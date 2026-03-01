@@ -62,7 +62,7 @@ const WelcomeScreen: React.FC = () => {
   return (
     <div className="welcome-screen">
       <div className="welcome-card">
-        <h1>Welcome to Budget Manager</h1>
+        <h1>Welcome to Paycheck Planner</h1>
         <p>Manage your finances locally with encrypted storage</p>
         <div className="action-buttons">
           <button

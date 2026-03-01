@@ -4,7 +4,7 @@ import CryptoJS from 'crypto-js';
 import type { BudgetData, AppSettings } from '../types/auth';
 
 // LocalStorage key for app settings
-const SETTINGS_KEY = 'budget-manager-settings';
+const SETTINGS_KEY = 'paycheck-planner-settings';
 
 export class FileStorageService {
   /**

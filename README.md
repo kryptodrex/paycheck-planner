@@ -1,4 +1,4 @@
-# Budget Manager
+# Paycheck Planner
 
 A local desktop application for managing personal budgets with encrypted file storage. Built with Electron, React, TypeScript, and Vite.
 
@@ -118,7 +118,7 @@ JSON data (encrypted or plain text, based on your choice)
 ## Project Structure
 
 ```
-budget-manager/
+paycheck-planner/
 ├── electron/              # Electron main process files
 │   ├── main.ts           # Main process (handles file I/O)
 │   └── preload.ts        # Preload script (secure bridge)

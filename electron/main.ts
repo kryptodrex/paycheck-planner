@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Set the app name - this is displayed in menus and dialogs
-app.name = 'Budget Manager';
+app.name = 'Paycheck Planner';
 
 // Variable to hold reference to the main application window
 let mainWindow: BrowserWindow | null = null;

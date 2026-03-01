@@ -1,5 +1,5 @@
 {
-  "name": "budget-manager",
+  "name": "paycheck-planner",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,8 +12,8 @@
     "preview": "vite preview"
   },
   "build": {
-    "appId": "com.budgetmanager.app",
-    "productName": "Budget Manager",
+    "appId": "com.paycheckplanner.app",
+    "productName": "Paycheck Planner",
     "directories": {
       "output": "release"
     },
