@@ -1,0 +1,234 @@
+.key-metrics {
+  padding: 2rem;
+}
+
+.metrics-header {
+  margin-bottom: 2rem;
+}
+
+.metrics-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+.metrics-header p {
+  margin: 0;
+  color: #666;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.metric-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.metric-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-values {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.metric-primary {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-primary .label {
+  font-size: 0.75rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.metric-primary .value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.metric-secondary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.metric-secondary .label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.metric-secondary .value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Card-specific colors */
+.income-card {
+  border-left: 4px solid #10b981;
+}
+
+.income-card .metric-primary .value {
+  color: #10b981;
+}
+
+.taxes-card {
+  border-left: 4px solid #ef4444;
+}
+
+.taxes-card .metric-primary .value {
+  color: #ef4444;
+}
+
+.net-card {
+  border-left: 4px solid #3b82f6;
+}
+
+.net-card .metric-primary .value {
+  color: #3b82f6;
+}
+
+.bills-card {
+  border-left: 4px solid #f59e0b;
+}
+
+.bills-card .metric-primary .value {
+  color: #f59e0b;
+}
+
+.remaining-card {
+  border-left: 4px solid #8b5cf6;
+}
+
+.remaining-card .metric-primary .value {
+  color: #8b5cf6;
+}
+
+.savings-card {
+  border-left: 4px solid #06b6d4;
+}
+
+.savings-card .metric-primary .value {
+  color: #06b6d4;
+}
+
+/* Summary Bar */
+.summary-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-bar h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.flow-visual {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.flow-segment {
+  padding: 1rem;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+  min-width: 100px;
+  transition: transform 0.2s;
+}
+
+.flow-segment:hover {
+  transform: scale(1.05);
+  cursor: help;
+}
+
+.flow-segment span {
+  font-size: 0.9rem;
+  display: block;
+}
+
+.income-segment {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.taxes-segment {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.net-segment {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.bills-segment {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.remaining-segment {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.flow-arrow {
+  color: #999;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .key-metrics {
+    padding: 1rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-visual {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .flow-segment {
+    width: 100% !important;
+  }
+
+  .flow-arrow {
+    transform: rotate(90deg);
+  }
+}

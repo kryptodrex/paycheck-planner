@@ -1,0 +1,100 @@
+name: Version Validation
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from current branch
+        id: current
+        run: |
+          VERSION=$(cat version)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Get version from develop branch
+        id: develop
+        run: |
+          # Fetch develop branch
+          git fetch origin develop:develop
+          # Get version from develop
+          VERSION=$(git show develop:version)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Develop version: $VERSION"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          CURRENT="${{ steps.current.outputs.VERSION }}"
+          DEVELOP="${{ steps.develop.outputs.VERSION }}"
+          
+          echo "Current branch version: $CURRENT"
+          echo "Develop branch version: $DEVELOP"
+          
+          # Parse semantic versions
+          parse_version() {
+            echo "$1" | tr '.' ' '
+          }
+          
+          read -r CURR_MAJOR CURR_MINOR CURR_PATCH <<< "$(parse_version "$CURRENT")"
+          read -r DEV_MAJOR DEV_MINOR DEV_PATCH <<< "$(parse_version "$DEVELOP")"
+          
+          # Convert to integers for comparison
+          CURR_NUM=$((CURR_MAJOR * 10000 + CURR_MINOR * 100 + CURR_PATCH))
+          DEV_NUM=$((DEV_MAJOR * 10000 + DEV_MINOR * 100 + DEV_PATCH))
+          
+          if [ $CURR_NUM -gt $DEV_NUM ]; then
+            echo "✓ Version incremented: $DEVELOP → $CURRENT"
+            echo "VALID=true" >> $GITHUB_OUTPUT
+          elif [ $CURR_NUM -eq $DEV_NUM ]; then
+            echo "✗ Version not incremented (same as develop)"
+            echo "VALID=false" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✗ Version decreased or invalid"
+            echo "VALID=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const current = '${{ steps.current.outputs.VERSION }}';
+            const develop = '${{ steps.develop.outputs.VERSION }}';
+            const isValid = '${{ steps.compare.outputs.VALID }}' === 'true';
+            
+            const body = isValid
+              ? `✅ **Version validation passed!**\n\n- Develop: ${develop}\n- Current: ${current}\n\nVersion has been properly incremented.`
+              : `❌ **Version validation failed!**\n\n- Develop: ${develop}\n- Current: ${current}\n\nPlease increment the version file in your PR.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Set check result
+        if: steps.compare.outputs.VALID != 'true'
+        run: |
+          echo "::error::Version validation failed. Please increment the version file."
+          exit 1
+
+    permissions:
+      contents: read
+      pull-requests: write

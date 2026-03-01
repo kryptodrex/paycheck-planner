@@ -1,9 +1,17 @@
-// Budget Context - Manages all budget data and operations
+// Budget Context - Manages all paycheck planning data and operations
 // This is like a "global state" that any component can access
-// In JavaScript, you'd use prop drilling or Redux - Context is React's built-in solution
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import type { BudgetData, BudgetContextType, Category, Transaction } from '../types/auth';
+import type { 
+  BudgetData, 
+  BudgetContextType, 
+  PaySettings,
+  Deduction,
+  TaxSettings,
+  Account,
+  Bill,
+  PaycheckBreakdown
+} from '../types/auth';
 import { FileStorageService } from '../services/fileStorage';
 
 // Create the context - this is the "container" for our global state
@@ -103,88 +111,63 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, []); // No dependencies: this function never needs to be recreated
 
   /**
-   * Create a new empty budget
-   * @param name - The name for the new budget
+   * Create a new empty budget plan
+   * @param year - The year for the new plan
    */
-  const createNewBudget = useCallback((name: string) => {
-    const newBudget = FileStorageService.createEmptyBudget(name);
+  const createNewBudget = useCallback((year: number) => {
+    const newBudget = FileStorageService.createEmptyBudget(year);
     setBudgetData(newBudget);
   }, []);
 
   /**
-   * Add a new category to the budget
-   * @param category - Category data without the ID (we generate that)
+   * Copy the current plan to a new year
+   * @param newYear - The target year
    */
-  const addCategory = useCallback((category: Omit<Category, 'id'>) => {
+  const copyPlanToNewYear = useCallback((newYear: number) => {
+    if (!budgetData) return;
+    
+    const newBudget: BudgetData = {
+      ...budgetData,
+      id: crypto.randomUUID(),
+      name: `${newYear} Plan`,
+      year: newYear,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      settings: {
+        ...budgetData.settings,
+        filePath: undefined, // Clear file path for new plan
+      },
+    };
+    
+    setBudgetData(newBudget);
+  }, [budgetData]);
+
+  /**
+   * Update pay settings
+   */
+  const updatePaySettings = useCallback((settings: PaySettings) => {
     setBudgetData((prev) => {
-      // If no budget exists, don't do anything
       if (!prev) return prev;
-      
       return {
-        ...prev, // Keep all existing data
-        categories: [
-          ...prev.categories, // Keep all existing categories
+        ...prev,
+        paySettings: settings,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Add a new pre-tax deduction
+   */
+  const addDeduction = useCallback((deduction: Omit<Deduction, 'id'>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        preTaxDeductions: [
+          ...prev.preTaxDeductions,
           {
-            ...category, // Add the new category
-            id: crypto.randomUUID(), // Generate a unique ID
-          },
-        ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
-
-  /**
-   * Update an existing category
-   * @param id - The ID of the category to update
-   * @param category - Partial category data (only the fields to update)
-   */
-  const updateCategory = useCallback((id: string, category: Partial<Category>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      
-      return {
-        ...prev,
-        // Map through categories and update the matching one
-        categories: prev.categories.map((cat) =>
-          cat.id === id ? { ...cat, ...category } : cat
-        ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
-
-  /**
-   * Delete a category
-   * @param id - The ID of the category to delete
-   */
-  const deleteCategory = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      
-      return {
-        ...prev,
-        // Filter out the category with this ID
-        categories: prev.categories.filter((cat) => cat.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
-
-  /**
-   * Add a new transaction
-   * @param transaction - Transaction data without the ID
-   */
-  const addTransaction = useCallback((transaction: Omit<Transaction, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      
-      return {
-        ...prev,
-        transactions: [
-          ...prev.transactions,
-          {
-            ...transaction,
+            ...deduction,
             id: crypto.randomUUID(),
           },
         ],
@@ -194,18 +177,15 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, []);
 
   /**
-   * Update an existing transaction
-   * @param id - The ID of the transaction to update
-   * @param transaction - Partial transaction data (only fields to update)
+   * Update an existing deduction
    */
-  const updateTransaction = useCallback((id: string, transaction: Partial<Transaction>) => {
+  const updateDeduction = useCallback((id: string, deduction: Partial<Deduction>) => {
     setBudgetData((prev) => {
       if (!prev) return prev;
-      
       return {
         ...prev,
-        transactions: prev.transactions.map((trans) =>
-          trans.id === id ? { ...trans, ...transaction } : trans
+        preTaxDeductions: prev.preTaxDeductions.map((d) =>
+          d.id === id ? { ...d, ...deduction } : d
         ),
         updatedAt: new Date().toISOString(),
       };
@@ -213,20 +193,214 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, []);
 
   /**
-   * Delete a transaction
-   * @param id - The ID of the transaction to delete
+   * Delete a deduction
    */
-  const deleteTransaction = useCallback((id: string) => {
+  const deleteDeduction = useCallback((id: string) => {
     setBudgetData((prev) => {
       if (!prev) return prev;
-      
       return {
         ...prev,
-        transactions: prev.transactions.filter((trans) => trans.id !== id),
+        preTaxDeductions: prev.preTaxDeductions.filter((d) => d.id !== id),
         updatedAt: new Date().toISOString(),
       };
     });
   }, []);
+
+  /**
+   * Update tax settings
+   */
+  const updateTaxSettings = useCallback((settings: TaxSettings) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        taxSettings: settings,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Add a new account
+   */
+  const addAccount = useCallback((account: Omit<Account, 'id'>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        accounts: [
+          ...prev.accounts,
+          {
+            ...account,
+            id: crypto.randomUUID(),
+          },
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Update an existing account
+   */
+  const updateAccount = useCallback((id: string, account: Partial<Account>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        accounts: prev.accounts.map((a) =>
+          a.id === id ? { ...a, ...account } : a
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Delete an account
+   */
+  const deleteAccount = useCallback((id: string) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        accounts: prev.accounts.filter((a) => a.id !== id),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Add a new bill
+   */
+  const addBill = useCallback((bill: Omit<Bill, 'id'>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        bills: [
+          ...prev.bills,
+          {
+            ...bill,
+            id: crypto.randomUUID(),
+          },
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Update an existing bill
+   */
+  const updateBill = useCallback((id: string, bill: Partial<Bill>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        bills: prev.bills.map((b) =>
+          b.id === id ? { ...b, ...bill } : b
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Delete a bill
+   */
+  const deleteBill = useCallback((id: string) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        bills: prev.bills.filter((b) => b.id !== id),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Calculate paycheck breakdown
+   */
+  const calculatePaycheckBreakdown = useCallback((): PaycheckBreakdown => {
+    if (!budgetData) {
+      return {
+        grossPay: 0,
+        preTaxDeductions: 0,
+        taxableIncome: 0,
+        federalTax: 0,
+        stateTax: 0,
+        socialSecurity: 0,
+        medicare: 0,
+        additionalWithholding: 0,
+        totalTaxes: 0,
+        netPay: 0,
+      };
+    }
+
+    const { paySettings, preTaxDeductions, taxSettings } = budgetData;
+    
+    // Calculate gross pay per paycheck
+    let grossPay = 0;
+    if (paySettings.payType === 'salary' && paySettings.annualSalary) {
+      const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
+      grossPay = paySettings.annualSalary / paychecksPerYear;
+    } else if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
+      grossPay = paySettings.hourlyRate * paySettings.hoursPerPayPeriod;
+    }
+
+    // Calculate pre-tax deductions
+    let totalPreTaxDeductions = 0;
+    preTaxDeductions.forEach((deduction) => {
+      if (deduction.isPercentage) {
+        totalPreTaxDeductions += (grossPay * deduction.amount) / 100;
+      } else {
+        totalPreTaxDeductions += deduction.amount;
+      }
+    });
+
+    // Calculate taxable income
+    const taxableIncome = grossPay - totalPreTaxDeductions;
+
+    // Calculate taxes
+    const federalTax = (taxableIncome * taxSettings.federalTaxRate) / 100;
+    const stateTax = (taxableIncome * taxSettings.stateTaxRate) / 100;
+    const socialSecurity = (taxableIncome * taxSettings.socialSecurityRate) / 100;
+    const medicare = (taxableIncome * taxSettings.medicareRate) / 100;
+    const additionalWithholding = taxSettings.additionalWithholding;
+
+    const totalTaxes = federalTax + stateTax + socialSecurity + medicare + additionalWithholding;
+
+    // Calculate net pay
+    const netPay = taxableIncome - totalTaxes;
+
+    return {
+      grossPay,
+      preTaxDeductions: totalPreTaxDeductions,
+      taxableIncome,
+      federalTax,
+      stateTax,
+      socialSecurity,
+      medicare,
+      additionalWithholding,
+      totalTaxes,
+      netPay,
+    };
+  }, [budgetData]);
+
+  /**
+   * Helper function to get number of paychecks per year
+   */
+  const getPaychecksPerYear = (frequency: string): number => {
+    switch (frequency) {
+      case 'weekly': return 52;
+      case 'bi-weekly': return 26;
+      case 'semi-monthly': return 24;
+      case 'monthly': return 12;
+      default: return 26;
+    }
+  };
 
   /**
    * Open a dialog to select where to save budget files
@@ -257,13 +431,20 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     saveBudget,
     loadBudget,
     createNewBudget,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
+    copyPlanToNewYear,
     selectSaveLocation,
+    updatePaySettings,
+    addDeduction,
+    updateDeduction,
+    deleteDeduction,
+    updateTaxSettings,
+    addAccount,
+    updateAccount,
+    deleteAccount,
+    addBill,
+    updateBill,
+    deleteBill,
+    calculatePaycheckBreakdown,
   };
 
   // Provide the value to all children components

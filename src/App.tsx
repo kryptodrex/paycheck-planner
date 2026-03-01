@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useBudget } from './contexts/BudgetContext'
 import EncryptionSetup from './components/EncryptionSetup'
 import WelcomeScreen from './components/WelcomeScreen'
-import BudgetDashboard from './components/BudgetDashboard'
+import PlanDashboard from './components/PlanDashboard'
 import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
@@ -60,7 +60,7 @@ function App() {
   // If no budget is loaded, show the welcome screen
   // Otherwise, show the main dashboard with a way to go back
   return budgetData ? (
-    <BudgetDashboard onResetSetup={handleResetSetup} />
+    <PlanDashboard onResetSetup={handleResetSetup} />
   ) : (
     <WelcomeScreen />
   )

@@ -1,0 +1,381 @@
+.pay-breakdown {
+  padding: 2rem;
+}
+
+.breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.breakdown-header h2 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+.breakdown-header p {
+  margin: 0;
+  color: #666;
+}
+
+.view-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: #f0f0f0;
+  padding: 0.25rem;
+  border-radius: 8px;
+}
+
+.view-mode-selector button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.view-mode-selector button.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.view-mode-selector button:hover:not(.active) {
+  color: #333;
+}
+
+.visual-flow {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.flow-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.stage-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.stage-box {
+  width: 100%;
+  max-width: 400px;
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stage-box h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+}
+
+.stage-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.stage-amount.negative {
+  color: #ef4444;
+}
+
+.stage-detail {
+  font-size: 0.9rem;
+  color: #999;
+}
+
+.stage-arrow {
+  font-size: 2rem;
+  color: #ccc;
+  margin: 0.5rem 0;
+}
+
+.gross-box {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.gross-box h3 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.gross-box .stage-detail {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.deduction-box {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.deduction-box h3 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.deduction-box .stage-detail {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.taxable-box {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.taxable-box h3 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.taxable-box .stage-detail {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.taxes-box {
+  background: white;
+  border: 2px solid #ef4444;
+}
+
+.taxes-box h3 {
+  color: #ef4444;
+}
+
+.stage-breakdown {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.breakdown-item span:last-child {
+  font-weight: 600;
+  color: #333;
+}
+
+.net-box {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.net-box h3 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.net-box .stage-detail {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Visual Bar */
+.breakdown-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.breakdown-bar h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.bar-container {
+  display: flex;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  transition: opacity 0.2s;
+}
+
+.bar-segment:hover {
+  opacity: 0.8;
+  cursor: help;
+}
+
+.pretax-segment {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.tax-segment {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.net-segment {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.bar-labels {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.bar-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.label-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.pretax-dot {
+  background: #f59e0b;
+}
+
+.tax-dot {
+  background: #ef4444;
+}
+
+.net-dot {
+  background: #3b82f6;
+}
+
+/* Account Allocations */
+.account-allocations {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.account-allocations h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.section-description {
+  color: #666;
+  margin: 0 0 1.5rem 0;
+}
+
+.allocations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.allocation-card {
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.allocation-card:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.allocation-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.account-icon {
+  font-size: 1.5rem;
+}
+
+.allocation-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.account-type {
+  font-size: 0.75rem;
+  color: #999;
+  text-transform: capitalize;
+}
+
+.allocation-amount {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.remainder-badge {
+  background: #667eea;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .pay-breakdown {
+    padding: 1rem;
+  }
+
+  .breakdown-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .view-mode-selector {
+    width: 100%;
+  }
+
+  .view-mode-selector button {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+  }
+
+  .stage-amount {
+    font-size: 1.5rem;
+  }
+
+  .allocations-grid {
+    grid-template-columns: 1fr;
+  }
+}

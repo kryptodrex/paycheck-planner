@@ -170,19 +170,32 @@ export class FileStorageService {
   }
 
   /**
-   * Create a new empty budget with default values
-   * @param name - The name for the new budget
+   * Create a new empty budget plan with default values
+   * @param year - The year for the new plan
    * @returns A new budget data object
    */
-  static createEmptyBudget(name: string): BudgetData {
+  static createEmptyBudget(year: number): BudgetData {
     // Get app settings to inherit encryption preferences
     const appSettings = this.getAppSettings();
     
     return {
       id: crypto.randomUUID(), // Generate a unique ID
-      name,
-      categories: [], // Start with no categories
-      transactions: [], // Start with no transactions
+      name: `${year} Plan`,
+      year,
+      paySettings: {
+        payType: 'salary',
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      taxSettings: {
+        federalTaxRate: 0,
+        stateTaxRate: 0,
+        socialSecurityRate: 6.2,
+        medicareRate: 1.45,
+        additionalWithholding: 0,
+      },
+      accounts: [],
+      bills: [],
       settings: {
         currency: 'USD',
         locale: 'en-US',

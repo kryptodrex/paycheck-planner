@@ -1,13 +1,18 @@
 {
   "name": "paycheck-planner",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build && electron-builder",
-    "build:dir": "tsc -b && vite build && electron-builder --dir",
+    "sync-version": "node scripts/sync-version.js",
+    "dev": "npm run sync-version && vite",
+    "build": "npm run sync-version && tsc -b && vite build && electron-builder",
+    "build:dir": "npm run sync-version && tsc -b && vite build && electron-builder --dir",
+    "build:mac": "npm run sync-version && tsc -b && vite build && electron-builder --mac",
+    "build:win": "npm run sync-version && tsc -b && vite build && electron-builder --win",
+    "build:linux": "npm run sync-version && tsc -b && vite build && electron-builder --linux",
+    "build:all": "npm run sync-version && tsc -b && vite build && electron-builder --mac --win --linux",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -22,14 +27,23 @@
       "dist-electron/**/*"
     ],
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.finance"
     },
     "win": {
-      "target": ["nsis", "portable"]
+      "target": [
+        "nsis",
+        "portable"
+      ]
     },
     "linux": {
-      "target": ["AppImage", "deb"]
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     }
   },
   "dependencies": {

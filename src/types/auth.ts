@@ -3,40 +3,96 @@
 // They help catch bugs by ensuring we use data correctly throughout the app
 
 /**
- * BudgetData - The main data structure for a budget file
+ * PayFrequency - How often the user gets paid
+ */
+export type PayFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly';
+
+/**
+ * BillFrequency - How often a bill is due
+ */
+export type BillFrequency = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'semi-annual' | 'yearly' | 'custom';
+
+/**
+ * PayType - Whether user is paid by salary or hourly
+ */
+export type PayType = 'salary' | 'hourly';
+
+/**
+ * BudgetData - The main data structure for a paycheck plan file
  * This is what gets saved to disk (after encryption)
  */
 export interface BudgetData {
-  id: string;                    // Unique identifier for this budget
-  name: string;                  // Display name (e.g., "2024 Budget")
-  categories: Category[];        // Array of budget categories
-  transactions: Transaction[];   // Array of all income/expenses
+  id: string;                    // Unique identifier for this plan
+  name: string;                  // Display name (e.g., "2026 Plan")
+  year: number;                  // Year this plan is for (e.g., 2026)
+  paySettings: PaySettings;      // How the user gets paid
+  preTaxDeductions: Deduction[]; // Pre-tax deductions (401k, benefits, etc.)
+  taxSettings: TaxSettings;      // Tax configuration
+  accounts: Account[];           // User's accounts (checking, savings, etc.)
+  bills: Bill[];                 // Recurring bills and expenses
   settings: BudgetSettings;      // User preferences
   createdAt: string;            // ISO date string when created
   updatedAt: string;            // ISO date string when last modified
 }
 
 /**
- * Category - A budget category (e.g., "Groceries", "Entertainment")
+ * PaySettings - Configuration for how the user gets paid
  */
-export interface Category {
-  id: string;          // Unique identifier
-  name: string;        // Category name
-  budget: number;      // Monthly budget amount in dollars
-  color: string;       // Hex color code for UI display (e.g., "#FF5733")
-  icon?: string;       // Optional emoji or icon (? means optional property)
+export interface PaySettings {
+  payType: PayType;              // Salary or hourly
+  annualSalary?: number;         // Annual salary (if payType is 'salary')
+  hourlyRate?: number;           // Hourly rate (if payType is 'hourly')
+  hoursPerPayPeriod?: number;    // Hours per pay period (if hourly)
+  payFrequency: PayFrequency;    // How often paid
 }
 
 /**
- * Transaction - A single income or expense entry
+ * Deduction - A pre-tax deduction (401k, health insurance, etc.)
  */
-export interface Transaction {
-  id: string;              // Unique identifier
-  categoryId: string;      // Which category this belongs to
-  amount: number;          // Dollar amount
-  description: string;     // What was this for?
-  date: string;           // ISO date string when it occurred
-  type: 'income' | 'expense';  // Union type: can only be one of these two strings
+export interface Deduction {
+  id: string;
+  name: string;                  // Description (e.g., "401k", "Health Insurance")
+  amount: number;                // Amount per paycheck
+  isPercentage: boolean;         // If true, amount is percentage of gross pay
+}
+
+/**
+ * TaxSettings - Tax configuration (user-entered for MVP)
+ */
+export interface TaxSettings {
+  federalTaxRate: number;        // Federal tax percentage (0-100)
+  stateTaxRate: number;          // State tax percentage (0-100)
+  socialSecurityRate: number;    // Social Security tax percentage (typically 6.2)
+  medicareRate: number;          // Medicare tax percentage (typically 1.45)
+  additionalWithholding: number; // Additional dollar amount to withhold per paycheck
+}
+
+/**
+ * Account - A financial account where money is allocated
+ */
+export interface Account {
+  id: string;
+  name: string;                  // Account name (e.g., "Checking", "Savings")
+  type: 'checking' | 'savings' | 'investment' | 'other';
+  allocation: number;            // Dollar amount allocated per paycheck (or 0 for remainder)
+  isRemainder: boolean;          // If true, gets whatever is left after other allocations
+  color: string;                 // Hex color for UI display
+  icon?: string;                 // Optional emoji or icon
+}
+
+/**
+ * Bill - A recurring bill or expense
+ */
+export interface Bill {
+  id: string;
+  name: string;                  // Bill description
+  amount: number;                // Amount due
+  frequency: BillFrequency;      // How often it's due
+  accountId: string;             // Which account this is paid from
+  dueDay?: number;               // Day of month/week it's due (if applicable)
+  customFrequencyDays?: number;  // For custom frequency: days between occurrences
+  category?: string;             // Optional category for organization
+  notes?: string;                // Optional notes
 }
 
 /**
@@ -60,6 +116,22 @@ export interface AppSettings {
 }
 
 /**
+ * PaycheckBreakdown - Calculated breakdown of a paycheck
+ */
+export interface PaycheckBreakdown {
+  grossPay: number;              // Total before any deductions
+  preTaxDeductions: number;      // Total pre-tax deductions
+  taxableIncome: number;         // Gross minus pre-tax deductions
+  federalTax: number;            // Federal income tax
+  stateTax: number;              // State income tax
+  socialSecurity: number;        // Social Security tax
+  medicare: number;              // Medicare tax
+  additionalWithholding: number; // Additional withholding
+  totalTaxes: number;            // Sum of all taxes
+  netPay: number;                // Take-home pay after all deductions
+}
+
+/**
  * BudgetContextType - Describes what the budget context provides
  * This interface defines all the state and functions available via useBudget() hook
  */
@@ -70,16 +142,31 @@ export interface BudgetContextType {
   // File operations
   saveBudget: () => Promise<void>;                      // Save to disk
   loadBudget: (filePath?: string) => Promise<void>;     // Load from disk
-  createNewBudget: (name: string) => void;              // Create empty budget
+  createNewBudget: (year: number) => void;              // Create empty plan for a year
   selectSaveLocation: () => Promise<void>;              // Choose where to save
+  copyPlanToNewYear: (newYear: number) => void;         // Duplicate plan to new year
   
-  // Category operations
-  addCategory: (category: Omit<Category, 'id'>) => void;              // Add category (Omit means "Category without id field")
-  updateCategory: (id: string, category: Partial<Category>) => void;  // Update category (Partial means "some fields of Category")
-  deleteCategory: (id: string) => void;                               // Delete category
+  // Pay settings operations
+  updatePaySettings: (settings: PaySettings) => void;
   
-  // Transaction operations
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
-  updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
-  deleteTransaction: (id: string) => void;
+  // Deduction operations
+  addDeduction: (deduction: Omit<Deduction, 'id'>) => void;
+  updateDeduction: (id: string, deduction: Partial<Deduction>) => void;
+  deleteDeduction: (id: string) => void;
+  
+  // Tax settings operations
+  updateTaxSettings: (settings: TaxSettings) => void;
+  
+  // Account operations
+  addAccount: (account: Omit<Account, 'id'>) => void;
+  updateAccount: (id: string, account: Partial<Account>) => void;
+  deleteAccount: (id: string) => void;
+  
+  // Bill operations
+  addBill: (bill: Omit<Bill, 'id'>) => void;
+  updateBill: (id: string, bill: Partial<Bill>) => void;
+  deleteBill: (id: string) => void;
+  
+  // Calculation functions
+  calculatePaycheckBreakdown: () => PaycheckBreakdown;
 }

@@ -1,0 +1,149 @@
+name: Release Build & Deploy
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+            artifact_name: Paycheck Planner-*.dmg
+          - os: windows-latest
+            target: win
+            artifact_name: Paycheck Planner-*.exe
+          - os: ubuntu-latest
+            target: linux
+            artifact_name: Paycheck Planner-*.AppImage
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync version from file
+        run: npm run sync-version
+
+      - name: Run tests
+        run: npm run lint
+
+      - name: Build Electron app for ${{ matrix.target }}
+        run: |
+          npm run build:${{ matrix.target }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paycheck-planner-${{ matrix.target }}
+          path: release/
+
+  create-release:
+    needs: release
+    runs-on: ubuntu-latest
+    if: always() && !contains(needs.release.result, 'failure')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync version from file
+        run: npm run sync-version
+
+      - name: Read version
+        id: version
+        run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %h: %s" --reverse)
+          else
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %h: %s" --reverse)
+          fi
+          
+          # Format as multiline output
+          CHANGELOG="## Changes in v${{ steps.version.outputs.VERSION }}
+
+### Commits
+$COMMITS
+
+### Platform Builds
+- **macOS**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.dmg
+- **Windows**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.exe
+- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
+          
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: Release v${{ steps.version.outputs.VERSION }}
+          body: ${{ env.CHANGELOG }}
+          files: |
+            all-artifacts/paycheck-planner-mac/**/*.dmg
+            all-artifacts/paycheck-planner-win/**/*.exe
+            all-artifacts/paycheck-planner-linux/**/*.AppImage
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-pr:
+    needs: create-release
+    runs-on: ubuntu-latest
+    if: always() && !contains(needs.create-release.result, 'failure')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: develop
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: merge develop into main for release"
+          title: "Release: Merge develop into main"
+          body: |
+            This PR merges the develop branch into main for the latest release.
+            
+            Please review the changes and merge when ready.
+          branch: release/merge-to-main
+          base: main
+          head: develop
+          delete-branch: true
