@@ -1,20 +1,22 @@
 .pay-breakdown {
-  padding: 2rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  height: 100%;
 }
 
 .breakdown-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
 
 .breakdown-header h2 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.25rem 0;
   color: #333;
-  font-size: 1.8rem;
+  font-size: 1.4rem;
 }
 
 .breakdown-header p {
@@ -54,9 +56,9 @@
 .visual-flow {
   background: white;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .flow-stage {
@@ -78,7 +80,7 @@
 .stage-box {
   width: 100%;
   max-width: 400px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border-radius: 12px;
   text-align: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -93,7 +95,7 @@
 }
 
 .stage-amount {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
 }

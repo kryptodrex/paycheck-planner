@@ -40,13 +40,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileDialog: () => ipcRenderer.invoke('save-file-dialog'),
   
   // Listen for menu events from the application menu bar
-  // Takes: event name ('new-budget', 'open-budget', 'change-encryption')
+  // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan')
   // Returns: () => unsubscribe function to remove listener
-  onMenuEvent: (event: 'new-budget' | 'open-budget' | 'change-encryption', callback: () => void) => {
+  onMenuEvent: (event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan', callback: () => void) => {
     const channel = `menu:${event}`;
     ipcRenderer.on(channel, callback);
     return () => ipcRenderer.removeListener(channel, callback);
   },
+  
+  // Save session state (last opened file and active tab)
+  // Takes: filePath and activeTab
+  // Returns: { success: boolean, error?: string }
+  saveSessionState: (filePath: string, activeTab: string) =>
+    ipcRenderer.invoke('save-session-state', filePath, activeTab),
+  
+  // Load session state (last opened file and active tab)
+  // Returns: { filePath?: string, activeTab?: string }
+  loadSessionState: () =>
+    ipcRenderer.invoke('load-session-state'),
+  
+  // Clear session state (used when opening a new file)
+  // Returns: { success: boolean }
+  clearSessionState: () =>
+    ipcRenderer.invoke('clear-session-state'),
 });
 
 // This export is needed to make TypeScript happy

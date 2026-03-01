@@ -9,13 +9,15 @@ import './App.css'
 
 function App() {
   // Get the current budget data and actions from our context
-  const { budgetData } = useBudget()
+  const { budgetData, loadBudget } = useBudget()
   
   // Track whether user has completed initial setup
   const [setupComplete, setSetupComplete] = useState(false)
   const [checkingSetup, setCheckingSetup] = useState(true)
   // Track if user wants to force encryption setup again (for testing/changing)
   const [forceSetupAgain, setForceSetupAgain] = useState(false)
+  // Track session restoration state
+  const [sessionError, setSessionError] = useState<string | null>(null)
 
   // Check if user has already configured encryption on app load
   useEffect(() => {
@@ -33,6 +35,37 @@ function App() {
     setSetupComplete(hasCompletedSetup)
     setCheckingSetup(false)
   }, [forceSetupAgain])
+
+  // Try to restore session when setup is complete and budget is not loaded
+  useEffect(() => {
+    if (!setupComplete || budgetData || !window.electronAPI) return
+
+    const restoreSession = async () => {
+      try {
+        const session = await window.electronAPI.loadSessionState()
+        
+        // If there's a saved session with a file path
+        if (session.filePath) {
+          // Check if the file still exists
+          const exists = await window.electronAPI.fileExists(session.filePath)
+          if (exists) {
+            // Load the file
+            await loadBudget(session.filePath)
+            return
+          } else {
+            // File no longer exists, show error
+            setSessionError(`The file "${session.filePath}" could not be found. Starting fresh...`)
+            // Clear the old session
+            await window.electronAPI.clearSessionState()
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error)
+      }
+    }
+
+    restoreSession()
+  }, [setupComplete, budgetData, loadBudget])
 
   // Handle going back to setup (for resetting encryption)
   const handleResetSetup = () => {
@@ -55,6 +88,13 @@ function App() {
   // If setup hasn't been completed, show encryption setup screen
   if (!setupComplete) {
     return <EncryptionSetup onComplete={handleSetupComplete} />
+  }
+
+  // Show session error if file not found, or if no budget is loaded, show welcome screen
+  if (sessionError) {
+    return (
+      <WelcomeScreen initialError={sessionError} />
+    )
   }
 
   // If no budget is loaded, show the welcome screen

@@ -1,25 +1,28 @@
 .plan-dashboard {
-  min-height: 100vh;
+  height: 100vh;
+  width: 100%;
   background: #f5f7fa;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .dashboard-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 1.5rem 2rem;
+  padding: 1rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   gap: 1rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .header-left h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.8rem;
+  margin: 0 0 0.25rem 0;
+  font-size: 1.4rem;
 }
 
 .header-meta {
@@ -61,28 +64,29 @@
   white-space: nowrap;
 }
 
-.btn-primary {
+/* Header button styles - these are on the gradient background */
+.header-btn-primary {
   background: white;
   color: #667eea;
 }
 
-.btn-primary:hover:not(:disabled) {
+.header-btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.btn-primary:disabled {
+.header-btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.btn-secondary {
+.header-btn-secondary {
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
-.btn-secondary:hover {
+.header-btn-secondary:hover {
   background: rgba(255, 255, 255, 0.3);
   border-color: white;
 }
@@ -93,16 +97,17 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid #e5e7eb;
   overflow-x: auto;
+  flex-shrink: 0;
 }
 
 .tab-button {
   flex: 1;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   border: none;
   background: transparent;
   color: #666;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
   border-bottom: 3px solid transparent;
   transition: all 0.2s;
@@ -132,14 +137,16 @@
   flex: 1;
   overflow-y: auto;
   background: #f5f7fa;
+  min-height: 0;
 }
 
 .dashboard-footer {
   background: white;
   border-top: 1px solid #e5e7eb;
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem;
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  flex-shrink: 0;
 }
 
 .footer-info {

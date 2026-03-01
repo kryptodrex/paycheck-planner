@@ -2,10 +2,15 @@ import React, { useState } from 'react';
 import { useBudget } from '../contexts/BudgetContext';
 import './WelcomeScreen.css';
 
-const WelcomeScreen: React.FC = () => {
+interface WelcomeScreenProps {
+  initialError?: string;
+}
+
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const { createNewBudget, loadBudget, loading } = useBudget();
   const [planYear, setPlanYear] = useState(new Date().getFullYear().toString());
   const [showNewPlanForm, setShowNewPlanForm] = useState(false);
+  const [dismissedError, setDismissedError] = useState(false);
 
   const handleCreateNew = () => {
     setShowNewPlanForm(true);
@@ -66,6 +71,24 @@ const WelcomeScreen: React.FC = () => {
 
   return (
     <div className="welcome-screen">
+      {initialError && !dismissedError && (
+        <div className="error-banner">
+          <div className="error-content">
+            <span className="error-icon">⚠️</span>
+            <div className="error-message">
+              <strong>Session Error</strong>
+              <p>{initialError}</p>
+            </div>
+            <button 
+              className="error-close"
+              onClick={() => setDismissedError(true)}
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div className="welcome-card">
         <h1>Welcome to Paycheck Planner</h1>
         <p>Plan where every paycheck goes, from gross to net, with year-based planning</p>

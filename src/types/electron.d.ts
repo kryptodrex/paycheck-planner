@@ -30,9 +30,18 @@ export interface ElectronAPI {
   // Takes an event name and a callback function
   // Returns an unsubscribe function to remove the listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'preferences',
+    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'preferences' | 'save-plan',
     callback: () => void
   ) => () => void;
+  
+  // Save session state (last opened file and active tab)
+  saveSessionState: (filePath: string, activeTab: string) => Promise<{ success: boolean; error?: string }>;
+  
+  // Load session state (last opened file and active tab)
+  loadSessionState: () => Promise<{ filePath?: string; activeTab?: string }>;
+  
+  // Clear session state (used when opening a new file or closing app)
+  clearSessionState: () => Promise<{ success: boolean }>;
 }
 
 /**

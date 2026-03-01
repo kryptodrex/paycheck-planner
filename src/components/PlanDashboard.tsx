@@ -48,12 +48,26 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup }) => {
       onResetSetup?.();
     });
 
+    const unsubscribeSave = window.electronAPI.onMenuEvent('save-plan', () => {
+      saveBudget();
+    });
+
     return () => {
       unsubscribeNew();
       unsubscribeOpen();
       unsubscribeEncryption();
+      unsubscribeSave();
     };
-  }, [createNewBudget, loadBudget, onResetSetup]);
+  }, [createNewBudget, loadBudget, onResetSetup, saveBudget]);
+
+  // Save session state when active tab or budget data changes
+  useEffect(() => {
+    if (!budgetData?.settings?.filePath || !window.electronAPI?.saveSessionState) return;
+
+    window.electronAPI.saveSessionState(budgetData.settings.filePath, activeTab).catch((error) => {
+      console.error('Failed to save session state:', error);
+    });
+  }, [activeTab, budgetData?.settings?.filePath]);
 
   if (!budgetData) return null;
 
@@ -86,14 +100,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup }) => {
         </div>
         <div className="header-right">
           <button 
-            className="btn btn-secondary" 
+            className="btn header-btn-secondary" 
             onClick={() => setShowCopyModal(true)}
             title="Copy this plan to another year"
           >
             📋 Copy Plan
           </button>
           <button 
-            className="btn btn-primary" 
+            className="btn header-btn-primary" 
             onClick={saveBudget} 
             disabled={loading}
           >

@@ -1,9 +1,10 @@
 // Electron Main Process - This runs in Node.js, not the browser
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, globalShortcut } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 // ES modules don't have __dirname, so we need to create it
@@ -14,46 +15,179 @@ const __dirname = path.dirname(__filename);
 // Set the app name - this is displayed in menus and dialogs
 app.name = 'Paycheck Planner';
 
-// Variable to hold reference to the main application window
+// Track all open plan windows
+const openWindows = new Set<BrowserWindow>();
+// Welcome window reference (shown when no plan windows are open)
+let welcomeWindow: BrowserWindow | null = null;
+// Variable to hold reference to the main/first application window (for backwards compatibility)
 let mainWindow: BrowserWindow | null = null;
 
 /**
- * Create the main application window
- * This is like opening a browser, but it's your app instead of a website
+ * Create a new plan window (can be called multiple times for multiple windows)
+ * @param windowState - Optional saved window state with dimensions and file path
  */
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createPlanWindow(windowState?: any) {
+  // Default window state
+  let state = {
     width: 1400,
     height: 900,
-    minWidth: 1000,   // Prevent window from getting too small
-    minHeight: 600,   // Minimum height to keep UI readable
+    x: undefined as number | undefined,
+    y: undefined as number | undefined,
+    lastFilePath: undefined as string | undefined,
+    lastTab: undefined as string | undefined,
+  };
+
+  // Use provided state or merge with defaults
+  if (windowState) {
+    state = { ...state, ...windowState };
+  }
+
+  const window = new BrowserWindow({
+    width: state.width,
+    height: state.height,
+    x: state.x,
+    y: state.y,
+    minWidth: 1000,
+    minHeight: 600,
+    title: 'Paycheck Planner',
     webPreferences: {
-      // preload.ts runs before the React app loads
-      // It's the secure bridge between Node.js and the browser
-      // Note: In development, vite-plugin-electron builds it as .mjs
       preload: path.join(__dirname, 'preload.mjs'),
-      nodeIntegration: false,  // Don't expose Node.js to the browser (security)
-      contextIsolation: true,   // Keep contexts separate (security)
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
-  // Load the app - either from dev server or built files
+  // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
-    // Development mode: load from Vite dev server
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-    mainWindow.webContents.openDevTools(); // Open dev tools automatically
+    window.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    // Production mode: load the built HTML file
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    window.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  // Clean up reference when window is closed
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+  // Track this window
+  openWindows.add(window);
+  if (!mainWindow) mainWindow = window; // Set as main if it's the first
+
+  // Handle window close and save state
+  window.on('close', () => {
+    try {
+      const bounds = window.getBounds();
+      const sessionPath = path.join(app.getPath('userData'), 'session.json');
+      let sessionData: any = {};
+      try {
+        sessionData = JSON.parse(readFileSync(sessionPath, 'utf-8'));
+      } catch {
+        // File doesn't exist or is invalid, start fresh
+      }
+
+      // Store all open window states
+      const windowStates = (sessionData.windows || []).filter((w: any) => {
+        // Keep window states from other windows
+        const existingWindow = Array.from(openWindows).find(
+          (win) => win.id === w.id && win !== window
+        );
+        return !!existingWindow;
+      });
+
+      // Add this window's state
+      windowStates.push({
+        id: window.id,
+        windowWidth: bounds.width,
+        windowHeight: bounds.height,
+        windowX: bounds.x,
+        windowY: bounds.y,
+        lastFilePath: state.lastFilePath, // Preserve file path if it exists
+        lastTab: state.lastTab,
+      });
+
+      sessionData.windows = windowStates;
+      writeFileSync(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
+    } catch (error) {
+      console.error('Error saving window state:', error);
+    }
   });
+
+  // Clean up when window is closed
+  window.on('closed', () => {
+    openWindows.delete(window);
+    if (mainWindow === window) mainWindow = null;
+
+    // If no more plan windows, show welcome window
+    if (openWindows.size === 0 && !welcomeWindow) {
+      createWelcomeWindow();
+    }
+  });
+
+  return window;
+}
+
+/**
+ * Create a welcome window for opening/creating plans
+ */
+function createWelcomeWindow() {
+  if (welcomeWindow) return;
+
+  welcomeWindow = new BrowserWindow({
+    width: 900,
+    height: 700,
+    minWidth: 800,
+    minHeight: 600,
+    title: 'Paycheck Planner - Welcome',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  if (process.env.VITE_DEV_SERVER_URL) {
+    welcomeWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+  } else {
+    welcomeWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  }
+
+  welcomeWindow.on('closed', () => {
+    welcomeWindow = null;
+  });
+}
+
+/**
+ * Create the main application window - called on app start
+ * This is like opening a browser, but it's your app instead of a website
+ */
+function createWindow() {
+  // Try to load saved window states
+  let savedWindows = [];
+
+  try {
+    const sessionPath = path.join(app.getPath('userData'), 'session.json');
+    const sessionData = JSON.parse(readFileSync(sessionPath, 'utf-8'));
+    if (sessionData.windows && Array.isArray(sessionData.windows)) {
+      savedWindows = sessionData.windows;
+    }
+  } catch (error) {
+    // No saved state, use defaults
+  }
+
+  // Restore all saved windows
+  if (savedWindows.length > 0) {
+    savedWindows.forEach((windowState: any) => {
+      createPlanWindow(windowState);
+    });
+  } else {
+    // No saved windows, create welcome window
+    createWelcomeWindow();
+  }
 
   // Create application menu with File and Edit options
   createApplicationMenu();
+  
+  // Register global keyboard shortcut for saving
+  globalShortcut.register('CmdOrCtrl+S', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('menu:save-plan');
+    }
+  });
 }
 
 /**
@@ -131,11 +265,19 @@ function createApplicationMenu() {
     label: 'File',
     submenu: [
       {
+        label: 'New Window',
+        accelerator: isMac ? 'Cmd+Shift+N' : 'Ctrl+Shift+N',
+        click: () => {
+          createPlanWindow();
+        },
+      },
+      {
         label: 'New Budget',
         accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
         click: () => {
-          if (mainWindow) {
-            mainWindow.webContents.send('menu:new-budget');
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:new-budget');
           }
         },
       },
@@ -143,8 +285,19 @@ function createApplicationMenu() {
         label: 'Open Budget',
         accelerator: isMac ? 'Cmd+O' : 'Ctrl+O',
         click: () => {
-          if (mainWindow) {
-            mainWindow.webContents.send('menu:open-budget');
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:open-budget');
+          }
+        },
+      },
+      {
+        label: 'Save',
+        accelerator: isMac ? 'Cmd+S' : 'Ctrl+S',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:save-plan');
           }
         },
       },
@@ -171,8 +324,9 @@ function createApplicationMenu() {
         label: 'Change Encryption Settings',
         accelerator: isMac ? 'Cmd+Shift+E' : 'Ctrl+Shift+E',
         click: () => {
-          if (mainWindow) {
-            mainWindow.webContents.send('menu:change-encryption');
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:change-encryption');
           }
         },
       },
@@ -208,21 +362,57 @@ function createApplicationMenu() {
   Menu.setApplicationMenu(menu);
 }
 
+// Save all window states before quitting
+app.on('before-quit', () => {
+  try {
+    const windows = Array.from(openWindows).map((window) => {
+      const bounds = window.getBounds();
+      return {
+        id: window.id,
+        windowWidth: bounds.width,
+        windowHeight: bounds.height,
+        windowX: bounds.x,
+        windowY: bounds.y,
+      };
+    });
+
+    if (windows.length > 0) {
+      const sessionPath = path.join(app.getPath('userData'), 'session.json');
+      let sessionData = {};
+      try {
+        sessionData = JSON.parse(readFileSync(sessionPath, 'utf-8'));
+      } catch {
+        // Start fresh
+      }
+      sessionData = { ...sessionData, windows };
+      writeFileSync(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
+    }
+  } catch (error) {
+    console.error('Error saving window states on quit:', error);
+  }
+});
+
 // Wait for Electron to be ready, then create the window
 app.whenReady().then(createWindow);
 
 // On macOS, apps typically stay open even when all windows are closed
-// On Windows/Linux, quit when all windows are closed
+// On Windows/Linux, show welcome window when all windows are closed
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
+  if (process.platform === 'darwin') {
+    // On macOS, keep the app open but show nothing
+    return;
+  } else {
+    // On Windows/Linux, show welcome window if no windows are open
+    if (openWindows.size === 0 && !welcomeWindow) {
+      createWelcomeWindow();
+    }
   }
 });
 
-// On macOS, re-create window when dock icon is clicked and no windows are open
+// On macOS, re-create window or show welcome when dock icon is clicked and no windows are open
 app.on('activate', () => {
-  if (mainWindow === null) {
-    createWindow();
+  if (openWindows.size === 0 && !welcomeWindow) {
+    createWelcomeWindow();
   }
 });
 
@@ -329,4 +519,62 @@ ipcMain.handle('save-file-dialog', async () => {
     return result.filePath;
   }
   return null;
+});
+
+/**
+ * Session State Management
+ * Saves and loads the user's last session (file and view)
+ */
+
+// Get the path to the session state file
+function getSessionFilePath(): string {
+  const userData = app.getPath('userData');
+  return path.join(userData, 'session.json');
+}
+
+// Save session state
+ipcMain.handle('save-session-state', async (event, filePath: string, activeTab: string) => {
+  try {
+    const sessionPath = getSessionFilePath();
+    const sessionData = {
+      lastFilePath: filePath,
+      lastTab: activeTab,
+      timestamp: new Date().toISOString(),
+    };
+    await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving session state:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
+// Load session state
+ipcMain.handle('load-session-state', async () => {
+  try {
+    const sessionPath = getSessionFilePath();
+    // Check if session file exists
+    await fs.access(sessionPath);
+    const data = await fs.readFile(sessionPath, 'utf-8');
+    const sessionData = JSON.parse(data);
+    return {
+      filePath: sessionData.lastFilePath,
+      activeTab: sessionData.lastTab,
+    };
+  } catch (error) {
+    // Session file doesn't exist or is invalid, return empty
+    return {};
+  }
+});
+
+// Clear session state
+ipcMain.handle('clear-session-state', async () => {
+  try {
+    const sessionPath = getSessionFilePath();
+    await fs.unlink(sessionPath);
+    return { success: true };
+  } catch (error) {
+    // File doesn't exist, which is fine
+    return { success: true };
+  }
 });
