@@ -92,20 +92,20 @@ jobs:
             COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %h: %s" --reverse)
           fi
           
-          # Format as multiline output
-          CHANGELOG="## Changes in v${{ steps.version.outputs.VERSION }}
-
-### Commits
-$COMMITS
-
-### Platform Builds
-- **macOS**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.dmg
-- **Windows**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.exe
-- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
-          
-          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-          echo "$CHANGELOG" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          # Use a unique delimiter to avoid YAML conflicts
+          {
+            echo "CHANGELOG<<__END_CHANGELOG__"
+            echo "## Changes in v${{ steps.version.outputs.VERSION }}"
+            echo ""
+            echo "### Commits"
+            echo "$COMMITS"
+            echo ""
+            echo "### Platform Builds"
+            echo "- **macOS**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.dmg"
+            echo "- **Windows**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.exe"
+            echo "- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
+            echo "__END_CHANGELOG__"
+          } >> $GITHUB_ENV
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -145,5 +145,4 @@ $COMMITS
             Please review the changes and merge when ready.
           branch: release/merge-to-main
           base: main
-          head: develop
           delete-branch: true
