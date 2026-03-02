@@ -14,6 +14,23 @@ const __dirname = path.dirname(__filename);
 // Set the app name - this is displayed in menus and dialogs
 app.name = 'Paycheck Planner';
 
+// Configure the About panel (macOS only)
+if (process.platform === 'darwin') {
+  app.setAboutPanelOptions({
+    applicationName: 'Paycheck Planner',
+    applicationVersion: '1.0.0',
+    version: '1.0.0',
+    copyright: '© 2026',
+    credits: 'Plan where every paycheck goes.\n\n' +
+      '• Paycheck Breakdown - Track gross to net pay\n' +
+      '• Smart Allocations - Assign net pay to accounts\n' +
+      '• Secure & Local - Your data stays private\n' +
+      '• Multi-Currency Support - Set currency per plan\n' +
+      '• Account Management - Multiple financial accounts\n' +
+      '• Year-Based Planning - Separate plans per year',
+  });
+}
+
 // Debug mode for development
 const DEBUG = process.env.NODE_ENV !== 'production';
 function debug(...args: any[]) {
@@ -453,6 +470,24 @@ function createApplicationMenu() {
       },
     ],
   });
+
+  // Help menu (for Windows/Linux - macOS has native About)
+  if (!isMac) {
+    template.push({
+      label: 'Help',
+      submenu: [
+        {
+          label: `About ${app.name}`,
+          click: () => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu:open-about');
+            }
+          },
+        },
+      ],
+    });
+  }
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);

@@ -6,6 +6,14 @@ import { AccountsService } from './accountsService';
 
 // LocalStorage key for app settings
 const SETTINGS_KEY = 'paycheck-planner-settings';
+const RECENT_FILES_KEY = 'paycheck-planner-recent-files';
+const MAX_RECENT_FILES = 10;
+
+export interface RecentFile {
+  filePath: string;
+  fileName: string;
+  lastOpened: string;
+}
 
 export class FileStorageService {
   /**
@@ -33,6 +41,65 @@ export class FileStorageService {
    */
   static saveAppSettings(settings: AppSettings): void {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  /**
+   * Get recent files list from localStorage
+   * @returns Array of recent files, sorted by most recently opened
+   */
+  static getRecentFiles(): RecentFile[] {
+    const stored = localStorage.getItem(RECENT_FILES_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  /**
+   * Add a file to the recent files list
+   * @param filePath - The file path to add
+   */
+  static addRecentFile(filePath: string): void {
+    // Extract file name from path
+    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    
+    const recentFiles = this.getRecentFiles();
+    
+    // Remove any existing entry for this file
+    const filtered = recentFiles.filter(f => f.filePath !== filePath);
+    
+    // Add to the beginning of the list
+    filtered.unshift({
+      filePath,
+      fileName,
+      lastOpened: new Date().toISOString(),
+    });
+    
+    // Keep only the most recent MAX_RECENT_FILES
+    const trimmed = filtered.slice(0, MAX_RECENT_FILES);
+    
+    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(trimmed));
+  }
+
+  /**
+   * Remove a file from the recent files list
+   * @param filePath - The file path to remove
+   */
+  static removeRecentFile(filePath: string): void {
+    const recentFiles = this.getRecentFiles();
+    const filtered = recentFiles.filter(f => f.filePath !== filePath);
+    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(filtered));
+  }
+
+  /**
+   * Clear all recent files
+   */
+  static clearRecentFiles(): void {
+    localStorage.removeItem(RECENT_FILES_KEY);
   }
 
   /**
@@ -111,6 +178,9 @@ export class FileStorageService {
       throw new Error(result.error || 'Failed to save budget');
     }
 
+    // Add to recent files
+    this.addRecentFile(targetPath);
+
     return targetPath;
   }
 
@@ -149,6 +219,8 @@ export class FileStorageService {
     // Try to parse as JSON first (unencrypted file)
     try {
       const budgetData: BudgetData = JSON.parse(jsonData);
+      // Add to recent files on successful load
+      this.addRecentFile(targetPath);
       return budgetData;
     } catch {
       // If JSON parsing fails, it's likely encrypted
@@ -165,6 +237,8 @@ export class FileStorageService {
         
         // Parse JSON back into a JavaScript object (deserialization)
         const budgetData: BudgetData = JSON.parse(decryptedData);
+        // Add to recent files on successful load
+        this.addRecentFile(targetPath);
         return budgetData;
       } catch {
         throw new Error('Failed to decrypt file. The encryption key may be incorrect.');

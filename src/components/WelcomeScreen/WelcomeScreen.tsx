@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { FileStorageService } from '../../services/fileStorage';
+import type { RecentFile } from '../../services/fileStorage';
 import './WelcomeScreen.css';
 
 interface WelcomeScreenProps {
@@ -11,6 +13,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const [planYear, setPlanYear] = useState(new Date().getFullYear().toString());
   const [showNewPlanForm, setShowNewPlanForm] = useState(false);
   const [dismissedError, setDismissedError] = useState(false);
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
+
+  // Load recent files on mount
+  useEffect(() => {
+    setRecentFiles(FileStorageService.getRecentFiles());
+  }, []);
 
   const handleCreateNew = () => {
     setShowNewPlanForm(true);
@@ -26,6 +34,41 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
 
   const handleLoadExisting = async () => {
     await loadBudget();
+  };
+
+  const handleOpenRecent = async (filePath: string) => {
+    try {
+      await loadBudget(filePath);
+    } catch (error) {
+      console.error('Error opening recent file:', error);
+      // Remove the file from recent files if it failed to load
+      FileStorageService.removeRecentFile(filePath);
+      setRecentFiles(FileStorageService.getRecentFiles());
+      alert('Failed to open file: ' + (error as Error).message);
+    }
+  };
+
+  const handleRemoveRecent = (filePath: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening the file
+    FileStorageService.removeRecentFile(filePath);
+    setRecentFiles(FileStorageService.getRecentFiles());
+  };
+
+  const formatDate = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   };
 
   if (showNewPlanForm) {
@@ -110,23 +153,34 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             Open Existing Plan
           </button>
         </div>
-        <div className="features">
-          <div className="feature">
-            <span className="feature-icon">💰</span>
-            <h3>Paycheck Breakdown</h3>
-            <p>See exactly where your money goes from gross pay to take-home</p>
+
+        {recentFiles.length > 0 && (
+          <div className="recent-files">
+            <h3>Recent Plans</h3>
+            <div className="recent-files-list">
+              {recentFiles.map((file) => (
+                <div
+                  key={file.filePath}
+                  className={`recent-file-item ${loading ? 'disabled' : ''}`}
+                  onClick={() => !loading && handleOpenRecent(file.filePath)}
+                >
+                  <div className="recent-file-info">
+                    <div className="recent-file-name">{file.fileName}</div>
+                    <div className="recent-file-date">{formatDate(file.lastOpened)}</div>
+                  </div>
+                  <button
+                    className="recent-file-remove"
+                    onClick={(e) => handleRemoveRecent(file.filePath, e)}
+                    title="Remove from recent"
+                    disabled={loading}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="feature">
-            <span className="feature-icon">📊</span>
-            <h3>Smart Allocations</h3>
-            <p>Assign your net pay to accounts and track recurring bills</p>
-          </div>
-          <div className="feature">
-            <span className="feature-icon">🔒</span>
-            <h3>Secure & Local</h3>
-            <p>Your data stays on your computer with optional encryption</p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

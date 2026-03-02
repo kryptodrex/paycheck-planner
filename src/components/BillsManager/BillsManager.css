@@ -103,7 +103,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--header-gradient);
   color: white;
 }
 
@@ -122,9 +122,9 @@
   font-size: 1.1rem;
 }
 
-.account-type {
+.account-header .account-type {
   font-size: 0.85rem;
-  opacity: 0.9;
+  color: var(--header-text-secondary);
   text-transform: capitalize;
 }
 
@@ -132,10 +132,10 @@
   text-align: right;
 }
 
-.total-label {
+.account-header .total-label {
   display: block;
   font-size: 0.85rem;
-  opacity: 0.9;
+  color: var(--header-text-secondary);
   margin-bottom: 0.25rem;
 }
 

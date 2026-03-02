@@ -40,19 +40,6 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onOpenEncryptionSe
     }
   }, [isOpen, onClose]);
 
-  // Listen for system theme changes when in System mode
-  useEffect(() => {
-    if (settings.themeMode !== 'system') return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? 'dark' : 'light');
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [settings.themeMode, setTheme]);
-
   const handleThemeModeChange = (mode: ThemeOption) => {
     setSettings((prev) => {
       const updated = { ...prev, themeMode: mode };
@@ -66,6 +53,9 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onOpenEncryptionSe
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         setTheme(systemPrefersDark ? 'dark' : 'light');
       }
+      
+      // Dispatch custom event to notify ThemeProvider
+      window.dispatchEvent(new Event('theme-mode-changed'));
       
       return updated;
     });

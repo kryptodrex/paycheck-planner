@@ -148,32 +148,89 @@
   font-size: clamp(1.25rem, 3vw, 1.5rem);
 }
 
-.features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1.5rem;
+.recent-files {
+  margin-top: 2rem;
 }
 
-.feature {
+.recent-files h3 {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  margin-bottom: 1rem;
+  color: var(--text-primary);
   text-align: center;
 }
 
-.feature-icon {
-  font-size: clamp(2rem, 5vw, 2.5rem);
-  display: block;
-  margin-bottom: 0.5rem;
+.recent-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
-.feature h3 {
-  font-size: clamp(1rem, 2vw, 1.1rem);
-  margin-bottom: 0.5rem;
+.recent-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.recent-file-item:hover:not(.disabled) {
+  background: var(--bg-tertiary);
+  border-color: #667eea;
+}
+
+.recent-file-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.recent-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-file-name {
+  font-weight: 600;
   color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.feature p {
-  font-size: 0.9rem;
+.recent-file-date {
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  line-height: 1.4;
+}
+
+.recent-file-remove {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-left: 0.5rem;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.recent-file-remove:hover:not(:disabled) {
+  opacity: 1;
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+.recent-file-remove:disabled {
+  cursor: not-allowed;
 }
 
 .new-budget-form {
@@ -229,8 +286,8 @@
     grid-template-columns: 1fr;
   }
 
-  .features {
-    grid-template-columns: 1fr;
+  .recent-files-list {
+    max-height: 250px;
   }
 }
 

@@ -5,6 +5,7 @@ import EncryptionSetup from './components/EncryptionSetup'
 import WelcomeScreen from './components/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
 import Settings from './components/Settings'
+import About from './components/About'
 import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
@@ -28,6 +29,8 @@ function App() {
   const [skipSessionRestore, setSkipSessionRestore] = useState(false)
   // Track if settings modal is open
   const [showSettings, setShowSettings] = useState(false)
+  // Track if about modal is open
+  const [showAbout, setShowAbout] = useState(false)
 
   // Check view mode and session restore flag on mount
   useEffect(() => {
@@ -60,6 +63,17 @@ function App() {
 
     const unsubscribe = window.electronAPI.onMenuEvent('open-settings', () => {
       setShowSettings(true)
+    })
+
+    return unsubscribe
+  }, [])
+
+  // Listen for about menu event from Electron menu (Windows/Linux)
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent('open-about', () => {
+      setShowAbout(true)
     })
 
     return unsubscribe
@@ -178,6 +192,7 @@ function App() {
           <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </>
       )}
+      <About isOpen={showAbout} onClose={() => setShowAbout(false)} />
     </>
   )
 }

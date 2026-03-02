@@ -14,11 +14,13 @@
 - [x] **Enhanced Modal Navigation** - Improve UX for windows with Cancel buttons:
   - Implement Esc key handling to close modals and dialogs without requiring a Cancel button click
 
-- [x] **Account Configuration in Setup Wizard** - Move account management from the Bills section to the initial setup flow:
+- [x] **Account Configuration** - Move account management from the Bills section to the initial setup flow:
   - Allow users to create and configure multiple accounts during setup
   - Remove the Account creation from the Bill editor to streamline the bill management process
+  - Accounts should be app-wide entities that can be associated with bills and pay breakdowns, rather than being tied to specific bills
+  - Update the UI to reflect this change, ensuring that users can easily manage their accounts and associate them with their financial plans
 
-- [ ] **Improve Welcome page** - Refine the welcome screen to better guide new users:
+- [x] **Improve Welcome page** - Refine the welcome screen to better guide new users:
   - Keep the Create new and Open existing, but below them have the recently opened plans (with file names and last opened dates) for quick access
   - Remove the blurbs about the app features from the welcome screen and move them to the About section (accessible from the menu bar or settings) to keep the welcome screen focused on getting users to create or open a plan
 

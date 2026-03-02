@@ -29,6 +29,25 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Initialize theme from localStorage or system preference
   const [theme, setTheme] = useState<Theme>(() => {
+    // Check if user has selected system mode
+    const settingsStr = localStorage.getItem('paycheck-planner-settings');
+    if (settingsStr) {
+      try {
+        const settings = JSON.parse(settingsStr);
+        if (settings.themeMode === 'system') {
+          // Use system preference
+          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          return systemPrefersDark ? 'dark' : 'light';
+        }
+        if (settings.themeMode === 'light' || settings.themeMode === 'dark') {
+          return settings.themeMode;
+        }
+      } catch (e) {
+        // If parsing fails, fall through to default behavior
+      }
+    }
+    
+    // Fallback: check stored theme
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') {
       return stored;
@@ -42,6 +61,61 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  // Listen for system theme changes when in System mode
+  useEffect(() => {
+    const getCurrentThemeMode = () => {
+      const settingsStr = localStorage.getItem('paycheck-planner-settings');
+      if (settingsStr) {
+        try {
+          const settings = JSON.parse(settingsStr);
+          return settings.themeMode || 'light';
+        } catch (e) {
+          return 'light';
+        }
+      }
+      return 'light';
+    };
+
+    let cleanup: (() => void) | null = null;
+
+    const setupSystemListener = () => {
+      // Clean up any existing listener
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+
+      const themeMode = getCurrentThemeMode();
+      if (themeMode !== 'system') return;
+
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
+        // Only update if we're still in system mode
+        if (getCurrentThemeMode() === 'system') {
+          setTheme(e.matches ? 'dark' : 'light');
+        }
+      };
+
+      mediaQuery.addEventListener('change', handleChange);
+      cleanup = () => mediaQuery.removeEventListener('change', handleChange);
+    };
+
+    // Setup initial listener
+    setupSystemListener();
+
+    // Listen for custom event when theme mode changes
+    const handleThemeModeChange = () => {
+      setupSystemListener();
+    };
+
+    window.addEventListener('theme-mode-changed', handleThemeModeChange);
+
+    return () => {
+      if (cleanup) cleanup();
+      window.removeEventListener('theme-mode-changed', handleThemeModeChange);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
