@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Bill, BillFrequency } from '../../types/auth';
+import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import './BillsManager.css';
 
 const BillsManager: React.FC = () => {
-  const { budgetData, addBill, updateBill, deleteBill, addAccount } = useBudget();
+  const { budgetData, addBill, updateBill, deleteBill } = useBudget();
   const [showAddBill, setShowAddBill] = useState(false);
-  const [showAddAccount, setShowAddAccount] = useState(false);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
 
   // Form state for new/edit bill
@@ -17,11 +17,9 @@ const BillsManager: React.FC = () => {
   const [billCategory, setBillCategory] = useState('');
   const [billNotes, setBillNotes] = useState('');
 
-  // Form state for new account
-  const [accountName, setAccountName] = useState('');
-  const [accountType, setAccountType] = useState<'checking' | 'savings' | 'investment' | 'other'>('checking');
-
   if (!budgetData) return null;
+
+  const currency = budgetData.settings?.currency || 'USD';
 
   const handleAddBill = () => {
     setEditingBill(null);
@@ -73,22 +71,6 @@ const BillsManager: React.FC = () => {
     }
   };
 
-  const handleAddAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    addAccount({
-      name: accountName,
-      type: accountType,
-      allocation: 0,
-      isRemainder: false,
-      color: getColorForAccountType(accountType),
-    });
-
-    setShowAddAccount(false);
-    setAccountName('');
-    setAccountType('checking');
-  };
-
   // Group bills by account
   const billsByAccount = budgetData.bills.reduce((acc, bill) => {
     if (!acc[bill.accountId]) {
@@ -106,9 +88,6 @@ const BillsManager: React.FC = () => {
           <p>Manage your recurring bills and expenses</p>
         </div>
         <div className="header-actions">
-          <button className="btn btn-secondary" onClick={() => setShowAddAccount(true)}>
-            + Add Account
-          </button>
           <button className="btn btn-primary" onClick={handleAddBill}>
             + Add Bill
           </button>
@@ -118,11 +97,8 @@ const BillsManager: React.FC = () => {
       {budgetData.accounts.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">🏦</div>
-          <h3>No Accounts Yet</h3>
-          <p>Create an account first to start tracking bills</p>
-          <button className="btn btn-primary" onClick={() => setShowAddAccount(true)}>
-            Create First Account
-          </button>
+          <h3>No Accounts Set Up</h3>
+          <p>Accounts are created during the initial setup wizard. Run the setup wizard to create your first account.</p>
         </div>
       ) : budgetData.bills.length === 0 ? (
         <div className="empty-state">
@@ -153,7 +129,7 @@ const BillsManager: React.FC = () => {
                   </div>
                   <div className="account-total">
                     <span className="total-label">Monthly Total</span>
-                    <span className="total-amount">${totalMonthly.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                    <span className="total-amount">{formatWithSymbol(totalMonthly, currency, { minimumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -167,7 +143,7 @@ const BillsManager: React.FC = () => {
                             {bill.category && <span className="bill-category">{bill.category}</span>}
                           </div>
                           <div className="bill-amount">
-                            <span className="amount">${bill.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            <span className="amount">{formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}</span>
                             <span className="frequency">{formatFrequency(bill.frequency)}</span>
                           </div>
                         </div>
@@ -218,7 +194,7 @@ const BillsManager: React.FC = () => {
                 <div className="form-group">
                   <label htmlFor="billAmount">Amount *</label>
                   <div className="input-with-prefix">
-                    <span className="prefix">$</span>
+                    <span className="prefix">{getCurrencySymbol(currency)}</span>
                     <input
                       type="number"
                       id="billAmount"
@@ -302,52 +278,6 @@ const BillsManager: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Add Account Modal */}
-      {showAddAccount && (
-        <div className="modal-overlay" onClick={() => setShowAddAccount(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h3>Add New Account</h3>
-            <form onSubmit={handleAddAccount}>
-              <div className="form-group">
-                <label htmlFor="accountName">Account Name *</label>
-                <input
-                  type="text"
-                  id="accountName"
-                  value={accountName}
-                  onChange={e => setAccountName(e.target.value)}
-                  placeholder="e.g., Main Checking, Emergency Savings"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="accountType">Account Type *</label>
-                <select
-                  id="accountType"
-                  value={accountType}
-                  onChange={e => setAccountType(e.target.value as any)}
-                  required
-                >
-                  <option value="checking">Checking</option>
-                  <option value="savings">Savings</option>
-                  <option value="investment">Investment</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddAccount(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Add Account
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -371,16 +301,6 @@ function formatFrequency(frequency: BillFrequency): string {
     case 'semi-annual': return 'Semi-annual';
     default: return frequency.charAt(0).toUpperCase() + frequency.slice(1);
   }
-}
-
-function getColorForAccountType(type: string): string {
-  const colors: Record<string, string> = {
-    checking: '#3b82f6',
-    savings: '#10b981',
-    investment: '#8b5cf6',
-    other: '#6b7280',
-  };
-  return colors[type] || colors.other;
 }
 
 export default BillsManager;

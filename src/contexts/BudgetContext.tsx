@@ -202,6 +202,20 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, [budgetData]);
 
   /**
+   * Generic update function for bulk changes (e.g., reordering accounts)
+   */
+  const updateBudgetData = useCallback((updates: Partial<BudgetData>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
    * Update pay settings
    */
   const updatePaySettings = useCallback((settings: PaySettings) => {
@@ -506,6 +520,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     createNewBudget,
     copyPlanToNewYear,
     selectSaveLocation,
+    updateBudgetData,
     updatePaySettings,
     addDeduction,
     updateDeduction,

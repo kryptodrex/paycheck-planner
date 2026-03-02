@@ -145,6 +145,7 @@ export interface BudgetContextType {
   createNewBudget: (year: number) => void;              // Create empty plan for a year
   selectSaveLocation: () => Promise<void>;              // Choose where to save
   copyPlanToNewYear: (newYear: number) => void;         // Duplicate plan to new year
+  updateBudgetData: (data: Partial<BudgetData>) => void; // Generic update for any budget data
   
   // Pay settings operations
   updatePaySettings: (settings: PaySettings) => void;

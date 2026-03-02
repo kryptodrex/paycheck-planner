@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import './PayBreakdown.css';
 
 const PayBreakdown: React.FC = () => {
@@ -8,6 +9,7 @@ const PayBreakdown: React.FC = () => {
 
   if (!budgetData) return null;
 
+  const currency = budgetData.settings?.currency || 'USD';
   const breakdown = calculatePaycheckBreakdown();
   
   // Calculate multiplier based on view mode
@@ -75,11 +77,11 @@ const PayBreakdown: React.FC = () => {
           <div className="stage-label">START</div>
           <div className="stage-box gross-box">
             <h3>Gross Pay</h3>
-            <div className="stage-amount">${displayBreakdown.grossPay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">
               {budgetData.paySettings.payType === 'salary' 
-                ? `$${budgetData.paySettings.annualSalary?.toLocaleString()}/year`
-                : `$${budgetData.paySettings.hourlyRate}/hr × ${budgetData.paySettings.hoursPerPayPeriod} hrs`
+                ? `${formatWithSymbol(budgetData.paySettings.annualSalary || 0, currency, { maximumFractionDigits: 0 })}/year`
+                : `${getCurrencySymbol(currency)}${budgetData.paySettings.hourlyRate}/hr × ${budgetData.paySettings.hoursPerPayPeriod} hrs`
               }
             </div>
           </div>
@@ -90,7 +92,7 @@ const PayBreakdown: React.FC = () => {
           <div className="flow-stage">
             <div className="stage-box deduction-box">
               <h3>Pre-Tax Deductions</h3>
-              <div className="stage-amount negative">-${displayBreakdown.preTaxDeductions.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <div className="stage-detail">
                 {budgetData.preTaxDeductions.length} deduction(s)
               </div>
@@ -102,7 +104,7 @@ const PayBreakdown: React.FC = () => {
         <div className="flow-stage">
           <div className="stage-box taxable-box">
             <h3>Taxable Income</h3>
-            <div className="stage-amount">${displayBreakdown.taxableIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">Subject to taxes</div>
           </div>
           <div className="stage-arrow">↓</div>
@@ -111,28 +113,28 @@ const PayBreakdown: React.FC = () => {
         <div className="flow-stage">
           <div className="stage-box taxes-box">
             <h3>Total Taxes</h3>
-            <div className="stage-amount negative">-${displayBreakdown.totalTaxes.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.totalTaxes, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-breakdown">
               <div className="breakdown-item">
                 <span>Federal Tax ({budgetData.taxSettings.federalTaxRate}%)</span>
-                <span>${displayBreakdown.federalTax.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+                <span>{formatWithSymbol(displayBreakdown.federalTax, currency, { maximumFractionDigits: 2 })}</span>
               </div>
               <div className="breakdown-item">
                 <span>State Tax ({budgetData.taxSettings.stateTaxRate}%)</span>
-                <span>${displayBreakdown.stateTax.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+                <span>{formatWithSymbol(displayBreakdown.stateTax, currency, { maximumFractionDigits: 2 })}</span>
               </div>
               <div className="breakdown-item">
                 <span>Social Security (6.2%)</span>
-                <span>${displayBreakdown.socialSecurity.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+                <span>{formatWithSymbol(displayBreakdown.socialSecurity, currency, { maximumFractionDigits: 2 })}</span>
               </div>
               <div className="breakdown-item">
                 <span>Medicare (1.45%)</span>
-                <span>${displayBreakdown.medicare.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+                <span>{formatWithSymbol(displayBreakdown.medicare, currency, { maximumFractionDigits: 2 })}</span>
               </div>
               {displayBreakdown.additionalWithholding > 0 && (
                 <div className="breakdown-item">
                   <span>Additional Withholding</span>
-                  <span>${displayBreakdown.additionalWithholding.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+                  <span>{formatWithSymbol(displayBreakdown.additionalWithholding, currency, { maximumFractionDigits: 2 })}</span>
                 </div>
               )}
             </div>
@@ -144,7 +146,7 @@ const PayBreakdown: React.FC = () => {
           <div className="stage-label">RESULT</div>
           <div className="stage-box net-box">
             <h3>Net Pay (Take Home)</h3>
-            <div className="stage-amount">${displayBreakdown.netPay.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
           </div>
         </div>
@@ -158,7 +160,7 @@ const PayBreakdown: React.FC = () => {
             <div 
               className="bar-segment pretax-segment" 
               style={{ width: `${preTaxPct}%` }}
-              title={`Pre-Tax: $${displayBreakdown.preTaxDeductions.toLocaleString()} (${preTaxPct.toFixed(1)}%)`}
+              title={`Pre-Tax: ${formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
             >
               {preTaxPct > 5 && <span>{preTaxPct.toFixed(1)}%</span>}
             </div>
@@ -166,14 +168,14 @@ const PayBreakdown: React.FC = () => {
           <div 
             className="bar-segment tax-segment" 
             style={{ width: `${taxPct}%` }}
-            title={`Taxes: $${displayBreakdown.totalTaxes.toLocaleString()} (${taxPct.toFixed(1)}%)`}
+            title={`Taxes: ${formatWithSymbol(displayBreakdown.totalTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
           >
             <span>{taxPct.toFixed(1)}%</span>
           </div>
           <div 
             className="bar-segment net-segment" 
             style={{ width: `${netPct}%` }}
-            title={`Net Pay: $${displayBreakdown.netPay.toLocaleString()} (${netPct.toFixed(1)}%)`}
+            title={`Net Pay: ${formatWithSymbol(displayBreakdown.netPay, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
           >
             <span>{netPct.toFixed(1)}%</span>
           </div>
@@ -220,7 +222,7 @@ const PayBreakdown: React.FC = () => {
                     {account.isRemainder ? (
                       <span className="remainder-badge">Remainder</span>
                     ) : (
-                      `$${accountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                     )}
                   </div>
                 </div>

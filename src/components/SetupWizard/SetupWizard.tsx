@@ -1,17 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { PaySettings, TaxSettings } from '../../types/auth';
+import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
+import { AccountsService } from '../../services/accountsService';
+import type { PaySettings, TaxSettings, Account } from '../../types/auth';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
   onComplete: () => void;
+  onCancel?: () => void;
 }
 
-const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
+const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const { updatePaySettings, updateTaxSettings, updateBudgetSettings, budgetData } = useBudget();
   
   const [step, setStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 5;
+
+  // Check if user already has accounts set up
+  const [hasExistingAccounts] = useState(AccountsService.hasAccounts());
 
   // Form state
   const [currency, setCurrency] = useState(budgetData?.settings?.currency || 'USD');
@@ -24,6 +30,23 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   const [federalTaxRate, setFederalTaxRate] = useState('12');
   const [stateTaxRate, setStateTaxRate] = useState('5');
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
+
+  // Account configuration - load from global accounts or use defaults
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountType, setNewAccountType] = useState<Account['type']>('checking');
+  const [editingAccountIndex, setEditingAccountIndex] = useState<number | null>(null);
+  const [editingAccountName, setEditingAccountName] = useState('');
+
+  // Initialize accounts from global storage
+  useEffect(() => {
+    if (hasExistingAccounts) {
+      setAccounts(AccountsService.getAccounts());
+    } else {
+      // First time setup - use defaults
+      setAccounts(AccountsService.getDefaultAccounts());
+    }
+  }, [hasExistingAccounts]);
 
   const handleNext = () => {
     if (step < totalSteps) {
@@ -70,7 +93,70 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
     };
     updateTaxSettings(taxSettings);
 
+    // Save accounts to global storage if this is first-time setup
+    if (!hasExistingAccounts) {
+      AccountsService.saveAccounts(accounts);
+    }
+
     onComplete();
+  };
+
+  const handleAddAccount = () => {
+    if (newAccountName.trim()) {
+      const newAccount: Account = {
+        id: crypto.randomUUID(),
+        name: newAccountName.trim(),
+        type: newAccountType,
+        allocation: 0,
+        isRemainder: false,
+        color: getColorForAccountType(newAccountType),
+      };
+      
+      // For existing accounts, add to global storage immediately
+      if (hasExistingAccounts) {
+        AccountsService.addAccount(newAccount.name, newAccount.type);
+        setAccounts(AccountsService.getAccounts());
+      } else {
+        // For first-time setup, just add to local state
+        setAccounts([...accounts, newAccount]);
+      }
+      
+      setNewAccountName('');
+      setNewAccountType('checking');
+    }
+  };
+
+  const handleRemoveAccount = (id: string) => {
+    if (hasExistingAccounts) {
+      // For existing accounts, remove from global storage
+      AccountsService.deleteAccount(id);
+      setAccounts(AccountsService.getAccounts());
+    } else {
+      // For first-time setup, just remove from local state
+      setAccounts(accounts.filter(acc => acc.id !== id));
+    }
+  };
+
+  const handleStartEditAccountName = (index: number) => {
+    setEditingAccountIndex(index);
+    setEditingAccountName(accounts[index].name);
+  };
+
+  const handleSaveAccountName = (index: number) => {
+    if (editingAccountName.trim()) {
+      const account = accounts[index];
+      if (hasExistingAccounts) {
+        // Update in global storage
+        AccountsService.updateAccount(account.id, { name: editingAccountName.trim() });
+        setAccounts(AccountsService.getAccounts());
+      } else {
+        // Update in local state
+        const newAccounts = [...accounts];
+        newAccounts[index] = { ...account, name: editingAccountName.trim() };
+        setAccounts(newAccounts);
+      }
+    }
+    setEditingAccountIndex(null);
   };
 
   const canProceed = () => {
@@ -88,6 +174,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
         return true; // payFrequency is always set to a value
       case 4:
         return true; // Tax settings are optional (can use defaults)
+      case 5:
+        return accounts.length > 0; // Need at least one account
       default:
         return false;
     }
@@ -124,25 +212,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   onChange={(e) => setCurrency(e.target.value)}
                   className="currency-select"
                 >
-                  <option value="USD">🇺🇸 US Dollar (USD)</option>
-                  <option value="EUR">🇪🇺 Euro (EUR)</option>
-                  <option value="GBP">🇬🇧 British Pound (GBP)</option>
-                  <option value="CAD">🇨🇦 Canadian Dollar (CAD)</option>
-                  <option value="AUD">🇦🇺 Australian Dollar (AUD)</option>
-                  <option value="JPY">🇯🇵 Japanese Yen (JPY)</option>
-                  <option value="CNY">🇨🇳 Chinese Yuan (CNY)</option>
-                  <option value="INR">🇮🇳 Indian Rupee (INR)</option>
-                  <option value="MXN">🇲🇽 Mexican Peso (MXN)</option>
-                  <option value="BRL">🇧🇷 Brazilian Real (BRL)</option>
-                  <option value="ZAR">🇿🇦 South African Rand (ZAR)</option>
-                  <option value="CHF">🇨🇭 Swiss Franc (CHF)</option>
-                  <option value="SEK">🇸🇪 Swedish Krona (SEK)</option>
-                  <option value="NOK">🇳🇴 Norwegian Krone (NOK)</option>
-                  <option value="DKK">🇩🇰 Danish Krone (DKK)</option>
-                  <option value="NZD">🇳🇿 New Zealand Dollar (NZD)</option>
-                  <option value="SGD">🇸🇬 Singapore Dollar (SGD)</option>
-                  <option value="HKD">🇭🇰 Hong Kong Dollar (HKD)</option>
-                  <option value="KRW">🇰🇷 South Korean Won (KRW)</option>
+                  {CURRENCIES.map(curr => (
+                    <option key={curr.code} value={curr.code}>
+                      {curr.flag} {curr.name} ({curr.code})
+                    </option>
+                  ))}
                 </select>
                 <small>Choose your local currency for this plan</small>
               </div>
@@ -197,7 +271,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 <div className="form-group">
                   <label htmlFor="annualSalary">Annual Salary</label>
                   <div className="input-with-prefix">
-                    <span className="prefix">$</span>
+                    <span className="prefix">{getCurrencySymbol(currency)}</span>
                     <input
                       type="number"
                       id="annualSalary"
@@ -214,7 +288,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                   <div className="form-group">
                     <label htmlFor="hourlyRate">Hourly Rate</label>
                     <div className="input-with-prefix">
-                      <span className="prefix">$</span>
+                      <span className="prefix">{getCurrencySymbol(currency)}</span>
                       <input
                         type="number"
                         id="hourlyRate"
@@ -350,7 +424,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
               <div className="form-group">
                 <label htmlFor="additionalWithholding">Additional Withholding (per paycheck)</label>
                 <div className="input-with-prefix">
-                  <span className="prefix">$</span>
+                  <span className="prefix">{getCurrencySymbol(currency)}</span>
                   <input
                     type="number"
                     id="additionalWithholding"
@@ -369,16 +443,132 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
               </div>
             </div>
           )}
+
+          {step === 5 && (
+            <div className="wizard-step">
+              <h2>Where does your money go? 💰</h2>
+              <p className="step-description">
+                {hasExistingAccounts 
+                  ? 'Your existing accounts are listed below. You can add more if needed.'
+                  : 'Set up your accounts where you want to allocate your paycheck funds.'}
+              </p>
+
+              <div className="form-group">
+                <label>Your Accounts</label>
+                <div className="accounts-list">
+                  {accounts.map((account, index) => (
+                    <div key={account.id} className="account-item">
+                      <div className="account-info">
+                        <div>
+                          {editingAccountIndex === index ? (
+                            <input
+                              autoFocus
+                              type="text"
+                              className="account-name-input"
+                              value={editingAccountName}
+                              onChange={(e) => setEditingAccountName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveAccountName(index);
+                                } else if (e.key === 'Escape') {
+                                  setEditingAccountIndex(null);
+                                }
+                              }}
+                              onBlur={() => handleSaveAccountName(index)}
+                            />
+                          ) : (
+                            <>
+                              <span className="account-name">{account.name}</span>
+                              <span className="account-type-badge">{account.type}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="account-actions">
+                        {editingAccountIndex !== index && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              onClick={() => handleStartEditAccountName(index)}
+                              title="Edit name"
+                            >
+                              ✎
+                            </button>
+                            {!hasExistingAccounts && (
+                              <button
+                                type="button"
+                                className="btn-icon btn-danger"
+                                onClick={() => handleRemoveAccount(account.id)}
+                                title="Remove"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Add Another Account</label>
+                <div className="add-account-form">
+                  <div className="form-row">
+                    <input
+                      type="text"
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                      placeholder="e.g., Emergency Fund"
+                      className="flex-grow"
+                    />
+                    <select
+                      value={newAccountType}
+                      onChange={(e) => setNewAccountType(e.target.value as any)}
+                    >
+                      <option value="checking">Checking</option>
+                      <option value="savings">Savings</option>
+                      <option value="investment">Investment</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleAddAccount}
+                  >
+                    + Add Account
+                  </button>
+                </div>
+              </div>
+
+              <div className="info-box">
+                <strong>Tip:</strong> {hasExistingAccounts 
+                  ? 'These accounts are shared across all your plans. Manage them anytime from Edit → Accounts.'
+                  : 'You can always add, remove, or rename accounts later from Edit → Accounts.'}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="wizard-footer">
-          <button
-            className="btn btn-secondary"
-            onClick={handlePrevious}
-            disabled={step === 1}
-          >
-            ← Previous
-          </button>
+          {step === 1 ? (
+            <button
+              className="btn btn-secondary"
+              onClick={onCancel}
+            >
+              ← Back
+            </button>
+          ) : (
+            <button
+              className="btn btn-secondary"
+              onClick={handlePrevious}
+            >
+              ← Previous
+            </button>
+          )}
           
           {step < totalSteps ? (
             <button
@@ -404,3 +594,13 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
 };
 
 export default SetupWizard;
+
+function getColorForAccountType(type: string): string {
+  const colors: Record<string, string> = {
+    checking: '#3b82f6',
+    savings: '#10b981',
+    investment: '#8b5cf6',
+    other: '#6b7280',
+  };
+  return colors[type] || colors.other;
+}

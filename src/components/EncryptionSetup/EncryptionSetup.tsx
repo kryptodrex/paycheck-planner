@@ -6,9 +6,10 @@ import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {
   onComplete: () => void;  // Called when setup is finished
+  onCancel?: () => void;   // Called when user wants to exit without completing
 }
 
-const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete }) => {
+const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel }) => {
   const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
   const [customKey, setCustomKey] = useState('');
   const [generatedKey, setGeneratedKey] = useState('');
@@ -97,6 +98,14 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete }) => {
           <p className="note">
             💡 You can change this setting later in the app
           </p>
+
+          {onCancel && (
+            <div className="button-group" style={{ marginTop: '1rem' }}>
+              <button className="btn btn-secondary" onClick={onCancel}>
+                ← Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

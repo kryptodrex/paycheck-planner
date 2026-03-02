@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import  React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { BillFrequency, PaySettings, TaxSettings } from '../../types/auth';
+import { formatWithSymbol, CURRENCIES, getCurrencySymbol } from '../../utils/currency';
 import './KeyMetrics.css';
 
-const KeyMetrics: React.FC = () => {
-  const { budgetData, calculatePaycheckBreakdown, updatePaySettings, updateTaxSettings } = useBudget();
-  const [showEditModal, setShowEditModal] = useState(false);
+interface KeyMetricsProps {
+  showEditModal?: boolean;
+  onCloseEditModal?: () => void;
+}
+
+const KeyMetrics: React.FC<KeyMetricsProps> = ({ showEditModal: externalShowEditModal, onCloseEditModal }) => {
+  const { budgetData, calculatePaycheckBreakdown, updatePaySettings, updateTaxSettings, updateBudgetSettings } = useBudget();
+  const [internalShowEditModal, setInternalShowEditModal] = useState(false);
+  const showEditModal = externalShowEditModal ?? internalShowEditModal;
+  const setShowEditModal = onCloseEditModal ? (value: boolean) => { if (!value) onCloseEditModal(); } : setInternalShowEditModal;
   
   // Form state for editing
   const [editPayType, setEditPayType] = useState<'salary' | 'hourly'>('salary');
@@ -16,21 +24,38 @@ const KeyMetrics: React.FC = () => {
   const [editFederalTaxRate, setEditFederalTaxRate] = useState('');
   const [editStateTaxRate, setEditStateTaxRate] = useState('');
   const [editAdditionalWithholding, setEditAdditionalWithholding] = useState('');
+  const [editCurrency, setEditCurrency] = useState('USD');
+
+  // Pre-fill form when modal opens (either internally or externally controlled)
+  useEffect(() => {
+    if (showEditModal && budgetData) {
+      setEditPayType(budgetData.paySettings.payType);
+      setEditPayFrequency(budgetData.paySettings.payFrequency);
+      setEditAnnualSalary(budgetData.paySettings.annualSalary?.toString() || '');
+      setEditHourlyRate(budgetData.paySettings.hourlyRate?.toString() || '');
+      setEditHoursPerPayPeriod(budgetData.paySettings.hoursPerPayPeriod?.toString() || '');
+      setEditFederalTaxRate(budgetData.taxSettings.federalTaxRate.toString());
+      setEditStateTaxRate(budgetData.taxSettings.stateTaxRate.toString());
+      setEditAdditionalWithholding(budgetData.taxSettings.additionalWithholding.toString());
+      setEditCurrency(budgetData.settings.currency || 'USD');
+    }
+  }, [showEditModal, budgetData]);
+
+  // Handle Esc key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showEditModal) {
+        setShowEditModal(false);
+      }
+    };
+
+    if (showEditModal) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [showEditModal]);
 
   if (!budgetData) return null;
-
-  const openEditModal = () => {
-    // Pre-fill form with current values
-    setEditPayType(budgetData.paySettings.payType);
-    setEditPayFrequency(budgetData.paySettings.payFrequency);
-    setEditAnnualSalary(budgetData.paySettings.annualSalary?.toString() || '');
-    setEditHourlyRate(budgetData.paySettings.hourlyRate?.toString() || '');
-    setEditHoursPerPayPeriod(budgetData.paySettings.hoursPerPayPeriod?.toString() || '');
-    setEditFederalTaxRate(budgetData.taxSettings.federalTaxRate.toString());
-    setEditStateTaxRate(budgetData.taxSettings.stateTaxRate.toString());
-    setEditAdditionalWithholding(budgetData.taxSettings.additionalWithholding.toString());
-    setShowEditModal(true);
-  };
 
   const handleSaveSettings = () => {
     // Save pay settings
@@ -56,6 +81,14 @@ const KeyMetrics: React.FC = () => {
       additionalWithholding: parseFloat(editAdditionalWithholding) || 0,
     };
     updateTaxSettings(taxSettings);
+
+    // Save currency settings
+    if (budgetData) {
+      updateBudgetSettings({
+        ...budgetData.settings,
+        currency: editCurrency,
+      });
+    }
 
     setShowEditModal(false);
   };
@@ -91,6 +124,9 @@ const KeyMetrics: React.FC = () => {
   }, 0);
   const savingsRate = annualGross > 0 ? (annualSavings / annualGross) * 100 : 0;
 
+  // Get currency from budget settings
+  const currency = budgetData.settings.currency || 'USD';
+
   return (
     <div className="key-metrics">
       <div className="metrics-header">
@@ -98,9 +134,6 @@ const KeyMetrics: React.FC = () => {
           <h2>Key Metrics</h2>
           <p>Your financial overview at a glance</p>
         </div>
-        <button className="btn btn-secondary" onClick={openEditModal}>
-          ✏️ Edit Pay Settings
-        </button>
       </div>
 
       <div className="metrics-grid">
@@ -111,15 +144,15 @@ const KeyMetrics: React.FC = () => {
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
-              <span className="value">${annualGross.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualGross, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Monthly</span>
-              <span className="value">${monthlyGross.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(monthlyGross, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Per Paycheck</span>
-              <span className="value">${breakdown.grossPay.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+              <span className="value">{formatWithSymbol(breakdown.grossPay, currency, { maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>
@@ -131,11 +164,11 @@ const KeyMetrics: React.FC = () => {
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
-              <span className="value">${annualTaxes.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualTaxes, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Monthly</span>
-              <span className="value">${monthlyTaxes.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(monthlyTaxes, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Effective Rate</span>
@@ -151,15 +184,15 @@ const KeyMetrics: React.FC = () => {
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
-              <span className="value">${annualNet.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualNet, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Monthly</span>
-              <span className="value">${monthlyNet.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(monthlyNet, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Per Paycheck</span>
-              <span className="value">${breakdown.netPay.toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+              <span className="value">{formatWithSymbol(breakdown.netPay, currency, { maximumFractionDigits: 2 })}</span>
             </div>
           </div>
         </div>
@@ -171,11 +204,11 @@ const KeyMetrics: React.FC = () => {
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
-              <span className="value">${annualBills.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualBills, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Monthly</span>
-              <span className="value">${monthlyBills.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(monthlyBills, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Count</span>
@@ -191,11 +224,11 @@ const KeyMetrics: React.FC = () => {
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
-              <span className="value">${annualRemaining.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualRemaining, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Monthly</span>
-              <span className="value">${monthlyRemaining.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(monthlyRemaining, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">% of Net</span>
@@ -215,11 +248,11 @@ const KeyMetrics: React.FC = () => {
             </div>
             <div className="metric-secondary">
               <span className="label">Yearly Savings</span>
-              <span className="value">${annualSavings.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualSavings, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Monthly Savings</span>
-              <span className="value">${(annualSavings / 12).toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualSavings / 12, currency, { maximumFractionDigits: 0 })}</span>
             </div>
           </div>
         </div>
@@ -232,41 +265,41 @@ const KeyMetrics: React.FC = () => {
           <div 
             className="flow-segment income-segment" 
             style={{ width: '100%' }}
-            title={`Gross Income: $${annualGross.toLocaleString()}`}
+            title={`Gross Income: ${formatWithSymbol(annualGross, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Gross: ${(annualGross / 1000).toFixed(0)}k</span>
+            <span>Gross: {getCurrencySymbol(currency)}{(annualGross / 1000).toFixed(0)}k</span>
           </div>
           <div className="flow-arrow">→</div>
           <div 
             className="flow-segment taxes-segment" 
             style={{ width: `${(annualTaxes / annualGross) * 100}%` }}
-            title={`Taxes: $${annualTaxes.toLocaleString()}`}
+            title={`Taxes: ${formatWithSymbol(annualTaxes, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Taxes: ${(annualTaxes / 1000).toFixed(0)}k</span>
+            <span>Taxes: {getCurrencySymbol(currency)}{(annualTaxes / 1000).toFixed(0)}k</span>
           </div>
           <div className="flow-arrow">→</div>
           <div 
             className="flow-segment net-segment" 
             style={{ width: `${(annualNet / annualGross) * 100}%` }}
-            title={`Net Pay: $${annualNet.toLocaleString()}`}
+            title={`Net Pay: ${formatWithSymbol(annualNet, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Net: ${(annualNet / 1000).toFixed(0)}k</span>
+            <span>Net: {getCurrencySymbol(currency)}{(annualNet / 1000).toFixed(0)}k</span>
           </div>
           <div className="flow-arrow">→</div>
           <div 
             className="flow-segment bills-segment" 
             style={{ width: `${(annualBills / annualGross) * 100}%` }}
-            title={`Bills: $${annualBills.toLocaleString()}`}
+            title={`Bills: ${formatWithSymbol(annualBills, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Bills: ${(annualBills / 1000).toFixed(0)}k</span>
+            <span>Bills: {getCurrencySymbol(currency)}{(annualBills / 1000).toFixed(0)}k</span>
           </div>
           <div className="flow-arrow">→</div>
           <div 
             className="flow-segment remaining-segment" 
             style={{ width: `${(annualRemaining / annualGross) * 100}%` }}
-            title={`Remaining: $${annualRemaining.toLocaleString()}`}
+            title={`Remaining: ${formatWithSymbol(annualRemaining, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Left: ${(annualRemaining / 1000).toFixed(0)}k</span>
+            <span>Left: {getCurrencySymbol(currency)}{(annualRemaining / 1000).toFixed(0)}k</span>
           </div>
         </div>
       </div>
@@ -306,11 +339,26 @@ const KeyMetrics: React.FC = () => {
                 </div>
               </div>
 
+              <div className="form-group">
+                <label htmlFor="editCurrency">Currency</label>
+                <select
+                  id="editCurrency"
+                  value={editCurrency}
+                  onChange={(e) => setEditCurrency(e.target.value)}
+                >
+                  {CURRENCIES.map((curr) => (
+                    <option key={curr.code} value={curr.code}>
+                      {curr.symbol} - {curr.name} ({curr.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {editPayType === 'salary' ? (
                 <div className="form-group">
                   <label htmlFor="editAnnualSalary">Annual Salary</label>
                   <div className="input-with-prefix">
-                    <span className="prefix">$</span>
+                    <span className="prefix">{getCurrencySymbol(editCurrency)}</span>
                     <input
                       type="number"
                       id="editAnnualSalary"
@@ -327,7 +375,7 @@ const KeyMetrics: React.FC = () => {
                   <div className="form-group">
                     <label htmlFor="editHourlyRate">Hourly Rate</label>
                     <div className="input-with-prefix">
-                      <span className="prefix">$</span>
+                      <span className="prefix">{getCurrencySymbol(editCurrency)}</span>
                       <input
                         type="number"
                         id="editHourlyRate"
@@ -431,7 +479,7 @@ const KeyMetrics: React.FC = () => {
               <div className="form-group">
                 <label htmlFor="editAdditionalWithholding">Additional Withholding (per paycheck)</label>
                 <div className="input-with-prefix">
-                  <span className="prefix">$</span>
+                  <span className="prefix">{getCurrencySymbol(editCurrency)}</span>
                   <input
                     type="number"
                     id="editAdditionalWithholding"

@@ -42,10 +42,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileDialog: () => ipcRenderer.invoke('save-file-dialog'),
   
   // Listen for menu events from the application menu bar
-  // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan', 'open-view-window')
+  // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan', 'open-settings', 'open-pay-options')
   // Returns: () => unsubscribe function to remove listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan',
+    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-pay-options',
     callback: () => void
   ) => {
     const channel = `menu:${event}`;

@@ -2,6 +2,7 @@
 // This class manages reading/writing budget files and encrypting/decrypting the data
 import CryptoJS from 'crypto-js';
 import type { BudgetData, AppSettings } from '../types/auth';
+import { AccountsService } from './accountsService';
 
 // LocalStorage key for app settings
 const SETTINGS_KEY = 'paycheck-planner-settings';
@@ -178,7 +179,7 @@ export class FileStorageService {
    * @returns A new budget data object
    */
   static createEmptyBudget(year: number, currency: string = 'USD'): BudgetData {
-    // Get app settings to inherit encryption preferences
+    // Get app settings to inherit encryption preferences  
     const appSettings = this.getAppSettings();
     
     return {
@@ -197,7 +198,7 @@ export class FileStorageService {
         medicareRate: 1.45,
         additionalWithholding: 0,
       },
-      accounts: [],
+      accounts: AccountsService.getAccountsForNewPlan(), // Initialize from global accounts
       bills: [],
       settings: {
         currency,

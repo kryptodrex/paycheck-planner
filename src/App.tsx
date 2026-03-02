@@ -4,6 +4,7 @@ import { useBudget } from './contexts/BudgetContext'
 import EncryptionSetup from './components/EncryptionSetup'
 import WelcomeScreen from './components/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
+import Settings from './components/Settings'
 import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
@@ -25,6 +26,8 @@ function App() {
   const [viewMode, setViewMode] = useState<string | null>(null)
   // Track if session restore should be skipped
   const [skipSessionRestore, setSkipSessionRestore] = useState(false)
+  // Track if settings modal is open
+  const [showSettings, setShowSettings] = useState(false)
 
   // Check view mode and session restore flag on mount
   useEffect(() => {
@@ -33,6 +36,33 @@ function App() {
       setViewMode(params.viewType)
       setSkipSessionRestore(params.skipSessionRestore)
     }
+  }, [])
+
+  // Handle keyboard shortcuts for settings (Cmd+, or Ctrl+,)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toLowerCase().includes('mac')
+      const ctrlKey = isMac ? e.metaKey : e.ctrlKey
+      
+      if (ctrlKey && e.key === ',') {
+        e.preventDefault()
+        setShowSettings(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Listen for settings menu event from Electron menu
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent('open-settings', () => {
+      setShowSettings(true)
+    })
+
+    return unsubscribe
   }, [])
 
   // Check if user has already configured encryption on app load
@@ -94,6 +124,13 @@ function App() {
     setForceSetupAgain(true)
   }
 
+  // Handle canceling encryption setup when editing
+  const handleCancelEncryptionSetup = () => {
+    console.log('Canceling encryption setup...')
+    setForceSetupAgain(false)
+    setSetupComplete(true)
+  }
+
   // Called when encryption setup is complete
   const handleSetupComplete = () => {
     console.log('Encryption setup completed')
@@ -110,7 +147,14 @@ function App() {
   // If setup hasn't been completed, show encryption setup screen
   if (!setupComplete) {
     console.log('[APP] Showing encryption setup (setupComplete=false)');
-    return <EncryptionSetup onComplete={handleSetupComplete} />
+    // If we're forcing setup again (editing settings), provide a cancel option
+    const isEditing = forceSetupAgain;
+    return (
+      <EncryptionSetup 
+        onComplete={handleSetupComplete}
+        onCancel={isEditing ? handleCancelEncryptionSetup : undefined}
+      />
+    )
   }
 
   // Show session error if file not found, or if no budget is loaded, show welcome screen
@@ -124,10 +168,17 @@ function App() {
   // If no budget is loaded, show the welcome screen
   // Otherwise, show the main dashboard with a way to go back
   console.log('[APP] Rendering final view - budgetData:', !!budgetData);
-  return budgetData ? (
-    <PlanDashboard onResetSetup={handleResetSetup} viewMode={viewMode} />
-  ) : (
-    <WelcomeScreen />
+  return (
+    <>
+      {budgetData ? (
+        <PlanDashboard onResetSetup={handleResetSetup} viewMode={viewMode} />
+      ) : (
+        <>
+          <WelcomeScreen />
+          <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+        </>
+      )}
+    </>
   )
 }
 

@@ -284,11 +284,12 @@ function createApplicationMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Preferences',
-          accelerator: 'Cmd+,',
+          label: 'Settings',
+          accelerator: isMac ? 'Cmd+,' : 'Ctrl+,',
           click: () => {
-            if (mainWindow) {
-              mainWindow.webContents.send('menu:preferences');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('menu:open-settings');
             }
           },
         },
@@ -325,7 +326,8 @@ function createApplicationMenu() {
     submenu: [
 
       {
-        label: 'New Budget',
+        label: 'New Plan',
+        accelerator: isMac ? 'Cmd+Shift+N' : 'Ctrl+Shift+N',
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
@@ -341,7 +343,7 @@ function createApplicationMenu() {
         },
       },
       {
-        label: 'Open Budget',
+        label: 'Open Plan',
         accelerator: isMac ? 'Cmd+O' : 'Ctrl+O',
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -391,12 +393,22 @@ function createApplicationMenu() {
     label: 'Edit',
     submenu: [
       {
-        label: 'Change Encryption Settings',
-        accelerator: isMac ? 'Cmd+Shift+E' : 'Ctrl+Shift+E',
+        label: 'Accounts',
+        accelerator: isMac ? 'Cmd+Shift+A' : 'Ctrl+Shift+A',
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:change-encryption');
+            focusedWindow.webContents.send('menu:open-accounts');
+          }
+        },
+      },
+      {
+        label: 'Pay Options',
+        accelerator: isMac ? 'Cmd+Shift+P' : 'Ctrl+Shift+P',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:open-pay-options');
           }
         },
       },
@@ -408,15 +420,6 @@ function createApplicationMenu() {
     label: 'View',
     submenu: [
       {
-        label: 'Reload',
-        accelerator: isMac ? 'Cmd+R' : 'Ctrl+R',
-        click: () => {
-          if (mainWindow) {
-            mainWindow.reload();
-          }
-        },
-      },
-      {
         label: 'Toggle Developer Tools',
         accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
         click: () => {
@@ -425,6 +428,16 @@ function createApplicationMenu() {
           }
         },
       },
+      ...(!isMac ? [{
+        label: 'Settings',
+        accelerator: 'Ctrl+,',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:open-settings');
+          }
+        },
+      }] : []),
     ],
   });
 
@@ -432,46 +445,6 @@ function createApplicationMenu() {
   template.push({
     label: 'Window',
     submenu: [
-      {
-        label: 'Open Metrics in New Window',
-        accelerator: isMac ? 'Cmd+1' : 'Ctrl+1',
-        click: () => {
-          const focusedWindow = BrowserWindow.getFocusedWindow();
-          if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-view-window', 'metrics');
-          }
-        },
-      },
-      {
-        label: 'Open Breakdown in New Window',
-        accelerator: isMac ? 'Cmd+2' : 'Ctrl+2',
-        click: () => {
-          const focusedWindow = BrowserWindow.getFocusedWindow();
-          if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-view-window', 'breakdown');
-          }
-        },
-      },
-      {
-        label: 'Open Bills in New Window',
-        accelerator: isMac ? 'Cmd+3' : 'Ctrl+3',
-        click: () => {
-          const focusedWindow = BrowserWindow.getFocusedWindow();
-          if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-view-window', 'bills');
-          }
-        },
-      },
-      {
-        label: 'Open Accounts in New Window',
-        accelerator: isMac ? 'Cmd+4' : 'Ctrl+4',
-        click: () => {
-          const focusedWindow = BrowserWindow.getFocusedWindow();
-          if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-view-window', 'accounts');
-          }
-        },
-      },
       { type: 'separator' },
       {
         label: 'Minimize',

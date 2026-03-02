@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import SetupWizard from '../SetupWizard';
 import KeyMetrics from '../KeyMetrics';
 import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
+import Settings from '../Settings';
+import AccountsManager from '../AccountsManager';
 import './PlanDashboard.css';
 
 type TabView = 'metrics' | 'breakdown' | 'bills';
@@ -16,7 +17,6 @@ interface PlanDashboardProps {
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear } = useBudget();
-  const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<TabView>(
     viewMode && ['metrics', 'breakdown', 'bills'].includes(viewMode) 
       ? viewMode as TabView 
@@ -25,6 +25,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [showEditPayModal, setShowEditPayModal] = useState(false);
+  const [showAccountsModal, setShowAccountsModal] = useState(false);
 
   // Check if initial setup is complete
   useEffect(() => {
@@ -59,26 +62,28 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       saveBudget();
     });
 
+    const unsubscribeSettings = window.electronAPI.onMenuEvent('open-settings', () => {
+      setShowSettings(true);
+    });
+
+    const unsubscribePayOptions = window.electronAPI.onMenuEvent('open-pay-options', () => {
+      setShowEditPayModal(true);
+    });
+
+    const unsubscribeAccounts = window.electronAPI.onMenuEvent('open-accounts', () => {
+      setShowAccountsModal(true);
+    });
+
     return () => {
       unsubscribeNew();
       unsubscribeOpen();
       unsubscribeEncryption();
       unsubscribeSave();
+      unsubscribeSettings();
+      unsubscribePayOptions();
+      unsubscribeAccounts();
     };
   }, [createNewBudget, loadBudget, onResetSetup, saveBudget]);
-
-  // Listen for view window open requests
-  useEffect(() => {
-    if (!window.electronAPI?.onOpenViewWindow || !budgetData?.settings?.filePath) return;
-
-    const unsubscribe = window.electronAPI.onOpenViewWindow((viewType: string) => {
-      if (budgetData.settings.filePath) {
-        window.electronAPI.openViewWindow(viewType, budgetData.settings.filePath);
-      }
-    });
-
-    return unsubscribe;
-  }, [budgetData?.settings?.filePath]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -89,10 +94,30 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
   }, [activeTab, budgetData?.settings?.filePath]);
 
+  // Handle Esc key to close Copy Plan modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showCopyModal) {
+        setShowCopyModal(false);
+        setNewYear('');
+      }
+    };
+
+    if (showCopyModal) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [showCopyModal]);
+
   if (!budgetData) return null;
 
   if (showSetupWizard) {
-    return <SetupWizard onComplete={() => setShowSetupWizard(false)} />;
+    return (
+      <SetupWizard 
+        onComplete={() => setShowSetupWizard(false)}
+        onCancel={onResetSetup}
+      />
+    );
   }
 
   const handleCopyToNewYear = (e: React.FormEvent) => {
@@ -117,13 +142,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </div>
         </div>
         <div className="header-right">
-          <button 
-            className="btn header-btn-icon" 
-            onClick={toggleTheme}
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
-            {theme === 'light' ? '🌙' : '☀️'}
-          </button>
           <button 
             className="btn header-btn-secondary" 
             onClick={() => setShowCopyModal(true)}
@@ -152,15 +170,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               <span className="tab-icon">📊</span>
               Key Metrics
             </button>
-            {budgetData?.settings?.filePath && (
-              <button
-                className="tab-open-window"
-                onClick={() => window.electronAPI?.openViewWindow('metrics', budgetData.settings.filePath!)}
-                title="Open in New Window"
-              >
-                ⧉
-              </button>
-            )}
           </div>
           <div className="tab-button-group">
             <button
@@ -170,15 +179,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               <span className="tab-icon">💵</span>
               Pay Breakdown
             </button>
-            {budgetData?.settings?.filePath && (
-              <button
-                className="tab-open-window"
-                onClick={() => window.electronAPI?.openViewWindow('breakdown', budgetData.settings.filePath!)}
-                title="Open in New Window"
-              >
-                ⧉
-              </button>
-            )}
           </div>
           <div className="tab-button-group">
             <button
@@ -188,22 +188,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               <span className="tab-icon">📋</span>
               Bills
             </button>
-            {budgetData?.settings?.filePath && (
-              <button
-                className="tab-open-window"
-                onClick={() => window.electronAPI?.openViewWindow('bills', budgetData.settings.filePath!)}
-                title="Open in New Window"
-              >
-                ⧉
-              </button>
-            )}
           </div>
         </div>
       )}
 
       <div className="tab-content">
         {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
-        {activeTab === 'metrics' && <KeyMetrics />}
+        {activeTab === 'metrics' && <KeyMetrics showEditModal={showEditPayModal} onCloseEditModal={() => setShowEditPayModal(false)} />}
         {activeTab === 'breakdown' && <PayBreakdown />}
         {activeTab === 'bills' && <BillsManager />}
       </div>
@@ -251,6 +242,26 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             </form>
           </div>
         </div>
+      )}
+
+      {/* Settings Modal */}
+      <Settings 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)}
+        onOpenEncryptionSetup={() => {
+          setShowSettings(false);
+          onResetSetup?.();
+        }}
+        onOpenPaySettings={() => {
+          setShowSettings(false);
+          setShowEditPayModal(true);
+        }}
+        hasActivePlan={!!budgetData}
+      />
+
+      {/* Accounts Manager Modal */}
+      {showAccountsModal && (
+        <AccountsManager onClose={() => setShowAccountsModal(false)} />
       )}
     </div>
   );
