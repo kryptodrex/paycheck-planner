@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useBudget } from '../contexts/BudgetContext';
-import type { Bill, BillFrequency } from '../types/auth';
+import { useBudget } from '../../contexts/BudgetContext';
+import type { Bill, BillFrequency } from '../../types/auth';
 import './BillsManager.css';
 
 const BillsManager: React.FC = () => {

@@ -8,8 +8,11 @@ import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
 function App() {
+  console.log('[APP] App component rendering...');
+  
   // Get the current budget data and actions from our context
   const { budgetData, loadBudget } = useBudget()
+  console.log('[APP] Budget data available:', !!budgetData);
   
   // Track whether user has completed initial setup
   const [setupComplete, setSetupComplete] = useState(false)
@@ -18,6 +21,19 @@ function App() {
   const [forceSetupAgain, setForceSetupAgain] = useState(false)
   // Track session restoration state
   const [sessionError, setSessionError] = useState<string | null>(null)
+  // Track view mode (if this is a view window)
+  const [viewMode, setViewMode] = useState<string | null>(null)
+  // Track if session restore should be skipped
+  const [skipSessionRestore, setSkipSessionRestore] = useState(false)
+
+  // Check view mode and session restore flag on mount
+  useEffect(() => {
+    if (window.electronAPI && window.electronAPI.getWindowParams) {
+      const params = window.electronAPI.getWindowParams()
+      setViewMode(params.viewType)
+      setSkipSessionRestore(params.skipSessionRestore)
+    }
+  }, [])
 
   // Check if user has already configured encryption on app load
   useEffect(() => {
@@ -39,6 +55,11 @@ function App() {
   // Try to restore session when setup is complete and budget is not loaded
   useEffect(() => {
     if (!setupComplete || budgetData || !window.electronAPI) return
+
+    // Check if this window should skip session restoration (new windows via Cmd+N)
+    if (skipSessionRestore) {
+      return
+    }
 
     const restoreSession = async () => {
       try {
@@ -65,7 +86,7 @@ function App() {
     }
 
     restoreSession()
-  }, [setupComplete, budgetData, loadBudget])
+  }, [setupComplete, budgetData, loadBudget, skipSessionRestore])
 
   // Handle going back to setup (for resetting encryption)
   const handleResetSetup = () => {
@@ -82,16 +103,19 @@ function App() {
 
   // Show loading state while checking
   if (checkingSetup) {
+    console.log('[APP] Showing loading state (checkingSetup=true)');
     return <div className="loading">Loading...</div>
   }
 
   // If setup hasn't been completed, show encryption setup screen
   if (!setupComplete) {
+    console.log('[APP] Showing encryption setup (setupComplete=false)');
     return <EncryptionSetup onComplete={handleSetupComplete} />
   }
 
   // Show session error if file not found, or if no budget is loaded, show welcome screen
   if (sessionError) {
+    console.log('[APP] Showing welcome screen with error:', sessionError);
     return (
       <WelcomeScreen initialError={sessionError} />
     )
@@ -99,8 +123,9 @@ function App() {
 
   // If no budget is loaded, show the welcome screen
   // Otherwise, show the main dashboard with a way to go back
+  console.log('[APP] Rendering final view - budgetData:', !!budgetData);
   return budgetData ? (
-    <PlanDashboard onResetSetup={handleResetSetup} />
+    <PlanDashboard onResetSetup={handleResetSetup} viewMode={viewMode} />
   ) : (
     <WelcomeScreen />
   )

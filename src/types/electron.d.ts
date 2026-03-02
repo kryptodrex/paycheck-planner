@@ -33,6 +33,15 @@ export interface ElectronAPI {
     event: 'new-budget' | 'open-budget' | 'change-encryption' | 'preferences' | 'save-plan',
     callback: () => void
   ) => () => void;
+
+  // Listen for view window open requests from the menu
+  onOpenViewWindow: (callback: (viewType: string) => void) => () => void;
+
+  // Open a view in a new window
+  openViewWindow: (viewType: string, filePath: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Get window initialization parameters (for view windows)
+  getWindowParams: () => { viewType: string | null; skipSessionRestore: boolean };
   
   // Save session state (last opened file and active tab)
   saveSessionState: (filePath: string, activeTab: string) => Promise<{ success: boolean; error?: string }>;
@@ -42,6 +51,9 @@ export interface ElectronAPI {
   
   // Clear session state (used when opening a new file or closing app)
   clearSessionState: () => Promise<{ success: boolean }>;
+  
+  // Notify main process that a budget has been loaded (transitions welcome window to plan window)
+  budgetLoaded: () => Promise<void>;
 }
 
 /**
@@ -52,5 +64,6 @@ export interface ElectronAPI {
 declare global {
   interface Window {
     electronAPI: ElectronAPI;
+    __hasUnsavedChanges?: boolean;
   }
 }

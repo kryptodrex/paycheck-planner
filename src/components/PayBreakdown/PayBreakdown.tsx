@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useBudget } from '../contexts/BudgetContext';
+import { useBudget } from '../../contexts/BudgetContext';
 import './PayBreakdown.css';
 
 const PayBreakdown: React.FC = () => {

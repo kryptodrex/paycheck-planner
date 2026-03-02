@@ -1,6 +1,6 @@
 // Budget Context - Manages all paycheck planning data and operations
 // This is like a "global state" that any component can access
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { 
   BudgetData, 
@@ -8,6 +8,7 @@ import type {
   PaySettings,
   Deduction,
   TaxSettings,
+  BudgetSettings,
   Account,
   Bill,
   PaycheckBreakdown
@@ -49,6 +50,37 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   // Loading state to show spinners/disable buttons during operations
   const [loading, setLoading] = useState(false);
 
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  
+  // Keep a reference to the last saved state
+  const lastSavedDataRef = useRef<string | null>(null);
+
+  // Update unsaved changes tracking whenever budgetData changes
+  useEffect(() => {
+    if (!budgetData) {
+      setHasUnsavedChanges(false);
+      return;
+    }
+
+    const currentData = JSON.stringify(budgetData);
+    if (lastSavedDataRef.current === null) {
+      // First load, no changes yet
+      lastSavedDataRef.current = currentData;
+      setHasUnsavedChanges(false);
+    } else if (currentData !== lastSavedDataRef.current) {
+      setHasUnsavedChanges(true);
+    } else {
+      setHasUnsavedChanges(false);
+    }
+  }, [budgetData]);
+
+  // Store unsaved changes state globally so Electron can access it
+  useEffect(() => {
+    // Use a global variable instead of trying to modify the frozen electronAPI object
+    window.__hasUnsavedChanges = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
   /**
    * Save the current budget to disk
    * useCallback prevents recreating this function on every render (performance optimization)
@@ -75,14 +107,24 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         budgetData.settings.filePath
       );
 
+      // If user canceled the dialog, filePath will be null
+      if (!filePath) {
+        return;
+      }
+
       // Update state with the new file path and settings
-      setBudgetData({
+      const savedBudget = {
         ...updatedBudget,
         settings: {
           ...updatedBudget.settings,
           filePath,
         },
-      });
+      };
+      setBudgetData(savedBudget);
+      
+      // Mark as saved
+      lastSavedDataRef.current = JSON.stringify(savedBudget);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error saving budget:', error);
       // Type assertion: tell TypeScript that error is an Error object
@@ -101,7 +143,19 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       const data = await FileStorageService.loadBudget(filePath);
+      // If user canceled the dialog, data will be null
+      if (!data) {
+        return;
+      }
       setBudgetData(data);
+      // Mark as saved (just loaded)
+      lastSavedDataRef.current = JSON.stringify(data);
+      setHasUnsavedChanges(false);
+      
+      // Notify main process that a budget is loaded (transitions welcome to plan window)
+      if (window.electronAPI) {
+        window.electronAPI.budgetLoaded();
+      }
     } catch (error) {
       console.error('Error loading budget:', error);
       alert('Failed to load budget: ' + (error as Error).message);
@@ -117,6 +171,11 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const createNewBudget = useCallback((year: number) => {
     const newBudget = FileStorageService.createEmptyBudget(year);
     setBudgetData(newBudget);
+    
+    // Notify main process that a budget is loaded (transitions welcome to plan window)
+    if (window.electronAPI) {
+      window.electronAPI.budgetLoaded();
+    }
   }, []);
 
   /**
@@ -215,6 +274,20 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       return {
         ...prev,
         taxSettings: settings,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Update budget settings (currency, locale, etc.)
+   */
+  const updateBudgetSettings = useCallback((settings: BudgetSettings) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        settings: settings,
         updatedAt: new Date().toISOString(),
       };
     });
@@ -438,6 +511,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     updateDeduction,
     deleteDeduction,
     updateTaxSettings,
+    updateBudgetSettings,
     addAccount,
     updateAccount,
     deleteAccount,

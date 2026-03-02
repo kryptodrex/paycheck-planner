@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useBudget } from '../contexts/BudgetContext';
-import type { PaySettings, TaxSettings } from '../types/auth';
+import { useBudget } from '../../contexts/BudgetContext';
+import type { PaySettings, TaxSettings } from '../../types/auth';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -8,12 +8,13 @@ interface SetupWizardProps {
 }
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
-  const { updatePaySettings, updateTaxSettings, budgetData } = useBudget();
+  const { updatePaySettings, updateTaxSettings, updateBudgetSettings, budgetData } = useBudget();
   
   const [step, setStep] = useState(1);
   const totalSteps = 4;
 
   // Form state
+  const [currency, setCurrency] = useState(budgetData?.settings?.currency || 'USD');
   const [payType, setPayType] = useState<'salary' | 'hourly'>('salary');
   const [annualSalary, setAnnualSalary] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
@@ -37,6 +38,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   };
 
   const handleComplete = () => {
+    // Save currency setting
+    if (budgetData) {
+      updateBudgetSettings({
+        ...budgetData.settings,
+        currency,
+      });
+    }
+
     // Save pay settings
     const paySettings: PaySettings = {
       payType,
@@ -106,6 +115,38 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
                 You're planning for <strong>{budgetData?.year}</strong>. 
                 Let's set up how you get paid so we can help you plan where every paycheck goes.
               </p>
+
+              <div className="form-group">
+                <label htmlFor="currency">Currency</label>
+                <select
+                  id="currency"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="currency-select"
+                >
+                  <option value="USD">🇺🇸 US Dollar (USD)</option>
+                  <option value="EUR">🇪🇺 Euro (EUR)</option>
+                  <option value="GBP">🇬🇧 British Pound (GBP)</option>
+                  <option value="CAD">🇨🇦 Canadian Dollar (CAD)</option>
+                  <option value="AUD">🇦🇺 Australian Dollar (AUD)</option>
+                  <option value="JPY">🇯🇵 Japanese Yen (JPY)</option>
+                  <option value="CNY">🇨🇳 Chinese Yuan (CNY)</option>
+                  <option value="INR">🇮🇳 Indian Rupee (INR)</option>
+                  <option value="MXN">🇲🇽 Mexican Peso (MXN)</option>
+                  <option value="BRL">🇧🇷 Brazilian Real (BRL)</option>
+                  <option value="ZAR">🇿🇦 South African Rand (ZAR)</option>
+                  <option value="CHF">🇨🇭 Swiss Franc (CHF)</option>
+                  <option value="SEK">🇸🇪 Swedish Krona (SEK)</option>
+                  <option value="NOK">🇳🇴 Norwegian Krone (NOK)</option>
+                  <option value="DKK">🇩🇰 Danish Krone (DKK)</option>
+                  <option value="NZD">🇳🇿 New Zealand Dollar (NZD)</option>
+                  <option value="SGD">🇸🇬 Singapore Dollar (SGD)</option>
+                  <option value="HKD">🇭🇰 Hong Kong Dollar (HKD)</option>
+                  <option value="KRW">🇰🇷 South Korean Won (KRW)</option>
+                </select>
+                <small>Choose your local currency for this plan</small>
+              </div>
+
               <div className="info-box">
                 <h3>What you'll configure:</h3>
                 <ul>

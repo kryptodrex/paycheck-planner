@@ -1,7 +1,7 @@
 // Encryption Setup Component - Shown on first launch
 // Allows users to configure encryption or skip it
 import React, { useState } from 'react';
-import { FileStorageService } from '../services/fileStorage';
+import { FileStorageService } from '../../services/fileStorage';
 import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {

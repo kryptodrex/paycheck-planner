@@ -4,6 +4,8 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 
+console.log('[PRELOAD] Preload script starting...');
+
 // Expose protected methods to the renderer process (React app)
 // contextBridge is the secure way to expose functions to the browser
 // The first argument is the name it will have in the browser (window.electronAPI)
@@ -40,12 +42,37 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFileDialog: () => ipcRenderer.invoke('save-file-dialog'),
   
   // Listen for menu events from the application menu bar
-  // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan')
+  // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan', 'open-view-window')
   // Returns: () => unsubscribe function to remove listener
-  onMenuEvent: (event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan', callback: () => void) => {
+  onMenuEvent: (
+    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan',
+    callback: () => void
+  ) => {
     const channel = `menu:${event}`;
     ipcRenderer.on(channel, callback);
     return () => ipcRenderer.removeListener(channel, callback);
+  },
+
+  // Listen for view window open requests
+  onOpenViewWindow: (callback: (viewType: string) => void) => {
+    ipcRenderer.on('menu:open-view-window', (_event, viewType) => callback(viewType));
+    return () => ipcRenderer.removeAllListeners('menu:open-view-window');
+  },
+
+  // Open a view in a new window
+  // Takes: viewType and filePath
+  // Returns: { success: boolean, error?: string }
+  openViewWindow: (viewType: string, filePath: string) =>
+    ipcRenderer.invoke('open-view-window', viewType, filePath),
+
+  // Get window initialization parameters (for view windows)
+  getWindowParams: () => {
+    const params = new URLSearchParams(window.location.search);
+    const additionalArgs = process.argv.filter(arg => arg.startsWith('--'));
+    const viewTypeArg = additionalArgs.find(arg => arg.startsWith('--view-type='));
+    const viewType = viewTypeArg ? viewTypeArg.split('=')[1] : params.get('view') || null;
+    const skipSessionRestore = additionalArgs.includes('--skip-session-restore') || params.get('skipSession') === 'true';
+    return { viewType, skipSessionRestore };
   },
   
   // Save session state (last opened file and active tab)
@@ -63,7 +90,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: { success: boolean }
   clearSessionState: () =>
     ipcRenderer.invoke('clear-session-state'),
+  
+  // Notify main process that a budget has been loaded (transitions welcome window to plan window)
+  budgetLoaded: () =>
+    ipcRenderer.invoke('budget-loaded'),
 });
+
+console.log('[PRELOAD] ElectronAPI exposed to renderer');
+console.log('[PRELOAD] Preload script completed successfully');
 
 // This export is needed to make TypeScript happy
 // It tells TypeScript this file is a module

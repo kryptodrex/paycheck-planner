@@ -75,7 +75,7 @@ export class FileStorageService {
    * @param filePath - Optional path to save to (if not provided, user will be prompted)
    * @returns The file path where the data was saved
    */
-  static async saveBudget(budgetData: BudgetData, filePath?: string): Promise<string> {
+  static async saveBudget(budgetData: BudgetData, filePath?: string): Promise<string | null> {
     // Check if Electron API is available (we're running in Electron)
     if (!window.electronAPI) {
       throw new Error('Electron API not available');
@@ -87,7 +87,8 @@ export class FileStorageService {
     if (!targetPath) {
       const selectedPath = await window.electronAPI.saveFileDialog();
       if (!selectedPath) {
-        throw new Error('No file path selected');
+        // User canceled - return null without error
+        return null;
       }
       targetPath = selectedPath;
     }
@@ -118,7 +119,7 @@ export class FileStorageService {
    * @param filePath - Optional path to load from (if not provided, user will be prompted)
    * @returns The loaded budget data object
    */
-  static async loadBudget(filePath?: string): Promise<BudgetData> {
+  static async loadBudget(filePath?: string): Promise<BudgetData | null> {
     if (!window.electronAPI) {
       throw new Error('Electron API not available');
     }
@@ -129,7 +130,8 @@ export class FileStorageService {
     if (!targetPath) {
       const selectedPath = await window.electronAPI.openFileDialog();
       if (!selectedPath) {
-        throw new Error('No file selected');
+        // User canceled - return null without error
+        return null;
       }
       targetPath = selectedPath;
     }
@@ -172,9 +174,10 @@ export class FileStorageService {
   /**
    * Create a new empty budget plan with default values
    * @param year - The year for the new plan
+   * @param currency - The currency code (default: 'USD')
    * @returns A new budget data object
    */
-  static createEmptyBudget(year: number): BudgetData {
+  static createEmptyBudget(year: number, currency: string = 'USD'): BudgetData {
     // Get app settings to inherit encryption preferences
     const appSettings = this.getAppSettings();
     
@@ -197,7 +200,7 @@ export class FileStorageService {
       accounts: [],
       bills: [],
       settings: {
-        currency: 'USD',
+        currency,
         locale: 'en-US',
         encryptionEnabled: appSettings.encryptionEnabled ?? false, // Default to false if undefined
         encryptionKey: appSettings.encryptionKey,

@@ -1,10 +1,9 @@
 // Electron Main Process - This runs in Node.js, not the browser
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
-import { app, BrowserWindow, ipcMain, dialog, Menu, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 // ES modules don't have __dirname, so we need to create it
@@ -15,8 +14,18 @@ const __dirname = path.dirname(__filename);
 // Set the app name - this is displayed in menus and dialogs
 app.name = 'Paycheck Planner';
 
+// Debug mode for development
+const DEBUG = process.env.NODE_ENV !== 'production';
+function debug(...args: any[]) {
+  if (DEBUG) console.log('[MAIN]', ...args);
+}
+
+debug('Starting Paycheck Planner...');
+
 // Track all open plan windows
 const openWindows = new Set<BrowserWindow>();
+// Map to track view windows and their parent plan windows
+const viewWindows = new Map<BrowserWindow, { parent: BrowserWindow; viewType: string }>();
 // Welcome window reference (shown when no plan windows are open)
 let welcomeWindow: BrowserWindow | null = null;
 // Variable to hold reference to the main/first application window (for backwards compatibility)
@@ -27,6 +36,8 @@ let mainWindow: BrowserWindow | null = null;
  * @param windowState - Optional saved window state with dimensions and file path
  */
 function createPlanWindow(windowState?: any) {
+  debug('createPlanWindow called with state:', windowState);
+  
   // Default window state
   let state = {
     width: 1400,
@@ -35,6 +46,7 @@ function createPlanWindow(windowState?: any) {
     y: undefined as number | undefined,
     lastFilePath: undefined as string | undefined,
     lastTab: undefined as string | undefined,
+    viewType: undefined as string | undefined, // 'full', 'metrics', 'breakdown', 'bills', etc.
   };
 
   // Use provided state or merge with defaults
@@ -42,54 +54,79 @@ function createPlanWindow(windowState?: any) {
     state = { ...state, ...windowState };
   }
 
-  const window = new BrowserWindow({
-    width: state.width,
-    height: state.height,
+  // Adjust window size for view windows
+  const isViewWindow = state.viewType && state.viewType !== 'full';
+  const windowConfig = {
+    width: isViewWindow ? 800 : state.width,
+    height: isViewWindow ? 600 : state.height,
     x: state.x,
     y: state.y,
-    minWidth: 1000,
-    minHeight: 600,
-    title: 'Paycheck Planner',
+    minWidth: isViewWindow ? 600 : 1000,
+    minHeight: isViewWindow ? 400 : 600,
+    title: isViewWindow ? `Paycheck Planner - ${state.viewType}` : 'Paycheck Planner',
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      additionalArguments: state.viewType ? [`--view-type=${state.viewType}`] : [],
     },
-  });
+  };
+
+  const window = new BrowserWindow(windowConfig);
+  debug('BrowserWindow created, loading URL...');
 
   // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
-    window.loadURL(process.env.VITE_DEV_SERVER_URL);
+    const url = new URL(process.env.VITE_DEV_SERVER_URL);
+    if (state.viewType) {
+      url.searchParams.set('view', state.viewType);
+    }
+    debug('Loading dev server URL:', url.toString());
+    window.loadURL(url.toString());
   } else {
-    window.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    debug('Loading production file:', indexPath);
+    window.loadFile(indexPath);
+  }
+  
+  // Open DevTools in development
+  if (DEBUG) {
+    window.webContents.openDevTools();
   }
 
   // Track this window
-  openWindows.add(window);
-  if (!mainWindow) mainWindow = window; // Set as main if it's the first
+  if (!isViewWindow) {
+    openWindows.add(window);
+    if (!mainWindow) mainWindow = window; // Set as main if it's the first
+  }
 
   // Handle window close and save state
-  window.on('close', () => {
+  window.on('close', async () => {
+    // Only save state for main plan windows, not view windows
+    if (isViewWindow) return;
+    
     try {
       const bounds = window.getBounds();
       const sessionPath = path.join(app.getPath('userData'), 'session.json');
       let sessionData: any = {};
+      
       try {
-        sessionData = JSON.parse(readFileSync(sessionPath, 'utf-8'));
+        const content = await fs.readFile(sessionPath, 'utf-8');
+        sessionData = JSON.parse(content);
       } catch {
         // File doesn't exist or is invalid, start fresh
       }
 
-      // Store all open window states
+      // Store all open window states (excluding view windows)
       const windowStates = (sessionData.windows || []).filter((w: any) => {
-        // Keep window states from other windows
+        // Keep window states from other windows that are still open
         const existingWindow = Array.from(openWindows).find(
           (win) => win.id === w.id && win !== window
         );
         return !!existingWindow;
       });
 
-      // Add this window's state
+      // Add this window's state (only if it's a main window)
       windowStates.push({
         id: window.id,
         windowWidth: bounds.width,
@@ -101,7 +138,7 @@ function createPlanWindow(windowState?: any) {
       });
 
       sessionData.windows = windowStates;
-      writeFileSync(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
+      await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
     } catch (error) {
       console.error('Error saving window state:', error);
     }
@@ -123,9 +160,14 @@ function createPlanWindow(windowState?: any) {
 
 /**
  * Create a welcome window for opening/creating plans
+ * @param skipSessionRestore - If true, don't restore previous session (for new windows via Cmd+N)
  */
-function createWelcomeWindow() {
-  if (welcomeWindow) return;
+function createWelcomeWindow(skipSessionRestore = false) {
+  debug('createWelcomeWindow called, skipSessionRestore:', skipSessionRestore);
+  if (welcomeWindow) {
+    debug('Welcome window already exists, skipping');
+    return;
+  }
 
   welcomeWindow = new BrowserWindow({
     width: 900,
@@ -137,17 +179,36 @@ function createWelcomeWindow() {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      additionalArguments: skipSessionRestore ? ['--skip-session-restore'] : [],
     },
   });
+  debug('Welcome window created');
+
+  // Welcome window is NOT added to openWindows initially
+  // It will be added when a budget is loaded (see 'budget-loaded' IPC handler)
 
   if (process.env.VITE_DEV_SERVER_URL) {
-    welcomeWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+    const url = new URL(process.env.VITE_DEV_SERVER_URL);
+    if (skipSessionRestore) {
+      url.searchParams.set('skipSession', 'true');
+    }
+    debug('Loading welcome window from dev server:', url.toString());
+    welcomeWindow.loadURL(url.toString());
   } else {
-    welcomeWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    debug('Loading welcome window from file:', indexPath);
+    welcomeWindow.loadFile(indexPath);
+  }
+  
+  // Open DevTools in development
+  if (DEBUG) {
+    welcomeWindow.webContents.openDevTools();
   }
 
   welcomeWindow.on('closed', () => {
     welcomeWindow = null;
+    // Don't auto-create another welcome window
+    // Only plan windows trigger welcome window creation
   });
 }
 
@@ -155,39 +216,52 @@ function createWelcomeWindow() {
  * Create the main application window - called on app start
  * This is like opening a browser, but it's your app instead of a website
  */
-function createWindow() {
+async function createWindow() {
+  debug('createWindow called');
+  
   // Try to load saved window states
   let savedWindows = [];
 
   try {
     const sessionPath = path.join(app.getPath('userData'), 'session.json');
-    const sessionData = JSON.parse(readFileSync(sessionPath, 'utf-8'));
+    debug('Looking for session file at:', sessionPath);
+    const content = await fs.readFile(sessionPath, 'utf-8');
+    const sessionData = JSON.parse(content);
     if (sessionData.windows && Array.isArray(sessionData.windows)) {
       savedWindows = sessionData.windows;
+      debug('Found saved windows:', savedWindows.length);
     }
-  } catch (error) {
-    // No saved state, use defaults
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      debug('No session file found (first run or cleared)');
+    } else {
+      console.error('Error reading session file:', error);
+    }
   }
 
   // Restore all saved windows
   if (savedWindows.length > 0) {
-    savedWindows.forEach((windowState: any) => {
-      createPlanWindow(windowState);
-    });
+    // Only restore main plan windows, not view windows
+    const mainWindows = savedWindows.filter((w: any) => !w.viewType || w.viewType === 'full');
+    debug('Main windows to restore:', mainWindows.length);
+    if (mainWindows.length > 0) {
+      mainWindows.forEach((windowState: any) => {
+        debug('Restoring window:', windowState.id);
+        createPlanWindow(windowState);
+      });
+    } else {
+      // No main windows, create welcome window
+      debug('No main windows found, creating welcome window');
+      createWelcomeWindow();
+    }
   } else {
     // No saved windows, create welcome window
+    debug('No saved windows, creating welcome window');
     createWelcomeWindow();
   }
 
   // Create application menu with File and Edit options
   createApplicationMenu();
-  
-  // Register global keyboard shortcut for saving
-  globalShortcut.register('CmdOrCtrl+S', () => {
-    if (mainWindow) {
-      mainWindow.webContents.send('menu:save-plan');
-    }
-  });
 }
 
 /**
@@ -222,31 +296,16 @@ function createApplicationMenu() {
         {
           label: 'Hide ' + app.name,
           accelerator: 'Cmd+H',
-          click: () => {
-            // Hide the app window
-            if (mainWindow) {
-              mainWindow.hide();
-            }
-          },
+          role: 'hide', // Built-in role that hides ALL app windows
         },
         {
           label: 'Hide Others',
           accelerator: 'Cmd+Shift+H',
-          click: () => {
-            // Hide other windows (we'll just hide ours)
-            if (mainWindow) {
-              mainWindow.minimize();
-            }
-          },
+          role: 'hideOthers', // Built-in role to hide other apps
         },
         {
           label: 'Show All',
-          click: () => {
-            // Show the app window
-            if (mainWindow) {
-              mainWindow.show();
-            }
-          },
+          role: 'unhide', // Built-in role to show all app windows
         },
         { type: 'separator' },
         {
@@ -264,21 +323,21 @@ function createApplicationMenu() {
   template.push({
     label: 'File',
     submenu: [
-      {
-        label: 'New Window',
-        accelerator: isMac ? 'Cmd+Shift+N' : 'Ctrl+Shift+N',
-        click: () => {
-          createPlanWindow();
-        },
-      },
+
       {
         label: 'New Budget',
-        accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
             focusedWindow.webContents.send('menu:new-budget');
           }
+        },
+      },
+      {
+        label: 'New Window',
+        accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
+        click: () => {
+          createWelcomeWindow(true); // Skip session restore for new windows
         },
       },
       {
@@ -298,6 +357,17 @@ function createApplicationMenu() {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
             focusedWindow.webContents.send('menu:save-plan');
+          }
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Close Window',
+        accelerator: isMac ? 'Cmd+W' : 'Ctrl+W',
+        click: async () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            await handleCloseWindow(focusedWindow);
           }
         },
       },
@@ -358,12 +428,103 @@ function createApplicationMenu() {
     ],
   });
 
+  // Window menu
+  template.push({
+    label: 'Window',
+    submenu: [
+      {
+        label: 'Open Metrics in New Window',
+        accelerator: isMac ? 'Cmd+1' : 'Ctrl+1',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:open-view-window', 'metrics');
+          }
+        },
+      },
+      {
+        label: 'Open Breakdown in New Window',
+        accelerator: isMac ? 'Cmd+2' : 'Ctrl+2',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:open-view-window', 'breakdown');
+          }
+        },
+      },
+      {
+        label: 'Open Bills in New Window',
+        accelerator: isMac ? 'Cmd+3' : 'Ctrl+3',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:open-view-window', 'bills');
+          }
+        },
+      },
+      {
+        label: 'Open Accounts in New Window',
+        accelerator: isMac ? 'Cmd+4' : 'Ctrl+4',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:open-view-window', 'accounts');
+          }
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Minimize',
+        accelerator: isMac ? 'Cmd+M' : 'Ctrl+M',
+        role: 'minimize',
+      },
+    ],
+  });
+
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 }
 
+/**
+ * Handle closing a window with unsaved changes check
+ */
+async function handleCloseWindow(window: BrowserWindow) {
+  try {
+    // Ask renderer if there are unsaved changes via global variable
+    const hasUnsaved = await window.webContents.executeJavaScript(
+      'window.__hasUnsavedChanges || false'
+    );
+
+    if (hasUnsaved) {
+      const result = await dialog.showMessageBox(window, {
+        type: 'warning',
+        buttons: ['Cancel', 'Close Without Saving'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes',
+        detail: 'Are you sure you want to close this window without saving?',
+      });
+
+      if (result.response === 0) {
+        // User clicked Cancel
+        return;
+      }
+    }
+
+    // Close the window
+    window.close();
+  } catch (error) {
+    console.error('Error checking unsaved changes:', error);
+    // If there's an error, just close the window
+    window.close();
+  }
+}
+
 // Save all window states before quitting
 app.on('before-quit', () => {
+  debug('App quitting, saving window states...');
+  
   try {
     const windows = Array.from(openWindows).map((window) => {
       const bounds = window.getBounds();
@@ -378,14 +539,24 @@ app.on('before-quit', () => {
 
     if (windows.length > 0) {
       const sessionPath = path.join(app.getPath('userData'), 'session.json');
-      let sessionData = {};
+      let sessionData: any = {};
+      
+      // Use dynamic import of fs sync operations for quit handler
+      const { readFileSync, writeFileSync } = require('fs');
+      
       try {
-        sessionData = JSON.parse(readFileSync(sessionPath, 'utf-8'));
+        const content = readFileSync(sessionPath, 'utf-8');
+        sessionData = JSON.parse(content);
+        debug('Loaded existing session data');
       } catch {
-        // Start fresh
+        debug('No existing session, creating new');
       }
+      
       sessionData = { ...sessionData, windows };
       writeFileSync(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
+      debug('Window states saved successfully:', windows.length, 'windows');
+    } else {
+      debug('No windows to save');
     }
   } catch (error) {
     console.error('Error saving window states on quit:', error);
@@ -522,6 +693,40 @@ ipcMain.handle('save-file-dialog', async () => {
 });
 
 /**
+ * Open a view window
+ * Creates a new window showing a specific view (metrics, breakdown, bills, accounts)
+ */
+ipcMain.handle('open-view-window', async (event, viewType: string, filePath: string) => {
+  try {
+    const parentWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!parentWindow) return { success: false, error: 'Parent window not found' };
+
+    // Create the view window
+    const viewWindow = createPlanWindow({
+      viewType,
+      lastFilePath: filePath,
+      width: 800,
+      height: 600,
+    });
+
+    // Track the relationship
+    if (viewWindow) {
+      viewWindows.set(viewWindow, { parent: parentWindow, viewType });
+      
+      // Clean up when view window closes
+      viewWindow.on('closed', () => {
+        viewWindows.delete(viewWindow);
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening view window:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
+/**
  * Session State Management
  * Saves and loads the user's last session (file and view)
  */
@@ -576,5 +781,22 @@ ipcMain.handle('clear-session-state', async () => {
   } catch (error) {
     // File doesn't exist, which is fine
     return { success: true };
+  }
+});
+
+/**
+ * Notify main process that a budget has been loaded
+ * This transitions a welcome window to a plan window
+ */
+ipcMain.handle('budget-loaded', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) return;
+
+  // If this is the welcome window, transition it to a plan window
+  if (welcomeWindow === window) {
+    debug('Transitioning welcome window to plan window');
+    openWindows.add(window);
+    if (!mainWindow) mainWindow = window;
+    welcomeWindow = null;
   }
 });

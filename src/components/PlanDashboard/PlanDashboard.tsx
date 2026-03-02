@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useBudget } from '../contexts/BudgetContext';
-import SetupWizard from './SetupWizard';
-import KeyMetrics from './KeyMetrics';
-import PayBreakdown from './PayBreakdown';
-import BillsManager from './BillsManager';
+import { useBudget } from '../../contexts/BudgetContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import SetupWizard from '../SetupWizard';
+import KeyMetrics from '../KeyMetrics';
+import PayBreakdown from '../PayBreakdown';
+import BillsManager from '../BillsManager';
 import './PlanDashboard.css';
 
 type TabView = 'metrics' | 'breakdown' | 'bills';
 
 interface PlanDashboardProps {
   onResetSetup?: () => void;
+  viewMode?: string | null; // If set, this is a view-only window
 }
 
-const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup }) => {
+const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear } = useBudget();
-  const [activeTab, setActiveTab] = useState<TabView>('metrics');
+  const { theme, toggleTheme } = useTheme();
+  const [activeTab, setActiveTab] = useState<TabView>(
+    viewMode && ['metrics', 'breakdown', 'bills'].includes(viewMode) 
+      ? viewMode as TabView 
+      : 'metrics'
+  );
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
@@ -60,6 +67,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup }) => {
     };
   }, [createNewBudget, loadBudget, onResetSetup, saveBudget]);
 
+  // Listen for view window open requests
+  useEffect(() => {
+    if (!window.electronAPI?.onOpenViewWindow || !budgetData?.settings?.filePath) return;
+
+    const unsubscribe = window.electronAPI.onOpenViewWindow((viewType: string) => {
+      if (budgetData.settings.filePath) {
+        window.electronAPI.openViewWindow(viewType, budgetData.settings.filePath);
+      }
+    });
+
+    return unsubscribe;
+  }, [budgetData?.settings?.filePath]);
+
   // Save session state when active tab or budget data changes
   useEffect(() => {
     if (!budgetData?.settings?.filePath || !window.electronAPI?.saveSessionState) return;
@@ -91,14 +111,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup }) => {
         <div className="header-left">
           <h1>{budgetData.name}</h1>
           <div className="header-meta">
-            <span className="year-badge">{budgetData.year}</span>
-            <span className="divider">•</span>
             <span className="status">
               {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
             </span>
           </div>
         </div>
         <div className="header-right">
+          <button 
+            className="btn header-btn-icon" 
+            onClick={toggleTheme}
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
           <button 
             className="btn header-btn-secondary" 
             onClick={() => setShowCopyModal(true)}
@@ -116,31 +141,68 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup }) => {
         </div>
       </header>
 
-      <div className="tab-navigation">
-        <button
-          className={`tab-button ${activeTab === 'metrics' ? 'active' : ''}`}
-          onClick={() => setActiveTab('metrics')}
-        >
-          <span className="tab-icon">📊</span>
-          Key Metrics
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'breakdown' ? 'active' : ''}`}
-          onClick={() => setActiveTab('breakdown')}
-        >
-          <span className="tab-icon">💵</span>
-          Pay Breakdown
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'bills' ? 'active' : ''}`}
-          onClick={() => setActiveTab('bills')}
-        >
-          <span className="tab-icon">📋</span>
-          Bills
-        </button>
-      </div>
+      {/* Only show tabs in full mode, not in view-only mode */}
+      {!viewMode && (
+        <div className="tab-navigation">
+          <div className="tab-button-group">
+            <button
+              className={`tab-button ${activeTab === 'metrics' ? 'active' : ''}`}
+              onClick={() => setActiveTab('metrics')}
+            >
+              <span className="tab-icon">📊</span>
+              Key Metrics
+            </button>
+            {budgetData?.settings?.filePath && (
+              <button
+                className="tab-open-window"
+                onClick={() => window.electronAPI?.openViewWindow('metrics', budgetData.settings.filePath!)}
+                title="Open in New Window"
+              >
+                ⧉
+              </button>
+            )}
+          </div>
+          <div className="tab-button-group">
+            <button
+              className={`tab-button ${activeTab === 'breakdown' ? 'active' : ''}`}
+              onClick={() => setActiveTab('breakdown')}
+            >
+              <span className="tab-icon">💵</span>
+              Pay Breakdown
+            </button>
+            {budgetData?.settings?.filePath && (
+              <button
+                className="tab-open-window"
+                onClick={() => window.electronAPI?.openViewWindow('breakdown', budgetData.settings.filePath!)}
+                title="Open in New Window"
+              >
+                ⧉
+              </button>
+            )}
+          </div>
+          <div className="tab-button-group">
+            <button
+              className={`tab-button ${activeTab === 'bills' ? 'active' : ''}`}
+              onClick={() => setActiveTab('bills')}
+            >
+              <span className="tab-icon">📋</span>
+              Bills
+            </button>
+            {budgetData?.settings?.filePath && (
+              <button
+                className="tab-open-window"
+                onClick={() => window.electronAPI?.openViewWindow('bills', budgetData.settings.filePath!)}
+                title="Open in New Window"
+              >
+                ⧉
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="tab-content">
+        {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
         {activeTab === 'metrics' && <KeyMetrics />}
         {activeTab === 'breakdown' && <PayBreakdown />}
         {activeTab === 'bills' && <BillsManager />}

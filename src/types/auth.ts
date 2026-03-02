@@ -157,6 +157,9 @@ export interface BudgetContextType {
   // Tax settings operations
   updateTaxSettings: (settings: TaxSettings) => void;
   
+  // Budget settings operations
+  updateBudgetSettings: (settings: BudgetSettings) => void;
+  
   // Account operations
   addAccount: (account: Omit<Account, 'id'>) => void;
   updateAccount: (id: string, account: Partial<Account>) => void;
