@@ -54,6 +54,18 @@ export interface ElectronAPI {
   
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
   budgetLoaded: () => Promise<void>;
+  
+  // Save an encryption key to the system keychain
+  // Returns whether it succeeded and any error message
+  saveKeychainKey: (service: string, account: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  
+  // Retrieve an encryption key from the system keychain
+  // Returns the password or an error
+  getKeychainKey: (service: string, account: string) => Promise<{ success: boolean; key?: string; error?: string }>;
+  
+  // Delete an encryption key from the system keychain
+  // Returns whether it succeeded and any error message
+  deleteKeychainKey: (service: string, account: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 /**

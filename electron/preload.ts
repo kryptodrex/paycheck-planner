@@ -94,6 +94,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
   budgetLoaded: () =>
     ipcRenderer.invoke('budget-loaded'),
+
+  // Save an encryption key to the system keychain
+  saveKeychainKey: (service: string, account: string, password: string) =>
+    ipcRenderer.invoke('save-keychain-key', service, account, password),
+
+  // Retrieve an encryption key from the system keychain
+  getKeychainKey: (service: string, account: string) =>
+    ipcRenderer.invoke('get-keychain-key', service, account),
+
+  // Delete an encryption key from the system keychain
+  deleteKeychainKey: (service: string, account: string) =>
+    ipcRenderer.invoke('delete-keychain-key', service, account),
 });
 
 console.log('[PRELOAD] ElectronAPI exposed to renderer');

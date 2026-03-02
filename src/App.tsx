@@ -164,10 +164,13 @@ function App() {
     // If we're forcing setup again (editing settings), provide a cancel option
     const isEditing = forceSetupAgain;
     return (
-      <EncryptionSetup 
-        onComplete={handleSetupComplete}
-        onCancel={isEditing ? handleCancelEncryptionSetup : undefined}
-      />
+      <>
+        <div className="drag-bar" />
+        <EncryptionSetup 
+          onComplete={handleSetupComplete}
+          onCancel={isEditing ? handleCancelEncryptionSetup : undefined}
+        />
+      </>
     )
   }
 
@@ -175,7 +178,10 @@ function App() {
   if (sessionError) {
     console.log('[APP] Showing welcome screen with error:', sessionError);
     return (
-      <WelcomeScreen initialError={sessionError} />
+      <>
+        <div className="drag-bar" />
+        <WelcomeScreen initialError={sessionError} />
+      </>
     )
   }
 
@@ -184,6 +190,7 @@ function App() {
   console.log('[APP] Rendering final view - budgetData:', !!budgetData);
   return (
     <>
+      <div className="drag-bar" />
       {budgetData ? (
         <PlanDashboard onResetSetup={handleResetSetup} viewMode={viewMode} />
       ) : (

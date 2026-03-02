@@ -16,8 +16,10 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+  padding-top: 35px;
   display: flex;
   flex-direction: column;
+  background: var(--bg-secondary);
 }
 
 .loading {
@@ -65,4 +67,28 @@ html, body {
 
 .read-the-docs {
   color: #888;
+}
+
+/* Draggable region for macOS titlebar area */
+.drag-bar {
+  height: 28px;
+  -webkit-app-region: drag;
+  /* background: var(--bg-secondary); */
+  background: none;
+  opacity: 0.01; /* Make it invisible but still draggable */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  pointer-events: auto;
+  /* border-bottom: 1px solid var(--border-color); */
+}
+
+/* Make sure buttons and interactive elements stay clickable */
+.drag-bar button,
+.drag-bar a,
+.drag-bar input,
+.drag-bar select {
+  -webkit-app-region: no-drag;
 }

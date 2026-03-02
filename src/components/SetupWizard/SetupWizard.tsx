@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
 import { AccountsService } from '../../services/accountsService';
+import { KeychainService } from '../../services/keychainService';
+import { FileStorageService } from '../../services/fileStorage';
 import type { PaySettings, TaxSettings, Account } from '../../types/auth';
 import './SetupWizard.css';
 
@@ -14,13 +16,21 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const { updatePaySettings, updateTaxSettings, updateBudgetSettings, budgetData } = useBudget();
   
   const [step, setStep] = useState(1);
-  const totalSteps = 5;
+  const totalSteps = 6; // Increased from 5 to include encryption step
 
   // Check if user already has accounts set up
   const [hasExistingAccounts] = useState(AccountsService.hasAccounts());
 
   // Form state
   const [currency, setCurrency] = useState(budgetData?.settings?.currency || 'USD');
+  
+  // Encryption configuration
+  const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
+  const [customEncryptionKey, setCustomEncryptionKey] = useState('');
+  const [generatedEncryptionKey, setGeneratedEncryptionKey] = useState('');
+  const [showEncryptionKey, setShowEncryptionKey] = useState(false);
+  const [useCustomEncryptionKey, setUseCustomEncryptionKey] = useState(false);
+  
   const [payType, setPayType] = useState<'salary' | 'hourly'>('salary');
   const [annualSalary, setAnnualSalary] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
@@ -60,12 +70,45 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     }
   };
 
-  const handleComplete = () => {
+  // Generate a new encryption key
+  const handleGenerateEncryptionKey = () => {
+    const key = FileStorageService.generateEncryptionKey();
+    setGeneratedEncryptionKey(key);
+    setUseCustomEncryptionKey(false);
+  };
+
+  // Configure encryption for this plan
+  const handleSetEncryption = (enabled: boolean) => {
+    setEncryptionEnabled(enabled);
+    if (enabled) {
+      handleGenerateEncryptionKey(); // Auto-generate a key
+    }
+  };
+
+  const handleCompleteEncryptionSetup = async () => {
+    if (!budgetData) return;
+
+    if (encryptionEnabled) {
+      const keyToUse = useCustomEncryptionKey ? customEncryptionKey : generatedEncryptionKey;
+      if (!keyToUse) {
+        alert('Please generate or enter an encryption key.');
+        return;
+      }
+      // Save the encryption key to keychain
+      await KeychainService.saveKey(budgetData.id, keyToUse);
+    }
+
+    // Proceed to next step
+    handleNext();
+  };
+
+  const handleComplete = async () => {
     // Save currency setting
     if (budgetData) {
       updateBudgetSettings({
         ...budgetData.settings,
         currency,
+        encryptionEnabled: encryptionEnabled ?? false,
       });
     }
 
@@ -162,19 +205,21 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const canProceed = () => {
     switch (step) {
       case 1:
-        return true; // Year is already set
+        return true; // Year and currency are always set
       case 2:
+        return encryptionEnabled !== null; // Must have chosen encryption or no encryption
+      case 3:
         if (payType === 'salary') {
           return annualSalary && parseFloat(annualSalary) > 0;
         } else {
           return hourlyRate && parseFloat(hourlyRate) > 0 && 
                  hoursPerPayPeriod && parseFloat(hoursPerPayPeriod) > 0;
         }
-      case 3:
-        return true; // payFrequency is always set to a value
       case 4:
-        return true; // Tax settings are optional (can use defaults)
+        return true; // payFrequency is always set to a value
       case 5:
+        return true; // Tax settings are optional (can use defaults)
+      case 6:
         return accounts.length > 0; // Need at least one account
       default:
         return false;
@@ -235,6 +280,139 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
           )}
 
           {step === 2 && (
+            <div className="wizard-step">
+              <h2>🔐 Security Setup</h2>
+              <p className="step-description">
+                Choose how you want to protect your budget files
+              </p>
+
+              {encryptionEnabled === null ? (
+                <>
+                  <div className="encryption-options">
+                    <div className="option-card">
+                      <div className="option-icon">🔒</div>
+                      <h3>Enable Encryption</h3>
+                      <p>Your budget files will be encrypted with AES-256 encryption. Recommended for sensitive financial data.</p>
+                      <ul className="feature-list">
+                        <li>✓ Maximum security</li>
+                        <li>✓ Files unreadable without key</li>
+                        <li>⚠️ Must remember your key</li>
+                      </ul>
+                      <button className="btn btn-primary" onClick={() => handleSetEncryption(true)}>
+                        Enable Encryption
+                      </button>
+                    </div>
+
+                    <div className="option-card">
+                      <div className="option-icon">📄</div>
+                      <h3>No Encryption</h3>
+                      <p>Your budget files will be saved as plain text JSON. Easier to backup and access, but not secure.</p>
+                      <ul className="feature-list">
+                        <li>✓ Simple and easy</li>
+                        <li>✓ No key to remember</li>
+                        <li>⚠️ Files are readable by anyone</li>
+                      </ul>
+                      <button className="btn btn-secondary" onClick={() => handleSetEncryption(false)}>
+                        Skip Encryption
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="note">
+                    💡 You can change this setting later in the app
+                  </p>
+                </>
+              ) : encryptionEnabled ? (
+                <>
+                  <h3>Choose Your Encryption Key</h3>
+                  
+                  <div className="radio-option">
+                    <label>
+                      <input 
+                        type="radio" 
+                        checked={!useCustomEncryptionKey}
+                        onChange={() => setUseCustomEncryptionKey(false)}
+                      />
+                      <span>Use Generated Key (Recommended)</span>
+                    </label>
+                    {!useCustomEncryptionKey && (
+                      <div className="key-display">
+                        {generatedEncryptionKey ? (
+                          <>
+                            <div className="key-box">
+                              <code>{showEncryptionKey ? generatedEncryptionKey : '••••••••••••••••••••••••••••••••'}</code>
+                              <button 
+                                className="btn-icon"
+                                onClick={() => setShowEncryptionKey(!showEncryptionKey)}
+                                title={showEncryptionKey ? 'Hide key' : 'Show key'}
+                              >
+                                {showEncryptionKey ? '🙈' : '👁️'}
+                              </button>
+                              <button 
+                                className="btn-icon"
+                                onClick={() => navigator.clipboard.writeText(generatedEncryptionKey)}
+                                title="Copy to clipboard"
+                              >
+                                📋
+                              </button>
+                            </div>
+                            <button className="btn btn-small" onClick={handleGenerateEncryptionKey}>
+                              🔄 Generate New Key
+                            </button>
+                            <div className="warning-box">
+                              <strong>⚠️ Save This Key!</strong> Write it down or store it in a password manager. 
+                              You'll need it to access your encrypted budget files.
+                            </div>
+                          </>
+                        ) : (
+                          <button className="btn btn-primary" onClick={handleGenerateEncryptionKey}>
+                            Generate Secure Key
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="radio-option">
+                    <label>
+                      <input 
+                        type="radio" 
+                        checked={useCustomEncryptionKey}
+                        onChange={() => setUseCustomEncryptionKey(true)}
+                      />
+                      <span>Use Custom Key</span>
+                    </label>
+                    {useCustomEncryptionKey && (
+                      <div className="key-display">
+                        <input
+                          type="text"
+                          className="key-input"
+                          value={customEncryptionKey}
+                          onChange={(e) => setCustomEncryptionKey(e.target.value)}
+                          placeholder="Enter your custom encryption key"
+                          autoFocus
+                        />
+                        <p className="help-text">
+                          Use a strong, memorable passphrase or a randomly generated key
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3>No Encryption</h3>
+                  <p>Your budget files will be saved without encryption.</p>
+                  <div className="warning-box">
+                    <strong>⚠️ Important:</strong> Your budget files will be readable by anyone who has access to them. 
+                    Only continue if you're comfortable with that.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
             <div className="wizard-step">
               <h2>How do you get paid?</h2>
               <p className="step-description">
@@ -318,7 +496,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="wizard-step">
               <h2>How often are you paid?</h2>
               <p className="step-description">
@@ -384,7 +562,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="wizard-step">
               <h2>Tax Withholding</h2>
               <p className="step-description">
@@ -444,7 +622,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="wizard-step">
               <h2>Where does your money go? 💰</h2>
               <p className="step-description">
@@ -555,12 +733,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
         <div className="wizard-footer">
           {step === 1 ? (
-            <button
-              className="btn btn-secondary"
-              onClick={onCancel}
-            >
-              ← Back
-            </button>
+            onCancel ? (
+              <button
+                className="btn btn-secondary"
+                onClick={onCancel}
+              >
+                ← Back
+              </button>
+            ) : null
           ) : (
             <button
               className="btn btn-secondary"
@@ -573,7 +753,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
           {step < totalSteps ? (
             <button
               className="btn btn-primary"
-              onClick={handleNext}
+              onClick={() => {
+                // Special handling for encryption step
+                if (step === 2) {
+                  handleCompleteEncryptionSetup();
+                } else {
+                  handleNext();
+                }
+              }}
               disabled={!canProceed()}
             >
               Next →

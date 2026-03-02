@@ -179,6 +179,15 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, []);
 
   /**
+   * Close the current budget and return to welcome screen
+   */
+  const closeBudget = useCallback(() => {
+    setBudgetData(null);
+    setHasUnsavedChanges(false);
+    lastSavedDataRef.current = '';
+  }, []);
+
+  /**
    * Copy the current plan to a new year
    * @param newYear - The target year
    */
@@ -518,6 +527,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     saveBudget,
     loadBudget,
     createNewBudget,
+    closeBudget,
     copyPlanToNewYear,
     selectSaveLocation,
     updateBudgetData,

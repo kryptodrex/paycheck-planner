@@ -143,6 +143,7 @@ export interface BudgetContextType {
   saveBudget: () => Promise<void>;                      // Save to disk
   loadBudget: (filePath?: string) => Promise<void>;     // Load from disk
   createNewBudget: (year: number) => void;              // Create empty plan for a year
+  closeBudget: () => void;                              // Close current budget (return to welcome)
   selectSaveLocation: () => Promise<void>;              // Choose where to save
   copyPlanToNewYear: (newYear: number) => void;         // Duplicate plan to new year
   updateBudgetData: (data: Partial<BudgetData>) => void; // Generic update for any budget data

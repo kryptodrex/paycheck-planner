@@ -16,30 +16,17 @@ interface PlanDashboardProps {
 }
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
-  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear } = useBudget();
+  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget } = useBudget();
   const [activeTab, setActiveTab] = useState<TabView>(
     viewMode && ['metrics', 'breakdown', 'bills'].includes(viewMode) 
       ? viewMode as TabView 
       : 'metrics'
   );
-  const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showEditPayModal, setShowEditPayModal] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
-
-  // Check if initial setup is complete
-  useEffect(() => {
-    if (budgetData) {
-      const { paySettings } = budgetData;
-      const isSetupComplete = 
-        (paySettings.payType === 'salary' && paySettings.annualSalary && paySettings.annualSalary > 0) ||
-        (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hourlyRate > 0);
-      
-      setShowSetupWizard(!isSetupComplete);
-    }
-  }, [budgetData]);
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -111,11 +98,21 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   if (!budgetData) return null;
 
-  if (showSetupWizard) {
+  // Check if initial setup is complete (synchronously, no state needed)
+  const { paySettings } = budgetData;
+  const isSetupComplete = 
+    (paySettings.payType === 'salary' && paySettings.annualSalary && paySettings.annualSalary > 0) ||
+    (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hourlyRate > 0);
+
+  // Show setup wizard if setup is not complete
+  if (!isSetupComplete) {
     return (
       <SetupWizard 
-        onComplete={() => setShowSetupWizard(false)}
-        onCancel={onResetSetup}
+        onComplete={() => {
+          // Setup is now complete, we'll re-render and show the dashboard
+          // This is handled by the parent component re-rendering when budgetData updates
+        }}
+        onCancel={closeBudget}
       />
     );
   }
@@ -135,11 +132,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <header className="dashboard-header">
         <div className="header-left">
           <h1>{budgetData.name}</h1>
-          <div className="header-meta">
-            <span className="status">
-              {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
-            </span>
-          </div>
+          <button 
+            className="encryption-status-btn"
+            onClick={() => setShowSettings(true)}
+            title="Click to manage encryption settings"
+          >
+            {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
+          </button>
         </div>
         <div className="header-right">
           <button 
@@ -204,7 +203,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <span>Last saved: {new Date(budgetData.updatedAt).toLocaleString()}</span>
           {budgetData.settings.filePath && (
             <>
-              <span>•</span>
+              <span className="bullet">•</span>
               <span>{budgetData.settings.filePath}</span>
             </>
           )}

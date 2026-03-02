@@ -5,6 +5,7 @@ import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import * as keytar from 'keytar';
 
 // ES modules don't have __dirname, so we need to create it
 // This converts the module URL to a file path
@@ -32,7 +33,7 @@ if (process.platform === 'darwin') {
 }
 
 // Debug mode for development
-const DEBUG = process.env.NODE_ENV !== 'production';
+const DEBUG = !app.isPackaged;
 function debug(...args: any[]) {
   if (DEBUG) console.log('[MAIN]', ...args);
 }
@@ -81,6 +82,7 @@ function createPlanWindow(windowState?: any) {
     minWidth: isViewWindow ? 600 : 1000,
     minHeight: isViewWindow ? 400 : 600,
     title: isViewWindow ? `Paycheck Planner - ${state.viewType}` : 'Paycheck Planner',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
@@ -192,6 +194,7 @@ function createWelcomeWindow(skipSessionRestore = false) {
     minWidth: 800,
     minHeight: 600,
     title: 'Paycheck Planner - Welcome',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
@@ -806,5 +809,60 @@ ipcMain.handle('budget-loaded', async (event) => {
     openWindows.add(window);
     if (!mainWindow) mainWindow = window;
     welcomeWindow = null;
+  }
+});
+
+/**
+ * Save an encryption key to the system keychain
+ */
+ipcMain.handle('save-keychain-key', async (event, service: string, account: string, password: string) => {
+  try {
+    debug(`Saving keychain key for ${service}:${account}`);
+    await keytar.setPassword(service, account, password);
+    return { success: true };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    debug(`Failed to save keychain key: ${errorMsg}`);
+    return { success: false, error: errorMsg };
+  }
+});
+
+/**
+ * Retrieve an encryption key from the system keychain
+ */
+ipcMain.handle('get-keychain-key', async (event, service: string, account: string) => {
+  try {
+    debug(`Retrieving keychain key for ${service}:${account}`);
+    const password = await keytar.getPassword(service, account);
+    if (password) {
+      return { success: true, key: password };
+    } else {
+      debug(`Keychain key not found for ${service}:${account}`);
+      return { success: true, key: null };
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    debug(`Failed to retrieve keychain key: ${errorMsg}`);
+    return { success: false, error: errorMsg };
+  }
+});
+
+/**
+ * Delete an encryption key from the system keychain
+ */
+ipcMain.handle('delete-keychain-key', async (event, service: string, account: string) => {
+  try {
+    debug(`Deleting keychain key for ${service}:${account}`);
+    const success = await keytar.deletePassword(service, account);
+    if (success) {
+      return { success: true };
+    } else {
+      debug(`Keychain key not found for deletion: ${service}:${account}`);
+      return { success: true }; // Still return success - key doesn't exist
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    debug(`Failed to delete keychain key: ${errorMsg}`);
+    return { success: false, error: errorMsg };
   }
 });

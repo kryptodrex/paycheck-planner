@@ -2,19 +2,22 @@
 // Allows users to configure encryption or skip it
 import React, { useState } from 'react';
 import { FileStorageService } from '../../services/fileStorage';
+import { KeychainService } from '../../services/keychainService';
 import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {
   onComplete: () => void;  // Called when setup is finished
   onCancel?: () => void;   // Called when user wants to exit without completing
+  planId?: string;         // Plan ID to associate with the encryption key
 }
 
-const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel }) => {
+const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel, planId }) => {
   const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
   const [customKey, setCustomKey] = useState('');
   const [generatedKey, setGeneratedKey] = useState('');
   const [showCustomKey, setShowCustomKey] = useState(false);
   const [useCustomKey, setUseCustomKey] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Generate a new random encryption key
   const handleGenerateKey = () => {
@@ -24,26 +27,39 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel 
   };
 
   // Save encryption settings and continue
-  const handleSaveSettings = () => {
-    const settings = FileStorageService.getAppSettings();
-    
-    if (encryptionEnabled) {
-      const keyToUse = useCustomKey ? customKey : generatedKey;
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      const settings = FileStorageService.getAppSettings();
       
-      if (!keyToUse) {
-        alert('Please generate or enter an encryption key.');
-        return;
+      if (encryptionEnabled) {
+        const keyToUse = useCustomKey ? customKey : generatedKey;
+        
+        if (!keyToUse) {
+          alert('Please generate or enter an encryption key.');
+          setIsSaving(false);
+          return;
+        }
+        
+        settings.encryptionEnabled = true;
+        // Don't store the key in localStorage - it goes to keychain
+        
+        // If we have a plan ID, save the key to keychain for that plan
+        if (planId) {
+          await KeychainService.saveKey(planId, keyToUse);
+        }
+      } else {
+        settings.encryptionEnabled = false;
+        // No key needed for unencrypted plans
       }
       
-      settings.encryptionEnabled = true;
-      settings.encryptionKey = keyToUse;
-    } else {
-      settings.encryptionEnabled = false;
-      delete settings.encryptionKey;
+      FileStorageService.saveAppSettings(settings);
+      onComplete();
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to save encryption settings: ${errorMsg}`);
+      setIsSaving(false);
     }
-    
-    FileStorageService.saveAppSettings(settings);
-    onComplete();
   };
 
   // User chose not to use encryption
@@ -123,10 +139,18 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel 
             Only choose this option if you're comfortable with that.
           </div>
           <div className="button-group">
-            <button className="btn btn-primary" onClick={handleSaveSettings}>
-              Continue Without Encryption
+            <button 
+              className="btn btn-primary" 
+              onClick={handleSaveSettings}
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Continue Without Encryption'}
             </button>
-            <button className="btn btn-secondary" onClick={() => setEncryptionEnabled(null)}>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setEncryptionEnabled(null)}
+              disabled={isSaving}
+            >
               Go Back
             </button>
           </div>
@@ -223,11 +247,15 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel 
           <button 
             className="btn btn-primary" 
             onClick={handleSaveSettings}
-            disabled={!useCustomKey && !generatedKey}
+            disabled={(!useCustomKey && !generatedKey) || isSaving}
           >
-            Continue with Encryption
+            {isSaving ? 'Saving...' : 'Continue with Encryption'}
           </button>
-          <button className="btn btn-secondary" onClick={() => setEncryptionEnabled(null)}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setEncryptionEnabled(null)}
+            disabled={isSaving}
+          >
             Go Back
           </button>
         </div>

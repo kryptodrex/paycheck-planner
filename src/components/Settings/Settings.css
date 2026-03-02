@@ -211,3 +211,21 @@
 .settings-modal::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
 }
+
+.settings-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings-action-btn.active {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.settings-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  display: block;
+}

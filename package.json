@@ -7,6 +7,7 @@
   "scripts": {
     "sync-version": "node scripts/sync-version.js",
     "generate-icons": "node scripts/generate-icons.js",
+    "start": "open ./release/mac-arm64/Paycheck\\ Planner.app",
     "dev": "npm run sync-version && vite",
     "build": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder",
     "build:dir": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --dir",
@@ -53,6 +54,7 @@
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
+    "keytar": "^7.9.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1"

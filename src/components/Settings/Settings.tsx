@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useBudget } from '../../contexts/BudgetContext';
+import { KeychainService } from '../../services/keychainService';
 import './Settings.css';
 
 interface SettingsProps {
@@ -18,6 +20,8 @@ interface SettingsState {
 
 const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onOpenEncryptionSetup, onOpenPaySettings, hasActivePlan }) => {
   const { theme, setTheme } = useTheme();
+  const { budgetData, updateBudgetSettings } = useBudget();
+  const [togglegingEncryption, setTogglingEncryption] = useState(false);
   const [settings, setSettings] = useState<SettingsState>(() => {
     const stored = localStorage.getItem('paycheck-planner-settings');
     if (stored) {
@@ -59,6 +63,43 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onOpenEncryptionSe
       
       return updated;
     });
+  };
+
+  const handleToggleEncryption = async () => {
+    if (!budgetData) return;
+
+    try {
+      setTogglingEncryption(true);
+      const newEncryptionState = !budgetData.settings.encryptionEnabled;
+
+      // Update the budget settings
+      updateBudgetSettings({
+        ...budgetData.settings,
+        encryptionEnabled: newEncryptionState,
+      });
+
+      // If disabling encryption, optionally delete the key from keychain
+      // (user can re-encrypt later if needed)
+      if (!newEncryptionState) {
+        try {
+          await KeychainService.deleteKey(budgetData.id);
+        } catch {
+          // If deletion fails, it's not critical - the key will just stay in keychain
+        }
+      } else {
+        // If enabling encryption, make sure we have a key
+        const existingKey = await KeychainService.getKey(budgetData.id);
+        if (!existingKey) {
+          // Should not happen if already encrypted, but just in case
+          onOpenEncryptionSetup?.();
+        }
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to toggle encryption: ${errorMsg}`);
+    } finally {
+      setTogglingEncryption(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -111,24 +152,46 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onOpenEncryptionSe
           </div>
 
           {/* Plan Settings Section (only show when a plan is active) */}
-          {hasActivePlan && (
+          {hasActivePlan && budgetData && (
             <div className="settings-section">
               <h3>Plan Settings</h3>
               
               <div className="settings-group">
-                <button
-                  className="settings-action-btn"
-                  onClick={() => {
-                    onOpenEncryptionSetup?.();
-                    onClose();
-                  }}
-                >
-                  <span className="action-icon">🔒</span>
-                  <div className="action-content">
-                    <div className="action-title">Encryption Settings</div>
-                    <div className="action-description">Change encryption password or disable encryption</div>
-                  </div>
-                </button>
+                <label className="setting-label">Encryption</label>
+                <div className="settings-info">
+                  <p>Status: <strong>{budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}</strong></p>
+                </div>
+                <div className="settings-action-buttons">
+                  <button
+                    className={`settings-action-btn ${budgetData.settings.encryptionEnabled ? 'active' : ''}`}
+                    onClick={handleToggleEncryption}
+                    disabled={togglegingEncryption}
+                    title={budgetData.settings.encryptionEnabled ? 'Disable encryption for this plan' : 'Enable encryption for this plan'}
+                  >
+                    <span className="action-icon">{budgetData.settings.encryptionEnabled ? '🔒' : '🔓'}</span>
+                    <div className="action-content">
+                      <div className="action-title">{budgetData.settings.encryptionEnabled ? 'Disable Encryption' : 'Enable Encryption'}</div>
+                      <div className="action-description">{budgetData.settings.encryptionEnabled ? 'Turn off encryption for sharing' : 'Protect this plan with encryption'}</div>
+                    </div>
+                  </button>
+                  
+                  {budgetData.settings.encryptionEnabled && (
+                    <button
+                      className="settings-action-btn"
+                      onClick={() => {
+                        onOpenEncryptionSetup?.();
+                        onClose();
+                      }}
+                      title="Change encryption password"
+                    >
+                      <span className="action-icon">🔑</span>
+                      <div className="action-content">
+                        <div className="action-title">Manage Encryption Key</div>
+                        <div className="action-description">View or change your encryption password</div>
+                      </div>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="settings-group">
