@@ -5,7 +5,23 @@ import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import * as keytar from 'keytar';
+import { createRequire } from 'module';
+
+// Create require function for ES modules
+const require = createRequire(import.meta.url);
+
+// Load keytar dynamically to avoid bundling issues with native modules
+let keytar: any = null;
+const loadKeytar = () => {
+  if (!keytar) {
+    try {
+      keytar = require('keytar');
+    } catch (error) {
+      console.error('Failed to load keytar module:', error);
+    }
+  }
+  return keytar;
+};
 
 // ES modules don't have __dirname, so we need to create it
 // This converts the module URL to a file path
@@ -817,8 +833,15 @@ ipcMain.handle('budget-loaded', async (event) => {
  */
 ipcMain.handle('save-keychain-key', async (event, service: string, account: string, password: string) => {
   try {
+    if (!service || !account || !password) {
+      throw new Error('Service, account, and password are required');
+    }
     debug(`Saving keychain key for ${service}:${account}`);
-    await keytar.setPassword(service, account, password);
+    const kt = loadKeytar();
+    if (!kt) {
+      throw new Error('Keytar module could not be loaded');
+    }
+    await kt.setPassword(service, account, password);
     return { success: true };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -832,8 +855,15 @@ ipcMain.handle('save-keychain-key', async (event, service: string, account: stri
  */
 ipcMain.handle('get-keychain-key', async (event, service: string, account: string) => {
   try {
+    if (!service || !account) {
+      throw new Error('Service and account are required');
+    }
     debug(`Retrieving keychain key for ${service}:${account}`);
-    const password = await keytar.getPassword(service, account);
+    const kt = loadKeytar();
+    if (!kt) {
+      throw new Error('Keytar module could not be loaded');
+    }
+    const password = await kt.getPassword(service, account);
     if (password) {
       return { success: true, key: password };
     } else {
@@ -852,8 +882,15 @@ ipcMain.handle('get-keychain-key', async (event, service: string, account: strin
  */
 ipcMain.handle('delete-keychain-key', async (event, service: string, account: string) => {
   try {
+    if (!service || !account) {
+      throw new Error('Service and account are required');
+    }
     debug(`Deleting keychain key for ${service}:${account}`);
-    const success = await keytar.deletePassword(service, account);
+    const kt = loadKeytar();
+    if (!kt) {
+      throw new Error('Keytar module could not be loaded');
+    }
+    const success = await kt.deletePassword(service, account);
     if (success) {
       return { success: true };
     } else {

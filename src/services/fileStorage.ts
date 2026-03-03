@@ -230,11 +230,12 @@ export class FileStorageService {
     let dataToSave = jsonData;
     if (budgetData.settings.encryptionEnabled) {
       // Get the encryption key - it should be in the keychain or in the current budget data
-      let encryptionKey = budgetData.settings.encryptionKey;
+      let encryptionKey: string | undefined = budgetData.settings.encryptionKey;
       
       if (!encryptionKey) {
         // Try to get from keychain
-        encryptionKey = await KeychainService.getKey(budgetData.id);
+        const keychainKey = await KeychainService.getKey(budgetData.id);
+        encryptionKey = keychainKey || undefined;
       }
       
       if (!encryptionKey) {

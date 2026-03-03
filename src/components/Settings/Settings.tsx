@@ -69,36 +69,40 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onOpenEncryptionSe
     if (!budgetData) return;
 
     try {
-      setTogglingEncryption(true);
       const newEncryptionState = !budgetData.settings.encryptionEnabled;
 
-      // Update the budget settings
-      updateBudgetSettings({
-        ...budgetData.settings,
-        encryptionEnabled: newEncryptionState,
-      });
-
-      // If disabling encryption, optionally delete the key from keychain
-      // (user can re-encrypt later if needed)
+      // If disabling encryption, delete the key and update settings
       if (!newEncryptionState) {
+        setTogglingEncryption(true);
         try {
           await KeychainService.deleteKey(budgetData.id);
         } catch {
           // If deletion fails, it's not critical - the key will just stay in keychain
         }
+        updateBudgetSettings({
+          ...budgetData.settings,
+          encryptionEnabled: false,
+        });
+        setTogglingEncryption(false);
       } else {
-        // If enabling encryption, make sure we have a key
+        // If enabling encryption, check if we have a key
         const existingKey = await KeychainService.getKey(budgetData.id);
-        if (!existingKey) {
-          // Should not happen if already encrypted, but just in case
+        if (existingKey) {
+          // We have a key already, just enable it
+          updateBudgetSettings({
+            ...budgetData.settings,
+            encryptionEnabled: true,
+          });
+        } else {
+          // No key exists, need to set up encryption
+          // Close Settings and let parent handle the encryption setup flow
+          onClose();
           onOpenEncryptionSetup?.();
         }
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       alert(`Failed to toggle encryption: ${errorMsg}`);
-    } finally {
-      setTogglingEncryption(false);
     }
   };
 

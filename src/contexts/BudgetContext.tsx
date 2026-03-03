@@ -96,10 +96,8 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         updatedAt: new Date().toISOString(),
       };
 
-      // Sync encryption settings from app settings (in case they changed)
-      const appSettings = FileStorageService.getAppSettings();
-      updatedBudget.settings.encryptionEnabled = appSettings.encryptionEnabled ?? false;
-      updatedBudget.settings.encryptionKey = appSettings.encryptionKey;
+      // Note: Each plan maintains its own encryptionEnabled setting (set during SetupWizard)
+      // Encryption keys are stored in the system keychain, not in settings
 
       // Save to file and get back the file path
       const filePath = await FileStorageService.saveBudget(

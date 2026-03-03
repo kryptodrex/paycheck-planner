@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import SetupWizard from '../SetupWizard';
+import EncryptionSetup from '../EncryptionSetup';
 import KeyMetrics from '../KeyMetrics';
 import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
@@ -16,7 +17,7 @@ interface PlanDashboardProps {
 }
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
-  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget } = useBudget();
+  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings } = useBudget();
   const [activeTab, setActiveTab] = useState<TabView>(
     viewMode && ['metrics', 'breakdown', 'bills'].includes(viewMode) 
       ? viewMode as TabView 
@@ -27,6 +28,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showSettings, setShowSettings] = useState(false);
   const [showEditPayModal, setShowEditPayModal] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
+  const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -249,7 +251,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         onClose={() => setShowSettings(false)}
         onOpenEncryptionSetup={() => {
           setShowSettings(false);
-          onResetSetup?.();
+          setShowEncryptionSetup(true);
         }}
         onOpenPaySettings={() => {
           setShowSettings(false);
@@ -257,6 +259,26 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         }}
         hasActivePlan={!!budgetData}
       />
+
+      {/* Encryption Setup Modal */}
+      {showEncryptionSetup && budgetData && (
+        <div className="modal-overlay">
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <EncryptionSetup 
+              planId={budgetData.id}
+              onComplete={() => {
+                setShowEncryptionSetup(false);
+                // Encryption setup successfully completed, enable encryption in budget settings
+                updateBudgetSettings({
+                  ...budgetData.settings,
+                  encryptionEnabled: true,
+                });
+              }}
+              onCancel={() => setShowEncryptionSetup(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Accounts Manager Modal */}
       {showAccountsModal && (
