@@ -5,13 +5,15 @@ import EncryptionSetup from '../EncryptionSetup';
 import KeyMetrics from '../KeyMetrics';
 import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
+import TaxBreakdown from '../TaxBreakdown';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
 import PaySettingsModal from '../PaySettingsModal';
 import { Toast, Modal, Button, FormGroup } from '../shared';
 import './PlanDashboard.css';
 
-type TabView = 'metrics' | 'breakdown' | 'bills';
+type TabView = 'metrics' | 'breakdown' | 'bills' | 'taxes';
+type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
 
 interface PlanDashboardProps {
   onResetSetup?: () => void;
@@ -21,11 +23,12 @@ interface PlanDashboardProps {
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings } = useBudget();
   const [activeTab, setActiveTab] = useState<TabView>(
-    viewMode && ['metrics', 'breakdown', 'bills'].includes(viewMode) 
+    viewMode && ['metrics', 'breakdown', 'bills', 'taxes'].includes(viewMode) 
       ? viewMode as TabView 
       : 'metrics'
   );
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -224,17 +227,35 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               Bills
             </button>
           </div>
+          <div className="tab-button-group">
+            <button
+              className={`tab-button ${activeTab === 'taxes' ? 'active' : ''}`}
+              onClick={() => setActiveTab('taxes')}
+            >
+              <span className="tab-icon">💰</span>
+              Taxes
+            </button>
+          </div>
         </div>
       )}
 
       <div className="tab-content">
         {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
         {activeTab === 'metrics' && <KeyMetrics />}
-        {activeTab === 'breakdown' && <PayBreakdown onNavigateToBills={(accountId) => {
-          setScrollToAccountId(accountId);
-          setActiveTab('bills');
-        }} />}
-        {activeTab === 'bills' && <BillsManager scrollToAccountId={scrollToAccountId} />}
+        {activeTab === 'breakdown' && <PayBreakdown 
+          displayMode={displayMode}
+          onDisplayModeChange={setDisplayMode}
+          onNavigateToBills={(accountId) => {
+            setScrollToAccountId(accountId);
+            setActiveTab('bills');
+          }} 
+        />}
+        {activeTab === 'bills' && <BillsManager 
+          scrollToAccountId={scrollToAccountId}
+          displayMode={displayMode}
+          onDisplayModeChange={setDisplayMode}
+        />}
+        {activeTab === 'taxes' && <TaxBreakdown />}
       </div>
 
       <footer className="dashboard-footer">

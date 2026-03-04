@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Bill, BillFrequency } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
+import { roundUpToCent } from '../../utils/money';
 import { Modal, Button, FormGroup, InputWithPrefix } from '../shared';
 import './BillsManager.css';
 
 interface BillsManagerProps {
   scrollToAccountId?: string;
+  displayMode: 'paycheck' | 'monthly' | 'yearly';
+  onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
 }
 
-const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId }) => {
+const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
   const { budgetData, addBill, updateBill, deleteBill } = useBudget();
   const [showAddBill, setShowAddBill] = useState(false);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
@@ -95,12 +98,64 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId }) => {
     return acc;
   }, {} as Record<string, Bill[]>);
 
+  // Get paychecks per year based on pay frequency
+  const getPaychecksPerYear = (): number => {
+    const freq = budgetData.paySettings.payFrequency;
+    switch (freq) {
+      case 'weekly': return 52;
+      case 'bi-weekly': return 26;
+      case 'semi-monthly': return 24;
+      case 'monthly': return 12;
+      default: return 26;
+    }
+  };
+
+  const paychecksPerYear = getPaychecksPerYear();
+
+  // Convert monthly amount to display mode
+  const toDisplayAmount = (monthlyAmount: number): number => {
+    if (displayMode === 'paycheck') {
+      return roundUpToCent(monthlyAmount * 12 / paychecksPerYear);
+    }
+    if (displayMode === 'yearly') {
+      return roundUpToCent(monthlyAmount * 12);
+    }
+    return monthlyAmount; // Already in monthly
+  };
+
+  // Get display mode label
+  const getDisplayLabel = (): string => {
+    if (displayMode === 'paycheck') return 'Per Paycheck';
+    if (displayMode === 'yearly') return 'Yearly';
+    return 'Monthly';
+  };
+
   return (
     <div className="bills-manager">
       <div className="bills-header">
         <div>
           <h2>Bills & Expenses</h2>
           <p>Manage your recurring bills and expenses</p>
+        </div>
+        <div className="view-mode-selector">
+          <button 
+            className={displayMode === 'paycheck' ? 'active' : ''}
+            onClick={() => onDisplayModeChange('paycheck')}
+          >
+            Per Paycheck
+          </button>
+          <button 
+            className={displayMode === 'monthly' ? 'active' : ''}
+            onClick={() => onDisplayModeChange('monthly')}
+          >
+            Monthly
+          </button>
+          <button 
+            className={displayMode === 'yearly' ? 'active' : ''}
+            onClick={() => onDisplayModeChange('yearly')}
+          >
+            Yearly
+          </button>
         </div>
         <div className="header-actions">
           <Button variant="primary" onClick={handleAddBill}>
@@ -126,11 +181,16 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId }) => {
         </div>
       ) : (
         <div className="bills-by-account">
-          {budgetData.accounts.map(account => {
-            const accountBills = billsByAccount[account.id] || [];
-            const totalMonthly = accountBills.reduce((sum, bill) => {
-              return sum + convertToMonthly(bill.amount, bill.frequency);
-            }, 0);
+          {budgetData.accounts
+            .map(account => {
+              const accountBills = billsByAccount[account.id] || [];
+              const totalMonthly = roundUpToCent(accountBills.reduce((sum, bill) => {
+                return sum + convertToMonthly(bill.amount, bill.frequency);
+              }, 0));
+              return { account, accountBills, totalMonthly };
+            })
+            .sort((a, b) => b.totalMonthly - a.totalMonthly)
+            .map(({ account, accountBills, totalMonthly }) => {
 
             return (
               <div key={account.id} id={`account-${account.id}`} className="account-section">
@@ -143,23 +203,28 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId }) => {
                     </div>
                   </div>
                   <div className="account-total">
-                    <span className="total-label">Monthly Total</span>
-                    <span className="total-amount">{formatWithSymbol(totalMonthly, currency, { minimumFractionDigits: 2 })}</span>
+                    <span className="total-label">{getDisplayLabel()} Total</span>
+                    <span className="total-amount">{formatWithSymbol(toDisplayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
                 {accountBills.length > 0 ? (
                   <div className="bills-list">
-                    {accountBills.map(bill => (
+                    {accountBills
+                      .sort((a, b) => b.amount - a.amount)
+                      .map(bill => (
                       <div key={bill.id} className="bill-item">
                         <div className="bill-main">
                           <div className="bill-info">
                             <h4>{bill.name}</h4>
+                            <div className="bill-frequency-amount">
+                              Paid {formatFrequency(bill.frequency)}: {formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}
+                            </div>
                             {bill.category && <span className="bill-category">{bill.category}</span>}
                           </div>
                           <div className="bill-amount">
-                            <span className="amount">{formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}</span>
-                            <span className="frequency">{formatFrequency(bill.frequency)}</span>
+                            <span className="amount">{formatWithSymbol(toDisplayAmount(convertToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
+                            <span className="frequency">{getDisplayLabel()}</span>
                           </div>
                         </div>
                         {bill.notes && (
@@ -300,15 +365,17 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId }) => {
 
 // Helper functions
 function convertToMonthly(amount: number, frequency: BillFrequency): number {
+  let monthly = amount;
   switch (frequency) {
-    case 'weekly': return amount * 52 / 12;
-    case 'bi-weekly': return amount * 26 / 12;
-    case 'monthly': return amount;
-    case 'quarterly': return amount * 4 / 12;
-    case 'semi-annual': return amount * 2 / 12;
-    case 'yearly': return amount / 12;
-    default: return amount;
+    case 'weekly': monthly = amount * 52 / 12; break;
+    case 'bi-weekly': monthly = amount * 26 / 12; break;
+    case 'monthly': monthly = amount; break;
+    case 'quarterly': monthly = amount * 4 / 12; break;
+    case 'semi-annual': monthly = amount * 2 / 12; break;
+    case 'yearly': monthly = amount / 12; break;
+    default: monthly = amount;
   }
+  return roundUpToCent(monthly);
 }
 
 function formatFrequency(frequency: BillFrequency): string {

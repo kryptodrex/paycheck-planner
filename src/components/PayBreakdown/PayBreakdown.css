@@ -56,17 +56,29 @@
 .visual-flow {
   background: var(--bg-primary);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 0;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
   margin-bottom: 1.25rem;
+  overflow: hidden;
 }
 
 .flow-stage {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  margin-bottom: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border-color-light);
+  gap: 2rem;
+  background: var(--bg-primary);
+}
+
+.flow-stage:last-child {
+  border-bottom: none;
+}
+
+.flow-stage:nth-child(odd) {
+  background: var(--bg-secondary);
 }
 
 .stage-label {
@@ -75,30 +87,36 @@
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
+  display: none;
 }
 
 .stage-box {
   width: 100%;
-  max-width: 400px;
-  padding: 1.25rem;
-  border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  border-radius: 0;
+  text-align: left;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: transparent;
 }
 
 .stage-box h3 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
+  margin: 0;
+  font-size: 0.9rem;
+  text-transform: capitalize;
+  letter-spacing: 0;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .stage-amount {
-  font-size: 1.75rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
+  text-align: right;
 }
 
 .stage-amount.negative {
@@ -106,62 +124,61 @@
 }
 
 .stage-detail {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: var(--text-tertiary);
+  margin: 0;
 }
 
 .stage-arrow {
-  font-size: 2rem;
-  color: var(--border-color-light);
-  margin: 0.5rem 0;
+  display: none;
+}
+
+.stage-breakdown {
+  display: none;
 }
 
 .gross-box {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
+  background: transparent;
+  color: inherit;
 }
 
 .gross-box h3 {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
 }
 
 .gross-box .stage-detail {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-tertiary);
 }
 
 .deduction-box {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
+  background: transparent;
+  color: inherit;
 }
 
 .deduction-box h3 {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
 }
 
 .deduction-box .stage-detail {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-tertiary);
 }
 
 .taxable-box {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  color: white;
+  background: transparent;
+  color: inherit;
 }
 
 .taxable-box h3 {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.taxable-box .stage-detail {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
 }
 
 .taxes-box {
-  background: var(--bg-primary);
-  border: 2px solid #ef4444;
+  background: transparent;
+  border: none;
 }
 
 .taxes-box h3 {
-  color: #ef4444;
+  color: var(--text-primary);
 }
 
 .stage-breakdown {
@@ -184,16 +201,16 @@
 }
 
 .net-box {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: white;
+  background: transparent;
+  color: inherit;
 }
 
 .net-box h3 {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
 }
 
 .net-box .stage-detail {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-tertiary);
 }
 
 /* Visual Bar */

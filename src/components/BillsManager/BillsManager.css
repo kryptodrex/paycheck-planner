@@ -13,6 +13,11 @@
   gap: 1rem;
 }
 
+.bills-header > div:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
 .bills-header h2 {
   margin: 0 0 0.25rem 0;
   color: var(--text-primary);
@@ -22,6 +27,35 @@
 .bills-header p {
   margin: 0;
   color: var(--text-secondary);
+}
+
+.view-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg-tertiary);
+  padding: 0.25rem;
+  border-radius: 8px;
+}
+
+.view-mode-selector button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+
+.view-mode-selector button.active {
+  background: var(--bg-primary);
+  color: #667eea;
+  box-shadow: var(--shadow-sm);
+}
+
+.view-mode-selector button:hover:not(.active) {
+  color: var(--text-primary);
 }
 
 .header-actions {
@@ -181,6 +215,12 @@
   font-size: 1.1rem;
 }
 
+.bill-frequency-amount {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
 .bill-category {
   display: inline-block;
   background: #e0e7ff;
@@ -196,10 +236,17 @@
     background: rgba(102, 126, 234, 0.2);
     color: #a5b4fc;
   }
+
+  .bill-original {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .bill-amount {
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .bill-amount .amount {
@@ -207,7 +254,6 @@
   font-size: 1.3rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
 }
 
 .bill-amount .frequency {
@@ -364,6 +410,16 @@
   .bills-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .view-mode-selector {
+    width: 100%;
+  }
+
+  .view-mode-selector button {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 0.5rem;
   }
 
   .header-actions {

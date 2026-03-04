@@ -30,12 +30,13 @@ type ValidationMessage = {
 };
 
 interface PayBreakdownProps {
+  displayMode: 'paycheck' | 'monthly' | 'yearly';
+  onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
   onNavigateToBills?: (accountId: string) => void;
 }
 
-const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
+const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeChange, onNavigateToBills }) => {
   const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
-  const [viewMode, setViewMode] = useState<'paycheck' | 'monthly' | 'yearly'>('paycheck');
   const [editingAccountIds, setEditingAccountIds] = useState<Set<string>>(new Set());
   const [draftAccounts, setDraftAccounts] = useState<Map<string, AllocationAccount>>(new Map());
   const [validationMessages, setValidationMessages] = useState<Map<string, ValidationMessage>>(new Map());
@@ -43,33 +44,77 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
   if (!budgetData) return null;
 
   const currency = budgetData.settings?.currency || 'USD';
-  const breakdown = calculatePaycheckBreakdown();
-  const normalizedAccounts = useMemo(() => normalizeAccounts(budgetData.accounts, budgetData.bills, budgetData.paySettings.payFrequency), [budgetData.accounts, budgetData.bills, budgetData.paySettings.payFrequency]);
-  const allocationPlan = calculateAllocationPlan(normalizedAccounts, breakdown.netPay);
-  const leftoverPerPaycheck = allocationPlan.remaining;
-  
-  // Calculate multiplier based on view mode
-  let multiplier = 1;
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
   
-  if (viewMode === 'monthly') {
-    multiplier = paychecksPerYear / 12;
-  } else if (viewMode === 'yearly') {
-    multiplier = paychecksPerYear;
-  }
+  // Calculate yearly breakdown from configured salary/hourly rate
+  const yearlyBreakdown = useMemo(() => {
+    const { paySettings } = budgetData;
+    
+    // Calculate yearly gross pay
+    let yearlyGrossPay = 0;
+    if (paySettings.payType === 'salary') {
+      yearlyGrossPay = paySettings.annualSalary || 0;
+    } else {
+      yearlyGrossPay = (paySettings.hourlyRate || 0) * (paySettings.hoursPerPayPeriod || 0) * paychecksPerYear;
+    }
 
-  // Apply multiplier to all values and round up to nearest cent
+    // Get per-paycheck breakdown to get tax rates and deduction information
+    const paycheckBreakdown = calculatePaycheckBreakdown();
+    
+    // Calculate yearly values by scaling the per-paycheck percentages
+    const yearlyGrossPayCalc = yearlyGrossPay;
+    const yearlyPreTax = roundUpToCent(paycheckBreakdown.preTaxDeductions * paychecksPerYear);
+    const yearlyTaxableIncome = roundUpToCent(yearlyGrossPayCalc - yearlyPreTax);
+    
+    // Use the per-paycheck breakdown to get the tax calculation rates and apply them to yearly
+    const yearlyFederalTax = roundUpToCent(paycheckBreakdown.federalTax * paychecksPerYear);
+    const yearlyStateTax = roundUpToCent(paycheckBreakdown.stateTax * paychecksPerYear);
+    const yearlySocialSecurity = roundUpToCent(paycheckBreakdown.socialSecurity * paychecksPerYear);
+    const yearlyMedicare = roundUpToCent(paycheckBreakdown.medicare * paychecksPerYear);
+    const yearlyAdditionalWithholding = roundUpToCent(paycheckBreakdown.additionalWithholding * paychecksPerYear);
+    const yearlyTotalTaxes = roundUpToCent(yearlyFederalTax + yearlyStateTax + yearlySocialSecurity + yearlyMedicare + yearlyAdditionalWithholding);
+    const yearlyNetPay = roundUpToCent(yearlyGrossPayCalc - yearlyPreTax - yearlyTotalTaxes);
+
+    return {
+      grossPay: yearlyGrossPayCalc,
+      preTaxDeductions: yearlyPreTax,
+      taxableIncome: yearlyTaxableIncome,
+      federalTax: yearlyFederalTax,
+      stateTax: yearlyStateTax,
+      socialSecurity: yearlySocialSecurity,
+      medicare: yearlyMedicare,
+      additionalWithholding: yearlyAdditionalWithholding,
+      totalTaxes: yearlyTotalTaxes,
+      netPay: yearlyNetPay,
+    };
+  }, [budgetData, paychecksPerYear]);
+
+  // Get per-paycheck breakdown for allocation purposes
+  const paycheckBreakdown = calculatePaycheckBreakdown();
+  const normalizedAccounts = useMemo(() => normalizeAccounts(budgetData.accounts, budgetData.bills, budgetData.paySettings.payFrequency), [budgetData.accounts, budgetData.bills, budgetData.paySettings.payFrequency]);
+  const allocationPlan = calculateAllocationPlan(normalizedAccounts, paycheckBreakdown.netPay);
+  const leftoverPerPaycheck = allocationPlan.remaining;
+
+  // Calculate display breakdown based on view mode
+  const displayDivisor = displayMode === 'paycheck' ? paychecksPerYear : (displayMode === 'monthly' ? 12 : 1);
   const displayBreakdown = {
-    grossPay: roundUpToCent(breakdown.grossPay * multiplier),
-    preTaxDeductions: roundUpToCent(breakdown.preTaxDeductions * multiplier),
-    taxableIncome: roundUpToCent(breakdown.taxableIncome * multiplier),
-    federalTax: roundUpToCent(breakdown.federalTax * multiplier),
-    stateTax: roundUpToCent(breakdown.stateTax * multiplier),
-    socialSecurity: roundUpToCent(breakdown.socialSecurity * multiplier),
-    medicare: roundUpToCent(breakdown.medicare * multiplier),
-    additionalWithholding: roundUpToCent(breakdown.additionalWithholding * multiplier),
-    totalTaxes: roundUpToCent(breakdown.totalTaxes * multiplier),
-    netPay: roundUpToCent(breakdown.netPay * multiplier),
+    grossPay: roundUpToCent(yearlyBreakdown.grossPay / displayDivisor),
+    preTaxDeductions: roundUpToCent(yearlyBreakdown.preTaxDeductions / displayDivisor),
+    taxableIncome: roundUpToCent(yearlyBreakdown.taxableIncome / displayDivisor),
+    federalTax: roundUpToCent(yearlyBreakdown.federalTax / displayDivisor),
+    stateTax: roundUpToCent(yearlyBreakdown.stateTax / displayDivisor),
+    socialSecurity: roundUpToCent(yearlyBreakdown.socialSecurity / displayDivisor),
+    medicare: roundUpToCent(yearlyBreakdown.medicare / displayDivisor),
+    additionalWithholding: roundUpToCent(yearlyBreakdown.additionalWithholding / displayDivisor),
+    totalTaxes: roundUpToCent(yearlyBreakdown.totalTaxes / displayDivisor),
+    netPay: roundUpToCent(yearlyBreakdown.netPay / displayDivisor),
+  };
+
+  // Helper function to convert per-paycheck values to display values based on display mode
+  const toDisplayAmount = (paycheckAmount: number) => {
+    if (displayMode === 'paycheck') return paycheckAmount;
+    if (displayMode === 'monthly') return paycheckAmount * (paychecksPerYear / 12);
+    return paycheckAmount * paychecksPerYear;
   };
 
   // Calculate percentages for visual bar
@@ -134,7 +179,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
       }
     }, 0);
 
-    const remaining = breakdown.netPay - totalAllocations;
+    const remaining = paycheckBreakdown.netPay - totalAllocations;
 
     // ERROR: Attempting to allocate more than available (negative remaining)
     if (remaining < 0) {
@@ -143,7 +188,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
         accountId,
         {
           type: 'error',
-          message: `This allocation exceeds your net pay by ${formatWithSymbol(overage, currency, { minimumFractionDigits: 2 })}. Please reduce allocations to stay within ${formatWithSymbol(breakdown.netPay, currency, { minimumFractionDigits: 2 })}.`
+          message: `This allocation exceeds your net pay by ${formatWithSymbol(overage, currency, { minimumFractionDigits: 2 })}. Please reduce allocations to stay within ${formatWithSymbol(paycheckBreakdown.netPay, currency, { minimumFractionDigits: 2 })}.`
         }
       ));
       return; // Prevent saving
@@ -233,20 +278,20 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
         </div>
         <div className="view-mode-selector">
           <button 
-            className={viewMode === 'paycheck' ? 'active' : ''}
-            onClick={() => setViewMode('paycheck')}
+            className={displayMode === 'paycheck' ? 'active' : ''}
+            onClick={() => onDisplayModeChange('paycheck')}
           >
             Per Paycheck
           </button>
           <button 
-            className={viewMode === 'monthly' ? 'active' : ''}
-            onClick={() => setViewMode('monthly')}
+            className={displayMode === 'monthly' ? 'active' : ''}
+            onClick={() => onDisplayModeChange('monthly')}
           >
             Monthly
           </button>
           <button 
-            className={viewMode === 'yearly' ? 'active' : ''}
-            onClick={() => setViewMode('yearly')}
+            className={displayMode === 'yearly' ? 'active' : ''}
+            onClick={() => onDisplayModeChange('yearly')}
           >
             Yearly
           </button>
@@ -394,7 +439,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
             </div>
 
             {allocationPlan.accountFunding.map((fundingItem) => {
-              const accountAmount = roundUpToCent(fundingItem.totalAmount * multiplier);
+              const accountAmount = roundUpToCent(toDisplayAmount(fundingItem.totalAmount));
               const isEditing = editingAccountIds.has(fundingItem.account.id);
               const displayAccount = isEditing ? draftAccounts.get(fundingItem.account.id) : fundingItem.account;
               
@@ -494,7 +539,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
                           )}
                         </span>
                         <span className="waterfall-amount">
-                          {category.amount === 0 ? '-' : formatWithSymbol(roundUpToCent(category.amount * multiplier), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {category.amount === 0 ? '-' : formatWithSymbol(roundUpToCent(toDisplayAmount(category.amount)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     ))
@@ -505,13 +550,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ onNavigateToBills }) => {
 
             <div className="waterfall-row waterfall-footer-row">
               <span className="waterfall-label">All that remains for spending</span>
-              {leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
-                <Alert type="warning">
-                  You are {formatWithSymbol(roundUpToCent(((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck) * multiplier), currency, { minimumFractionDigits: 2 })} under your minimum of {formatWithSymbol(roundUpToCent((budgetData.paySettings.minLeftover || 0) * multiplier), currency, { minimumFractionDigits: 2 })}
-                </Alert>
-              )}
-              <span className="waterfall-amount">{formatWithSymbol(roundUpToCent(Math.max(0, leftoverPerPaycheck * multiplier)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="waterfall-amount">{formatWithSymbol(roundUpToCent(Math.max(0, toDisplayAmount(leftoverPerPaycheck))), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
+            {leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
+              <div className="waterfall-row">
+                <Alert type="warning">
+                  You are {formatWithSymbol(roundUpToCent(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck)), currency, { minimumFractionDigits: 2 })} under your desired minimum of {formatWithSymbol(roundUpToCent(toDisplayAmount(budgetData.paySettings.minLeftover || 0)), currency, { minimumFractionDigits: 2 })}
+                </Alert>
+              </div>
+            )}
           </div>
         </div>
       )}

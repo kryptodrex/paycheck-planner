@@ -1,4 +1,4 @@
-import  React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { BillFrequency } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
