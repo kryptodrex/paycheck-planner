@@ -53,6 +53,10 @@
   - Font size adjustments for better readability
     - Allow users to increase font size via zoom settings, which should be under the View menu in the menu bar, and also accessible via keyboard shortcuts (e.g., Cmd + Plus to zoom in, Cmd + Minus to zoom out, Cmd + 0 to reset zoom)
 
+- [ ] **Export the Plan** - Add ability to export the plan as a PDF or CSV for easy sharing and printing
+    - For PDF export, we can use a library like jsPDF to generate a nicely formatted PDF that includes all the relevant information from the plan (pay breakdown, bills, accounts, etc.) in a clean layout
+    - For CSV export, we can allow users to export their bills and pay breakdowns in a CSV format that can be opened in Excel or Google Sheets for further analysis and manipulation
+
 - [ ] **Unit tests** - Add unit tests for critical components and functions to improve reliability and catch bugs early
   - Focus on testing the core logic of the application, such as the pay breakdown calculations, encryption/decryption functions, and file storage operations
   - Use a testing framework like Jest to write and run the tests

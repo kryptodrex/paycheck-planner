@@ -7,6 +7,7 @@ import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
+import { Toast } from '../shared';
 import './PlanDashboard.css';
 
 type TabView = 'metrics' | 'breakdown' | 'bills';
@@ -29,6 +30,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showEditPayModal, setShowEditPayModal] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
+  const [statusToast, setStatusToast] = useState<string | null>(null);
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -98,6 +100,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   }, [showCopyModal]);
 
+  // Auto-dismiss status toast
+  useEffect(() => {
+    if (!statusToast) return;
+    const timer = window.setTimeout(() => {
+      setStatusToast(null);
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [statusToast]);
+
   if (!budgetData) return null;
 
   // Check if initial setup is complete (synchronously, no state needed)
@@ -136,8 +147,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <h1>{budgetData.name}</h1>
           <button 
             className="encryption-status-btn"
-            onClick={() => setShowSettings(true)}
-            title="Click to manage encryption settings"
+            onClick={() => setShowEncryptionSetup(true)}
+            title="Click to open encryption configuration"
           >
             {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
           </button>
@@ -249,35 +260,39 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <Settings 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)}
-        onOpenEncryptionSetup={() => {
-          setShowSettings(false);
-          setShowEncryptionSetup(true);
-        }}
-        onOpenPaySettings={() => {
-          setShowSettings(false);
-          setShowEditPayModal(true);
-        }}
-        hasActivePlan={!!budgetData}
       />
 
       {/* Encryption Setup Modal */}
       {showEncryptionSetup && budgetData && (
-        <div className="modal-overlay">
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => setShowEncryptionSetup(false)}>
+          <div className="modal-content encryption-modal-content" onClick={(e) => e.stopPropagation()}>
             <EncryptionSetup 
               planId={budgetData.id}
-              onComplete={() => {
+              onComplete={(isEncryptionEnabled) => {
                 setShowEncryptionSetup(false);
-                // Encryption setup successfully completed, enable encryption in budget settings
+                // Apply the selected encryption state for this plan
                 updateBudgetSettings({
                   ...budgetData.settings,
-                  encryptionEnabled: true,
+                  encryptionEnabled: isEncryptionEnabled,
                 });
+                setStatusToast(
+                  isEncryptionEnabled
+                    ? '🔒 Encryption enabled for this plan'
+                    : '📄 Encryption disabled for this plan'
+                );
               }}
               onCancel={() => setShowEncryptionSetup(false)}
             />
           </div>
         </div>
+      )}
+
+      {statusToast && (
+        <Toast 
+          message={statusToast}
+          duration={2500}
+          onDismiss={() => setStatusToast(null)}
+        />
       )}
 
       {/* Accounts Manager Modal */}

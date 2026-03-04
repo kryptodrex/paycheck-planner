@@ -234,6 +234,14 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
+.encryption-modal-content {
+  max-width: 960px;
+  width: min(960px, 95vw);
+  max-height: 95vh;
+  overflow: hidden;
+  padding: 0;
+}
+
 .modal-content h3 {
   margin: 0 0 0.5rem 0;
   color: var(--text-primary);
@@ -329,7 +337,6 @@
   flex: 1;
 }
 
-/* View-only mode header */
 .view-mode-header {
   background: var(--header-gradient);
   color: white;

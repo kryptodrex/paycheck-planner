@@ -132,59 +132,6 @@
   font-size: 0.9rem;
 }
 
-.settings-placeholder {
-  color: var(--text-tertiary);
-  font-style: italic;
-  margin: 0;
-}
-
-/* Settings action buttons */
-.settings-action-btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-}
-
-.settings-action-btn:hover:not(:disabled) {
-  background: var(--bg-tertiary);
-  border-color: #667eea;
-}
-
-.settings-action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.settings-action-btn .action-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.settings-action-btn .action-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.settings-action-btn .action-title {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.settings-action-btn .action-description {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
 .settings-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border-color);
@@ -210,22 +157,4 @@
 
 .settings-modal::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
-}
-
-.settings-action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.settings-action-btn.active {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
-}
-
-.settings-label {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-  display: block;
 }

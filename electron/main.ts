@@ -428,6 +428,14 @@ function createApplicationMenu() {
   template.push({
     label: 'Edit',
     submenu: [
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { role: 'selectAll' },
+      { type: 'separator' },
       {
         label: 'Accounts',
         accelerator: isMac ? 'Cmd+Shift+A' : 'Ctrl+Shift+A',

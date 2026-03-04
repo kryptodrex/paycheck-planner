@@ -4,6 +4,7 @@ import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
 import { AccountsService } from '../../services/accountsService';
 import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
+import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import type { PaySettings, TaxSettings, Account } from '../../types/auth';
 import './SetupWizard.css';
 
@@ -75,14 +76,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     const key = FileStorageService.generateEncryptionKey();
     setGeneratedEncryptionKey(key);
     setUseCustomEncryptionKey(false);
-  };
-
-  // Configure encryption for this plan
-  const handleSetEncryption = (enabled: boolean) => {
-    setEncryptionEnabled(enabled);
-    if (enabled) {
-      handleGenerateEncryptionKey(); // Auto-generate a key
-    }
   };
 
   const handleCompleteEncryptionSetup = async () => {
@@ -286,129 +279,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 Choose how you want to protect your budget files
               </p>
 
-              {encryptionEnabled === null ? (
-                <>
-                  <div className="encryption-options">
-                    <div className="option-card">
-                      <div className="option-icon">🔒</div>
-                      <h3>Enable Encryption</h3>
-                      <p>Your budget files will be encrypted with AES-256 encryption. Recommended for sensitive financial data.</p>
-                      <ul className="feature-list">
-                        <li>✓ Maximum security</li>
-                        <li>✓ Files unreadable without key</li>
-                        <li>⚠️ Must remember your key</li>
-                      </ul>
-                      <button className="btn btn-primary" onClick={() => handleSetEncryption(true)}>
-                        Enable Encryption
-                      </button>
-                    </div>
-
-                    <div className="option-card">
-                      <div className="option-icon">📄</div>
-                      <h3>No Encryption</h3>
-                      <p>Your budget files will be saved as plain text JSON. Easier to backup and access, but not secure.</p>
-                      <ul className="feature-list">
-                        <li>✓ Simple and easy</li>
-                        <li>✓ No key to remember</li>
-                        <li>⚠️ Files are readable by anyone</li>
-                      </ul>
-                      <button className="btn btn-secondary" onClick={() => handleSetEncryption(false)}>
-                        Skip Encryption
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="note">
-                    💡 You can change this setting later in the app
-                  </p>
-                </>
-              ) : encryptionEnabled ? (
-                <>
-                  <h3>Choose Your Encryption Key</h3>
-                  
-                  <div className="radio-option">
-                    <label>
-                      <input 
-                        type="radio" 
-                        checked={!useCustomEncryptionKey}
-                        onChange={() => setUseCustomEncryptionKey(false)}
-                      />
-                      <span>Use Generated Key (Recommended)</span>
-                    </label>
-                    {!useCustomEncryptionKey && (
-                      <div className="key-display">
-                        {generatedEncryptionKey ? (
-                          <>
-                            <div className="key-box">
-                              <code>{showEncryptionKey ? generatedEncryptionKey : '••••••••••••••••••••••••••••••••'}</code>
-                              <button 
-                                className="btn-icon"
-                                onClick={() => setShowEncryptionKey(!showEncryptionKey)}
-                                title={showEncryptionKey ? 'Hide key' : 'Show key'}
-                              >
-                                {showEncryptionKey ? '🙈' : '👁️'}
-                              </button>
-                              <button 
-                                className="btn-icon"
-                                onClick={() => navigator.clipboard.writeText(generatedEncryptionKey)}
-                                title="Copy to clipboard"
-                              >
-                                📋
-                              </button>
-                            </div>
-                            <button className="btn btn-small" onClick={handleGenerateEncryptionKey}>
-                              🔄 Generate New Key
-                            </button>
-                            <div className="warning-box">
-                              <strong>⚠️ Save This Key!</strong> Write it down or store it in a password manager. 
-                              You'll need it to access your encrypted budget files.
-                            </div>
-                          </>
-                        ) : (
-                          <button className="btn btn-primary" onClick={handleGenerateEncryptionKey}>
-                            Generate Secure Key
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="radio-option">
-                    <label>
-                      <input 
-                        type="radio" 
-                        checked={useCustomEncryptionKey}
-                        onChange={() => setUseCustomEncryptionKey(true)}
-                      />
-                      <span>Use Custom Key</span>
-                    </label>
-                    {useCustomEncryptionKey && (
-                      <div className="key-display">
-                        <input
-                          type="text"
-                          className="key-input"
-                          value={customEncryptionKey}
-                          onChange={(e) => setCustomEncryptionKey(e.target.value)}
-                          placeholder="Enter your custom encryption key"
-                          autoFocus
-                        />
-                        <p className="help-text">
-                          Use a strong, memorable passphrase or a randomly generated key
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3>No Encryption</h3>
-                  <p>Your budget files will be saved without encryption.</p>
-                  <div className="warning-box">
-                    <strong>⚠️ Important:</strong> Your budget files will be readable by anyone who has access to them. 
-                    Only continue if you're comfortable with that.
-                  </div>
-                </>
-              )}
+              <EncryptionConfigPanel
+                encryptionEnabled={encryptionEnabled}
+                setEncryptionEnabled={setEncryptionEnabled}
+                useCustomKey={useCustomEncryptionKey}
+                setUseCustomKey={setUseCustomEncryptionKey}
+                customKey={customEncryptionKey}
+                setCustomKey={setCustomEncryptionKey}
+                generatedKey={generatedEncryptionKey}
+                showKey={showEncryptionKey}
+                setShowKey={setShowEncryptionKey}
+                onGenerateKey={handleGenerateEncryptionKey}
+              />
             </div>
           )}
 
