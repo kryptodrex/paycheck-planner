@@ -712,13 +712,14 @@ ipcMain.handle('open-file-dialog', async () => {
  * Save file dialog
  * Opens a native file picker for saving new files
  */
-ipcMain.handle('save-file-dialog', async () => {
+ipcMain.handle('save-file-dialog', async (event, budgetName?: string) => {
+  const fileName = budgetName ? `${budgetName}.budget` : 'my-budget.budget';
   const result = await dialog.showSaveDialog({
     filters: [
       { name: 'Budget Files', extensions: ['budget'] },
       { name: 'JSON Files', extensions: ['json'] },
     ],
-    defaultPath: 'my-budget.budget',
+    defaultPath: fileName,
   });
 
   if (!result.canceled && result.filePath) {

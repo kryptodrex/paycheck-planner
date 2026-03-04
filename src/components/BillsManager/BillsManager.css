@@ -191,6 +191,13 @@
   font-weight: 600;
 }
 
+@media (prefers-color-scheme: dark) {
+  .bill-category {
+    background: rgba(102, 126, 234, 0.2);
+    color: #a5b4fc;
+  }
+}
+
 .bill-amount {
   text-align: right;
 }

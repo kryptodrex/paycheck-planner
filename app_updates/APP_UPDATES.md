@@ -30,7 +30,7 @@
     - If they want, they should be able to turn that encryption off individually for the plans (for sharing the file or other reasons).
     - On the plan page header, display the encryption status as a clickable badge that opens encryption settings for quick access
 
-- [ ] **Pay Breakdown Improvements** - 
+- [x] **Pay Breakdown Improvements** - 
   - Enable detailed fund allocation per account (investment goals, savings targets, expense distribution, etc.) after Net Pay is calculated
   - Define account priority and funding order after taxes and other deductions are taken from the Gross Pay (e.g., Investment → Savings → Checking)
   - Allow users to specify how they want their Net Pay distributed across accounts and categories

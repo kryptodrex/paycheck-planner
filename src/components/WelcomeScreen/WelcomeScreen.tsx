@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { FileStorageService } from '../../services/fileStorage';
 import type { RecentFile } from '../../services/fileStorage';
+import { Button, FormGroup } from '../shared';
 import './WelcomeScreen.css';
 
 interface WelcomeScreenProps {
@@ -78,11 +79,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
           <h1>Create New Plan</h1>
           <p className="form-description">Start planning your paychecks for a specific year</p>
           <form onSubmit={handleSubmitNew} className="new-budget-form">
-            <div className="form-group">
-              <label htmlFor="planYear">Plan Year</label>
+            <FormGroup label="Plan Year" required helperText="Choose the year you want to plan for">
               <input
                 type="number"
-                id="planYear"
                 value={planYear}
                 onChange={(e) => setPlanYear(e.target.value)}
                 placeholder={new Date().getFullYear().toString()}
@@ -91,20 +90,19 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
                 autoFocus
                 required
               />
-              <small>Choose the year you want to plan for</small>
-            </div>
+            </FormGroup>
             <div className="button-group">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
+              <Button type="submit" variant="primary" disabled={loading}>
                 Create Plan
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
                 onClick={() => setShowNewPlanForm(false)}
                 disabled={loading}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -136,22 +134,26 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
         <h1>Welcome to Paycheck Planner</h1>
         <p>Plan where every paycheck goes, from gross to net, with year-based planning</p>
         <div className="action-buttons">
-          <button
-            className="btn btn-primary btn-large"
+          <Button
+            variant="primary"
+            size="large"
             onClick={handleCreateNew}
             disabled={loading}
+            className="btn-large"
           >
             <span className="icon">+</span>
             Create New Plan
-          </button>
-          <button
-            className="btn btn-secondary btn-large"
+          </Button>
+          <Button
+            variant="secondary"
+            size="large"
             onClick={handleLoadExisting}
             disabled={loading}
+            className="btn-large"
           >
             <span className="icon">📂</span>
             Open Existing Plan
-          </button>
+          </Button>
         </div>
 
         {recentFiles.length > 0 && (
@@ -173,6 +175,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
                     onClick={(e) => handleRemoveRecent(file.filePath, e)}
                     title="Remove from recent"
                     disabled={loading}
+                    type="button"
                   >
                     ✕
                   </button>

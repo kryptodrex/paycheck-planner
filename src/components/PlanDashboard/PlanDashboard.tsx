@@ -7,7 +7,8 @@ import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
-import { Toast } from '../shared';
+import PaySettingsModal from '../PaySettingsModal';
+import { Toast, Modal, Button, FormGroup } from '../shared';
 import './PlanDashboard.css';
 
 type TabView = 'metrics' | 'breakdown' | 'bills';
@@ -24,6 +25,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       ? viewMode as TabView 
       : 'metrics'
   );
+  const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -130,11 +132,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     );
   }
 
-  const handleCopyToNewYear = (e: React.FormEvent) => {
+  const handleCopyToNewYear = async (e: React.FormEvent) => {
     e.preventDefault();
     const year = parseInt(newYear);
     if (year && year >= 2000 && year <= 2100) {
-      copyPlanToNewYear(year);
+      await copyPlanToNewYear(year);
       setShowCopyModal(false);
       setNewYear('');
     }
@@ -154,20 +156,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </button>
         </div>
         <div className="header-right">
-          <button 
-            className="btn header-btn-secondary" 
+          <Button
+            variant="secondary"
+            onClick={() => setShowEditPayModal(true)}
+            title="Edit pay settings and tax information"
+            className="header-btn-secondary"
+          >
+            ⚙️ Pay Options
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setShowAccountsModal(true)}
+            title="Manage your financial accounts"
+            className="header-btn-secondary"
+          >
+            🏦 Accounts
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => setShowCopyModal(true)}
             title="Copy this plan to another year"
+            className="header-btn-secondary"
           >
             📋 Copy Plan
-          </button>
-          <button 
-            className="btn header-btn-primary" 
-            onClick={saveBudget} 
+          </Button>
+          <Button
+            variant="primary"
+            onClick={saveBudget}
             disabled={loading}
+            className="header-btn-primary"
           >
             {loading ? 'Saving...' : '💾 Save'}
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -195,7 +215,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <div className="tab-button-group">
             <button
               className={`tab-button ${activeTab === 'bills' ? 'active' : ''}`}
-              onClick={() => setActiveTab('bills')}
+              onClick={() => {
+                setActiveTab('bills');
+                setScrollToAccountId(undefined);
+              }}
             >
               <span className="tab-icon">📋</span>
               Bills
@@ -206,9 +229,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
       <div className="tab-content">
         {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
-        {activeTab === 'metrics' && <KeyMetrics showEditModal={showEditPayModal} onCloseEditModal={() => setShowEditPayModal(false)} />}
-        {activeTab === 'breakdown' && <PayBreakdown />}
-        {activeTab === 'bills' && <BillsManager />}
+        {activeTab === 'metrics' && <KeyMetrics />}
+        {activeTab === 'breakdown' && <PayBreakdown onNavigateToBills={(accountId) => {
+          setScrollToAccountId(accountId);
+          setActiveTab('bills');
+        }} />}
+        {activeTab === 'bills' && <BillsManager scrollToAccountId={scrollToAccountId} />}
       </div>
 
       <footer className="dashboard-footer">
@@ -224,37 +250,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       </footer>
 
       {/* Copy Plan Modal */}
-      {showCopyModal && (
-        <div className="modal-overlay" onClick={() => setShowCopyModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h3>Copy Plan to New Year</h3>
-            <p>This will create a copy of your current plan for a different year.</p>
-            <form onSubmit={handleCopyToNewYear}>
-              <div className="form-group">
-                <label htmlFor="newYear">Target Year</label>
-                <input
-                  type="number"
-                  id="newYear"
-                  value={newYear}
-                  onChange={e => setNewYear(e.target.value)}
-                  placeholder={`${budgetData.year + 1}`}
-                  min="2000"
-                  max="2100"
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCopyModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Copy Plan
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCopyModal}
+        onClose={() => setShowCopyModal(false)}
+      >
+        <h3>Copy Plan to New Year</h3>
+        <p>This will create a copy of your current plan for a different year.</p>
+        <form onSubmit={handleCopyToNewYear}>
+          <FormGroup label="Target Year" required>
+            <input
+              type="number"
+              value={newYear}
+              onChange={e => setNewYear(e.target.value)}
+              placeholder={`${budgetData.year + 1}`}
+              min="2000"
+              max="2100"
+              required
+            />
+          </FormGroup>
+          <div className="modal-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowCopyModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              Copy Plan
+            </Button>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {/* Settings Modal */}
       <Settings 
@@ -262,30 +289,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         onClose={() => setShowSettings(false)}
       />
 
+      {/* Pay Settings Modal */}
+      <PaySettingsModal
+        isOpen={showEditPayModal}
+        onClose={() => setShowEditPayModal(false)}
+      />
+
       {/* Encryption Setup Modal */}
-      {showEncryptionSetup && budgetData && (
-        <div className="modal-overlay" onClick={() => setShowEncryptionSetup(false)}>
-          <div className="modal-content encryption-modal-content" onClick={(e) => e.stopPropagation()}>
-            <EncryptionSetup 
-              planId={budgetData.id}
-              onComplete={(isEncryptionEnabled) => {
-                setShowEncryptionSetup(false);
-                // Apply the selected encryption state for this plan
-                updateBudgetSettings({
-                  ...budgetData.settings,
-                  encryptionEnabled: isEncryptionEnabled,
-                });
-                setStatusToast(
-                  isEncryptionEnabled
-                    ? '🔒 Encryption enabled for this plan'
-                    : '📄 Encryption disabled for this plan'
-                );
-              }}
-              onCancel={() => setShowEncryptionSetup(false)}
-            />
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showEncryptionSetup && !!budgetData}
+        onClose={() => setShowEncryptionSetup(false)}
+        contentClassName="encryption-modal-content"
+      >
+        {budgetData && (
+          <EncryptionSetup 
+            planId={budgetData.id}
+            onComplete={(isEncryptionEnabled) => {
+              setShowEncryptionSetup(false);
+              // Apply the selected encryption state for this plan
+              updateBudgetSettings({
+                ...budgetData.settings,
+                encryptionEnabled: isEncryptionEnabled,
+              });
+              setStatusToast(
+                isEncryptionEnabled
+                  ? '🔒 Encryption enabled for this plan'
+                  : '📄 Encryption disabled for this plan'
+              );
+            }}
+            onCancel={() => setShowEncryptionSetup(false)}
+          />
+        )}
+      </Modal>
 
       {statusToast && (
         <Toast 

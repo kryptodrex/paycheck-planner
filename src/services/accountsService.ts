@@ -50,24 +50,18 @@ export class AccountsService {
         id: crypto.randomUUID(),
         name: 'Investment',
         type: 'investment' as const,
-        allocation: 0,
-        isRemainder: false,
         color: getDefaultColorForType('investment'),
       },
       {
         id: crypto.randomUUID(),
         name: 'Savings',
         type: 'savings' as const,
-        allocation: 0,
-        isRemainder: false,
         color: getDefaultColorForType('savings'),
       },
       {
         id: crypto.randomUUID(),
         name: 'Checking',
         type: 'checking' as const,
-        allocation: 0,
-        isRemainder: true,
         color: getDefaultColorForType('checking'),
       },
     ];
@@ -101,8 +95,6 @@ export class AccountsService {
       id: crypto.randomUUID(),
       name: name.trim(),
       type,
-      allocation: 0,
-      isRemainder: false,
       color: getDefaultColorForType(type),
     };
     accounts.push(newAccount);
@@ -145,11 +137,7 @@ export class AccountsService {
    */
   static getAccountsForNewPlan(): Account[] {
     const globalAccounts = this.getAccounts();
-    // Return copies with reset allocations
-    return globalAccounts.map(acc => ({
-      ...acc,
-      allocation: 0,
-      // Keep isRemainder from global account
-    }));
+    // Return copies
+    return globalAccounts.map(acc => ({ ...acc }));
   }
 }

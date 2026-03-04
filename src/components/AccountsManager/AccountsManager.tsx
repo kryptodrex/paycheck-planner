@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AccountsService } from '../../services/accountsService';
 import type { Account } from '../../types/auth';
+import { Modal, Button, FormGroup } from '../shared';
 import './AccountsManager.css';
 
 interface AccountsManagerProps {
@@ -65,46 +66,52 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content accounts-manager" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Manage Accounts</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
-        </div>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      contentClassName="accounts-manager"
+    >
+      <div className="modal-header">
+        <h2>Manage Accounts</h2>
+      </div>
 
         {/* Add New Account Section */}
         <div className="add-account-section">
           <h3>Add New Account</h3>
           <div className="add-account-form">
-            <input
-              type="text"
-              className="account-name-input"
-              placeholder="Account name (e.g., Emergency Fund)"
-              value={newAccountName}
-              onChange={(e) => setNewAccountName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddAccount();
-                }
-              }}
-            />
-            <select
-              className="account-type-select"
-              value={newAccountType}
-              onChange={(e) => setNewAccountType(e.target.value as Account['type'])}
-            >
-              <option value="checking">Checking</option>
-              <option value="savings">Savings</option>
-              <option value="investment">Investment</option>
-              <option value="other">Other</option>
-            </select>
-            <button
-              className="btn btn-primary"
+            <FormGroup>
+              <input
+                type="text"
+                className="account-name-input"
+                placeholder="Account name (e.g., Emergency Fund)"
+                value={newAccountName}
+                onChange={(e) => setNewAccountName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddAccount();
+                  }
+                }}
+              />
+            </FormGroup>
+            <FormGroup>
+              <select
+                className="account-type-select"
+                value={newAccountType}
+                onChange={(e) => setNewAccountType(e.target.value as Account['type'])}
+              >
+                <option value="checking">Checking</option>
+                <option value="savings">Savings</option>
+                <option value="investment">Investment</option>
+                <option value="other">Other</option>
+              </select>
+            </FormGroup>
+            <Button
+              variant="primary"
               onClick={handleAddAccount}
               disabled={!newAccountName.trim()}
             >
               Add Account
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -141,20 +148,20 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
               <div className="account-actions">
                 {editingId !== account.id && (
                   <>
-                    <button
-                      className="btn-icon"
+                    <Button
+                      variant="icon"
                       onClick={() => handleStartEdit(account)}
                       title="Edit name"
                     >
                       ✎
-                    </button>
-                    <button
-                      className="btn-icon btn-danger"
+                    </Button>
+                    <Button
+                      variant="icon"
                       onClick={() => handleDeleteAccount(account.id)}
                       title="Delete account"
                     >
                       🗑
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
@@ -167,13 +174,12 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
         </div>
 
         <div className="modal-footer">
-          <button className="btn btn-primary" onClick={onClose}>
+          <Button variant="primary" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
-  );
+      </Modal>
+    );
 };
 
 export default AccountsManager;

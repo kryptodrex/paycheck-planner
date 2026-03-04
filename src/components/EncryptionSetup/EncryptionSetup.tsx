@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
 import EncryptionConfigPanel from './EncryptionConfigPanel';
+import { Button } from '../shared';
 import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {
@@ -91,36 +92,36 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
         <div className="button-group">
           {encryptionEnabled === null ? (
             onCancel && (
-              <button
-                className="btn btn-secondary"
+              <Button
+                variant="secondary"
                 onClick={onCancel}
                 disabled={isSaving}
               >
                 ← Cancel
-              </button>
+              </Button>
             )
           ) : (
-            <button
-              className="btn btn-secondary"
+            <Button
+              variant="secondary"
               onClick={() => setEncryptionEnabled(null)}
               disabled={isSaving}
             >
               ← Back
-            </button>
+            </Button>
           )}
-          <button 
-            className="btn btn-primary" 
+          <Button 
+            variant="primary" 
             onClick={handleSaveSettings}
-            hidden={
+            disabled={
               encryptionEnabled === null ||
               (encryptionEnabled === true && !useCustomKey && !generatedKey) ||
               isSaving
             }
+            loadingText="Saving..."
+            isLoading={isSaving}
           >
-            {isSaving
-              ? 'Saving...'
-              : 'Continue'}
-          </button>
+            Continue
+          </Button>
         </div>
       </div>
     </div>

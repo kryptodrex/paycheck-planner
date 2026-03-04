@@ -1,127 +1,46 @@
 import  React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { BillFrequency, PaySettings, TaxSettings } from '../../types/auth';
-import { formatWithSymbol, CURRENCIES, getCurrencySymbol } from '../../utils/currency';
+import type { BillFrequency } from '../../types/auth';
+import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
+import { roundUpToCent } from '../../utils/money';
 import './KeyMetrics.css';
 
-interface KeyMetricsProps {
-  showEditModal?: boolean;
-  onCloseEditModal?: () => void;
-}
-
-const KeyMetrics: React.FC<KeyMetricsProps> = ({ showEditModal: externalShowEditModal, onCloseEditModal }) => {
-  const { budgetData, calculatePaycheckBreakdown, updatePaySettings, updateTaxSettings, updateBudgetSettings } = useBudget();
-  const [internalShowEditModal, setInternalShowEditModal] = useState(false);
-  const showEditModal = externalShowEditModal ?? internalShowEditModal;
-  const setShowEditModal = onCloseEditModal ? (value: boolean) => { if (!value) onCloseEditModal(); } : setInternalShowEditModal;
-  
-  // Form state for editing
-  const [editPayType, setEditPayType] = useState<'salary' | 'hourly'>('salary');
-  const [editAnnualSalary, setEditAnnualSalary] = useState('');
-  const [editHourlyRate, setEditHourlyRate] = useState('');
-  const [editHoursPerPayPeriod, setEditHoursPerPayPeriod] = useState('');
-  const [editPayFrequency, setEditPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
-  const [editFederalTaxRate, setEditFederalTaxRate] = useState('');
-  const [editStateTaxRate, setEditStateTaxRate] = useState('');
-  const [editAdditionalWithholding, setEditAdditionalWithholding] = useState('');
-  const [editCurrency, setEditCurrency] = useState('USD');
-
-  // Pre-fill form when modal opens (either internally or externally controlled)
-  useEffect(() => {
-    if (showEditModal && budgetData) {
-      setEditPayType(budgetData.paySettings.payType);
-      setEditPayFrequency(budgetData.paySettings.payFrequency);
-      setEditAnnualSalary(budgetData.paySettings.annualSalary?.toString() || '');
-      setEditHourlyRate(budgetData.paySettings.hourlyRate?.toString() || '');
-      setEditHoursPerPayPeriod(budgetData.paySettings.hoursPerPayPeriod?.toString() || '');
-      setEditFederalTaxRate(budgetData.taxSettings.federalTaxRate.toString());
-      setEditStateTaxRate(budgetData.taxSettings.stateTaxRate.toString());
-      setEditAdditionalWithholding(budgetData.taxSettings.additionalWithholding.toString());
-      setEditCurrency(budgetData.settings.currency || 'USD');
-    }
-  }, [showEditModal, budgetData]);
-
-  // Handle Esc key to close modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showEditModal) {
-        setShowEditModal(false);
-      }
-    };
-
-    if (showEditModal) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [showEditModal]);
+const KeyMetrics: React.FC = () => {
+  const { budgetData, calculatePaycheckBreakdown } = useBudget();
 
   if (!budgetData) return null;
-
-  const handleSaveSettings = () => {
-    // Save pay settings
-    const paySettings: PaySettings = {
-      payType: editPayType,
-      payFrequency: editPayFrequency,
-      ...(editPayType === 'salary' 
-        ? { annualSalary: parseFloat(editAnnualSalary) || 0 }
-        : { 
-            hourlyRate: parseFloat(editHourlyRate) || 0,
-            hoursPerPayPeriod: parseFloat(editHoursPerPayPeriod) || 0
-          }
-      ),
-    };
-    updatePaySettings(paySettings);
-
-    // Save tax settings
-    const taxSettings: TaxSettings = {
-      federalTaxRate: parseFloat(editFederalTaxRate) || 0,
-      stateTaxRate: parseFloat(editStateTaxRate) || 0,
-      socialSecurityRate: 6.2,
-      medicareRate: 1.45,
-      additionalWithholding: parseFloat(editAdditionalWithholding) || 0,
-    };
-    updateTaxSettings(taxSettings);
-
-    // Save currency settings
-    if (budgetData) {
-      updateBudgetSettings({
-        ...budgetData.settings,
-        currency: editCurrency,
-      });
-    }
-
-    setShowEditModal(false);
-  };
 
   const breakdown = calculatePaycheckBreakdown();
 
   // Calculate annualized values
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const annualGross = breakdown.grossPay * paychecksPerYear;
-  const annualNet = breakdown.netPay * paychecksPerYear;
-  const annualTaxes = breakdown.totalTaxes * paychecksPerYear;
+  const annualGross = roundUpToCent(breakdown.grossPay * paychecksPerYear);
+  const annualNet = roundUpToCent(breakdown.netPay * paychecksPerYear);
+  const annualTaxes = roundUpToCent(breakdown.totalTaxes * paychecksPerYear);
 
   // Calculate total bills (annualized)
-  const annualBills = budgetData.bills.reduce((sum, bill) => {
+  const annualBills = roundUpToCent(budgetData.bills.reduce((sum, bill) => {
     return sum + annualizeBillAmount(bill.amount, bill.frequency);
-  }, 0);
+  }, 0));
 
   // Calculate monthly averages
-  const monthlyGross = annualGross / 12;
-  const monthlyNet = annualNet / 12;
-  const monthlyTaxes = annualTaxes / 12;
-  const monthlyBills = annualBills / 12;
+  const monthlyGross = roundUpToCent(annualGross / 12);
+  const monthlyNet = roundUpToCent(annualNet / 12);
+  const monthlyTaxes = roundUpToCent(annualTaxes / 12);
+  const monthlyBills = roundUpToCent(annualBills / 12);
 
   // Calculate remaining/free money
-  const annualRemaining = annualNet - annualBills;
-  const monthlyRemaining = annualRemaining / 12;
+  const annualRemaining = roundUpToCent(annualNet - annualBills);
+  const monthlyRemaining = roundUpToCent(annualRemaining / 12);
 
   // Calculate savings rate
   const savingsAccounts = budgetData.accounts.filter(a => a.type === 'savings');
-  const annualSavings = savingsAccounts.reduce((sum, account) => {
-    if (account.isRemainder) return 0; // Can't calculate remainder yet
-    return sum + (account.allocation * paychecksPerYear);
-  }, 0);
+  const annualSavings = roundUpToCent(savingsAccounts.reduce((sum, account) => {
+    // Use category-based allocations
+    const categories = account.allocationCategories || [];
+    const accountTotal = categories.reduce((catSum, cat) => catSum + cat.amount, 0);
+    return sum + (accountTotal * paychecksPerYear);
+  }, 0));
   const savingsRate = annualGross > 0 ? (annualSavings / annualGross) * 100 : 0;
 
   // Get currency from budget settings
@@ -303,202 +222,6 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({ showEditModal: externalShowEdit
           </div>
         </div>
       </div>
-
-      {/* Edit Pay Settings Modal */}
-      {showEditModal && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Edit Pay Settings</h2>
-              <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Pay Type</label>
-                <div className="radio-group">
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="editPayType"
-                      value="salary"
-                      checked={editPayType === 'salary'}
-                      onChange={(e) => setEditPayType(e.target.value as 'salary' | 'hourly')}
-                    />
-                    <span>Annual Salary</span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="editPayType"
-                      value="hourly"
-                      checked={editPayType === 'hourly'}
-                      onChange={(e) => setEditPayType(e.target.value as 'salary' | 'hourly')}
-                    />
-                    <span>Hourly Wage</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="editCurrency">Currency</label>
-                <select
-                  id="editCurrency"
-                  value={editCurrency}
-                  onChange={(e) => setEditCurrency(e.target.value)}
-                >
-                  {CURRENCIES.map((curr) => (
-                    <option key={curr.code} value={curr.code}>
-                      {curr.symbol} - {curr.name} ({curr.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {editPayType === 'salary' ? (
-                <div className="form-group">
-                  <label htmlFor="editAnnualSalary">Annual Salary</label>
-                  <div className="input-with-prefix">
-                    <span className="prefix">{getCurrencySymbol(editCurrency)}</span>
-                    <input
-                      type="number"
-                      id="editAnnualSalary"
-                      value={editAnnualSalary}
-                      onChange={(e) => setEditAnnualSalary(e.target.value)}
-                      placeholder="65000"
-                      min="0"
-                      step="1000"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label htmlFor="editHourlyRate">Hourly Rate</label>
-                    <div className="input-with-prefix">
-                      <span className="prefix">{getCurrencySymbol(editCurrency)}</span>
-                      <input
-                        type="number"
-                        id="editHourlyRate"
-                        value={editHourlyRate}
-                        onChange={(e) => setEditHourlyRate(e.target.value)}
-                        placeholder="25.00"
-                        min="0"
-                        step="0.50"
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="editHoursPerPayPeriod">Hours per Pay Period</label>
-                    <input
-                      type="number"
-                      id="editHoursPerPayPeriod"
-                      value={editHoursPerPayPeriod}
-                      onChange={(e) => setEditHoursPerPayPeriod(e.target.value)}
-                      placeholder="80"
-                      min="0"
-                      step="1"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="form-group">
-                <label>Pay Frequency</label>
-                <div className="radio-group vertical">
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="editPayFrequency"
-                      value="weekly"
-                      checked={editPayFrequency === 'weekly'}
-                      onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                    />
-                    <span>Weekly (52 per year)</span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="editPayFrequency"
-                      value="bi-weekly"
-                      checked={editPayFrequency === 'bi-weekly'}
-                      onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                    />
-                    <span>Bi-weekly (26 per year)</span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="editPayFrequency"
-                      value="semi-monthly"
-                      checked={editPayFrequency === 'semi-monthly'}
-                      onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                    />
-                    <span>Semi-monthly (24 per year)</span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="editPayFrequency"
-                      value="monthly"
-                      checked={editPayFrequency === 'monthly'}
-                      onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                    />
-                    <span>Monthly (12 per year)</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="editFederalTaxRate">Federal Tax Rate (%)</label>
-                <input
-                  type="number"
-                  id="editFederalTaxRate"
-                  value={editFederalTaxRate}
-                  onChange={(e) => setEditFederalTaxRate(e.target.value)}
-                  placeholder="12"
-                  min="0"
-                  max="50"
-                  step="0.5"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="editStateTaxRate">State Tax Rate (%)</label>
-                <input
-                  type="number"
-                  id="editStateTaxRate"
-                  value={editStateTaxRate}
-                  onChange={(e) => setEditStateTaxRate(e.target.value)}
-                  placeholder="5"
-                  min="0"
-                  max="20"
-                  step="0.5"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="editAdditionalWithholding">Additional Withholding (per paycheck)</label>
-                <div className="input-with-prefix">
-                  <span className="prefix">{getCurrencySymbol(editCurrency)}</span>
-                  <input
-                    type="number"
-                    id="editAdditionalWithholding"
-                    value={editAdditionalWithholding}
-                    onChange={(e) => setEditAdditionalWithholding(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="10"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSaveSettings}>Save Changes</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

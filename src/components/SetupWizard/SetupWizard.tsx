@@ -6,6 +6,7 @@ import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import type { PaySettings, TaxSettings, Account } from '../../types/auth';
+import { Button, FormGroup, InputWithPrefix } from '../shared';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -37,6 +38,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [hourlyRate, setHourlyRate] = useState('');
   const [hoursPerPayPeriod, setHoursPerPayPeriod] = useState('80');
   const [payFrequency, setPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
+  const [minLeftover, setMinLeftover] = useState('0');
   
   const [federalTaxRate, setFederalTaxRate] = useState('12');
   const [stateTaxRate, setStateTaxRate] = useState('5');
@@ -109,6 +111,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     const paySettings: PaySettings = {
       payType,
       payFrequency,
+      minLeftover: parseFloat(minLeftover) || 0,
       ...(payType === 'salary' 
         ? { annualSalary: parseFloat(annualSalary) || 0 }
         : { 
@@ -143,8 +146,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         id: crypto.randomUUID(),
         name: newAccountName.trim(),
         type: newAccountType,
-        allocation: 0,
-        isRemainder: false,
         color: getColorForAccountType(newAccountType),
       };
       
@@ -154,7 +155,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         setAccounts(AccountsService.getAccounts());
       } else {
         // For first-time setup, just add to local state
-        setAccounts([...accounts, newAccount]);
+        setAccounts((prev) => [...prev, newAccount]);
       }
       
       setNewAccountName('');
@@ -242,10 +243,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 Let's set up how you get paid so we can help you plan where every paycheck goes.
               </p>
 
-              <div className="form-group">
-                <label htmlFor="currency">Currency</label>
+              <FormGroup label="Currency" helperText="Choose your local currency for this plan">
                 <select
-                  id="currency"
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
                   className="currency-select"
@@ -256,8 +255,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                     </option>
                   ))}
                 </select>
-                <small>Choose your local currency for this plan</small>
-              </div>
+              </FormGroup>
 
               <div className="info-box">
                 <h3>What you'll configure:</h3>
@@ -301,8 +299,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 Tell us whether you're paid a salary or hourly, and how much.
               </p>
 
-              <div className="form-group">
-                <label>Pay Type</label>
+              <FormGroup label="Pay Type">
                 <div className="radio-group">
                   <label className="radio-option">
                     <input
@@ -325,54 +322,43 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                     <span>Hourly Wage</span>
                   </label>
                 </div>
-              </div>
+              </FormGroup>
 
               {payType === 'salary' ? (
-                <div className="form-group">
-                  <label htmlFor="annualSalary">Annual Salary</label>
-                  <div className="input-with-prefix">
-                    <span className="prefix">{getCurrencySymbol(currency)}</span>
-                    <input
-                      type="number"
-                      id="annualSalary"
-                      value={annualSalary}
-                      onChange={(e) => setAnnualSalary(e.target.value)}
-                      placeholder="65000"
-                      min="0"
-                      step="1000"
-                    />
-                  </div>
-                </div>
+                <FormGroup label="Annual Salary">
+                  <InputWithPrefix
+                    prefix={getCurrencySymbol(currency)}
+                    type="number"
+                    value={annualSalary}
+                    onChange={(e) => setAnnualSalary(e.target.value)}
+                    placeholder="65000"
+                    min="0"
+                    step="1000"
+                  />
+                </FormGroup>
               ) : (
                 <>
-                  <div className="form-group">
-                    <label htmlFor="hourlyRate">Hourly Rate</label>
-                    <div className="input-with-prefix">
-                      <span className="prefix">{getCurrencySymbol(currency)}</span>
-                      <input
-                        type="number"
-                        id="hourlyRate"
-                        value={hourlyRate}
-                        onChange={(e) => setHourlyRate(e.target.value)}
-                        placeholder="25.00"
-                        min="0"
-                        step="0.50"
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="hoursPerPayPeriod">Hours per Pay Period</label>
+                  <FormGroup label="Hourly Rate">
+                    <InputWithPrefix
+                      prefix={getCurrencySymbol(currency)}
+                      type="number"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(e.target.value)}
+                      placeholder="25.00"
+                      min="0"
+                      step="0.50"
+                    />
+                  </FormGroup>
+                  <FormGroup label="Hours per Pay Period" helperText="e.g., 80 hours for bi-weekly pay (40 hrs/week × 2 weeks)">
                     <input
                       type="number"
-                      id="hoursPerPayPeriod"
                       value={hoursPerPayPeriod}
                       onChange={(e) => setHoursPerPayPeriod(e.target.value)}
                       placeholder="80"
                       min="0"
                       step="1"
                     />
-                    <small>e.g., 80 hours for bi-weekly pay (40 hrs/week × 2 weeks)</small>
-                  </div>
+                  </FormGroup>
                 </>
               )}
             </div>
@@ -385,7 +371,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 Select your pay frequency so we can calculate your per-paycheck amounts.
               </p>
 
-              <div className="form-group">
+              <FormGroup label="Pay Frequency">
                 <div className="radio-group vertical">
                   <label className="radio-option">
                     <input
@@ -440,7 +426,22 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                     </span>
                   </label>
                 </div>
-              </div>
+              </FormGroup>
+
+              <FormGroup 
+                label="Minimum Leftover Per Paycheck" 
+                helperText="The minimum amount you want to keep unallocated for spending (groceries, shopping, etc.). This will warn you if allocations leave less than this amount."
+              >
+                <InputWithPrefix
+                  prefix="$"
+                  type="number"
+                  value={minLeftover}
+                  onChange={(e) => setMinLeftover(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="10"
+                />
+              </FormGroup>
             </div>
           )}
 
@@ -451,11 +452,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 Enter your estimated tax rates. You can update these later or leave them as defaults.
               </p>
 
-              <div className="form-group">
-                <label htmlFor="federalTaxRate">Federal Tax Rate (%)</label>
+              <FormGroup label="Federal Tax Rate (%)" helperText="Your estimated federal income tax rate">
                 <input
                   type="number"
-                  id="federalTaxRate"
                   value={federalTaxRate}
                   onChange={(e) => setFederalTaxRate(e.target.value)}
                   placeholder="12"
@@ -463,14 +462,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   max="50"
                   step="0.5"
                 />
-                <small>Your estimated federal income tax rate</small>
-              </div>
+              </FormGroup>
 
-              <div className="form-group">
-                <label htmlFor="stateTaxRate">State Tax Rate (%)</label>
+              <FormGroup label="State Tax Rate (%)" helperText="Your state income tax rate (0 if no state tax)">
                 <input
                   type="number"
-                  id="stateTaxRate"
                   value={stateTaxRate}
                   onChange={(e) => setStateTaxRate(e.target.value)}
                   placeholder="5"
@@ -478,25 +474,22 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   max="20"
                   step="0.5"
                 />
-                <small>Your state income tax rate (0 if no state tax)</small>
-              </div>
+              </FormGroup>
 
-              <div className="form-group">
-                <label htmlFor="additionalWithholding">Additional Withholding (per paycheck)</label>
-                <div className="input-with-prefix">
-                  <span className="prefix">{getCurrencySymbol(currency)}</span>
-                  <input
-                    type="number"
-                    id="additionalWithholding"
-                    value={additionalWithholding}
-                    onChange={(e) => setAdditionalWithholding(e.target.value)}
-                    placeholder="0"
-                    min="0"
-                    step="10"
-                  />
-                </div>
-                <small>Extra amount to withhold per paycheck (optional)</small>
-              </div>
+              <FormGroup 
+                label="Additional Withholding (per paycheck)" 
+                helperText="Extra tax amount withheld per paycheck and sent to the IRS. Use this if you owe taxes at year-end or want to increase your refund. This is already subtracted from your net pay."
+              >
+                <InputWithPrefix
+                  prefix={getCurrencySymbol(currency)}
+                  type="number"
+                  value={additionalWithholding}
+                  onChange={(e) => setAdditionalWithholding(e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="10"
+                />
+              </FormGroup>
 
               <div className="info-box">
                 <strong>Note:</strong> Social Security (6.2%) and Medicare (1.45%) are automatically included.
@@ -513,8 +506,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   : 'Set up your accounts where you want to allocate your paycheck funds.'}
               </p>
 
-              <div className="form-group">
-                <label>Your Accounts</label>
+              <FormGroup label="Your Accounts">
                 <div className="accounts-list">
                   {accounts.map((account, index) => (
                     <div key={account.id} className="account-item">
@@ -547,23 +539,21 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                       <div className="account-actions">
                         {editingAccountIndex !== index && (
                           <>
-                            <button
-                              type="button"
-                              className="btn-icon"
+                            <Button
+                              variant="icon"
                               onClick={() => handleStartEditAccountName(index)}
                               title="Edit name"
                             >
                               ✎
-                            </button>
+                            </Button>
                             {!hasExistingAccounts && (
-                              <button
-                                type="button"
-                                className="btn-icon btn-danger"
+                              <Button
+                                variant="icon"
                                 onClick={() => handleRemoveAccount(account.id)}
                                 title="Remove"
                               >
                                 ✕
-                              </button>
+                              </Button>
                             )}
                           </>
                         )}
@@ -571,10 +561,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </FormGroup>
 
-              <div className="form-group">
-                <label>Add Another Account</label>
+              <FormGroup label="Add Another Account">
                 <div className="add-account-form">
                   <div className="form-row">
                     <input
@@ -594,15 +583,15 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                       <option value="other">Other</option>
                     </select>
                   </div>
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-secondary"
+                    variant="secondary"
                     onClick={handleAddAccount}
                   >
                     + Add Account
-                  </button>
+                  </Button>
                 </div>
-              </div>
+              </FormGroup>
 
               <div className="info-box">
                 <strong>Tip:</strong> {hasExistingAccounts 
@@ -616,25 +605,25 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         <div className="wizard-footer">
           {step === 1 ? (
             onCancel ? (
-              <button
-                className="btn btn-secondary"
+              <Button
+                variant="secondary"
                 onClick={onCancel}
               >
                 ← Back
-              </button>
+              </Button>
             ) : null
           ) : (
-            <button
-              className="btn btn-secondary"
+            <Button
+              variant="secondary"
               onClick={handlePrevious}
             >
               ← Previous
-            </button>
+            </Button>
           )}
           
           {step < totalSteps ? (
-            <button
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               onClick={() => {
                 // Special handling for encryption step
                 if (step === 2) {
@@ -646,15 +635,15 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               disabled={!canProceed()}
             >
               Next →
-            </button>
+            </Button>
           ) : (
-            <button
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               onClick={handleComplete}
               disabled={!canProceed()}
             >
               Complete Setup ✓
-            </button>
+            </Button>
           )}
         </div>
       </div>

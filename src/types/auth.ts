@@ -44,6 +44,7 @@ export interface PaySettings {
   hourlyRate?: number;           // Hourly rate (if payType is 'hourly')
   hoursPerPayPeriod?: number;    // Hours per pay period (if hourly)
   payFrequency: PayFrequency;    // How often paid
+  minLeftover?: number;          // Minimum amount to keep leftover per paycheck (default: 0)
 }
 
 /**
@@ -74,10 +75,23 @@ export interface Account {
   id: string;
   name: string;                  // Account name (e.g., "Checking", "Savings")
   type: 'checking' | 'savings' | 'investment' | 'other';
-  allocation: number;            // Dollar amount allocated per paycheck (or 0 for remainder)
-  isRemainder: boolean;          // If true, gets whatever is left after other allocations
+  allocation?: number;           // DEPRECATED: Dollar amount allocated per paycheck
+  isRemainder?: boolean;         // DEPRECATED: If true, gets whatever is left after other allocations
+  priority?: number;             // DEPRECATED: Funding order (1 = first funded)
+  allocationCategories?: AccountAllocationCategory[]; // Category-level allocation targets
   color: string;                 // Hex color for UI display
   icon?: string;                 // Optional emoji or icon
+}
+
+/**
+ * AccountAllocationCategory - Category targets within an account allocation
+ */
+export interface AccountAllocationCategory {
+  id: string;
+  name: string;                  // Category name (e.g., "Emergency Fund", "Groceries")
+  amount: number;                // Amount per paycheck targeted for this category
+  isBill?: boolean;              // If true, this is an auto-calculated sum of bills for this account
+  billCount?: number;            // Number of bills in this category (if isBill is true)
 }
 
 /**
@@ -145,7 +159,7 @@ export interface BudgetContextType {
   createNewBudget: (year: number) => void;              // Create empty plan for a year
   closeBudget: () => void;                              // Close current budget (return to welcome)
   selectSaveLocation: () => Promise<void>;              // Choose where to save
-  copyPlanToNewYear: (newYear: number) => void;         // Duplicate plan to new year
+  copyPlanToNewYear: (newYear: number) => Promise<void>; // Duplicate plan to new year (with encryption key transfer)
   updateBudgetData: (data: Partial<BudgetData>) => void; // Generic update for any budget data
   
   // Pay settings operations

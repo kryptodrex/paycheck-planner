@@ -14,6 +14,8 @@ import type {
   PaycheckBreakdown
 } from '../types/auth';
 import { FileStorageService } from '../services/fileStorage';
+import { KeychainService } from '../services/keychainService';
+import { roundUpToCent } from '../utils/money';
 
 // Create the context - this is the "container" for our global state
 // Initially undefined, we'll provide the actual value in the Provider
@@ -187,9 +189,10 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
   /**
    * Copy the current plan to a new year
+   * If the current plan is encrypted, the encryption key is transferred to the new plan
    * @param newYear - The target year
    */
-  const copyPlanToNewYear = useCallback((newYear: number) => {
+  const copyPlanToNewYear = useCallback(async (newYear: number) => {
     if (!budgetData) return;
     
     const newBudget: BudgetData = {
@@ -204,6 +207,21 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         filePath: undefined, // Clear file path for new plan
       },
     };
+    
+    // If the old plan was encrypted, transfer the encryption key to the new plan
+    if (budgetData.settings.encryptionEnabled) {
+      try {
+        // Retrieve the encryption key for the old plan
+        const encryptionKey = await KeychainService.getKey(budgetData.id);
+        if (encryptionKey) {
+          // Save the same key for the new plan
+          await KeychainService.saveKey(newBudget.id, encryptionKey);
+        }
+      } catch (error) {
+        console.error('Failed to copy encryption key to new plan:', error);
+        // Continue anyway - user can set up encryption again if needed
+      }
+    }
     
     setBudgetData(newBudget);
   }, [budgetData]);
@@ -439,9 +457,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     let grossPay = 0;
     if (paySettings.payType === 'salary' && paySettings.annualSalary) {
       const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
-      grossPay = paySettings.annualSalary / paychecksPerYear;
+      grossPay = roundUpToCent(paySettings.annualSalary / paychecksPerYear);
     } else if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
-      grossPay = paySettings.hourlyRate * paySettings.hoursPerPayPeriod;
+      grossPay = roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
     }
 
     // Calculate pre-tax deductions
@@ -453,21 +471,22 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         totalPreTaxDeductions += deduction.amount;
       }
     });
+    totalPreTaxDeductions = roundUpToCent(totalPreTaxDeductions);
 
     // Calculate taxable income
-    const taxableIncome = grossPay - totalPreTaxDeductions;
+    const taxableIncome = roundUpToCent(grossPay - totalPreTaxDeductions);
 
     // Calculate taxes
-    const federalTax = (taxableIncome * taxSettings.federalTaxRate) / 100;
-    const stateTax = (taxableIncome * taxSettings.stateTaxRate) / 100;
-    const socialSecurity = (taxableIncome * taxSettings.socialSecurityRate) / 100;
-    const medicare = (taxableIncome * taxSettings.medicareRate) / 100;
-    const additionalWithholding = taxSettings.additionalWithholding;
+    const federalTax = roundUpToCent((taxableIncome * taxSettings.federalTaxRate) / 100);
+    const stateTax = roundUpToCent((taxableIncome * taxSettings.stateTaxRate) / 100);
+    const socialSecurity = roundUpToCent((taxableIncome * taxSettings.socialSecurityRate) / 100);
+    const medicare = roundUpToCent((taxableIncome * taxSettings.medicareRate) / 100);
+    const additionalWithholding = roundUpToCent(taxSettings.additionalWithholding);
 
-    const totalTaxes = federalTax + stateTax + socialSecurity + medicare + additionalWithholding;
+    const totalTaxes = roundUpToCent(federalTax + stateTax + socialSecurity + medicare + additionalWithholding);
 
     // Calculate net pay
-    const netPay = taxableIncome - totalTaxes;
+    const netPay = roundUpToCent(taxableIncome - totalTaxes);
 
     return {
       grossPay,

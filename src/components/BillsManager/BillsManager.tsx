@@ -1,13 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Bill, BillFrequency } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
+import { Modal, Button, FormGroup, InputWithPrefix } from '../shared';
 import './BillsManager.css';
 
-const BillsManager: React.FC = () => {
+interface BillsManagerProps {
+  scrollToAccountId?: string;
+}
+
+const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId }) => {
   const { budgetData, addBill, updateBill, deleteBill } = useBudget();
   const [showAddBill, setShowAddBill] = useState(false);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
+
+  // Scroll to account when scrollToAccountId changes
+  useEffect(() => {
+    if (scrollToAccountId) {
+      const element = document.getElementById(`account-${scrollToAccountId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [scrollToAccountId]);
 
   // Form state for new/edit bill
   const [billName, setBillName] = useState('');
@@ -88,9 +103,9 @@ const BillsManager: React.FC = () => {
           <p>Manage your recurring bills and expenses</p>
         </div>
         <div className="header-actions">
-          <button className="btn btn-primary" onClick={handleAddBill}>
+          <Button variant="primary" onClick={handleAddBill}>
             + Add Bill
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -118,7 +133,7 @@ const BillsManager: React.FC = () => {
             }, 0);
 
             return (
-              <div key={account.id} className="account-section">
+              <div key={account.id} id={`account-${account.id}`} className="account-section">
                 <div className="account-header">
                   <div className="account-info">
                     <span className="account-icon">{account.icon || '💳'}</span>
@@ -151,12 +166,20 @@ const BillsManager: React.FC = () => {
                           <div className="bill-notes">{bill.notes}</div>
                         )}
                         <div className="bill-actions">
-                          <button className="btn-icon" onClick={() => handleEditBill(bill)} title="Edit">
+                          <Button
+                            variant="icon"
+                            onClick={() => handleEditBill(bill)}
+                            title="Edit"
+                          >
                             ✏️
-                          </button>
-                          <button className="btn-icon" onClick={() => handleDeleteBill(bill.id)} title="Delete">
+                          </Button>
+                          <Button
+                            variant="icon"
+                            onClick={() => handleDeleteBill(bill.id)}
+                            title="Delete"
+                          >
                             🗑️
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -173,111 +196,104 @@ const BillsManager: React.FC = () => {
       )}
 
       {/* Add/Edit Bill Modal */}
-      {showAddBill && (
-        <div className="modal-overlay" onClick={() => setShowAddBill(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h3>{editingBill ? 'Edit Bill' : 'Add New Bill'}</h3>
-            <form onSubmit={handleSaveBill}>
-              <div className="form-group">
-                <label htmlFor="billName">Bill Name *</label>
-                <input
-                  type="text"
-                  id="billName"
-                  value={billName}
-                  onChange={e => setBillName(e.target.value)}
-                  placeholder="e.g., Electric Bill, Netflix"
+      <Modal
+        isOpen={showAddBill}
+        onClose={() => setShowAddBill(false)}
+      >
+        <h3>{editingBill ? 'Edit Bill' : 'Add New Bill'}</h3>
+        <form onSubmit={handleSaveBill}>
+          <FormGroup label="Bill Name" required>
+            <input
+              type="text"
+              value={billName}
+              onChange={e => setBillName(e.target.value)}
+              placeholder="e.g., Electric Bill, Netflix"
+              required
+            />
+          </FormGroup>
+
+          <div className="form-row">
+            <div style={{ flex: 1 }}>
+              <FormGroup label="Amount" required>
+                <InputWithPrefix
+                  prefix={getCurrencySymbol(currency)}
+                  type="number"
+                  value={billAmount}
+                  onChange={e => setBillAmount(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
                   required
                 />
-              </div>
+              </FormGroup>
+            </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="billAmount">Amount *</label>
-                  <div className="input-with-prefix">
-                    <span className="prefix">{getCurrencySymbol(currency)}</span>
-                    <input
-                      type="number"
-                      id="billAmount"
-                      value={billAmount}
-                      onChange={e => setBillAmount(e.target.value)}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="billFrequency">Frequency *</label>
-                  <select
-                    id="billFrequency"
-                    value={billFrequency}
-                    onChange={e => setBillFrequency(e.target.value as BillFrequency)}
-                    required
-                  >
-                    <option value="weekly">Weekly</option>
-                    <option value="bi-weekly">Bi-weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="semi-annual">Semi-annual</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="billAccountId">Account *</label>
-                  <select
-                    id="billAccountId"
-                    value={billAccountId}
-                    onChange={e => setBillAccountId(e.target.value)}
-                    required
-                  >
-                    {budgetData.accounts.map(account => (
-                      <option key={account.id} value={account.id}>
-                        {account.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="billCategory">Category</label>
-                  <input
-                    type="text"
-                    id="billCategory"
-                    value={billCategory}
-                    onChange={e => setBillCategory(e.target.value)}
-                    placeholder="e.g., Utilities, Entertainment"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="billNotes">Notes</label>
-                <textarea
-                  id="billNotes"
-                  value={billNotes}
-                  onChange={e => setBillNotes(e.target.value)}
-                  placeholder="Optional notes about this bill"
-                  rows={2}
-                />
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddBill(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {editingBill ? 'Update Bill' : 'Add Bill'}
-                </button>
-              </div>
-            </form>
+            <div style={{ flex: 1, marginLeft: '1rem' }}>
+              <FormGroup label="Frequency" required>
+                <select
+                  value={billFrequency}
+                  onChange={e => setBillFrequency(e.target.value as BillFrequency)}
+                  required
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="bi-weekly">Bi-weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="semi-annual">Semi-annual</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </FormGroup>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="form-row">
+            <div style={{ flex: 1 }}>
+              <FormGroup label="Account" required>
+                <select
+                  value={billAccountId}
+                  onChange={e => setBillAccountId(e.target.value)}
+                  required
+                >
+                  {budgetData.accounts.map(account => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </FormGroup>
+            </div>
+
+            <div style={{ flex: 1, marginLeft: '1rem' }}>
+              <FormGroup label="Category">
+                <input
+                  type="text"
+                  value={billCategory}
+                  onChange={e => setBillCategory(e.target.value)}
+                  placeholder="e.g., Utilities, Entertainment"
+                />
+              </FormGroup>
+            </div>
+          </div>
+
+          <FormGroup label="Notes">
+            <textarea
+              value={billNotes}
+              onChange={e => setBillNotes(e.target.value)}
+              placeholder="Optional notes about this bill"
+              rows={2}
+            />
+          </FormGroup>
+
+          <div className="modal-actions">
+            <Button type="button" variant="secondary" onClick={() => setShowAddBill(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              {editingBill ? 'Update Bill' : 'Add Bill'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

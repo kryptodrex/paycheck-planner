@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Button } from '../shared';
 import './Settings.css';
 
 interface SettingsProps {
@@ -65,9 +66,14 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
       <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
           <h2>Settings</h2>
-          <button className="settings-close" onClick={onClose} aria-label="Close settings">
+          <Button
+            variant="icon"
+            onClick={onClose}
+            title="Close settings"
+            aria-label="Close settings"
+          >
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="settings-content">
@@ -110,9 +116,9 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="settings-footer">
-          <button className="btn btn-primary" onClick={onClose}>
+          <Button variant="primary" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
       </div>
     </div>

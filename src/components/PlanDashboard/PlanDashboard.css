@@ -303,10 +303,14 @@
 
   .header-right {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .header-right .btn {
     flex: 1;
+    min-width: 45%;
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
   }
 
   .tab-button {
@@ -322,6 +326,14 @@
     /* flex-direction: column; */
     align-items: flex-start;
     gap: 0.5rem;
+  }
+}
+
+/* Compact buttons for very small screens */
+@media (max-width: 480px) {
+  .header-right .btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
   }
 }
 

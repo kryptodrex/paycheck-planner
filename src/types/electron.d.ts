@@ -24,7 +24,8 @@ export interface ElectronAPI {
   openFileDialog: () => Promise<string | null>;
   
   // Open a save file dialog (for saving files)
-  saveFileDialog: () => Promise<string | null>;
+  // Takes optional budgetName to use as default filename
+  saveFileDialog: (budgetName?: string) => Promise<string | null>;
   
   // Listen for menu events from the application menu bar
   // Takes an event name and a callback function

@@ -205,7 +205,7 @@ export class FileStorageService {
 
     // If no file path provided, open save dialog for user to choose location
     if (!targetPath) {
-      const selectedPath = await window.electronAPI.saveFileDialog();
+      const selectedPath = await window.electronAPI.saveFileDialog(budgetData.name);
       if (!selectedPath) {
         // User canceled - return null without error
         return null;

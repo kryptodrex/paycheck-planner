@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../shared';
 import './About.css';
 
 interface AboutProps {
@@ -28,9 +29,14 @@ const About: React.FC<AboutProps> = ({ isOpen, onClose }) => {
       <div className="about-modal" onClick={(e) => e.stopPropagation()}>
         <div className="about-header">
           <h2>About Paycheck Planner</h2>
-          <button className="about-close" onClick={onClose} aria-label="Close about">
+          <Button
+            variant="icon"
+            onClick={onClose}
+            title="Close about"
+            aria-label="Close about"
+          >
             ✕
-          </button>
+          </Button>
         </div>
 
         <div className="about-content">
@@ -95,9 +101,9 @@ const About: React.FC<AboutProps> = ({ isOpen, onClose }) => {
         </div>
 
         <div className="about-footer">
-          <button className="btn btn-primary" onClick={onClose}>
+          <Button variant="primary" onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>
