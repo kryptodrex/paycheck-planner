@@ -48,7 +48,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   
   // Calculate yearly breakdown from configured salary/hourly rate
   const yearlyBreakdown = useMemo(() => {
-    const { paySettings } = budgetData;
+    const { paySettings, benefits = [] } = budgetData;
     
     // Calculate yearly gross pay
     let yearlyGrossPay = 0;
@@ -73,7 +73,21 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     const yearlyMedicare = roundUpToCent(paycheckBreakdown.medicare * paychecksPerYear);
     const yearlyAdditionalWithholding = roundUpToCent(paycheckBreakdown.additionalWithholding * paychecksPerYear);
     const yearlyTotalTaxes = roundUpToCent(yearlyFederalTax + yearlyStateTax + yearlySocialSecurity + yearlyMedicare + yearlyAdditionalWithholding);
-    const yearlyNetPay = roundUpToCent(yearlyGrossPayCalc - yearlyPreTax - yearlyTotalTaxes);
+    
+    // Calculate post-tax deductions
+    let yearlyPostTaxDeductions = 0;
+    (benefits || []).forEach((benefit) => {
+      if (benefit.isTaxable) { // Post-tax benefit
+        if (benefit.isPercentage) {
+          yearlyPostTaxDeductions += roundUpToCent((yearlyGrossPayCalc * benefit.amount) / 100);
+        } else {
+          yearlyPostTaxDeductions += roundUpToCent(benefit.amount * paychecksPerYear);
+        }
+      }
+    });
+    
+    const yearlyNetPayBeforeTax = roundUpToCent(yearlyGrossPayCalc - yearlyPreTax - yearlyTotalTaxes);
+    const yearlyNetPay = roundUpToCent(Math.max(0, yearlyNetPayBeforeTax - yearlyPostTaxDeductions));
 
     return {
       grossPay: yearlyGrossPayCalc,
@@ -85,6 +99,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       medicare: yearlyMedicare,
       additionalWithholding: yearlyAdditionalWithholding,
       totalTaxes: yearlyTotalTaxes,
+      postTaxDeductions: yearlyPostTaxDeductions,
       netPay: yearlyNetPay,
     };
   }, [budgetData, paychecksPerYear]);
@@ -107,8 +122,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     medicare: roundUpToCent(yearlyBreakdown.medicare / displayDivisor),
     additionalWithholding: roundUpToCent(yearlyBreakdown.additionalWithholding / displayDivisor),
     totalTaxes: roundUpToCent(yearlyBreakdown.totalTaxes / displayDivisor),
+    postTaxDeductions: roundUpToCent(yearlyBreakdown.postTaxDeductions / displayDivisor),
     netPay: roundUpToCent(yearlyBreakdown.netPay / displayDivisor),
   };
+
+  const preTaxDeductionCount = (budgetData.preTaxDeductions || []).filter((deduction) => deduction.amount > 0).length;
+  const preTaxBenefitCount = (budgetData.benefits || []).filter((benefit) => !benefit.isTaxable && benefit.amount > 0).length;
+  const retirementContributionCount = (budgetData.retirement || []).filter((election) => election.employeeContribution > 0).length;
+  const totalPreTaxItemCount = preTaxDeductionCount + preTaxBenefitCount + retirementContributionCount;
+  const postTaxDeductionCount = (budgetData.benefits || []).filter((benefit) => benefit.isTaxable && benefit.amount > 0).length;
 
   // Helper function to convert per-paycheck values to display values based on display mode
   const toDisplayAmount = (paycheckAmount: number) => {
@@ -321,7 +343,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               <h3>Pre-Tax Deductions</h3>
               <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <div className="stage-detail">
-                {budgetData.preTaxDeductions.length} deduction(s)
+                {totalPreTaxItemCount} deduction(s)
               </div>
             </div>
             <div className="stage-arrow">↓</div>
@@ -368,6 +390,19 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
           </div>
           <div className="stage-arrow">↓</div>
         </div>
+
+        {displayBreakdown.postTaxDeductions > 0 && (
+          <div className="flow-stage">
+            <div className="stage-box postax-box">
+              <h3>Post-Tax Deductions</h3>
+              <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="stage-detail">
+                {postTaxDeductionCount} deduction(s)
+              </div>
+            </div>
+            <div className="stage-arrow">↓</div>
+          </div>
+        )}
 
         <div className="flow-stage">
           <div className="stage-label">RESULT</div>

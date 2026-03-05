@@ -76,6 +76,8 @@ export function formatWithSymbol(
   options?: Intl.NumberFormatOptions
 ): string {
   const symbol = getCurrencySymbol(currencyCode);
-  const formatted = amount.toLocaleString('en-US', options);
+  // Handle null, undefined, or NaN values
+  const safeAmount = (amount == null || isNaN(amount)) ? 0 : amount;
+  const formatted = safeAmount.toLocaleString('en-US', options);
   return `${symbol}${formatted}`;
 }

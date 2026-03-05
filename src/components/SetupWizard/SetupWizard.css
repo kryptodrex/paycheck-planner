@@ -158,60 +158,6 @@
   flex: 1;
 }
 
-.radio-group {
-  display: flex;
-  gap: 1rem;
-}
-
-.radio-group.vertical {
-  flex-direction: column;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  padding: 1rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex: 1;
-  background: var(--bg-primary);
-}
-
-.radio-option:hover {
-  border-color: #667eea;
-  background: var(--bg-secondary);
-}
-
-.radio-option input[type="radio"] {
-  margin-right: 0.75rem;
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-}
-
-.radio-option input[type="radio"]:checked + span {
-  color: #667eea;
-  font-weight: 600;
-}
-
-.radio-option span {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.radio-option strong {
-  display: block;
-  margin-bottom: 0.25rem;
-}
-
-.radio-option small {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
 .wizard-footer {
   display: flex;
   justify-content: space-between;

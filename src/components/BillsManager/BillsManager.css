@@ -221,27 +221,6 @@
   margin-bottom: 0.5rem;
 }
 
-.bill-category {
-  display: inline-block;
-  background: #e0e7ff;
-  color: #667eea;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-@media (prefers-color-scheme: dark) {
-  .bill-category {
-    background: rgba(102, 126, 234, 0.2);
-    color: #a5b4fc;
-  }
-
-  .bill-original {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-  }
-}
-
 .bill-amount {
   text-align: right;
   display: flex;
@@ -268,6 +247,13 @@
   padding: 0.5rem;
   background: var(--bg-primary);
   border-radius: 4px;
+}
+
+.bill-end {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: center;
 }
 
 .bill-actions {

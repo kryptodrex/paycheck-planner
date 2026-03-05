@@ -11,6 +11,8 @@ import type {
   BudgetSettings,
   Account,
   Bill,
+  Benefit,
+  RetirementElection,
   PaycheckBreakdown
 } from '../types/auth';
 import { FileStorageService } from '../services/fileStorage';
@@ -142,11 +144,53 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const loadBudget = useCallback(async (filePath?: string) => {
     setLoading(true);
     try {
-      const data = await FileStorageService.loadBudget(filePath);
+      let data = await FileStorageService.loadBudget(filePath);
       // If user canceled the dialog, data will be null
       if (!data) {
         return;
       }
+      
+      // Migrate old budget data to include new fields if they don't exist
+      if (!data.benefits) {
+        data.benefits = [];
+      }
+      if (!data.retirement) {
+        data.retirement = [];
+      }
+      
+      // Migrate old retirement election format to new format
+      data.retirement = data.retirement.map((election: any) => {
+        const migrated: any = { ...election };
+        
+        // Migrate field names
+        if ('employeeContributionAmount' in election) {
+          migrated.employeeContribution = election.employeeContributionAmount;
+          delete migrated.employeeContributionAmount;
+        }
+        
+        // Add hasEmployerMatch if missing
+        if (!('hasEmployerMatch' in migrated)) {
+          // If there was an employerMatchAmount, assume employer match is enabled
+          migrated.hasEmployerMatch = (election.employerMatchAmount && election.employerMatchAmount > 0) || false;
+        }
+        
+        // Initialize employerMatchCap if missing
+        if (!('employerMatchCap' in migrated)) {
+          migrated.employerMatchCap = election.employerMatchCap || 0;
+        }
+        
+        // Initialize employerMatchCapIsPercentage if missing
+        if (!('employerMatchCapIsPercentage' in migrated)) {
+          migrated.employerMatchCapIsPercentage = election.employerMatchCapIsPercentage || false;
+        }
+        
+        // Remove old fields that are no longer used
+        delete migrated.employerMatchAmount;
+        delete migrated.employerMatchIsPercentage;
+        
+        return migrated;
+      });
+      
       setBudgetData(data);
       // Mark as saved (just loaded)
       lastSavedDataRef.current = JSON.stringify(data);
@@ -433,6 +477,106 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, []);
 
   /**
+   * Add a new benefit
+   */
+  const addBenefit = useCallback((benefit: Omit<Benefit, 'id'>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        benefits: [
+          ...prev.benefits,
+          {
+            ...benefit,
+            id: crypto.randomUUID(),
+          },
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Update an existing benefit
+   */
+  const updateBenefit = useCallback((id: string, benefit: Partial<Benefit>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        benefits: prev.benefits.map((b) =>
+          b.id === id ? { ...b, ...benefit } : b
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Delete a benefit
+   */
+  const deleteBenefit = useCallback((id: string) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        benefits: prev.benefits.filter((b) => b.id !== id),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Add a new retirement election
+   */
+  const addRetirementElection = useCallback((election: Omit<RetirementElection, 'id'>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        retirement: [
+          ...prev.retirement,
+          {
+            ...election,
+            id: crypto.randomUUID(),
+          },
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Update an existing retirement election
+   */
+  const updateRetirementElection = useCallback((id: string, election: Partial<RetirementElection>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        retirement: prev.retirement.map((r) =>
+          r.id === id ? { ...r, ...election } : r
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Delete a retirement election
+   */
+  const deleteRetirementElection = useCallback((id: string) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        retirement: prev.retirement.filter((r) => r.id !== id),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
    * Calculate paycheck breakdown
    */
   const calculatePaycheckBreakdown = useCallback((): PaycheckBreakdown => {
@@ -451,7 +595,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       };
     }
 
-    const { paySettings, preTaxDeductions, taxSettings } = budgetData;
+    const { paySettings, preTaxDeductions, benefits = [], retirement = [], taxSettings } = budgetData;
     
     // Calculate gross pay per paycheck
     let grossPay = 0;
@@ -462,7 +606,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       grossPay = roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
     }
 
-    // Calculate pre-tax deductions
+    // Calculate pre-tax deductions (existing deductions)
     let totalPreTaxDeductions = 0;
     preTaxDeductions.forEach((deduction) => {
       if (deduction.isPercentage) {
@@ -471,6 +615,27 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         totalPreTaxDeductions += deduction.amount;
       }
     });
+
+    // Add pre-tax benefits
+    (benefits || []).forEach((benefit) => {
+      if (!benefit.isTaxable) { // Pre-tax benefit
+        if (benefit.isPercentage) {
+          totalPreTaxDeductions += (grossPay * benefit.amount) / 100;
+        } else {
+          totalPreTaxDeductions += benefit.amount;
+        }
+      }
+    });
+
+    // Add employee retirement contributions (pre-tax)
+    (retirement || []).forEach((election) => {
+      if (election.employeeContributionIsPercentage) {
+        totalPreTaxDeductions += (grossPay * election.employeeContribution) / 100;
+      } else {
+        totalPreTaxDeductions += election.employeeContribution;
+      }
+    });
+
     totalPreTaxDeductions = roundUpToCent(totalPreTaxDeductions);
 
     // Calculate taxable income
@@ -485,8 +650,23 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
     const totalTaxes = roundUpToCent(federalTax + stateTax + socialSecurity + medicare + additionalWithholding);
 
-    // Calculate net pay
-    const netPay = roundUpToCent(taxableIncome - totalTaxes);
+    // Calculate net pay before post-tax deductions
+    let netPayBeforePostTax = roundUpToCent(taxableIncome - totalTaxes);
+
+    // Subtract post-tax benefits
+    (benefits || []).forEach((benefit) => {
+      if (benefit.isTaxable) { // Post-tax benefit
+        if (benefit.isPercentage) {
+          netPayBeforePostTax -= roundUpToCent((grossPay * benefit.amount) / 100);
+        } else {
+          netPayBeforePostTax -= roundUpToCent(benefit.amount);
+        }
+      }
+    });
+
+    // Note: Employer match is not deducted from net pay, it's added to the employee's retirement account
+    // So we don't subtract it here - it's handled separately
+    const netPay = roundUpToCent(Math.max(0, netPayBeforePostTax));
 
     return {
       grossPay,
@@ -500,6 +680,60 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       totalTaxes,
       netPay,
     };
+  }, [budgetData]);
+
+  /**
+   * Calculate retirement contribution amounts for display
+   * Returns estimated employee and employer contributions per paycheck
+   */
+  const calculateRetirementContributions = useCallback((election: RetirementElection) => {
+    if (!budgetData) {
+      return { employeeAmount: 0, employerAmount: 0 };
+    }
+
+    const { paySettings } = budgetData;
+    
+    // Calculate gross pay per paycheck
+    let grossPay = 0;
+    if (paySettings.payType === 'salary' && paySettings.annualSalary) {
+      const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
+      grossPay = roundUpToCent(paySettings.annualSalary / paychecksPerYear);
+    } else if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
+      grossPay = roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
+    }
+
+    // If no pay settings configured yet, return zeros
+    if (grossPay === 0) {
+      return { employeeAmount: 0, employerAmount: 0 };
+    }
+
+    // Calculate employee contribution
+    let employeeAmount = 0;
+    if (election.employeeContributionIsPercentage) {
+      employeeAmount = roundUpToCent((grossPay * election.employeeContribution) / 100);
+    } else {
+      employeeAmount = roundUpToCent(election.employeeContribution);
+    }
+
+    // Calculate employer match (if enabled)
+    let employerAmount = 0;
+    if (election.hasEmployerMatch) {
+      // Convert employee contribution to percentage of gross for comparison
+      const employeePercentage = election.employeeContributionIsPercentage
+        ? election.employeeContribution
+        : (employeeAmount / grossPay) * 100;
+
+      if (election.employerMatchCapIsPercentage) {
+        // Cap is a percentage - employer matches up to that percentage
+        const matchPercentage = Math.min(employeePercentage, election.employerMatchCap);
+        employerAmount = roundUpToCent((grossPay * matchPercentage) / 100);
+      } else {
+        // Cap is a dollar amount - employer matches up to that amount
+        employerAmount = Math.min(employeeAmount, roundUpToCent(election.employerMatchCap));
+      }
+    }
+
+    return { employeeAmount, employerAmount };
   }, [budgetData]);
 
   /**
@@ -560,7 +794,14 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     addBill,
     updateBill,
     deleteBill,
+    addBenefit,
+    updateBenefit,
+    deleteBenefit,
+    addRetirementElection,
+    updateRetirementElection,
+    deleteRetirementElection,
     calculatePaycheckBreakdown,
+    calculateRetirementContributions,
   };
 
   // Provide the value to all children components

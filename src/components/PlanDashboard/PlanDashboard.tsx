@@ -5,6 +5,7 @@ import EncryptionSetup from '../EncryptionSetup';
 import KeyMetrics from '../KeyMetrics';
 import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
+import BenefitsManager from '../BenefitsManager';
 import TaxBreakdown from '../TaxBreakdown';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
@@ -12,7 +13,7 @@ import PaySettingsModal from '../PaySettingsModal';
 import { Toast, Modal, Button, FormGroup } from '../shared';
 import './PlanDashboard.css';
 
-type TabView = 'metrics' | 'breakdown' | 'bills' | 'taxes';
+type TabView = 'metrics' | 'breakdown' | 'bills' | 'benefits' | 'taxes';
 type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
 
 interface PlanDashboardProps {
@@ -23,7 +24,7 @@ interface PlanDashboardProps {
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings } = useBudget();
   const [activeTab, setActiveTab] = useState<TabView>(
-    viewMode && ['metrics', 'breakdown', 'bills', 'taxes'].includes(viewMode) 
+    viewMode && ['metrics', 'breakdown', 'bills', 'taxes', 'benefits'].includes(viewMode) 
       ? viewMode as TabView 
       : 'metrics'
   );
@@ -236,6 +237,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               Taxes
             </button>
           </div>
+          <div className="tab-button-group">
+            <button
+              className={`tab-button ${activeTab === 'benefits' ? 'active' : ''}`}
+              onClick={() => setActiveTab('benefits')}
+            >
+              <span className="tab-icon">🏥</span>
+              Benefits
+            </button>
+          </div>
         </div>
       )}
 
@@ -256,6 +266,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           onDisplayModeChange={setDisplayMode}
         />}
         {activeTab === 'taxes' && <TaxBreakdown />}
+        {activeTab === 'benefits' && <BenefitsManager />}
       </div>
 
       <footer className="dashboard-footer">

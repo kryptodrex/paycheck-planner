@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { PaySettings, TaxSettings } from '../../types/auth';
 import { formatWithSymbol, CURRENCIES, getCurrencySymbol } from '../../utils/currency';
-import { Modal, Button, FormGroup, InputWithPrefix, StickyActions } from '../shared';
+import { Modal, Button, FormGroup, InputWithPrefix, StickyActions, RadioGroup } from '../shared';
 import './PaySettingsModal.css';
 
 interface PaySettingsModalProps {
@@ -151,28 +151,16 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         <>
           <div className="modal-body pay-settings-editor-body">
             <FormGroup label="Pay Type">
-              <div className="radio-group">
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="editPayType"
-                    value="salary"
-                    checked={editPayType === 'salary'}
-                    onChange={(e) => setEditPayType(e.target.value as 'salary' | 'hourly')}
-                  />
-                  <span>Annual Salary</span>
-                </label>
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="editPayType"
-                    value="hourly"
-                    checked={editPayType === 'hourly'}
-                    onChange={(e) => setEditPayType(e.target.value as 'salary' | 'hourly')}
-                  />
-                  <span>Hourly Wage</span>
-                </label>
-              </div>
+              <RadioGroup
+                name="editPayType"
+                value={editPayType}
+                onChange={(value) => setEditPayType(value as 'salary' | 'hourly')}
+                layout="row"
+                options={[
+                  { value: 'salary', label: 'Annual Salary' },
+                  { value: 'hourly', label: 'Hourly Wage' },
+                ]}
+              />
             </FormGroup>
 
             <FormGroup label="Currency">
@@ -227,48 +215,18 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
             )}
 
             <FormGroup label="Pay Frequency">
-              <div className="radio-group vertical">
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="editPayFrequency"
-                    value="weekly"
-                    checked={editPayFrequency === 'weekly'}
-                    onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                  />
-                  <span>Weekly (52 per year)</span>
-                </label>
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="editPayFrequency"
-                    value="bi-weekly"
-                    checked={editPayFrequency === 'bi-weekly'}
-                    onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                  />
-                  <span>Bi-weekly (26 per year)</span>
-                </label>
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="editPayFrequency"
-                    value="semi-monthly"
-                    checked={editPayFrequency === 'semi-monthly'}
-                    onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                  />
-                  <span>Semi-monthly (24 per year)</span>
-                </label>
-                <label className="radio-option">
-                  <input
-                    type="radio"
-                    name="editPayFrequency"
-                    value="monthly"
-                    checked={editPayFrequency === 'monthly'}
-                    onChange={(e) => setEditPayFrequency(e.target.value as any)}
-                  />
-                  <span>Monthly (12 per year)</span>
-                </label>
-              </div>
+              <RadioGroup
+                name="editPayFrequency"
+                value={editPayFrequency}
+                onChange={(value) => setEditPayFrequency(value as 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly')}
+                layout="column"
+                options={[
+                  { value: 'weekly', label: 'Weekly', description: '52 per year' },
+                  { value: 'bi-weekly', label: 'Bi-weekly', description: '26 per year' },
+                  { value: 'semi-monthly', label: 'Semi-monthly', description: '24 per year' },
+                  { value: 'monthly', label: 'Monthly', description: '12 per year' },
+                ]}
+              />
             </FormGroup>
 
             <FormGroup 

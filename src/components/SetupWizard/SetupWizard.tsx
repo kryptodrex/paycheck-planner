@@ -6,7 +6,7 @@ import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import type { PaySettings, TaxSettings, Account } from '../../types/auth';
-import { Button, FormGroup, InputWithPrefix } from '../shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup } from '../shared';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -30,7 +30,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
   const [customEncryptionKey, setCustomEncryptionKey] = useState('');
   const [generatedEncryptionKey, setGeneratedEncryptionKey] = useState('');
-  const [showEncryptionKey, setShowEncryptionKey] = useState(false);
   const [useCustomEncryptionKey, setUseCustomEncryptionKey] = useState(false);
   
   const [payType, setPayType] = useState<'salary' | 'hourly'>('salary');
@@ -285,8 +284,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 customKey={customEncryptionKey}
                 setCustomKey={setCustomEncryptionKey}
                 generatedKey={generatedEncryptionKey}
-                showKey={showEncryptionKey}
-                setShowKey={setShowEncryptionKey}
                 onGenerateKey={handleGenerateEncryptionKey}
               />
             </div>
@@ -300,28 +297,16 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               </p>
 
               <FormGroup label="Pay Type">
-                <div className="radio-group">
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="payType"
-                      value="salary"
-                      checked={payType === 'salary'}
-                      onChange={(e) => setPayType(e.target.value as 'salary' | 'hourly')}
-                    />
-                    <span>Annual Salary</span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="payType"
-                      value="hourly"
-                      checked={payType === 'hourly'}
-                      onChange={(e) => setPayType(e.target.value as 'salary' | 'hourly')}
-                    />
-                    <span>Hourly Wage</span>
-                  </label>
-                </div>
+                <RadioGroup
+                  name="payType"
+                  value={payType}
+                  onChange={(value) => setPayType(value as 'salary' | 'hourly')}
+                  layout="row"
+                  options={[
+                    { value: 'salary', label: 'Annual Salary' },
+                    { value: 'hourly', label: 'Hourly Wage' },
+                  ]}
+                />
               </FormGroup>
 
               {payType === 'salary' ? (
@@ -372,60 +357,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               </p>
 
               <FormGroup label="Pay Frequency">
-                <div className="radio-group vertical">
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="payFrequency"
-                      value="weekly"
-                      checked={payFrequency === 'weekly'}
-                      onChange={(e) => setPayFrequency(e.target.value as any)}
-                    />
-                    <span>
-                      <strong>Weekly</strong>
-                      <small>52 paychecks per year</small>
-                    </span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="payFrequency"
-                      value="bi-weekly"
-                      checked={payFrequency === 'bi-weekly'}
-                      onChange={(e) => setPayFrequency(e.target.value as any)}
-                    />
-                    <span>
-                      <strong>Bi-weekly</strong>
-                      <small>26 paychecks per year (every 2 weeks)</small>
-                    </span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="payFrequency"
-                      value="semi-monthly"
-                      checked={payFrequency === 'semi-monthly'}
-                      onChange={(e) => setPayFrequency(e.target.value as any)}
-                    />
-                    <span>
-                      <strong>Semi-monthly</strong>
-                      <small>24 paychecks per year (twice a month)</small>
-                    </span>
-                  </label>
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="payFrequency"
-                      value="monthly"
-                      checked={payFrequency === 'monthly'}
-                      onChange={(e) => setPayFrequency(e.target.value as any)}
-                    />
-                    <span>
-                      <strong>Monthly</strong>
-                      <small>12 paychecks per year</small>
-                    </span>
-                  </label>
-                </div>
+                <RadioGroup
+                  name="payFrequency"
+                  value={payFrequency}
+                  onChange={(value) => setPayFrequency(value as 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly')}
+                  layout="column"
+                  options={[
+                    { value: 'weekly', label: 'Weekly', description: '52 paychecks per year' },
+                    { value: 'bi-weekly', label: 'Bi-weekly', description: '26 paychecks per year (every 2 weeks)' },
+                    { value: 'semi-monthly', label: 'Semi-monthly', description: '24 paychecks per year (twice a month)' },
+                    { value: 'monthly', label: 'Monthly', description: '12 paychecks per year' },
+                  ]}
+                />
               </FormGroup>
 
               <FormGroup 

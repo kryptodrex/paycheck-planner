@@ -32,7 +32,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const [billAmount, setBillAmount] = useState('');
   const [billFrequency, setBillFrequency] = useState<BillFrequency>('monthly');
   const [billAccountId, setBillAccountId] = useState('');
-  const [billCategory, setBillCategory] = useState('');
   const [billNotes, setBillNotes] = useState('');
 
   if (!budgetData) return null;
@@ -45,7 +44,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBillAmount('');
     setBillFrequency('monthly');
     setBillAccountId(budgetData.accounts[0]?.id || '');
-    setBillCategory('');
     setBillNotes('');
     setShowAddBill(true);
   };
@@ -56,20 +54,18 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBillAmount(bill.amount.toString());
     setBillFrequency(bill.frequency);
     setBillAccountId(bill.accountId);
-    setBillCategory(bill.category || '');
     setBillNotes(bill.notes || '');
     setShowAddBill(true);
   };
 
   const handleSaveBill = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const billData = {
       name: billName,
       amount: parseFloat(billAmount),
       frequency: billFrequency,
       accountId: billAccountId,
-      category: billCategory || undefined,
       notes: billNotes || undefined,
     };
 
@@ -138,19 +134,19 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           <p>Manage your recurring bills and expenses</p>
         </div>
         <div className="view-mode-selector">
-          <button 
+          <button
             className={displayMode === 'paycheck' ? 'active' : ''}
             onClick={() => onDisplayModeChange('paycheck')}
           >
             Per Paycheck
           </button>
-          <button 
+          <button
             className={displayMode === 'monthly' ? 'active' : ''}
             onClick={() => onDisplayModeChange('monthly')}
           >
             Monthly
           </button>
-          <button 
+          <button
             className={displayMode === 'yearly' ? 'active' : ''}
             onClick={() => onDisplayModeChange('yearly')}
           >
@@ -192,71 +188,72 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             .sort((a, b) => b.totalMonthly - a.totalMonthly)
             .map(({ account, accountBills, totalMonthly }) => {
 
-            return (
-              <div key={account.id} id={`account-${account.id}`} className="account-section">
-                <div className="account-header">
-                  <div className="account-info">
-                    <span className="account-icon">{account.icon || '💳'}</span>
-                    <div>
-                      <h3>{account.name}</h3>
-                      <span className="account-type">{account.type}</span>
+              return (
+                <div key={account.id} id={`account-${account.id}`} className="account-section">
+                  <div className="account-header">
+                    <div className="account-info">
+                      <span className="account-icon">{account.icon || '💳'}</span>
+                      <div>
+                        <h3>{account.name}</h3>
+                        <span className="account-type">{account.type}</span>
+                      </div>
+                    </div>
+                    <div className="account-total">
+                      <span className="total-label">{getDisplayLabel()} Total</span>
+                      <span className="total-amount">{formatWithSymbol(toDisplayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
-                  <div className="account-total">
-                    <span className="total-label">{getDisplayLabel()} Total</span>
-                    <span className="total-amount">{formatWithSymbol(toDisplayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
 
-                {accountBills.length > 0 ? (
-                  <div className="bills-list">
-                    {accountBills
-                      .sort((a, b) => b.amount - a.amount)
-                      .map(bill => (
-                      <div key={bill.id} className="bill-item">
-                        <div className="bill-main">
-                          <div className="bill-info">
-                            <h4>{bill.name}</h4>
-                            <div className="bill-frequency-amount">
-                              Paid {formatFrequency(bill.frequency)}: {formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}
+                  {accountBills.length > 0 ? (
+                    <div className="bills-list">
+                      {accountBills
+                        .sort((a, b) => b.amount - a.amount)
+                        .map(bill => (
+                          <div key={bill.id} className="bill-item">
+                            <div className="bill-main">
+                              <div className="bill-info">
+                                <h4>{bill.name}</h4>
+                                <div className="bill-frequency-amount">
+                                  Paid {formatFrequency(bill.frequency)}: {formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}
+                                </div>
+                              </div>
+                              <div className="bill-end">
+                                <div className="bill-amount">
+                                  <span className="amount">{formatWithSymbol(toDisplayAmount(convertToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
+                                  <span className="frequency">{getDisplayLabel()}</span>
+                                </div>
+                                <div className="bill-actions">
+                                  <Button
+                                    variant="icon"
+                                    onClick={() => handleEditBill(bill)}
+                                    title="Edit"
+                                  >
+                                    ✏️
+                                  </Button>
+                                  <Button
+                                    variant="icon"
+                                    onClick={() => handleDeleteBill(bill.id)}
+                                    title="Delete"
+                                  >
+                                    🗑️
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
-                            {bill.category && <span className="bill-category">{bill.category}</span>}
+                            {bill.notes && (
+                              <div className="bill-notes">{bill.notes}</div>
+                            )}
                           </div>
-                          <div className="bill-amount">
-                            <span className="amount">{formatWithSymbol(toDisplayAmount(convertToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
-                            <span className="frequency">{getDisplayLabel()}</span>
-                          </div>
-                        </div>
-                        {bill.notes && (
-                          <div className="bill-notes">{bill.notes}</div>
-                        )}
-                        <div className="bill-actions">
-                          <Button
-                            variant="icon"
-                            onClick={() => handleEditBill(bill)}
-                            title="Edit"
-                          >
-                            ✏️
-                          </Button>
-                          <Button
-                            variant="icon"
-                            onClick={() => handleDeleteBill(bill.id)}
-                            title="Delete"
-                          >
-                            🗑️
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="no-bills-message">
-                    No bills assigned to this account yet
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="no-bills-message">
+                      No bills assigned to this account yet
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
       )}
 
@@ -313,7 +310,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
 
           <div className="form-row">
             <div style={{ flex: 1 }}>
-              <FormGroup label="Account" required>
+              <FormGroup label="Paid from Account" required>
                 <select
                   value={billAccountId}
                   onChange={e => setBillAccountId(e.target.value)}
@@ -325,17 +322,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                     </option>
                   ))}
                 </select>
-              </FormGroup>
-            </div>
-
-            <div style={{ flex: 1, marginLeft: '1rem' }}>
-              <FormGroup label="Category">
-                <input
-                  type="text"
-                  value={billCategory}
-                  onChange={e => setBillCategory(e.target.value)}
-                  placeholder="e.g., Utilities, Entertainment"
-                />
               </FormGroup>
             </div>
           </div>

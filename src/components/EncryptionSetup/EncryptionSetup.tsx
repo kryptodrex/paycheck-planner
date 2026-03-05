@@ -17,7 +17,6 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
   const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
   const [customKey, setCustomKey] = useState('');
   const [generatedKey, setGeneratedKey] = useState('');
-  const [showCustomKey, setShowCustomKey] = useState(false);
   const [useCustomKey, setUseCustomKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -84,8 +83,6 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
           customKey={customKey}
           setCustomKey={setCustomKey}
           generatedKey={generatedKey}
-          showKey={showCustomKey}
-          setShowKey={setShowCustomKey}
           onGenerateKey={handleGenerateKey}
         />
 

@@ -48,49 +48,9 @@
   gap: 1.25rem;
 }
 
-/* Radio groups */
-.radio-group {
-  display: flex;
-  gap: 1rem;
-}
-
-.radio-group.vertical {
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.radio-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.radio-option:hover {
-  background: var(--bg-secondary);
-  border-color: var(--primary);
-}
-
-.radio-option input[type="radio"] {
-  cursor: pointer;
-}
-
-.radio-option input[type="radio"]:checked + span {
-  font-weight: 600;
-  color: var(--primary);
-}
-
 /* Responsive */
 @media (max-width: 640px) {
   .overview-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .radio-group:not(.vertical) {
-    flex-direction: column;
   }
 }

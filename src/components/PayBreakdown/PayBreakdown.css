@@ -163,6 +163,19 @@
   color: var(--text-tertiary);
 }
 
+  .postax-box {
+    background: transparent;
+    color: inherit;
+  }
+
+  .postax-box h3 {
+    color: var(--text-primary);
+  }
+
+  .postax-box .stage-detail {
+    color: var(--text-tertiary);
+  }
+
 .taxable-box {
   background: transparent;
   color: inherit;

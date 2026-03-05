@@ -382,6 +382,8 @@ export class FileStorageService {
       },
       accounts: AccountsService.getAccountsForNewPlan(), // Initialize from global accounts
       bills: [],
+      benefits: [],
+      retirement: [],
       settings: {
         currency,
         locale: 'en-US',

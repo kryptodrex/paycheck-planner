@@ -18,6 +18,30 @@ export type BillFrequency = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | '
 export type PayType = 'salary' | 'hourly';
 
 /**
+ * Benefit - A benefits election (health insurance, FSA, etc.)
+ */
+export interface Benefit {
+  id: string;
+  name: string;                  // Benefit name (e.g., "Health Insurance")
+  amount: number;                // Amount per paycheck
+  isTaxable: boolean;            // If true, this is post-tax; if false, pre-tax
+  isPercentage?: boolean;        // If true, amount is percentage of gross pay
+}
+
+/**
+ * RetirementElection - 401k or similar retirement contribution election
+ */
+export interface RetirementElection {
+  id: string;
+  type: '401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'other'; // Type of retirement plan
+  employeeContribution: number;            // Amount employee contributes per paycheck
+  employeeContributionIsPercentage: boolean; // If true, amount is percentage of gross pay
+  hasEmployerMatch: boolean;               // Whether employer offers matching contributions
+  employerMatchCap: number;                // Maximum employer will match (amount or percent)
+  employerMatchCapIsPercentage: boolean;   // If true, cap is percentage of gross; if false, it's dollar amount
+}
+
+/**
  * BudgetData - The main data structure for a paycheck plan file
  * This is what gets saved to disk (after encryption)
  */
@@ -27,6 +51,8 @@ export interface BudgetData {
   year: number;                  // Year this plan is for (e.g., 2026)
   paySettings: PaySettings;      // How the user gets paid
   preTaxDeductions: Deduction[]; // Pre-tax deductions (401k, benefits, etc.)
+  benefits: Benefit[];           // Benefits elections (health insurance, FSA, etc.)
+  retirement: RetirementElection[]; // Retirement plan elections (401k, etc.)
   taxSettings: TaxSettings;      // Tax configuration
   accounts: Account[];           // User's accounts (checking, savings, etc.)
   bills: Bill[];                 // Recurring bills and expenses
@@ -186,6 +212,17 @@ export interface BudgetContextType {
   updateBill: (id: string, bill: Partial<Bill>) => void;
   deleteBill: (id: string) => void;
   
+  // Benefit operations
+  addBenefit: (benefit: Omit<Benefit, 'id'>) => void;
+  updateBenefit: (id: string, benefit: Partial<Benefit>) => void;
+  deleteBenefit: (id: string) => void;
+  
+  // Retirement operations
+  addRetirementElection: (election: Omit<RetirementElection, 'id'>) => void;
+  updateRetirementElection: (id: string, election: Partial<RetirementElection>) => void;
+  deleteRetirementElection: (id: string) => void;
+  
   // Calculation functions
   calculatePaycheckBreakdown: () => PaycheckBreakdown;
+  calculateRetirementContributions: (election: RetirementElection) => { employeeAmount: number; employerAmount: number };
 }

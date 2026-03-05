@@ -1,4 +1,5 @@
 import React from 'react';
+import { RadioGroup } from '../shared';
 import './EncryptionConfigPanel.css';
 
 interface EncryptionConfigPanelProps {
@@ -9,8 +10,6 @@ interface EncryptionConfigPanelProps {
     customKey: string;
     setCustomKey: (value: string) => void;
     generatedKey: string;
-    showKey: boolean;
-    setShowKey: (value: boolean) => void;
     onGenerateKey: () => void;
 }
 
@@ -22,8 +21,6 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
     customKey,
     setCustomKey,
     generatedKey,
-    showKey,
-    setShowKey,
     onGenerateKey,
 }) => {
     const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, enabled: boolean) => {
@@ -91,46 +88,50 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
         <div className="encryption-config-panel">
             <h3>Choose Your Encryption Key</h3>
 
-            <div className="encryption-key-radio">
-                <label>
-                    <input
-                        type="radio"
-                        checked={!useCustomKey}
-                        onChange={() => setUseCustomKey(false)}
-                    />
-                    <span>Use Generated Key (Recommended)</span>
-                </label>
-                {!useCustomKey && (
+            <RadioGroup
+                name="encryptionKeyType"
+                value={useCustomKey ? 'custom' : 'generated'}
+                onChange={(value) => setUseCustomKey(value === 'custom')}
+                layout="column"
+                className="encryption-key-choice"
+                options={[
+                    {
+                        value: 'generated',
+                        label: 'Use Generated Key (Recommended)',
+                        description: 'Auto-generate a strong key and store it securely in your keychain.',
+                    },
+                    {
+                        value: 'custom',
+                        label: 'Use Custom Key',
+                        description: 'Enter your own passphrase or key.',
+                    },
+                ]}
+            />
+
+            {!useCustomKey && (
+                <div className="encryption-key-radio">
                     <div className="encryption-key-display">
                         <div className="encryption-key-box">
                             <code onCopy={() => navigator.clipboard.writeText(generatedKey)}>{generatedKey}</code>
                         </div>
                     </div>
-                )}
-                <div className="button-group">
-                    <button className="btn encryption-btn-small" onClick={onGenerateKey}>
-                        🔄 Generate New Key
-                    </button>
-                    <button 
-                        className="btn encryption-btn-small"
-                        onClick={() => navigator.clipboard.writeText(generatedKey)}
-                        title="Copy to clipboard"
-                    >
-                        Copy to Clipboard
-                    </button>
+                    <div className="button-group">
+                        <button className="btn encryption-btn-small" onClick={onGenerateKey}>
+                            🔄 Generate New Key
+                        </button>
+                        <button 
+                            className="btn encryption-btn-small"
+                            onClick={() => navigator.clipboard.writeText(generatedKey)}
+                            title="Copy to clipboard"
+                        >
+                            Copy to Clipboard
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <div className="encryption-key-radio">
-                <label>
-                    <input
-                        type="radio"
-                        checked={useCustomKey}
-                        onChange={() => setUseCustomKey(true)}
-                    />
-                    <span>Use Custom Key</span>
-                </label>
-                {useCustomKey && (
+            {useCustomKey && (
+                <div className="encryption-key-radio">
                     <div className="encryption-key-display">
                         <input
                             type="text"
@@ -144,8 +145,8 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                             Use a strong, memorable passphrase or a randomly generated key
                         </p>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
             <p className="encryption-note">
                 ❗️ Your encryption key is stored securely in your computer's keychain, but it is recommended to also keep a backup saved in another secure location.
             </p>
