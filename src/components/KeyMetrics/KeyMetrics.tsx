@@ -6,7 +6,7 @@ import { roundUpToCent } from '../../utils/money';
 import './KeyMetrics.css';
 
 const KeyMetrics: React.FC = () => {
-  const { budgetData, calculatePaycheckBreakdown } = useBudget();
+  const { budgetData, calculatePaycheckBreakdown, calculateRetirementContributions } = useBudget();
 
   if (!budgetData) return null;
 
@@ -33,14 +33,21 @@ const KeyMetrics: React.FC = () => {
   const annualRemaining = roundUpToCent(annualNet - annualBills);
   const monthlyRemaining = roundUpToCent(annualRemaining / 12);
 
-  // Calculate savings rate
+  // Calculate savings rate (savings-account allocations + retirement contributions)
   const savingsAccounts = budgetData.accounts.filter(a => a.type === 'savings');
-  const annualSavings = roundUpToCent(savingsAccounts.reduce((sum, account) => {
+  const annualSavingsFromAccounts = roundUpToCent(savingsAccounts.reduce((sum, account) => {
     // Use category-based allocations
     const categories = account.allocationCategories || [];
     const accountTotal = categories.reduce((catSum, cat) => catSum + cat.amount, 0);
     return sum + (accountTotal * paychecksPerYear);
   }, 0));
+
+  const annualSavingsFromRetirement = roundUpToCent((budgetData.retirement || []).reduce((sum, election) => {
+    const { employeeAmount } = calculateRetirementContributions(election);
+    return sum + (employeeAmount * paychecksPerYear);
+  }, 0));
+
+  const annualSavings = roundUpToCent(annualSavingsFromAccounts + annualSavingsFromRetirement);
   const savingsRate = annualGross > 0 ? (annualSavings / annualGross) * 100 : 0;
 
   // Get currency from budget settings

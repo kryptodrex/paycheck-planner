@@ -192,6 +192,7 @@ export interface BudgetContextType {
   saveBudget: () => Promise<void>;                      // Save to disk
   loadBudget: (filePath?: string) => Promise<void>;     // Load from disk
   createNewBudget: (year: number) => void;              // Create empty plan for a year
+  createDemoBudget: () => void;                         // Create demo plan with random realistic data
   closeBudget: () => void;                              // Close current budget (return to welcome)
   selectSaveLocation: () => Promise<void>;              // Choose where to save
   copyPlanToNewYear: (newYear: number) => Promise<void>; // Duplicate plan to new year (with encryption key transfer)

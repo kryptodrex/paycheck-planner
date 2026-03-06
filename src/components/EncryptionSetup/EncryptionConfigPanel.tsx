@@ -108,30 +108,31 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                 ]}
             />
 
-            {!useCustomKey && (
-                <div className="encryption-key-radio">
-                    <div className="encryption-key-display">
-                        <div className="encryption-key-box">
-                            <code onCopy={() => navigator.clipboard.writeText(generatedKey)}>{generatedKey}</code>
+            <div className="encryption-key-radio">
+                <h4 style={{marginTop: 0}}>Encryption Key Details</h4>
+                {!useCustomKey && (
+                    <>
+                        <div className="encryption-key-display">
+                            <div className="encryption-key-box">
+                                <code onCopy={() => navigator.clipboard.writeText(generatedKey)}>{generatedKey}</code>
+                            </div>
                         </div>
-                    </div>
-                    <div className="button-group">
-                        <button className="btn encryption-btn-small" onClick={onGenerateKey}>
-                            🔄 Generate New Key
-                        </button>
-                        <button 
-                            className="btn encryption-btn-small"
-                            onClick={() => navigator.clipboard.writeText(generatedKey)}
-                            title="Copy to clipboard"
-                        >
-                            Copy to Clipboard
-                        </button>
-                    </div>
-                </div>
-            )}
+                        <div className="button-group">
+                            <button className="btn encryption-btn-small" onClick={onGenerateKey}>
+                                🔄 Generate New Key
+                            </button>
+                            <button 
+                                className="btn encryption-btn-small"
+                                onClick={() => navigator.clipboard.writeText(generatedKey)}
+                                title="Copy to clipboard"
+                            >
+                                Copy to Clipboard
+                            </button>
+                        </div>
+                    </>
+                )}
 
-            {useCustomKey && (
-                <div className="encryption-key-radio">
+                {useCustomKey && (
                     <div className="encryption-key-display">
                         <input
                             type="text"
@@ -145,8 +146,9 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                             Use a strong, memorable passphrase or a randomly generated key
                         </p>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
+
             <p className="encryption-note">
                 ❗️ Your encryption key is stored securely in your computer's keychain, but it is recommended to also keep a backup saved in another secure location.
             </p>

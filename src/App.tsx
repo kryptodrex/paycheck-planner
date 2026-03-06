@@ -13,7 +13,7 @@ function App() {
   console.log('[APP] App component rendering...');
   
   // Get the current budget data and actions from our context
-  const { budgetData, loadBudget } = useBudget()
+  const { budgetData } = useBudget()
   console.log('[APP] Budget data available:', !!budgetData);
   
   // Track whether user has completed initial setup
@@ -21,12 +21,8 @@ function App() {
   const [checkingSetup, setCheckingSetup] = useState(true)
   // Track if user wants to force encryption setup again (for testing/changing)
   const [forceSetupAgain, setForceSetupAgain] = useState(false)
-  // Track session restoration state
-  const [sessionError, setSessionError] = useState<string | null>(null)
   // Track view mode (if this is a view window)
   const [viewMode, setViewMode] = useState<string | null>(null)
-  // Track if session restore should be skipped
-  const [skipSessionRestore, setSkipSessionRestore] = useState(false)
   // Track if settings modal is open
   const [showSettings, setShowSettings] = useState(false)
   // Track if about modal is open
@@ -37,7 +33,6 @@ function App() {
     if (window.electronAPI && window.electronAPI.getWindowParams) {
       const params = window.electronAPI.getWindowParams()
       setViewMode(params.viewType)
-      setSkipSessionRestore(params.skipSessionRestore)
     }
   }, [])
 
@@ -96,42 +91,6 @@ function App() {
     setCheckingSetup(false)
   }, [forceSetupAgain])
 
-  // Try to restore session when setup is complete and budget is not loaded
-  useEffect(() => {
-    if (!setupComplete || budgetData || !window.electronAPI) return
-
-    // Check if this window should skip session restoration (new windows via Cmd+N)
-    if (skipSessionRestore) {
-      return
-    }
-
-    const restoreSession = async () => {
-      try {
-        const session = await window.electronAPI.loadSessionState()
-        
-        // If there's a saved session with a file path
-        if (session.filePath) {
-          // Check if the file still exists
-          const exists = await window.electronAPI.fileExists(session.filePath)
-          if (exists) {
-            // Load the file
-            await loadBudget(session.filePath)
-            return
-          } else {
-            // File no longer exists, show error
-            setSessionError(`The file "${session.filePath}" could not be found. Starting fresh...`)
-            // Clear the old session
-            await window.electronAPI.clearSessionState()
-          }
-        }
-      } catch (error) {
-        console.error('Error restoring session:', error)
-      }
-    }
-
-    restoreSession()
-  }, [setupComplete, budgetData, loadBudget, skipSessionRestore])
-
   // Handle going back to setup (for resetting encryption)
   const handleResetSetup = () => {
     console.log('Resetting encryption setup...')
@@ -170,17 +129,6 @@ function App() {
           onComplete={handleSetupComplete}
           onCancel={isEditing ? handleCancelEncryptionSetup : undefined}
         />
-      </>
-    )
-  }
-
-  // Show session error if file not found, or if no budget is loaded, show welcome screen
-  if (sessionError) {
-    console.log('[APP] Showing welcome screen with error:', sessionError);
-    return (
-      <>
-        <div className="drag-bar" />
-        <WelcomeScreen initialError={sessionError} />
       </>
     )
   }

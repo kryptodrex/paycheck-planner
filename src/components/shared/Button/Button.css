@@ -1,7 +1,7 @@
 .btn {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -99,6 +99,12 @@
 }
 
 /* Size variants */
+.btn-xsmall {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem !important;
+}
+
 .btn-small {
   padding: 0.5rem 1rem;
   font-size: 0.85rem;

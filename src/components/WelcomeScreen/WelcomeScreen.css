@@ -92,9 +92,10 @@
 
 .action-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 1rem;
   margin-bottom: 2rem;
+  align-items: stretch;
 }
 
 .btn {
@@ -142,6 +143,15 @@
   justify-content: center;
   gap: 0.5rem;
   min-width: auto;
+}
+
+.btn-large-main {
+  width: 100%;
+}
+
+.btn-large-demo {
+  width: auto;
+  min-width: 160px;
 }
 
 .icon {
@@ -285,6 +295,11 @@
 
   .action-buttons {
     grid-template-columns: 1fr;
+  }
+
+  .btn-large-demo {
+    width: 100%;
+    min-width: 0;
   }
 
   .recent-files-list {

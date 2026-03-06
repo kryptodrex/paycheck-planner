@@ -5,7 +5,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** Button variant */
   variant?: 'primary' | 'secondary' | 'danger' | 'icon';
   /** Button size */
-  size?: 'small' | 'medium' | 'large';
+  size?: 'xsmall' | 'small' | 'medium' | 'large';
   /** Whether button is in a loading state */
   isLoading?: boolean;
   /** Loading text to display */

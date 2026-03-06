@@ -16,6 +16,36 @@ export interface RecentFile {
   lastOpened: string;
 }
 
+interface EncryptedBudgetEnvelopeV1 {
+  format: 'paycheck-planner-encrypted-v1';
+  planId: string;
+  payload: string;
+}
+
+function isEncryptedBudgetEnvelopeV1(value: unknown): value is EncryptedBudgetEnvelopeV1 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<EncryptedBudgetEnvelopeV1>;
+  return (
+    candidate.format === 'paycheck-planner-encrypted-v1' &&
+    typeof candidate.planId === 'string' &&
+    typeof candidate.payload === 'string'
+  );
+}
+
+function isBudgetData(value: unknown): value is BudgetData {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<BudgetData>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.year === 'number' &&
+    typeof candidate.name === 'string' &&
+    typeof candidate.paySettings === 'object' &&
+    Array.isArray(candidate.accounts) &&
+    Array.isArray(candidate.bills) &&
+    typeof candidate.settings === 'object'
+  );
+}
+
 export class FileStorageService {
   /**
    * Get app settings from localStorage
@@ -245,7 +275,16 @@ export class FileStorageService {
       await KeychainService.saveKey(budgetData.id, encryptionKey);
       
       // Encrypt the JSON data for security
-      dataToSave = this.encrypt(jsonData, encryptionKey);
+      const encryptedPayload = this.encrypt(jsonData, encryptionKey);
+
+      // Store encrypted file as a small JSON envelope with planId metadata.
+      // This allows key lookup by stable UUID even if filename/path changes.
+      const envelope: EncryptedBudgetEnvelopeV1 = {
+        format: 'paycheck-planner-encrypted-v1',
+        planId: budgetData.id,
+        payload: encryptedPayload,
+      };
+      dataToSave = JSON.stringify(envelope, null, 2);
     }
 
     // Send to Electron's main process to actually write the file
@@ -292,19 +331,49 @@ export class FileStorageService {
       throw new Error(result.error || 'Failed to load budget');
     }
 
-    let jsonData = result.data;
-    
-    // Try to parse as JSON first (unencrypted file)
+    let fileData = result.data;
+
+    // Try to parse as JSON first (unencrypted file or encrypted envelope)
     try {
-      const budgetData: BudgetData = JSON.parse(jsonData);
-      // Save the file-to-plan mapping for future reference
-      this.savePlanFileMapping(targetPath, budgetData.id);
-      // Add to recent files on successful load
-      this.addRecentFile(targetPath);
-      return budgetData;
+      const parsedData: unknown = JSON.parse(fileData);
+
+      // New encrypted format: use embedded plan ID metadata to fetch key
+      if (isEncryptedBudgetEnvelopeV1(parsedData)) {
+        const envelope = parsedData;
+        const encryptionKey = await KeychainService.getKey(envelope.planId);
+
+        if (!encryptionKey) {
+          throw new Error(
+            'This file is encrypted but no key was found for this plan in your keychain.'
+          );
+        }
+
+        const decryptedData = this.decrypt(envelope.payload, encryptionKey);
+        const decryptedParsed: unknown = JSON.parse(decryptedData);
+
+        if (!isBudgetData(decryptedParsed)) {
+          throw new Error('Decrypted file data is not a valid budget format.');
+        }
+
+        const budgetData = decryptedParsed as BudgetData;
+        this.savePlanFileMapping(targetPath, budgetData.id);
+        await KeychainService.saveKey(budgetData.id, encryptionKey);
+        this.addRecentFile(targetPath);
+        return budgetData;
+      }
+
+      // Regular unencrypted budget file
+      if (isBudgetData(parsedData)) {
+        const budgetData = parsedData as BudgetData;
+        this.savePlanFileMapping(targetPath, budgetData.id);
+        this.addRecentFile(targetPath);
+        return budgetData;
+      }
+
+      throw new Error('Unsupported or invalid budget file format.');
     } catch {
-      // If JSON parsing fails, it's likely encrypted
-      // Try to decrypt with the key from keychain
+      // If JSON parsing/validation fails, it may be a legacy encrypted raw payload.
+      // Try legacy decryption flow using path->plan mapping.
       
       // First, try to get the plan ID from our file mapping
       let planId = this.getPlanIdForFile(targetPath);
@@ -330,10 +399,14 @@ export class FileStorageService {
 
       try {
         // Decrypt the file contents
-        const decryptedData = this.decrypt(jsonData, encryptionKey);
+        const decryptedData = this.decrypt(fileData, encryptionKey);
         
         // Parse JSON back into a JavaScript object (deserialization)
-        const budgetData: BudgetData = JSON.parse(decryptedData);
+        const parsed: unknown = JSON.parse(decryptedData);
+        if (!isBudgetData(parsed)) {
+          throw new Error('Decrypted file data is not a valid budget format.');
+        }
+        const budgetData: BudgetData = parsed;
         
         // Save the file-to-plan mapping for future reference
         this.savePlanFileMapping(targetPath, budgetData.id);

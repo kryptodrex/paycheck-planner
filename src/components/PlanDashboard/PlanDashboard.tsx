@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { FileStorageService } from '../../services/fileStorage';
+import { KeychainService } from '../../services/keychainService';
 import SetupWizard from '../SetupWizard';
-import EncryptionSetup from '../EncryptionSetup';
+import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import KeyMetrics from '../KeyMetrics';
 import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
@@ -21,7 +23,7 @@ interface PlanDashboardProps {
 }
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
-  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings } = useBudget();
+  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
   const [activeTab, setActiveTab] = useState<TabView>(
     viewMode && ['metrics', 'breakdown', 'bills', 'taxes', 'benefits'].includes(viewMode) 
       ? viewMode as TabView 
@@ -35,6 +37,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
+  const [isEditingPlanName, setIsEditingPlanName] = useState(false);
+  const [draftPlanName, setDraftPlanName] = useState('');
+  const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
+  const [customKey, setCustomKey] = useState('');
+  const [generatedKey, setGeneratedKey] = useState('');
+  const [useCustomKey, setUseCustomKey] = useState(false);
+  const [encryptionSaving, setEncryptionSaving] = useState(false);
   const [statusToast, setStatusToast] = useState<string | null>(null);
   const tabContentRef = useRef<HTMLDivElement | null>(null);
   const tabPanelRefs = useRef<Partial<Record<TabView, HTMLDivElement | null>>>({});
@@ -150,6 +159,93 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   };
 
+  const handleGenerateEncryptionKey = () => {
+    const key = FileStorageService.generateEncryptionKey();
+    setGeneratedKey(key);
+    setUseCustomKey(false);
+  };
+
+  const handleEncryptionModalOpen = () => {
+    setEncryptionEnabled(null);
+    setCustomKey('');
+    setGeneratedKey('');
+    setUseCustomKey(false);
+    setShowEncryptionSetup(true);
+  };
+
+  const handleStartPlanNameEdit = () => {
+    setDraftPlanName(budgetData?.name || '');
+    setIsEditingPlanName(true);
+  };
+
+  const handleCancelPlanNameEdit = () => {
+    setIsEditingPlanName(false);
+    setDraftPlanName('');
+  };
+
+  const handleSavePlanName = () => {
+    const nextName = draftPlanName.trim();
+    if (!nextName || !budgetData || nextName === budgetData.name) {
+      handleCancelPlanNameEdit();
+      return;
+    }
+
+    updateBudgetData({ name: nextName });
+    setStatusToast('✏️ Plan name updated');
+    setIsEditingPlanName(false);
+  };
+
+  const handleEncryptionModalClose = () => {
+    setShowEncryptionSetup(false);
+    setEncryptionEnabled(null);
+    setCustomKey('');
+    setGeneratedKey('');
+    setUseCustomKey(false);
+    setEncryptionSaving(false);
+  };
+
+  const handleSaveEncryption = async () => {
+    if (!budgetData) return;
+    
+    setEncryptionSaving(true);
+    try {
+      const settings = FileStorageService.getAppSettings();
+      
+      if (encryptionEnabled) {
+        const keyToUse = useCustomKey ? customKey : generatedKey;
+        
+        if (!keyToUse) {
+          alert('Please generate or enter an encryption key.');
+          setEncryptionSaving(false);
+          return;
+        }
+        
+        settings.encryptionEnabled = true;
+        await KeychainService.saveKey(budgetData.id, keyToUse);
+      } else {
+        settings.encryptionEnabled = false;
+        await KeychainService.deleteKey(budgetData.id);
+      }
+      
+      FileStorageService.saveAppSettings(settings);
+      updateBudgetSettings({
+        ...budgetData.settings,
+        encryptionEnabled: Boolean(encryptionEnabled),
+      });
+      
+      setStatusToast(
+        encryptionEnabled
+          ? '🔒 Encryption enabled for this plan'
+          : '📄 Encryption disabled for this plan'
+      );
+      handleEncryptionModalClose();
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to save encryption settings: ${errorMsg}`);
+      setEncryptionSaving(false);
+    }
+  };
+
   const scrollTabToTop = (tab: TabView) => {
     tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -189,14 +285,66 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setActiveTab(tab);
   };
 
+  const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
+
   return (
     <div className="plan-dashboard">
       <header className="dashboard-header">
         <div className="header-left">
-          <h1>{budgetData.name}</h1>
+          <div className="plan-title-block">
+            {isEditingPlanName ? (
+              <div className="plan-title-edit-row">
+                <input
+                  value={draftPlanName}
+                  onChange={(event) => setDraftPlanName(event.target.value)}
+                  className="plan-title-input"
+                  placeholder="Plan name"
+                  autoFocus
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      handleSavePlanName();
+                    }
+                    if (event.key === 'Escape') {
+                      handleCancelPlanNameEdit();
+                    }
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  size="xsmall"
+                  className="header-btn-secondary plan-title-btn"
+                  onClick={handleSavePlanName}
+                >
+                  Save
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="xsmall"
+                  className="header-btn-secondary plan-title-btn"
+                  onClick={handleCancelPlanNameEdit}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="plan-title-view-row">
+                <h1>{budgetData.name}</h1>
+                <Button
+                  variant="secondary"
+                  size="xsmall"
+                  className="header-btn-secondary plan-title-btn"
+                  onClick={handleStartPlanNameEdit}
+                  title="Rename this plan"
+                >
+                  Rename
+                </Button>
+              </div>
+            )}
+            {showYearSubtitle && <p className="plan-year-subtitle">Year: {budgetData.year}</p>}
+          </div>
           <button 
             className="encryption-status-btn"
-            onClick={() => setShowEncryptionSetup(true)}
+            onClick={handleEncryptionModalOpen}
             title="Click to open encryption configuration"
           >
             {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
@@ -401,28 +549,63 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Encryption Setup Modal */}
       <Modal
         isOpen={showEncryptionSetup && !!budgetData}
-        onClose={() => setShowEncryptionSetup(false)}
-        contentClassName="encryption-modal-content"
+        onClose={handleEncryptionModalClose}
+        header={encryptionEnabled ? '🔐 Encryption Key Setup' : '🔐 Security Setup'}
+        footer={
+          <>
+            {encryptionEnabled === null ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleEncryptionModalClose}
+                disabled={encryptionSaving}
+              >
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setEncryptionEnabled(null)}
+                disabled={encryptionSaving}
+              >
+                Back
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleSaveEncryption}
+              disabled={
+                encryptionEnabled === null ||
+                (encryptionEnabled === true && !useCustomKey && !generatedKey) ||
+                encryptionSaving
+              }
+              isLoading={encryptionSaving}
+              loadingText="Saving..."
+            >
+              Continue
+            </Button>
+          </>
+        }
       >
-        {budgetData && (
-          <EncryptionSetup 
-            planId={budgetData.id}
-            onComplete={(isEncryptionEnabled) => {
-              setShowEncryptionSetup(false);
-              // Apply the selected encryption state for this plan
-              updateBudgetSettings({
-                ...budgetData.settings,
-                encryptionEnabled: isEncryptionEnabled,
-              });
-              setStatusToast(
-                isEncryptionEnabled
-                  ? '🔒 Encryption enabled for this plan'
-                  : '📄 Encryption disabled for this plan'
-              );
-            }}
-            onCancel={() => setShowEncryptionSetup(false)}
-          />
+        {encryptionEnabled !== null && (
+          <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>
+            {encryptionEnabled
+              ? 'This key will be used to encrypt and decrypt your budget files.'
+              : 'Your plan file will be saved without encryption.'}
+          </p>
         )}
+        <EncryptionConfigPanel
+          encryptionEnabled={encryptionEnabled}
+          setEncryptionEnabled={setEncryptionEnabled}
+          useCustomKey={useCustomKey}
+          setUseCustomKey={setUseCustomKey}
+          customKey={customKey}
+          setCustomKey={setCustomKey}
+          generatedKey={generatedKey}
+          onGenerateKey={handleGenerateEncryptionKey}
+        />
       </Modal>
 
       {statusToast && (

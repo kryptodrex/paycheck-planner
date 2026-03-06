@@ -57,6 +57,13 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   const handlePrevious = () => {
+    // If on encryption step and currently in key setup view (encryptionEnabled is not null),
+    // go back to the selection view instead of going to previous step
+    if (step === 2 && encryptionEnabled !== null) {
+      setEncryptionEnabled(null);
+      return;
+    }
+    
     if (step > 1) {
       setStep(step - 1);
     }

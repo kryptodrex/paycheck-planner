@@ -10,7 +10,7 @@ interface WelcomeScreenProps {
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
-  const { createNewBudget, loadBudget, loading } = useBudget();
+  const { createNewBudget, createDemoBudget, loadBudget, loading } = useBudget();
   const [planYear, setPlanYear] = useState(new Date().getFullYear().toString());
   const [showNewPlanForm, setShowNewPlanForm] = useState(false);
   const [dismissedError, setDismissedError] = useState(false);
@@ -23,6 +23,10 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
 
   const handleCreateNew = () => {
     setShowNewPlanForm(true);
+  };
+
+  const handleTryDemo = () => {
+    createDemoBudget();
   };
 
   const handleSubmitNew = (e: React.FormEvent) => {
@@ -139,7 +143,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             size="large"
             onClick={handleCreateNew}
             disabled={loading}
-            className="btn-large"
+            className="btn-large btn-large-main"
           >
             <span className="icon">+</span>
             Create New Plan
@@ -149,10 +153,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             size="large"
             onClick={handleLoadExisting}
             disabled={loading}
-            className="btn-large"
+            className="btn-large btn-large-main"
           >
             <span className="icon">📂</span>
             Open Existing Plan
+          </Button>
+          <Button
+            variant="secondary"
+            size="large"
+            onClick={handleTryDemo}
+            disabled={loading}
+            className="btn-large btn-large-demo"
+          >
+            <span className="icon">✨</span>
+            Try Demo
           </Button>
         </div>
 

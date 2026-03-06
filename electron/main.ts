@@ -1,7 +1,7 @@
 // Electron Main Process - This runs in Node.js, not the browser
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
-import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, screen } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -65,6 +65,56 @@ let welcomeWindow: BrowserWindow | null = null;
 // Variable to hold reference to the main/first application window (for backwards compatibility)
 let mainWindow: BrowserWindow | null = null;
 
+function hasLiveWelcomeWindow(): boolean {
+  return !!welcomeWindow && !welcomeWindow.isDestroyed();
+}
+
+type WindowBoundsState = {
+  width?: number;
+  height?: number;
+  x?: number;
+  y?: number;
+};
+
+function normalizeWindowBounds(
+  requested: WindowBoundsState,
+  defaults: { width: number; height: number; minWidth: number; minHeight: number }
+): Required<WindowBoundsState> {
+  const targetDisplay =
+    typeof requested.x === 'number' && typeof requested.y === 'number'
+      ? screen.getDisplayNearestPoint({ x: requested.x, y: requested.y })
+      : screen.getPrimaryDisplay();
+
+  const workArea = targetDisplay.workArea;
+  const maxWidth = Math.max(defaults.minWidth, workArea.width);
+  const maxHeight = Math.max(defaults.minHeight, workArea.height);
+
+  const width = Math.min(
+    Math.max(requested.width ?? defaults.width, defaults.minWidth),
+    maxWidth
+  );
+  const height = Math.min(
+    Math.max(requested.height ?? defaults.height, defaults.minHeight),
+    maxHeight
+  );
+
+  const minX = workArea.x;
+  const maxX = workArea.x + workArea.width - width;
+  const minY = workArea.y;
+  const maxY = workArea.y + workArea.height - height;
+
+  const x = Math.min(
+    Math.max(requested.x ?? workArea.x + Math.floor((workArea.width - width) / 2), minX),
+    Math.max(minX, maxX)
+  );
+  const y = Math.min(
+    Math.max(requested.y ?? workArea.y + Math.floor((workArea.height - height) / 2), minY),
+    Math.max(minY, maxY)
+  );
+
+  return { width, height, x, y };
+}
+
 /**
  * Create a new plan window (can be called multiple times for multiple windows)
  * @param windowState - Optional saved window state with dimensions and file path
@@ -78,8 +128,6 @@ function createPlanWindow(windowState?: any) {
     height: 900,
     x: undefined as number | undefined,
     y: undefined as number | undefined,
-    lastFilePath: undefined as string | undefined,
-    lastTab: undefined as string | undefined,
     viewType: undefined as string | undefined, // 'full', 'metrics', 'breakdown', 'bills', etc.
   };
 
@@ -90,15 +138,32 @@ function createPlanWindow(windowState?: any) {
 
   // Adjust window size for view windows
   const isViewWindow = state.viewType && state.viewType !== 'full';
+  const minWidth = isViewWindow ? 600 : 1000;
+  const minHeight = isViewWindow ? 400 : 600;
+  const normalizedBounds = normalizeWindowBounds(
+    {
+      width: isViewWindow ? 800 : state.width,
+      height: isViewWindow ? 600 : state.height,
+      x: state.x,
+      y: state.y,
+    },
+    {
+      width: isViewWindow ? 800 : 1400,
+      height: isViewWindow ? 600 : 900,
+      minWidth,
+      minHeight,
+    }
+  );
+
   const windowConfig = {
-    width: isViewWindow ? 800 : state.width,
-    height: isViewWindow ? 600 : state.height,
-    x: state.x,
-    y: state.y,
-    minWidth: isViewWindow ? 600 : 1000,
-    minHeight: isViewWindow ? 400 : 600,
+    width: normalizedBounds.width,
+    height: normalizedBounds.height,
+    x: normalizedBounds.x,
+    y: normalizedBounds.y,
+    minWidth,
+    minHeight,
     title: isViewWindow ? `Paycheck Planner - ${state.viewType}` : 'Paycheck Planner',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    titleBarStyle: (process.platform === 'darwin' ? 'hiddenInset' : 'default') as 'hiddenInset' | 'default',
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
@@ -168,8 +233,6 @@ function createPlanWindow(windowState?: any) {
         windowHeight: bounds.height,
         windowX: bounds.x,
         windowY: bounds.y,
-        lastFilePath: state.lastFilePath, // Preserve file path if it exists
-        lastTab: state.lastTab,
       });
 
       sessionData.windows = windowStates;
@@ -185,7 +248,7 @@ function createPlanWindow(windowState?: any) {
     if (mainWindow === window) mainWindow = null;
 
     // If no more plan windows, show welcome window
-    if (openWindows.size === 0 && !welcomeWindow) {
+    if (openWindows.size === 0 && !hasLiveWelcomeWindow()) {
       createWelcomeWindow();
     }
   });
@@ -195,18 +258,36 @@ function createPlanWindow(windowState?: any) {
 
 /**
  * Create a welcome window for opening/creating plans
- * @param skipSessionRestore - If true, don't restore previous session (for new windows via Cmd+N)
+ * @param skipSessionRestore - If true, skip any renderer-level session restore behavior
+ * @param windowState - Optional saved window bounds from previous app run
  */
-function createWelcomeWindow(skipSessionRestore = false) {
+function createWelcomeWindow(skipSessionRestore = false, windowState?: { width?: number; height?: number; x?: number; y?: number }) {
   debug('createWelcomeWindow called, skipSessionRestore:', skipSessionRestore);
-  if (welcomeWindow) {
+  if (hasLiveWelcomeWindow()) {
     debug('Welcome window already exists, skipping');
     return;
   }
 
+  const normalizedBounds = normalizeWindowBounds(
+    {
+      width: windowState?.width,
+      height: windowState?.height,
+      x: windowState?.x,
+      y: windowState?.y,
+    },
+    {
+      width: 900,
+      height: 700,
+      minWidth: 800,
+      minHeight: 600,
+    }
+  );
+
   welcomeWindow = new BrowserWindow({
-    width: 900,
-    height: 700,
+    width: normalizedBounds.width,
+    height: normalizedBounds.height,
+    x: normalizedBounds.x,
+    y: normalizedBounds.y,
     minWidth: 800,
     minHeight: 600,
     title: 'Paycheck Planner - Welcome',
@@ -241,6 +322,37 @@ function createWelcomeWindow(skipSessionRestore = false) {
     welcomeWindow.webContents.openDevTools();
   }
 
+  welcomeWindow.on('close', async () => {
+    try {
+      const bounds = welcomeWindow?.getBounds();
+      if (!bounds) return;
+
+      const sessionPath = path.join(app.getPath('userData'), 'session.json');
+      let sessionData: any = {};
+
+      try {
+        const content = await fs.readFile(sessionPath, 'utf-8');
+        sessionData = JSON.parse(content);
+      } catch {
+        // File doesn't exist or is invalid, start fresh
+      }
+
+      sessionData.windows = [
+        {
+          id: welcomeWindow?.id,
+          windowWidth: bounds.width,
+          windowHeight: bounds.height,
+          windowX: bounds.x,
+          windowY: bounds.y,
+        },
+      ];
+
+      await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
+    } catch (error) {
+      console.error('Error saving welcome window state:', error);
+    }
+  });
+
   welcomeWindow.on('closed', () => {
     welcomeWindow = null;
     // Don't auto-create another welcome window
@@ -255,8 +367,8 @@ function createWelcomeWindow(skipSessionRestore = false) {
 async function createWindow() {
   debug('createWindow called');
   
-  // Try to load saved window states
-  let savedWindows = [];
+  // Try to load saved window bounds (not plans/files)
+  let savedWindows: any[] = [];
 
   try {
     const sessionPath = path.join(app.getPath('userData'), 'session.json');
@@ -275,24 +387,18 @@ async function createWindow() {
     }
   }
 
-  // Restore all saved windows
+  // Always open Welcome on app relaunch, but preserve last window bounds
   if (savedWindows.length > 0) {
-    // Only restore main plan windows, not view windows
-    const mainWindows = savedWindows.filter((w: any) => !w.viewType || w.viewType === 'full');
-    debug('Main windows to restore:', mainWindows.length);
-    if (mainWindows.length > 0) {
-      mainWindows.forEach((windowState: any) => {
-        debug('Restoring window:', windowState.id);
-        createPlanWindow(windowState);
-      });
-    } else {
-      // No main windows, create welcome window
-      debug('No main windows found, creating welcome window');
-      createWelcomeWindow();
-    }
+    const [lastWindow] = savedWindows;
+    debug('Opening welcome window with saved bounds from last window');
+    createWelcomeWindow(false, {
+      width: lastWindow.windowWidth,
+      height: lastWindow.windowHeight,
+      x: lastWindow.windowX,
+      y: lastWindow.windowY,
+    });
   } else {
-    // No saved windows, create welcome window
-    debug('No saved windows, creating welcome window');
+    debug('No saved window bounds, creating welcome window with defaults');
     createWelcomeWindow();
   }
 
@@ -561,7 +667,12 @@ app.on('before-quit', () => {
   debug('App quitting, saving window states...');
   
   try {
-    const windows = Array.from(openWindows).map((window) => {
+    const windowsToSave = Array.from(openWindows);
+    if (welcomeWindow && !welcomeWindow.isDestroyed()) {
+      windowsToSave.push(welcomeWindow);
+    }
+
+    const windows = windowsToSave.map((window) => {
       const bounds = window.getBounds();
       return {
         id: window.id,
@@ -609,7 +720,7 @@ app.on('window-all-closed', () => {
     return;
   } else {
     // On Windows/Linux, show welcome window if no windows are open
-    if (openWindows.size === 0 && !welcomeWindow) {
+    if (openWindows.size === 0 && !hasLiveWelcomeWindow()) {
       createWelcomeWindow();
     }
   }
@@ -617,7 +728,7 @@ app.on('window-all-closed', () => {
 
 // On macOS, re-create window or show welcome when dock icon is clicked and no windows are open
 app.on('activate', () => {
-  if (openWindows.size === 0 && !welcomeWindow) {
+  if (openWindows.size === 0 && !hasLiveWelcomeWindow()) {
     createWelcomeWindow();
   }
 });
@@ -740,7 +851,6 @@ ipcMain.handle('open-view-window', async (event, viewType: string, filePath: str
     // Create the view window
     const viewWindow = createPlanWindow({
       viewType,
-      lastFilePath: filePath,
       width: 800,
       height: 600,
     });
@@ -775,49 +885,22 @@ function getSessionFilePath(): string {
 
 // Save session state
 ipcMain.handle('save-session-state', async (event, filePath: string, activeTab: string) => {
-  try {
-    const sessionPath = getSessionFilePath();
-    const sessionData = {
-      lastFilePath: filePath,
-      lastTab: activeTab,
-      timestamp: new Date().toISOString(),
-    };
-    await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
-    return { success: true };
-  } catch (error) {
-    console.error('Error saving session state:', error);
-    return { success: false, error: String(error) };
-  }
+  // Intentionally no-op: app should not persist last opened plans/tabs across relaunch.
+  // Keep handler for backward compatibility with renderer calls.
+  return { success: true };
 });
 
 // Load session state
 ipcMain.handle('load-session-state', async () => {
-  try {
-    const sessionPath = getSessionFilePath();
-    // Check if session file exists
-    await fs.access(sessionPath);
-    const data = await fs.readFile(sessionPath, 'utf-8');
-    const sessionData = JSON.parse(data);
-    return {
-      filePath: sessionData.lastFilePath,
-      activeTab: sessionData.lastTab,
-    };
-  } catch (error) {
-    // Session file doesn't exist or is invalid, return empty
-    return {};
-  }
+  // Intentionally disabled: do not auto-restore plans on startup.
+  return {};
 });
 
 // Clear session state
 ipcMain.handle('clear-session-state', async () => {
-  try {
-    const sessionPath = getSessionFilePath();
-    await fs.unlink(sessionPath);
-    return { success: true };
-  } catch (error) {
-    // File doesn't exist, which is fine
-    return { success: true };
-  }
+  // Intentionally no-op: window bounds are stored in the same session file.
+  // Keeping this for API compatibility without deleting window-size state.
+  return { success: true };
 });
 
 /**

@@ -18,6 +18,7 @@ import type {
 import { FileStorageService } from '../services/fileStorage';
 import { KeychainService } from '../services/keychainService';
 import { roundUpToCent } from '../utils/money';
+import { generateDemoBudgetData } from '../utils/demoDataGenerator';
 
 // Create the context - this is the "container" for our global state
 // Initially undefined, we'll provide the actual value in the Provider
@@ -237,6 +238,21 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const createNewBudget = useCallback((year: number) => {
     const newBudget = FileStorageService.createEmptyBudget(year);
     setBudgetData(newBudget);
+    
+    // Notify main process that a budget is loaded (transitions welcome to plan window)
+    if (window.electronAPI) {
+      window.electronAPI.budgetLoaded();
+    }
+  }, []);
+
+  /**
+   * Create a demo budget with realistic randomly-generated data
+   * Used for app demonstration and testing
+   */
+  const createDemoBudget = useCallback(() => {
+    const year = new Date().getFullYear();
+    const demoBudget = generateDemoBudgetData(year);
+    setBudgetData(demoBudget);
     
     // Notify main process that a budget is loaded (transitions welcome to plan window)
     if (window.electronAPI) {
@@ -813,6 +829,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     saveBudget,
     loadBudget,
     createNewBudget,
+    createDemoBudget,
     closeBudget,
     copyPlanToNewYear,
     selectSaveLocation,
