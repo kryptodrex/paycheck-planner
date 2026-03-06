@@ -414,7 +414,7 @@
 .waterfall-footer-row {
   font-weight: 700;
   font-size: 1.1rem;
-  color: var(--text-primary);
+  color: white;
   /* background: var(--bg-tertiary); */
   background: var(--header-gradient);
   padding: 1rem 0.75rem;
@@ -656,7 +656,7 @@
   }
 }
 
-.account-edit-actions {
+.paybreakdown-account-edit-actions {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
@@ -925,12 +925,12 @@
     gap: 0.5rem;
   }
 
-  .account-edit-actions {
+  .paybreakdown-account-edit-actions {
     flex-direction: column;
     width: 100%;
   }
 
-  .account-edit-actions .btn {
+  .paybreakdown-account-edit-actions .btn {
     width: 100%;
   }
 

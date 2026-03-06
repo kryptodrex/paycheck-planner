@@ -184,7 +184,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           <div className="empty-icon">📋</div>
           <h3>No Bills Yet</h3>
           <p>Add your first recurring bill or expense to get started</p>
-          <button className="btn btn-primary" onClick={handleAddBill}>
+          <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={handleAddBill}>
             Add First Bill
           </button>
         </div>

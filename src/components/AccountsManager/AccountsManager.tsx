@@ -1,53 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Account } from '../../types/auth';
-import { Modal, Button, FormGroup, InfoBox } from '../shared';
+import { Modal, Button, FormGroup, AccountsEditor } from '../shared';
 import './AccountsManager.css';
 
 interface AccountsManagerProps {
   onClose: () => void;
 }
 
-const getDefaultColorForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '#667eea';
-    case 'savings':
-      return '#f093fb';
-    case 'investment':
-      return '#4facfe';
-    case 'other':
-      return '#43e97b';
-    default:
-      return '#667eea';
-  }
-};
-
-const getDefaultIconForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '💳';
-    case 'savings':
-      return '💰';
-    case 'investment':
-      return '📈';
-    case 'other':
-      return '💵';
-    default:
-      return '💰';
-  }
-};
-
 const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
   const { budgetData, addAccount, updateAccount, updateBudgetData } = useBudget();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-  const [editingIcon, setEditingIcon] = useState('');
-  const [editingType, setEditingType] = useState<Account['type']>('checking');
-  const [showAddAccountForm, setShowAddAccountForm] = useState(false);
-  const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountType, setNewAccountType] = useState<Account['type']>('checking');
-  const [newAccountIcon, setNewAccountIcon] = useState(getDefaultIconForType('checking'));
   const [deleteTargetAccountId, setDeleteTargetAccountId] = useState<string>('');
   const [deleteDialogState, setDeleteDialogState] = useState<{
     account: Account;
@@ -58,58 +20,15 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
 
   const accounts = budgetData?.accounts ?? [];
 
-  useEffect(() => {
-    if (editingId && !accounts.some((account) => account.id === editingId)) {
-      setEditingId(null);
-      setEditingName('');
-    }
-  }, [accounts, editingId]);
-
-  const handleStartEdit = (account: Account) => {
-    setEditingId(account.id);
-    setEditingName(account.name);
-    setEditingIcon(account.icon || getDefaultIconForType(account.type));
-    setEditingType(account.type);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditingName('');
-    setEditingIcon('');
-    setEditingType('checking');
-  };
-
-  const handleSaveEdit = (account: Account) => {
-    if (!editingName.trim()) {
-      handleCancelEdit();
-      return;
-    }
-
-    updateAccount(account.id, { 
-      name: editingName.trim(),
-      icon: editingIcon.trim() || getDefaultIconForType(editingType),
-      type: editingType,
-      color: getDefaultColorForType(editingType)
-    });
-    handleCancelEdit();
-  };
-
-  const handleAddAccount = () => {
-    if (!newAccountName.trim()) {
-      return;
-    }
-
+  const handleAddAccount = (newAccount: Omit<Account, 'id'>) => {
     addAccount({
-      name: newAccountName.trim(),
-      type: newAccountType,
-      color: getDefaultColorForType(newAccountType),
-      icon: newAccountIcon.trim() || getDefaultIconForType(newAccountType),
-      allocationCategories: [],
+      ...newAccount,
+      allocationCategories: newAccount.allocationCategories || [],
     });
-    setNewAccountName('');
-    setNewAccountType('checking');
-    setNewAccountIcon(getDefaultIconForType('checking'));
-    setShowAddAccountForm(false);
+  };
+
+  const handleUpdateAccount = (id: string, updates: Partial<Account>) => {
+    updateAccount(id, updates);
   };
 
   const handleDeleteAccount = (id: string) => {
@@ -133,11 +52,9 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
     const totalLinkedItems = linkedBills + linkedBenefits + linkedRetirement;
 
     if (totalLinkedItems === 0) {
-      if (confirm('Are you sure you want to delete this account?')) {
-        updateBudgetData({
-          accounts: budgetData.accounts.filter((account) => account.id !== id),
-        });
-      }
+      updateBudgetData({
+        accounts: budgetData.accounts.filter((account) => account.id !== id),
+      });
       return;
     }
 
@@ -223,176 +140,14 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
           </Button>
         }
       >
-        <Button
-          variant="primary"
-          className="add-account-toggle-btn"
-          onClick={() => setShowAddAccountForm((prev) => !prev)}
-        >
-          {showAddAccountForm ? 'Hide Add Account Options' : '+ Add New Account'}
-        </Button>
-
-        {showAddAccountForm && (
-          <div className="add-account-section">
-            <h3>Add New Account</h3>
-            <div className="add-account-form">
-              <div className="add-account-row">
-                <div className="add-account-field add-account-icon-field">
-                  <label className="add-account-label">Icon</label>
-                  <input
-                    type="text"
-                    className="account-icon-input"
-                    placeholder="💰"
-                    value={newAccountIcon}
-                    onChange={(e) => setNewAccountIcon(e.target.value)}
-                    maxLength={2}
-                    title="Icon (emoji)"
-                  />
-                </div>
-                <div className="add-account-field add-account-name-field">
-                  <label className="add-account-label">Account Name</label>
-                  <input
-                    type="text"
-                    className="account-name-input"
-                    placeholder="e.g., Emergency Fund, Checking"
-                    value={newAccountName}
-                    onChange={(e) => setNewAccountName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleAddAccount();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="add-account-field add-account-type-field">
-                  <label className="add-account-label">Type</label>
-                  <select
-                    className="account-type-select"
-                    value={newAccountType}
-                    onChange={(e) => {
-                      const newType = e.target.value as Account['type'];
-                      setNewAccountType(newType);
-                      setNewAccountIcon(getDefaultIconForType(newType));
-                    }}
-                  >
-                    <option value="checking">Checking</option>
-                    <option value="savings">Savings</option>
-                    <option value="investment">Investment</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-              <Button
-                variant="primary"
-                onClick={handleAddAccount}
-                disabled={!newAccountName.trim()}
-              >
-                Add Account
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Existing Accounts List */}
-        <div className="accounts-list">
-          <h3>Your Accounts</h3>
-          {accounts.map((account) => (
-            <div key={account.id} className="account-item">
-              <div className="account-details">
-                {editingId === account.id ? (
-                  <>
-                    <div className="account-edit-form">
-                      <input
-                        type="text"
-                        className="account-icon-input"
-                        value={editingIcon}
-                        onChange={(e) => setEditingIcon(e.target.value)}
-                        placeholder="💰"
-                        maxLength={2}
-                      />
-                      <input
-                        autoFocus
-                        type="text"
-                        className="account-name-input"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleSaveEdit(account);
-                          } else if (e.key === 'Escape') {
-                            handleCancelEdit();
-                          }
-                        }}
-                      />
-                      <select
-                        className="account-type-select"
-                        value={editingType}
-                        onChange={(e) => {
-                          const newType = e.target.value as Account['type'];
-                          setEditingType(newType);
-                          if (!editingIcon || editingIcon === getDefaultIconForType(account.type)) {
-                            setEditingIcon(getDefaultIconForType(newType));
-                          }
-                        }}
-                      >
-                        <option value="checking">Checking</option>
-                        <option value="savings">Savings</option>
-                        <option value="investment">Investment</option>
-                        <option value="other">Other</option>
-                      </select>
-                      <div className="account-edit-actions">
-                        <Button
-                          variant="secondary"
-                          size="small"
-                          onClick={handleCancelEdit}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="primary"
-                          size="small"
-                          onClick={() => handleSaveEdit(account)}
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="account-name-display">
-                    <span className="account-icon-display">{account.icon || getDefaultIconForType(account.type)}</span>
-                    <div className="account-info-text">
-                      <h4>{account.name}</h4>
-                      <span className="account-type">{account.type}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {editingId !== account.id && (
-                <div className="account-actions">
-                  <Button
-                    variant="icon"
-                    onClick={() => handleStartEdit(account)}
-                    title="Edit account"
-                  >
-                    ✎
-                  </Button>
-                  <Button
-                    variant="icon"
-                    onClick={() => handleDeleteAccount(account.id)}
-                    title="Delete account"
-                  >
-                    🗑
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <InfoBox>
-          <strong>Info:</strong> These accounts are specific to this plan. Changes will only affect this plan file.
-        </InfoBox>
+        <AccountsEditor
+          accounts={accounts}
+          onAdd={handleAddAccount}
+          onUpdate={handleUpdateAccount}
+          onDelete={handleDeleteAccount}
+          showToggleButton={true}
+          infoMessage="These accounts are specific to this plan. Changes will only affect this plan file."
+        />
       </Modal>
 
       {deleteDialogState && (

@@ -29,29 +29,27 @@
   color: #0369a1;
 }
 
-/* Dark mode support for alerts */
-@media (prefers-color-scheme: dark) {
-  .alert-error {
-    background: rgba(220, 38, 38, 0.1);
-    border-color: rgba(220, 38, 38, 0.3);
-    color: #fca5a5;
-  }
+/* Dark mode support for alerts (follow app theme setting) */
+[data-theme="dark"] .alert-error {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.3);
+  color: #fca5a5;
+}
 
-  .alert-warning {
-    background: rgba(217, 119, 6, 0.1);
-    border-color: rgba(217, 119, 6, 0.3);
-    color: #fbbf24;
-  }
+[data-theme="dark"] .alert-warning {
+  background: rgba(217, 119, 6, 0.1);
+  border-color: rgba(217, 119, 6, 0.3);
+  color: #fbbf24;
+}
 
-  .alert-success {
-    background: rgba(22, 163, 74, 0.1);
-    border-color: rgba(22, 163, 74, 0.3);
-    color: #86efac;
-  }
+[data-theme="dark"] .alert-success {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.3);
+  color: #86efac;
+}
 
-  .alert-info {
-    background: rgba(3, 105, 161, 0.1);
-    border-color: rgba(3, 105, 161, 0.3);
-    color: #7dd3fc;
-  }
+[data-theme="dark"] .alert-info {
+  background: rgba(3, 105, 161, 0.1);
+  border-color: rgba(3, 105, 161, 0.3);
+  color: #7dd3fc;
 }

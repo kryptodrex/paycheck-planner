@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import SetupWizard from '../SetupWizard';
 import EncryptionSetup from '../EncryptionSetup';
@@ -116,6 +116,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     return () => window.clearTimeout(timer);
   }, [statusToast]);
 
+  const handleScrollToRetirementComplete = useCallback(() => {
+    setShouldScrollToRetirement(false);
+  }, []);
+
   if (!budgetData) return null;
 
   // Check if initial setup is complete (synchronously, no state needed)
@@ -170,10 +174,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       }
     });
   };
-
-  const handleScrollToRetirementComplete = useCallback(() => {
-    setShouldScrollToRetirement(false);
-  }, []);
 
   const handleTabClick = (tab: TabView, options?: { resetBillsAnchor?: boolean }) => {
     if (activeTab === tab) {

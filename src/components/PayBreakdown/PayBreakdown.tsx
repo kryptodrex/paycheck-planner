@@ -526,7 +526,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                     {!isEditing ? (
                       <Button variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
                     ) : (
-                      <div className="account-edit-actions">
+                      <div className="paybreakdown-account-edit-actions">
                         <Button variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
                         <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>
                       </div>
@@ -539,7 +539,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                     <div className="allocation-edit-section">
                       {displayAccount.allocationCategories.length === 0 && (
                         <div className="waterfall-row waterfall-category-row">
-                          <p className="category-empty">No categories yet. Add categories to allocate funds to this account.</p>
+                          <p className="category-empty">No allocations yet. Add allocations to allocate funds to this account.</p>
                         </div>
                       )}
 
@@ -573,7 +573,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                 type="text"
                                 value={category.name}
                                 onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
-                                placeholder="Category name"
+                                placeholder="Allocation name"
                                 className="category-name-input"
                               />
                               <InputWithPrefix
@@ -584,14 +584,14 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                 value={String(category.amount)}
                                 onChange={(e) => updateCategory(displayAccount.id, category.id, { amount: parseFloat(e.target.value) || 0 })}
                               />
-                              <Button variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove category">✕</Button>
+                              <Button variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove allocation">✕</Button>
                             </>
                           )}
                         </div>
                       ))}
 
                       <div className="waterfall-row waterfall-category-row category-actions-row">
-                        <Button variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Category</Button>
+                        <Button variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Allocation</Button>
                       </div>
 
                       {validationMessages.has(displayAccount.id) && (
