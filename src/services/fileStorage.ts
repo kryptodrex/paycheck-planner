@@ -2,7 +2,6 @@
 // This class manages reading/writing budget files and encrypting/decrypting the data
 import CryptoJS from 'crypto-js';
 import type { BudgetData, AppSettings } from '../types/auth';
-import { AccountsService } from './accountsService';
 import { KeychainService } from './keychainService';
 
 // LocalStorage key for app settings
@@ -380,7 +379,15 @@ export class FileStorageService {
         medicareRate: 1.45,
         additionalWithholding: 0,
       },
-      accounts: AccountsService.getAccountsForNewPlan(), // Initialize from global accounts
+      accounts: [
+        {
+          id: crypto.randomUUID(),
+          name: 'My Checking',
+          type: 'checking',
+          color: '#667eea',
+          icon: '💳',
+        },
+      ],
       bills: [],
       benefits: [],
       retirement: [],

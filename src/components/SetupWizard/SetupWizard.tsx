@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
-import { AccountsService } from '../../services/accountsService';
 import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
@@ -19,9 +18,6 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   
   const [step, setStep] = useState(1);
   const totalSteps = 6; // Increased from 5 to include encryption step
-
-  // Check if user already has accounts set up
-  const [hasExistingAccounts] = useState(AccountsService.hasAccounts());
 
   // Form state
   const [currency, setCurrency] = useState(budgetData?.settings?.currency || 'USD');
@@ -43,22 +39,23 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [stateTaxRate, setStateTaxRate] = useState('5');
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
 
-  // Account configuration - load from global accounts or use defaults
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  // Account configuration - start with default "My Checking" account
+  const [accounts, setAccounts] = useState<Account[]>([
+    {
+      id: crypto.randomUUID(),
+      name: 'My Checking',
+      type: 'checking',
+      color: getDefaultColorForType('checking'),
+      icon: getDefaultIconForType('checking'),
+    },
+  ]);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<Account['type']>('checking');
-  const [editingAccountIndex, setEditingAccountIndex] = useState<number | null>(null);
+  const [newAccountIcon, setNewAccountIcon] = useState(getDefaultIconForType('checking'));
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingAccountName, setEditingAccountName] = useState('');
-
-  // Initialize accounts from global storage
-  useEffect(() => {
-    if (hasExistingAccounts) {
-      setAccounts(AccountsService.getAccounts());
-    } else {
-      // First time setup - use defaults
-      setAccounts(AccountsService.getDefaultAccounts());
-    }
-  }, [hasExistingAccounts]);
+  const [editingAccountIcon, setEditingAccountIcon] = useState('');
+  const [editingAccountType, setEditingAccountType] = useState<Account['type']>('checking');
 
   const handleNext = () => {
     if (step < totalSteps) {
@@ -131,69 +128,70 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     };
     updateTaxSettings(taxSettings);
 
-    // Save accounts to global storage if this is first-time setup
-    if (!hasExistingAccounts) {
-      AccountsService.saveAccounts(accounts);
-    }
-
     onComplete();
   };
 
   const handleAddAccount = () => {
-    if (newAccountName.trim()) {
-      const newAccount: Account = {
-        id: crypto.randomUUID(),
-        name: newAccountName.trim(),
-        type: newAccountType,
-        color: getColorForAccountType(newAccountType),
-        icon: getDefaultIconForType(newAccountType),
-      };
-      
-      // For existing accounts, add to global storage immediately
-      if (hasExistingAccounts) {
-        AccountsService.addAccount(newAccount.name, newAccount.type);
-        setAccounts(AccountsService.getAccounts());
-      } else {
-        // For first-time setup, just add to local state
-        setAccounts((prev) => [...prev, newAccount]);
-      }
-      
-      setNewAccountName('');
-      setNewAccountType('checking');
+    if (!newAccountName.trim()) {
+      return;
     }
+
+    const newAccount: Account = {
+      id: crypto.randomUUID(),
+      name: newAccountName.trim(),
+      type: newAccountType,
+      color: getDefaultColorForType(newAccountType),
+      icon: newAccountIcon.trim() || getDefaultIconForType(newAccountType),
+    };
+    
+    setAccounts((prev) => [...prev, newAccount]);
+    setNewAccountName('');
+    setNewAccountType('checking');
+    setNewAccountIcon(getDefaultIconForType('checking'));
   };
 
   const handleRemoveAccount = (id: string) => {
-    if (hasExistingAccounts) {
-      // For existing accounts, remove from global storage
-      AccountsService.deleteAccount(id);
-      setAccounts(AccountsService.getAccounts());
-    } else {
-      // For first-time setup, just remove from local state
-      setAccounts(accounts.filter(acc => acc.id !== id));
+    if (accounts.length <= 1) {
+      alert('You must have at least one account');
+      return;
     }
+    setAccounts(accounts.filter(acc => acc.id !== id));
   };
 
-  const handleStartEditAccountName = (index: number) => {
-    setEditingAccountIndex(index);
-    setEditingAccountName(accounts[index].name);
+  const handleStartEdit = (account: Account) => {
+    setEditingAccountId(account.id);
+    setEditingAccountName(account.name);
+    setEditingAccountIcon(account.icon || getDefaultIconForType(account.type));
+    setEditingAccountType(account.type);
   };
 
-  const handleSaveAccountName = (index: number) => {
-    if (editingAccountName.trim()) {
-      const account = accounts[index];
-      if (hasExistingAccounts) {
-        // Update in global storage
-        AccountsService.updateAccount(account.id, { name: editingAccountName.trim() });
-        setAccounts(AccountsService.getAccounts());
-      } else {
-        // Update in local state
-        const newAccounts = [...accounts];
-        newAccounts[index] = { ...account, name: editingAccountName.trim() };
-        setAccounts(newAccounts);
-      }
+  const handleCancelEdit = () => {
+    setEditingAccountId(null);
+    setEditingAccountName('');
+    setEditingAccountIcon('');
+    setEditingAccountType('checking');
+  };
+
+  const handleSaveEdit = (accountId: string) => {
+    if (!editingAccountName.trim()) {
+      handleCancelEdit();
+      return;
     }
-    setEditingAccountIndex(null);
+
+    setAccounts((prev) =>
+      prev.map((acc) =>
+        acc.id === accountId
+          ? {
+              ...acc,
+              name: editingAccountName.trim(),
+              icon: editingAccountIcon.trim() || getDefaultIconForType(editingAccountType),
+              type: editingAccountType,
+              color: getDefaultColorForType(editingAccountType),
+            }
+          : acc
+      )
+    );
+    handleCancelEdit();
   };
 
   const canProceed = () => {
@@ -447,64 +445,99 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             <div className="wizard-step">
               <h2>Where does your money go? 💰</h2>
               <p className="step-description">
-                {hasExistingAccounts 
-                  ? 'Your existing accounts are listed below. You can add more if needed.'
-                  : 'Set up your accounts where you want to allocate your paycheck funds.'}
+                Set up your accounts where you want to allocate your paycheck funds. We've created a default checking account to get you started.
               </p>
 
               <FormGroup label="Your Accounts">
                 <div className="accounts-list">
-                  {accounts.map((account, index) => (
+                  {accounts.map((account) => (
                     <div key={account.id} className="account-item">
-                      <div className="account-info">
-                        <span className="account-icon">{account.icon || getDefaultIconForType(account.type)}</span>
-                        <div>
-                          {editingAccountIndex === index ? (
-                            <input
-                              autoFocus
-                              type="text"
-                              className="account-name-input"
-                              value={editingAccountName}
-                              onChange={(e) => setEditingAccountName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleSaveAccountName(index);
-                                } else if (e.key === 'Escape') {
-                                  setEditingAccountIndex(null);
-                                }
-                              }}
-                              onBlur={() => handleSaveAccountName(index)}
-                            />
-                          ) : (
-                            <>
-                              <span className="account-name">{account.name}</span>
-                              <span className="account-type-badge">{account.type}</span>
-                            </>
-                          )}
+                      {editingAccountId === account.id ? (
+                        <div className="account-edit-form">
+                          <input
+                            type="text"
+                            className="account-icon-input"
+                            value={editingAccountIcon}
+                            onChange={(e) => setEditingAccountIcon(e.target.value)}
+                            placeholder="💰"
+                            maxLength={2}
+                          />
+                          <input
+                            autoFocus
+                            type="text"
+                            className="account-name-input"
+                            value={editingAccountName}
+                            onChange={(e) => setEditingAccountName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSaveEdit(account.id);
+                              } else if (e.key === 'Escape') {
+                                handleCancelEdit();
+                              }
+                            }}
+                          />
+                          <select
+                            className="account-type-select"
+                            value={editingAccountType}
+                            onChange={(e) => {
+                              const newType = e.target.value as Account['type'];
+                              setEditingAccountType(newType);
+                              if (!editingAccountIcon || editingAccountIcon === getDefaultIconForType(account.type)) {
+                                setEditingAccountIcon(getDefaultIconForType(newType));
+                              }
+                            }}
+                          >
+                            <option value="checking">Checking</option>
+                            <option value="savings">Savings</option>
+                            <option value="investment">Investment</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <div className="account-edit-actions">
+                            <Button
+                              variant="secondary"
+                              size="small"
+                              onClick={handleCancelEdit}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="small"
+                              onClick={() => handleSaveEdit(account.id)}
+                            >
+                              Save
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="account-actions">
-                        {editingAccountIndex !== index && (
-                          <>
+                      ) : (
+                        <>
+                          <div className="account-details">
+                            <div className="account-name-display">
+                              <span className="account-icon-display">{account.icon || getDefaultIconForType(account.type)}</span>
+                              <div className="account-info-text">
+                                <h4>{account.name}</h4>
+                                <span className="account-type">{account.type}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="account-actions">
                             <Button
                               variant="icon"
-                              onClick={() => handleStartEditAccountName(index)}
-                              title="Edit name"
+                              onClick={() => handleStartEdit(account)}
+                              title="Edit account"
                             >
                               ✎
                             </Button>
-                            {!hasExistingAccounts && (
-                              <Button
-                                variant="icon"
-                                onClick={() => handleRemoveAccount(account.id)}
-                                title="Remove"
-                              >
-                                ✕
-                              </Button>
-                            )}
-                          </>
-                        )}
-                      </div>
+                            <Button
+                              variant="icon"
+                              onClick={() => handleRemoveAccount(account.id)}
+                              title="Delete account"
+                            >
+                              🗑
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -512,28 +545,57 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
               <FormGroup label="Add Another Account">
                 <div className="add-account-form">
-                  <div className="form-row">
-                    <input
-                      type="text"
-                      value={newAccountName}
-                      onChange={(e) => setNewAccountName(e.target.value)}
-                      placeholder="e.g., Emergency Fund"
-                      className="flex-grow"
-                    />
-                    <select
-                      value={newAccountType}
-                      onChange={(e) => setNewAccountType(e.target.value as any)}
-                    >
-                      <option value="checking">Checking</option>
-                      <option value="savings">Savings</option>
-                      <option value="investment">Investment</option>
-                      <option value="other">Other</option>
-                    </select>
+                  <div className="add-account-row">
+                    <div className="add-account-field add-account-icon-field">
+                      <label className="add-account-label">Icon</label>
+                      <input
+                        type="text"
+                        className="account-icon-input"
+                        placeholder="💰"
+                        value={newAccountIcon}
+                        onChange={(e) => setNewAccountIcon(e.target.value)}
+                        maxLength={2}
+                        title="Icon (emoji)"
+                      />
+                    </div>
+                    <div className="add-account-field add-account-name-field">
+                      <label className="add-account-label">Account Name</label>
+                      <input
+                        type="text"
+                        className="account-name-input"
+                        placeholder="e.g., Emergency Fund, Checking"
+                        value={newAccountName}
+                        onChange={(e) => setNewAccountName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddAccount();
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="add-account-field add-account-type-field">
+                      <label className="add-account-label">Type</label>
+                      <select
+                        className="account-type-select"
+                        value={newAccountType}
+                        onChange={(e) => {
+                          const newType = e.target.value as Account['type'];
+                          setNewAccountType(newType);
+                          setNewAccountIcon(getDefaultIconForType(newType));
+                        }}
+                      >
+                        <option value="checking">Checking</option>
+                        <option value="savings">Savings</option>
+                        <option value="investment">Investment</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
                   </div>
                   <Button
                     type="button"
                     variant="secondary"
                     onClick={handleAddAccount}
+                    disabled={!newAccountName.trim()}
                   >
                     + Add Account
                   </Button>
@@ -542,9 +604,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
               <InfoBox>
                 <p>
-                  <strong>Tip:</strong> {hasExistingAccounts 
-                    ? 'These accounts are used as templates for new plans. Manage them anytime from Edit → Accounts.'
-                    : 'You can always add, remove, or rename accounts later from Edit → Accounts.'}
+                  <strong>Tip:</strong> You can always add, remove, or rename accounts later from Edit → Accounts.
                 </p>
               </InfoBox>
             </div>
@@ -602,14 +662,19 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
 export default SetupWizard;
 
-function getColorForAccountType(type: string): string {
-  const colors: Record<string, string> = {
-    checking: '#3b82f6',
-    savings: '#10b981',
-    investment: '#8b5cf6',
-    other: '#6b7280',
-  };
-  return colors[type] || colors.other;
+function getDefaultColorForType(type: Account['type']): string {
+  switch (type) {
+    case 'checking':
+      return '#667eea';
+    case 'savings':
+      return '#f093fb';
+    case 'investment':
+      return '#4facfe';
+    case 'other':
+      return '#43e97b';
+    default:
+      return '#667eea';
+  }
 }
 
 function getDefaultIconForType(type: Account['type']): string {

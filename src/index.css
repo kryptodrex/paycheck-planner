@@ -20,6 +20,8 @@
   --text-tertiary: #9ca3af;
   --border-color: #e5e7eb;
   --border-color-light: #f3f4f6;
+  --progress-fill: #667eea;
+  --progress-bg: #c9d2e0;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -44,6 +46,8 @@
   --text-tertiary: #9ca3af;
   --border-color: #374151;
   --border-color-light: #2d2d2d;
+  --progress-fill: #667eea;
+  --progress-bg: #4e4e4e;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
