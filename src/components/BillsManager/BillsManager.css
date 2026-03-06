@@ -187,20 +187,9 @@
 }
 
 .bill-item {
-  background: var(--bg-secondary);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  transition: all 0.2s;
-}
-
-.bill-item:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
 }
 
 .bill-main {
@@ -284,38 +273,7 @@
   font-style: italic;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-content {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.modal-content h3 {
-  margin: 0 0 1.5rem 0;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-}
-
+/* Form Styles */
 .form-group {
   margin-bottom: 1.25rem;
 }
@@ -336,6 +294,7 @@
   border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
+  line-height: 1.5;
   transition: border-color 0.2s;
   font-family: inherit;
   background: var(--bg-primary);
@@ -377,15 +336,6 @@
 .input-with-prefix input {
   border-radius: 0 8px 8px 0 !important;
   flex: 1;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {

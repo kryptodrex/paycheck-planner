@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { Button, InputWithPrefix } from '../shared';
+import { Button, InputWithPrefix, Modal, FormGroup } from '../shared';
 import './TaxBreakdown.css';
 
 const TaxBreakdown: React.FC = () => {
   const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
-  const [isEditing, setIsEditing] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     federalTaxRate: 0,
     stateTaxRate: 0,
@@ -25,11 +25,11 @@ const TaxBreakdown: React.FC = () => {
       stateTaxRate: taxSettings.stateTaxRate,
       additionalWithholding: taxSettings.additionalWithholding,
     });
-    setIsEditing(true);
+    setShowEditModal(true);
   };
 
   const handleEditCancel = () => {
-    setIsEditing(false);
+    setShowEditModal(false);
   };
 
   const handleEditSave = () => {
@@ -41,7 +41,7 @@ const TaxBreakdown: React.FC = () => {
         additionalWithholding: editForm.additionalWithholding,
       },
     });
-    setIsEditing(false);
+    setShowEditModal(false);
   };
 
   const handleFieldChange = (field: string, value: number) => {
@@ -58,62 +58,12 @@ const TaxBreakdown: React.FC = () => {
           <h2>Tax Breakdown</h2>
           <p>View and manage your tax withholding information</p>
         </div>
-        {!isEditing && (
-          <Button variant="secondary" onClick={handleEditStart}>
-            ⚙️ Edit Tax Settings
-          </Button>
-        )}
+        <Button variant="secondary" onClick={handleEditStart}>
+          ⚙️ Edit Tax Settings
+        </Button>
       </div>
 
-      {isEditing ? (
-        <div className="tax-edit-section">
-          <h3>Edit Tax Settings</h3>
-          
-          <div className="edit-form">
-            <div className="form-group">
-              <label>Federal Tax Rate (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={editForm.federalTaxRate}
-                onChange={(e) => handleFieldChange('federalTaxRate', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>State Tax Rate (%)</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={editForm.stateTaxRate}
-                onChange={(e) => handleFieldChange('stateTaxRate', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Additional Withholding per Paycheck</label>
-              <InputWithPrefix
-                prefix={getCurrencySymbol(currency)}
-                type="number"
-                min="0"
-                step="0.01"
-                value={editForm.additionalWithholding}
-                onChange={(e) => handleFieldChange('additionalWithholding', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-          </div>
-
-          <div className="edit-actions">
-            <Button variant="secondary" onClick={handleEditCancel}>Cancel</Button>
-            <Button variant="primary" onClick={handleEditSave}>Save Changes</Button>
-          </div>
-        </div>
-      ) : (
-        <div className="tax-summary">
+      <div className="tax-summary">
           <div className="summary-section">
             <h3>Gross vs. Net Pay</h3>
             <div className="summary-table">
@@ -190,7 +140,56 @@ const TaxBreakdown: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+
+      {/* Edit Tax Settings Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={handleEditCancel}
+        header="Edit Tax Settings"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleEditCancel}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleEditSave}>
+              Save Changes
+            </Button>
+          </>
+        }
+      >
+        <FormGroup label="Federal Tax Rate (%)" required>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={editForm.federalTaxRate}
+            onChange={(e) => handleFieldChange('federalTaxRate', parseFloat(e.target.value) || 0)}
+          />
+        </FormGroup>
+
+        <FormGroup label="State Tax Rate (%)" required>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={editForm.stateTaxRate}
+            onChange={(e) => handleFieldChange('stateTaxRate', parseFloat(e.target.value) || 0)}
+          />
+        </FormGroup>
+
+        <FormGroup label="Additional Withholding per Paycheck">
+          <InputWithPrefix
+            prefix={getCurrencySymbol(currency)}
+            type="number"
+            min="0"
+            step="0.01"
+            value={editForm.additionalWithholding}
+            onChange={(e) => handleFieldChange('additionalWithholding', parseFloat(e.target.value) || 0)}
+          />
+        </FormGroup>
+      </Modal>
     </div>
   );
 };

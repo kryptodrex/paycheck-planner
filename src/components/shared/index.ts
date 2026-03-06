@@ -7,3 +7,4 @@ export { default as InputWithPrefix } from './InputWithPrefix';
 export { default as StickyActions } from './StickyActions';
 export { default as RadioGroup } from './RadioGroup';
 export { default as Toggle } from './Toggle';
+export { default as SectionItemCard } from './SectionItemCard';

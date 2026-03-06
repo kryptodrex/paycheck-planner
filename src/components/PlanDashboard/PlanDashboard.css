@@ -189,6 +189,15 @@
   min-height: 0;
 }
 
+.tab-panel {
+  display: none;
+  height: 100%;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
 .dashboard-footer {
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
@@ -210,49 +219,7 @@
   white-space: nowrap;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-content {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.encryption-modal-content {
-  max-width: 960px;
-  width: min(960px, 95vw);
-  max-height: 95vh;
-  overflow: hidden;
-  padding: 0;
-}
-
-.modal-content h3 {
-  margin: 0 0 0.5rem 0;
-  color: var(--text-primary);
-  font-size: 1.5rem;
-}
-
-.modal-content p {
-  margin: 0 0 1.5rem 0;
-  color: var(--text-secondary);
-}
-
+/* Form Styles */
 .form-group {
   margin-bottom: 1.25rem;
 }
@@ -273,21 +240,13 @@
   color: var(--text-primary);
   border-radius: 8px;
   font-size: 1rem;
+  line-height: 1.5;
   transition: border-color 0.2s;
 }
 
 .form-group input:focus {
   outline: none;
   border-color: #667eea;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {

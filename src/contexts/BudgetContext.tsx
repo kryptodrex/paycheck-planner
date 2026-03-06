@@ -157,6 +157,13 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       if (!data.retirement) {
         data.retirement = [];
       }
+
+      // Migrate benefits to include deduction source fields
+      data.benefits = data.benefits.map((benefit: any) => ({
+        ...benefit,
+        deductionSource: benefit.deductionSource || 'paycheck',
+        sourceAccountId: benefit.sourceAccountId,
+      }));
       
       // Migrate old retirement election format to new format
       data.retirement = data.retirement.map((election: any) => {
@@ -182,6 +189,21 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         // Initialize employerMatchCapIsPercentage if missing
         if (!('employerMatchCapIsPercentage' in migrated)) {
           migrated.employerMatchCapIsPercentage = election.employerMatchCapIsPercentage || false;
+        }
+        
+        // Add isPreTax if missing (default to true for backward compatibility)
+        if (!('isPreTax' in migrated)) {
+          migrated.isPreTax = true;
+        }
+        
+        // Add deductionSource if missing (default to 'paycheck' for backward compatibility)
+        if (!('deductionSource' in migrated)) {
+          migrated.deductionSource = 'paycheck';
+        }
+        
+        // Add sourceAccountId if missing
+        if (!('sourceAccountId' in migrated)) {
+          migrated.sourceAccountId = undefined;
         }
         
         // Remove old fields that are no longer used
@@ -616,9 +638,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
     });
 
-    // Add pre-tax benefits
+    // Add pre-tax benefits deducted from paycheck
     (benefits || []).forEach((benefit) => {
-      if (!benefit.isTaxable) { // Pre-tax benefit
+      if ((benefit.deductionSource || 'paycheck') === 'paycheck' && !benefit.isTaxable) { // Pre-tax paycheck benefit
         if (benefit.isPercentage) {
           totalPreTaxDeductions += (grossPay * benefit.amount) / 100;
         } else {
@@ -627,12 +649,14 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
     });
 
-    // Add employee retirement contributions (pre-tax)
+    // Add employee retirement contributions (pre-tax or account-sourced)
     (retirement || []).forEach((election) => {
-      if (election.employeeContributionIsPercentage) {
-        totalPreTaxDeductions += (grossPay * election.employeeContribution) / 100;
-      } else {
-        totalPreTaxDeductions += election.employeeContribution;
+      if ((election.deductionSource || 'paycheck') === 'paycheck' && (election.isPreTax !== false)) {
+        if (election.employeeContributionIsPercentage) {
+          totalPreTaxDeductions += (grossPay * election.employeeContribution) / 100;
+        } else {
+          totalPreTaxDeductions += election.employeeContribution;
+        }
       }
     });
 
@@ -653,13 +677,24 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     // Calculate net pay before post-tax deductions
     let netPayBeforePostTax = roundUpToCent(taxableIncome - totalTaxes);
 
-    // Subtract post-tax benefits
+    // Subtract post-tax benefits deducted from paycheck
     (benefits || []).forEach((benefit) => {
-      if (benefit.isTaxable) { // Post-tax benefit
+      if ((benefit.deductionSource || 'paycheck') === 'paycheck' && benefit.isTaxable) { // Post-tax paycheck benefit
         if (benefit.isPercentage) {
           netPayBeforePostTax -= roundUpToCent((grossPay * benefit.amount) / 100);
         } else {
           netPayBeforePostTax -= roundUpToCent(benefit.amount);
+        }
+      }
+    });
+
+    // Subtract post-tax retirement contributions deducted from paycheck
+    (retirement || []).forEach((election) => {
+      if ((election.deductionSource || 'paycheck') === 'paycheck' && election.isPreTax === false) { // Post-tax paycheck retirement
+        if (election.employeeContributionIsPercentage) {
+          netPayBeforePostTax -= roundUpToCent((grossPay * election.employeeContribution) / 100);
+        } else {
+          netPayBeforePostTax -= roundUpToCent(election.employeeContribution);
         }
       }
     });

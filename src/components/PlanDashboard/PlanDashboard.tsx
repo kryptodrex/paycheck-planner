@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import SetupWizard from '../SetupWizard';
 import EncryptionSetup from '../EncryptionSetup';
@@ -9,11 +9,10 @@ import BenefitsManager from '../BenefitsManager';
 import TaxBreakdown from '../TaxBreakdown';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
-import PaySettingsModal from '../PaySettingsModal';
 import { Toast, Modal, Button, FormGroup } from '../shared';
 import './PlanDashboard.css';
 
-type TabView = 'metrics' | 'breakdown' | 'bills' | 'benefits' | 'taxes';
+type TabView = 'metrics' | 'breakdown' | 'bills' | 'benefits' | 'retirement' | 'taxes';
 type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
 
 interface PlanDashboardProps {
@@ -29,14 +28,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       : 'metrics'
   );
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
+  const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [showEditPayModal, setShowEditPayModal] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [statusToast, setStatusToast] = useState<string | null>(null);
+  const tabContentRef = useRef<HTMLDivElement | null>(null);
+  const tabPanelRefs = useRef<Partial<Record<TabView, HTMLDivElement | null>>>({});
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -64,7 +65,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     const unsubscribePayOptions = window.electronAPI.onMenuEvent('open-pay-options', () => {
-      setShowEditPayModal(true);
+      setActiveTab('breakdown');
     });
 
     const unsubscribeAccounts = window.electronAPI.onMenuEvent('open-accounts', () => {
@@ -136,14 +137,56 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     );
   }
 
-  const handleCopyToNewYear = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCopyToNewYear = async () => {
     const year = parseInt(newYear);
     if (year && year >= 2000 && year <= 2100) {
       await copyPlanToNewYear(year);
       setShowCopyModal(false);
       setNewYear('');
     }
+  };
+
+  const scrollTabToTop = (tab: TabView) => {
+    tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const panel = tabPanelRefs.current[tab];
+    if (!panel) return;
+
+    panel.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const scrollableDescendants = panel.querySelectorAll<HTMLElement>('*');
+    scrollableDescendants.forEach((element) => {
+      if (element.scrollHeight > element.clientHeight) {
+        const computedStyle = window.getComputedStyle(element);
+        const isScrollable =
+          computedStyle.overflowY === 'auto' ||
+          computedStyle.overflowY === 'scroll' ||
+          computedStyle.overflow === 'auto' ||
+          computedStyle.overflow === 'scroll';
+
+        if (isScrollable) {
+          element.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    });
+  };
+
+  const handleScrollToRetirementComplete = useCallback(() => {
+    setShouldScrollToRetirement(false);
+  }, []);
+
+  const handleTabClick = (tab: TabView, options?: { resetBillsAnchor?: boolean }) => {
+    if (activeTab === tab) {
+      scrollTabToTop(tab);
+      return;
+    }
+
+    if (options?.resetBillsAnchor) {
+      setScrollToAccountId(undefined);
+      setShouldScrollToRetirement(false);
+    }
+
+    setActiveTab(tab);
   };
 
   return (
@@ -160,14 +203,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </button>
         </div>
         <div className="header-right">
-          <Button
-            variant="secondary"
-            onClick={() => setShowEditPayModal(true)}
-            title="Edit pay settings and tax information"
-            className="header-btn-secondary"
-          >
-            ⚙️ Pay Options
-          </Button>
           <Button
             variant="secondary"
             onClick={() => setShowAccountsModal(true)}
@@ -201,7 +236,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <div className="tab-button-group">
             <button
               className={`tab-button ${activeTab === 'metrics' ? 'active' : ''}`}
-              onClick={() => setActiveTab('metrics')}
+              onClick={() => handleTabClick('metrics')}
             >
               <span className="tab-icon">📊</span>
               Key Metrics
@@ -210,7 +245,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <div className="tab-button-group">
             <button
               className={`tab-button ${activeTab === 'breakdown' ? 'active' : ''}`}
-              onClick={() => setActiveTab('breakdown')}
+              onClick={() => handleTabClick('breakdown')}
             >
               <span className="tab-icon">💵</span>
               Pay Breakdown
@@ -219,10 +254,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <div className="tab-button-group">
             <button
               className={`tab-button ${activeTab === 'bills' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('bills');
-                setScrollToAccountId(undefined);
-              }}
+              onClick={() => handleTabClick('bills', { resetBillsAnchor: true })}
             >
               <span className="tab-icon">📋</span>
               Bills
@@ -230,43 +262,88 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </div>
           <div className="tab-button-group">
             <button
-              className={`tab-button ${activeTab === 'taxes' ? 'active' : ''}`}
-              onClick={() => setActiveTab('taxes')}
-            >
-              <span className="tab-icon">💰</span>
-              Taxes
-            </button>
-          </div>
-          <div className="tab-button-group">
-            <button
               className={`tab-button ${activeTab === 'benefits' ? 'active' : ''}`}
-              onClick={() => setActiveTab('benefits')}
+              onClick={() => handleTabClick('benefits')}
             >
               <span className="tab-icon">🏥</span>
               Benefits
             </button>
           </div>
+          <div className="tab-button-group">
+            <button
+              className={`tab-button ${activeTab === 'taxes' ? 'active' : ''}`}
+              onClick={() => handleTabClick('taxes')}
+            >
+              <span className="tab-icon">💰</span>
+              Taxes
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="tab-content">
+      <div className="tab-content" ref={tabContentRef}>
         {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
-        {activeTab === 'metrics' && <KeyMetrics />}
-        {activeTab === 'breakdown' && <PayBreakdown 
-          displayMode={displayMode}
-          onDisplayModeChange={setDisplayMode}
-          onNavigateToBills={(accountId) => {
-            setScrollToAccountId(accountId);
-            setActiveTab('bills');
-          }} 
-        />}
-        {activeTab === 'bills' && <BillsManager 
-          scrollToAccountId={scrollToAccountId}
-          displayMode={displayMode}
-          onDisplayModeChange={setDisplayMode}
-        />}
-        {activeTab === 'taxes' && <TaxBreakdown />}
-        {activeTab === 'benefits' && <BenefitsManager />}
+        <div
+          className={`tab-panel ${activeTab === 'metrics' ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current.metrics = element;
+          }}
+        >
+          <KeyMetrics />
+        </div>
+        <div
+          className={`tab-panel ${activeTab === 'breakdown' ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current.breakdown = element;
+          }}
+        >
+          <PayBreakdown 
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
+            onNavigateToBills={(accountId) => {
+              setScrollToAccountId(accountId);
+              setActiveTab('bills');
+            }}
+            onNavigateToBenefits={() => {
+              setActiveTab('benefits');
+            }}
+            onNavigateToRetirement={() => {
+              setShouldScrollToRetirement(true);
+              setActiveTab('benefits');
+            }} 
+          />
+        </div>
+        <div
+          className={`tab-panel ${activeTab === 'bills' ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current.bills = element;
+          }}
+        >
+          <BillsManager 
+            scrollToAccountId={scrollToAccountId}
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
+          />
+        </div>
+        <div
+          className={`tab-panel ${activeTab === 'taxes' ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current.taxes = element;
+          }}
+        >
+          <TaxBreakdown />
+        </div>
+        <div
+          className={`tab-panel ${activeTab === 'benefits' ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current.benefits = element;
+          }}
+        >
+          <BenefitsManager 
+            shouldScrollToRetirement={shouldScrollToRetirement}
+            onScrollToRetirementComplete={handleScrollToRetirementComplete}
+          />
+        </div>
       </div>
 
       <footer className="dashboard-footer">
@@ -285,10 +362,23 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <Modal
         isOpen={showCopyModal}
         onClose={() => setShowCopyModal(false)}
+        header="Copy Plan to New Year"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowCopyModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" onClick={handleCopyToNewYear}>
+              Copy Plan
+            </Button>
+          </>
+        }
       >
-        <h3>Copy Plan to New Year</h3>
         <p>This will create a copy of your current plan for a different year.</p>
-        <form onSubmit={handleCopyToNewYear}>
           <FormGroup label="Target Year" required>
             <input
               type="number"
@@ -300,31 +390,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               required
             />
           </FormGroup>
-          <div className="modal-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setShowCopyModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Copy Plan
-            </Button>
-          </div>
-        </form>
       </Modal>
 
       {/* Settings Modal */}
       <Settings 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)}
-      />
-
-      {/* Pay Settings Modal */}
-      <PaySettingsModal
-        isOpen={showEditPayModal}
-        onClose={() => setShowEditPayModal(false)}
       />
 
       {/* Encryption Setup Modal */}

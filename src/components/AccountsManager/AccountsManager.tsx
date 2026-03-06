@@ -70,11 +70,13 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
       isOpen={true}
       onClose={onClose}
       contentClassName="accounts-manager"
+      header="Manage Accounts"
+      footer={
+        <Button variant="primary" onClick={onClose}>
+          Done
+        </Button>
+      }
     >
-      <div className="modal-header">
-        <h2>Manage Accounts</h2>
-      </div>
-
         {/* Add New Account Section */}
         <div className="add-account-section">
           <h3>Add New Account</h3>
@@ -171,12 +173,6 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
 
         <div className="info-box-manager">
           <strong>Info:</strong> These accounts are available across all your plans. Deleting an account will remove it from all plans.
-        </div>
-
-        <div className="modal-footer">
-          <Button variant="primary" onClick={onClose}>
-            Done
-          </Button>
         </div>
       </Modal>
     );

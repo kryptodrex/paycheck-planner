@@ -26,6 +26,8 @@ export interface Benefit {
   amount: number;                // Amount per paycheck
   isTaxable: boolean;            // If true, this is post-tax; if false, pre-tax
   isPercentage?: boolean;        // If true, amount is percentage of gross pay
+  deductionSource?: 'paycheck' | 'account'; // Where deduction is applied
+  sourceAccountId?: string;      // Account ID when deductionSource is 'account'
 }
 
 /**
@@ -36,6 +38,9 @@ export interface RetirementElection {
   type: '401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'other'; // Type of retirement plan
   employeeContribution: number;            // Amount employee contributes per paycheck
   employeeContributionIsPercentage: boolean; // If true, amount is percentage of gross pay
+  isPreTax?: boolean;                      // If true/undefined, pre-tax; if false, post-tax
+  deductionSource?: 'paycheck' | 'account'; // Where deduction is applied
+  sourceAccountId?: string;                // Account ID when deductionSource is 'account'
   hasEmployerMatch: boolean;               // Whether employer offers matching contributions
   employerMatchCap: number;                // Maximum employer will match (amount or percent)
   employerMatchCapIsPercentage: boolean;   // If true, cap is percentage of gross; if false, it's dollar amount
@@ -118,6 +123,10 @@ export interface AccountAllocationCategory {
   amount: number;                // Amount per paycheck targeted for this category
   isBill?: boolean;              // If true, this is an auto-calculated sum of bills for this account
   billCount?: number;            // Number of bills in this category (if isBill is true)
+  isBenefit?: boolean;           // If true, this is an auto-calculated sum of benefits for this account
+  benefitCount?: number;         // Number of benefits in this category (if isBenefit is true)
+  isRetirement?: boolean;        // If true, this is an auto-calculated sum of retirement for this account
+  retirementCount?: number;      // Number of retirement contributions in this category (if isRetirement is true)
 }
 
 /**

@@ -5,33 +5,6 @@
   flex-direction: column;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.modal-header h2 {
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--text-secondary);
-  padding: 0.5rem;
-  transition: color 0.2s;
-}
-
-.modal-close:hover {
-  color: var(--text-primary);
-}
-
 /* Add Account Section */
 .add-account-section {
   margin-bottom: 1.5rem;
@@ -213,14 +186,6 @@
 
 .info-box-manager strong {
   color: var(--text-primary);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
 }
 
 .btn {

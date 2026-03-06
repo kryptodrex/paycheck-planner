@@ -24,6 +24,12 @@
   color: var(--text-secondary);
 }
 
+.breakdown-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .view-mode-selector {
   display: flex;
   gap: 0.5rem;
@@ -354,7 +360,7 @@
   border-collapse: collapse;
 }
 
-.waterfall-row {
+.waterfall-row, .waterfall-alert-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -363,12 +369,17 @@
   transition: background-color 0.15s;
 }
 
+.waterfall-alert-row {
+  justify-content: center;
+}
+
 .waterfall-row:hover {
   background-color: var(--bg-secondary);
 }
 
 .waterfall-header-row {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+  background: var(--header-gradient);
   color: white;
   font-weight: 700;
   font-size: 1.1rem;
@@ -378,20 +389,15 @@
   border-bottom: none;
 }
 
-.waterfall-header-row:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
 .waterfall-account-row {
+  display: grid !important;
+  grid-template-columns: 1fr auto auto !important;
   font-weight: 600;
   color: var(--text-primary);
   font-size: 1.05rem;
   background: var(--bg-secondary);
   margin-top: 0.25rem;
   padding: 0.85rem 0.75rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 1rem;
 }
 
@@ -401,7 +407,7 @@
   padding-left: 2.5rem;
   display: grid;
   grid-template-columns: 1fr auto auto;
-  gap: 0.75rem;
+  /* gap: 0.75rem; */
   align-items: center;
 }
 
@@ -409,15 +415,12 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--text-primary);
-  background: var(--bg-tertiary);
+  /* background: var(--bg-tertiary); */
+  background: var(--header-gradient);
   padding: 1rem 0.75rem;
   border-radius: 8px;
   margin-top: 0.5rem;
   border-bottom: none;
-}
-
-.waterfall-footer-row:hover {
-  background: var(--bg-tertiary);
 }
 
 .waterfall-label {
@@ -431,6 +434,7 @@
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
   font-weight: 600;
   white-space: nowrap;
+  margin-left: 0.75rem;
 }
 
 .account-icon-small {
@@ -440,6 +444,30 @@
 
 .category-label {
   padding-left: 1rem;
+}
+
+.category-button {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: inherit;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.category-button:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+.category-button:active {
+  background: var(--bg-secondary);
 }
 
 /* Inline Editing Styles */
@@ -477,9 +505,23 @@
   border-color: #667eea;
 }
 
-.category-edit-row .input-with-prefix {
+/* .category-edit-row .input-with-prefix {
   min-width: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
 }
+
+.category-edit-row .input-with-prefix .prefix {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  background: transparent;
+  border-right: none;
+}
+
+.category-edit-row .input-with-prefix input {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+} */
 
 .category-edit-row .btn-icon {
   width: 34px;
@@ -614,13 +656,6 @@
   }
 }
 
-.account-save-row {
-  padding: 1rem 0.75rem 0.75rem 2.5rem;
-  background: var(--bg-primary);
-  border-top: 1px solid var(--border-color);
-  display: block;
-}
-
 .account-edit-actions {
   display: flex;
   gap: 0.75rem;
@@ -673,51 +708,7 @@
   background: var(--bg-primary);
 }
 
-.allocations-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.allocation-card {
-  background: var(--bg-secondary);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  padding: 1rem;
-  transition: all 0.2s;
-  width: 100%;
-}
-
-.allocation-card:hover {
-  border-color: #667eea;
-  transform: translateY(-2px);
-}
-
-.allocation-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
 .category-row > input {
-  min-width: 0;
-}
-
-.allocation-categories .input-with-prefix {
-  width: 100%;
-  min-width: 0;
-  border-width: 1px;
-  border-color: var(--border-color);
-  border-radius: 6px;
-}
-
-.allocation-categories .input-with-prefix .prefix {
-  padding: 0.5rem 0.5rem;
-}
-
-.allocation-categories .input-with-prefix input {
-  padding: 0.5rem 0.5rem 0.5rem 0;
   min-width: 0;
 }
 

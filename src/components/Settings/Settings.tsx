@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Button } from '../shared';
+import { Button, Modal } from '../shared';
 import './Settings.css';
 
 interface SettingsProps {
@@ -62,66 +62,52 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="settings-overlay" onClick={onClose}>
-      <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="settings-header">
-          <h2>Settings</h2>
-          <Button
-            variant="icon"
-            onClick={onClose}
-            title="Close settings"
-            aria-label="Close settings"
-          >
-            ✕
-          </Button>
-        </div>
-
-        <div className="settings-content">
-          {/* Theme Settings */}
-          <div className="settings-section">
-            <h3>Appearance</h3>
-            
-            <div className="settings-group">
-              <label>Theme</label>
-              <div className="theme-options">
-                <button
-                  className={`theme-option ${settings.themeMode === 'light' ? 'active' : ''}`}
-                  onClick={() => handleThemeModeChange('light')}
-                  title="Light theme"
-                >
-                  ☀️ Light
-                </button>
-                <button
-                  className={`theme-option ${settings.themeMode === 'dark' ? 'active' : ''}`}
-                  onClick={() => handleThemeModeChange('dark')}
-                  title="Dark theme"
-                >
-                  🌙 Dark
-                </button>
-                <button
-                  className={`theme-option ${settings.themeMode === 'system' ? 'active' : ''}`}
-                  onClick={() => handleThemeModeChange('system')}
-                  title="Follow system preference"
-                >
-                  💻 System
-                </button>
-              </div>
-            </div>
-
-            <div className="settings-info">
-              <p>Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong></p>
-            </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      header="Settings"
+      footer={
+        <Button variant="primary" onClick={onClose}>
+          Done
+        </Button>
+      }
+    >
+      {/* Theme Settings */}
+      <div className="settings-section">
+        <h3>Appearance</h3>
+        
+        <div className="settings-group">
+          <label>Theme</label>
+          <div className="theme-options">
+            <button
+              className={`theme-option ${settings.themeMode === 'light' ? 'active' : ''}`}
+              onClick={() => handleThemeModeChange('light')}
+              title="Light theme"
+            >
+              ☀️ Light
+            </button>
+            <button
+              className={`theme-option ${settings.themeMode === 'dark' ? 'active' : ''}`}
+              onClick={() => handleThemeModeChange('dark')}
+              title="Dark theme"
+            >
+              🌙 Dark
+            </button>
+            <button
+              className={`theme-option ${settings.themeMode === 'system' ? 'active' : ''}`}
+              onClick={() => handleThemeModeChange('system')}
+              title="Follow system preference"
+            >
+              💻 System
+            </button>
           </div>
-
         </div>
 
-        <div className="settings-footer">
-          <Button variant="primary" onClick={onClose}>
-            Done
-          </Button>
+        <div className="settings-info">
+          <span>Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong></span>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

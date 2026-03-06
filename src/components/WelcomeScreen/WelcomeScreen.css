@@ -257,6 +257,7 @@
   color: var(--text-primary);
   border-radius: 0.5rem;
   font-size: 1rem;
+  line-height: 1.5;
   transition: border-color 0.3s ease;
 }
 

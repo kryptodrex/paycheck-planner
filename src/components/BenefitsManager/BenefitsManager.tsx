@@ -1,27 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Benefit, RetirementElection } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup } from '../shared';
+import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard } from '../shared';
 import './BenefitsManager.css';
 
-const BenefitsManager: React.FC = () => {
+interface BenefitsManagerProps {
+  shouldScrollToRetirement?: boolean;
+  onScrollToRetirementComplete?: () => void;
+}
+
+const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirement, onScrollToRetirementComplete }) => {
   const { budgetData, addBenefit, updateBenefit, deleteBenefit, addRetirementElection, updateRetirementElection, deleteRetirementElection, calculateRetirementContributions } = useBudget();
   const [showAddBenefit, setShowAddBenefit] = useState(false);
   const [editingBenefit, setEditingBenefit] = useState<Benefit | null>(null);
   const [showAddRetirement, setShowAddRetirement] = useState(false);
   const [editingRetirement, setEditingRetirement] = useState<RetirementElection | null>(null);
+  const scrollCompletedRef = useRef(false);
 
   // Benefit form state
   const [benefitName, setBenefitName] = useState('');
   const [benefitAmount, setBenefitAmount] = useState('');
   const [benefitIsPercentage, setBenefitIsPercentage] = useState(false);
   const [benefitIsTaxable, setBenefitIsTaxable] = useState(false);
+  const [benefitSource, setBenefitSource] = useState<'paycheck' | 'account'>('paycheck');
+  const [benefitSourceAccountId, setBenefitSourceAccountId] = useState('');
 
   // Retirement form state
   const [retirementType, setRetirementType] = useState<'401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'other'>('401k');
   const [employeeAmount, setEmployeeAmount] = useState('');
   const [employeeIsPercentage, setEmployeeIsPercentage] = useState(false);
+  const [retirementSource, setRetirementSource] = useState<'paycheck' | 'account'>('paycheck');
+  const [retirementSourceAccountId, setRetirementSourceAccountId] = useState('');
+  const [retirementIsPreTax, setRetirementIsPreTax] = useState(true);
   const [employerMatchOption, setEmployerMatchOption] = useState<'no-match' | 'has-match'>('no-match');
   const [employerMatchCap, setEmployerMatchCap] = useState('');
   const [employerMatchCapIsPercentage, setEmployerMatchCapIsPercentage] = useState(false);
@@ -30,6 +41,23 @@ const BenefitsManager: React.FC = () => {
 
   const currency = budgetData.settings?.currency || 'USD';
 
+  // Scroll to retirement section when shouldScrollToRetirement is true
+  useEffect(() => {
+    if (shouldScrollToRetirement && !scrollCompletedRef.current) {
+      const element = document.getElementById('retirement-section');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        scrollCompletedRef.current = true;
+        onScrollToRetirementComplete?.();
+      }
+    }
+    
+    // Reset the ref when shouldScrollToRetirement becomes false
+    if (!shouldScrollToRetirement) {
+      scrollCompletedRef.current = false;
+    }
+  }, [shouldScrollToRetirement, onScrollToRetirementComplete]);
+
   // Benefit handlers
   const handleAddBenefit = () => {
     setEditingBenefit(null);
@@ -37,6 +65,8 @@ const BenefitsManager: React.FC = () => {
     setBenefitAmount('');
     setBenefitIsPercentage(false);
     setBenefitIsTaxable(false);
+    setBenefitSource('paycheck');
+    setBenefitSourceAccountId('');
     setShowAddBenefit(true);
   };
 
@@ -45,18 +75,21 @@ const BenefitsManager: React.FC = () => {
     setBenefitName(benefit.name);
     setBenefitAmount(benefit.amount.toString());
     setBenefitIsPercentage(benefit.isPercentage || false);
-    setBenefitIsTaxable(benefit.isTaxable);
+    setBenefitSource(benefit.deductionSource || 'paycheck');
+    setBenefitSourceAccountId(benefit.sourceAccountId || '');
+    setBenefitIsTaxable((benefit.deductionSource || 'paycheck') === 'account' ? true : benefit.isTaxable);
     setShowAddBenefit(true);
   };
 
-  const handleSaveBenefit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSaveBenefit = () => {
+    const isAccountSource = benefitSource === 'account';
     const benefitData = {
       name: benefitName,
       amount: parseFloat(benefitAmount),
-      isTaxable: benefitIsTaxable,
+      isTaxable: isAccountSource ? true : benefitIsTaxable,
       isPercentage: benefitIsPercentage,
+      deductionSource: benefitSource,
+      sourceAccountId: isAccountSource ? benefitSourceAccountId : undefined,
     };
 
     if (editingBenefit) {
@@ -81,6 +114,9 @@ const BenefitsManager: React.FC = () => {
     setRetirementType('401k');
     setEmployeeAmount('');
     setEmployeeIsPercentage(false);
+    setRetirementSource('paycheck');
+    setRetirementSourceAccountId('');
+    setRetirementIsPreTax(true);
     setEmployerMatchOption('no-match');
     setEmployerMatchCap('');
     setEmployerMatchCapIsPercentage(false);
@@ -92,21 +128,26 @@ const BenefitsManager: React.FC = () => {
     setRetirementType(election.type);
     setEmployeeAmount(election.employeeContribution.toString());
     setEmployeeIsPercentage(election.employeeContributionIsPercentage);
+    setRetirementSource(election.deductionSource || 'paycheck');
+    setRetirementSourceAccountId(election.sourceAccountId || '');
+    setRetirementIsPreTax(election.isPreTax !== false);
     setEmployerMatchOption(election.hasEmployerMatch ? 'has-match' : 'no-match');
     setEmployerMatchCap((election.employerMatchCap || 0).toString());
     setEmployerMatchCapIsPercentage(election.employerMatchCapIsPercentage);
     setShowAddRetirement(true);
   };
 
-  const handleSaveRetirement = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSaveRetirement = () => {
     const hasEmployerMatch = employerMatchOption === 'has-match';
     const parsedMatchCap = parseFloat(employerMatchCap);
+    const isAccountSource = retirementSource === 'account';
     const retirementData = {
       type: retirementType,
       employeeContribution: parseFloat(employeeAmount),
       employeeContributionIsPercentage: employeeIsPercentage,
+      isPreTax: isAccountSource ? false : retirementIsPreTax,
+      deductionSource: retirementSource,
+      sourceAccountId: isAccountSource ? retirementSourceAccountId : undefined,
       hasEmployerMatch: hasEmployerMatch,
       employerMatchCap: hasEmployerMatch ? (isNaN(parsedMatchCap) ? 0 : parsedMatchCap) : 0,
       employerMatchCapIsPercentage: hasEmployerMatch ? employerMatchCapIsPercentage : false,
@@ -148,12 +189,17 @@ const BenefitsManager: React.FC = () => {
           </div>
         ) : (
           <div className="benefits-list">
-            {budgetData.benefits.map(benefit => (
-              <div key={benefit.id} className="benefit-item">
+            {budgetData.benefits.map(benefit => {
+              const accountName = benefit.deductionSource === 'account' 
+                ? budgetData.accounts.find(acc => acc.id === benefit.sourceAccountId)?.name 
+                : null;
+              
+              return (
+              <SectionItemCard key={benefit.id} className="benefit-item">
                 <div className="benefit-info">
                   <h4>{benefit.name}</h4>
-                  <span className={`benefit-type ${benefit.isTaxable ? 'post-tax' : 'pre-tax'}`}>
-                    {benefit.isTaxable ? 'Post-Tax' : 'Pre-Tax'}
+                  <span className={`benefit-type ${benefit.deductionSource === 'account' ? 'from-account' : (benefit.isTaxable ? 'post-tax' : 'pre-tax')}`}>
+                    {benefit.deductionSource === 'account' ? `From ${accountName}` : (benefit.isTaxable ? 'Post-Tax' : 'Pre-Tax')}
                   </span>
                 </div>
                 <div className="benefit-amount">
@@ -165,14 +211,15 @@ const BenefitsManager: React.FC = () => {
                   <Button variant="icon" onClick={() => handleEditBenefit(benefit)} title="Edit">✏️</Button>
                   <Button variant="icon" onClick={() => handleDeleteBenefit(benefit.id)} title="Delete">🗑️</Button>
                 </div>
-              </div>
-            ))}
+              </SectionItemCard>
+            );
+            })}
           </div>
         )}
       </div>
 
       {/* Retirement Section */}
-      <div className="retirement-section">
+      <div id="retirement-section" className="retirement-section">
         <div className="section-header">
           <h2>Retirement Elections</h2>
           <p>401k, 403b, IRA, and other retirement plan contributions</p>
@@ -193,7 +240,7 @@ const BenefitsManager: React.FC = () => {
               const { employeeAmount, employerAmount } = calculateRetirementContributions(retirement);
               
               return (
-                <div key={retirement.id} className="retirement-item">
+                <SectionItemCard key={retirement.id} className="retirement-item">
                   <div className="retirement-info">
                     <h4>{retirement.type.toUpperCase()}</h4>
                     <div className="retirement-details">
@@ -219,7 +266,7 @@ const BenefitsManager: React.FC = () => {
                     <Button variant="icon" onClick={() => handleEditRetirement(retirement)} title="Edit">✏️</Button>
                     <Button variant="icon" onClick={() => handleDeleteRetirement(retirement.id)} title="Delete">🗑️</Button>
                   </div>
-                </div>
+                </SectionItemCard>
               );
             })}
           </div>
@@ -227,10 +274,22 @@ const BenefitsManager: React.FC = () => {
       </div>
 
       {/* Add/Edit Benefit Modal */}
-      <Modal isOpen={showAddBenefit} onClose={() => setShowAddBenefit(false)}>
-        <h3>{editingBenefit ? 'Edit Benefit' : 'Add Benefit'}</h3>
-        <form onSubmit={handleSaveBenefit}>
-          <FormGroup label="Benefit Name" required>
+      <Modal 
+        isOpen={showAddBenefit} 
+        onClose={() => setShowAddBenefit(false)}
+        header={editingBenefit ? 'Edit Benefit' : 'Add Benefit'}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setShowAddBenefit(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" onClick={handleSaveBenefit}>
+              {editingBenefit ? 'Update Benefit' : 'Add Benefit'}
+            </Button>
+          </>
+        }
+      >
+        <FormGroup label="Benefit Name" required>
             <input
               type="text"
               value={benefitName}
@@ -238,6 +297,27 @@ const BenefitsManager: React.FC = () => {
               placeholder="e.g., Health Insurance, FSA"
               required
             />
+          </FormGroup>
+
+          <FormGroup label="Deduction Source">
+            <select
+              value={benefitSource === 'account' ? benefitSourceAccountId : 'paycheck'}
+              onChange={(e) => {
+                if (e.target.value === 'paycheck') {
+                  setBenefitSource('paycheck');
+                  setBenefitSourceAccountId('');
+                } else {
+                  setBenefitSource('account');
+                  setBenefitSourceAccountId(e.target.value);
+                  setBenefitIsTaxable(true);
+                }
+              }}
+            >
+              <option value="paycheck">Paid from Paycheck</option>
+              {budgetData.accounts.map((account) => (
+                <option key={account.id} value={account.id}>Paid from Account: {account.name}</option>
+              ))}
+            </select>
           </FormGroup>
 
           <div style={{ display: 'flex', gap: '1rem' }}>
@@ -265,35 +345,43 @@ const BenefitsManager: React.FC = () => {
             </div>
           </div>
 
-          <FormGroup label="Tax Treatment">
-            <RadioGroup
-              name="taxTreatment"
-              value={benefitIsTaxable ? 'post-tax' : 'pre-tax'}
-              onChange={(value) => setBenefitIsTaxable(value === 'post-tax')}
-              layout="column"
-              options={[
-                { value: 'pre-tax', label: 'Pre-Tax', description: 'Reduces taxable income' },
-                { value: 'post-tax', label: 'Post-Tax', description: 'Deducted after taxes' },
-              ]}
-            />
-          </FormGroup>
-
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
-            <Button type="button" variant="secondary" onClick={() => setShowAddBenefit(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              {editingBenefit ? 'Update Benefit' : 'Add Benefit'}
-            </Button>
-          </div>
-        </form>
+          {benefitSource === 'paycheck' ? (
+            <FormGroup label="Tax Treatment">
+              <RadioGroup
+                name="taxTreatment"
+                value={benefitIsTaxable ? 'post-tax' : 'pre-tax'}
+                onChange={(value) => setBenefitIsTaxable(value === 'post-tax')}
+                layout="column"
+                options={[
+                  { value: 'pre-tax', label: 'Pre-Tax', description: 'Reduces taxable income' },
+                  { value: 'post-tax', label: 'Post-Tax', description: 'Deducted after taxes' },
+                ]}
+              />
+            </FormGroup>
+          ) : (
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+              Account-based deductions are treated as post-tax and will be grouped under the selected account in Pay Breakdown.
+            </p>
+          )}
       </Modal>
 
       {/* Add/Edit Retirement Modal */}
-      <Modal isOpen={showAddRetirement} onClose={() => setShowAddRetirement(false)}>
-        <h3>{editingRetirement ? 'Edit Retirement Plan' : 'Add Retirement Plan'}</h3>
-        <form onSubmit={handleSaveRetirement}>
-          <FormGroup label="Plan Type" required>
+      <Modal 
+        isOpen={showAddRetirement} 
+        onClose={() => setShowAddRetirement(false)}
+        header={editingRetirement ? 'Edit Retirement Plan' : 'Add Retirement Plan'}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setShowAddRetirement(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" onClick={handleSaveRetirement}>
+              {editingRetirement ? 'Update Plan' : 'Add Plan'}
+            </Button>
+          </>
+        }
+      >
+        <FormGroup label="Plan Type" required>
             <select value={retirementType} onChange={e => setRetirementType(e.target.value as any)} required>
               <option value="401k">401(k)</option>
               <option value="403b">403(b)</option>
@@ -304,8 +392,31 @@ const BenefitsManager: React.FC = () => {
           </FormGroup>
 
           <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-            <h4 style={{ marginTop: 0 }}>Employee Contribution (Pre-Tax)</h4>
-            <div style={{ display: 'flex', gap: '1rem' }}>
+            <h4 style={{ marginTop: 0 }}>Employee Contribution</h4>
+            
+            <FormGroup label="Deduction Source">
+              <select
+                value={retirementSource === 'account' ? retirementSourceAccountId : 'paycheck'}
+                onChange={(e) => {
+                  if (e.target.value === 'paycheck') {
+                    setRetirementSource('paycheck');
+                    setRetirementSourceAccountId('');
+                    setRetirementIsPreTax(true);
+                  } else {
+                    setRetirementSource('account');
+                    setRetirementSourceAccountId(e.target.value);
+                    setRetirementIsPreTax(false);
+                  }
+                }}
+              >
+                <option value="paycheck">Paid from Paycheck</option>
+                {budgetData.accounts.map((account) => (
+                  <option key={account.id} value={account.id}>Paid from Account: {account.name}</option>
+                ))}
+              </select>
+            </FormGroup>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <div style={{ flex: 1 }}>
                 <FormGroup label="Amount" required>
                   <InputWithPrefix
@@ -329,9 +440,32 @@ const BenefitsManager: React.FC = () => {
                 </FormGroup>
               </div>
             </div>
+
+            {retirementSource === 'paycheck' && (
+              <div style={{ marginTop: '1rem' }}>
+                <FormGroup label="Tax Treatment">
+                  <RadioGroup
+                    name="taxTreatment"
+                    value={retirementIsPreTax ? 'pre-tax' : 'post-tax'}
+                    onChange={(value) => setRetirementIsPreTax(value === 'pre-tax')}
+                    layout="column"
+                    options={[
+                      { value: 'pre-tax', label: 'Pre-Tax', description: 'Reduces taxable income' },
+                      { value: 'post-tax', label: 'Post-Tax', description: 'Deducted after taxes' },
+                    ]}
+                  />
+                </FormGroup>
+              </div>
+            )}
+
+            {retirementSource === 'account' && (
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
+                Account-based contributions are treated as post-tax and will be grouped under the selected account in Pay Breakdown.
+              </p>
+            )}
           </div>
 
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+          <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem' }}>
             <h4 style={{ marginTop: 0, marginBottom: '1rem' }}>Employer Match (Optional)</h4>
             
             <FormGroup label="Employer Match Availability">
@@ -379,16 +513,6 @@ const BenefitsManager: React.FC = () => {
               </>
             )}
           </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
-            <Button type="button" variant="secondary" onClick={() => setShowAddRetirement(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              {editingRetirement ? 'Update Plan' : 'Add Plan'}
-            </Button>
-          </div>
-        </form>
       </Modal>
     </div>
   );

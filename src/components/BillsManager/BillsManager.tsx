@@ -3,7 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import type { Bill, BillFrequency } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
-import { Modal, Button, FormGroup, InputWithPrefix } from '../shared';
+import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard } from '../shared';
 import './BillsManager.css';
 
 interface BillsManagerProps {
@@ -58,9 +58,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setShowAddBill(true);
   };
 
-  const handleSaveBill = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSaveBill = () => {
     const billData = {
       name: billName,
       amount: parseFloat(billAmount),
@@ -209,7 +207,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                       {accountBills
                         .sort((a, b) => b.amount - a.amount)
                         .map(bill => (
-                          <div key={bill.id} className="bill-item">
+                          <SectionItemCard key={bill.id} className="bill-item">
                             <div className="bill-main">
                               <div className="bill-info">
                                 <h4>{bill.name}</h4>
@@ -243,7 +241,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                             {bill.notes && (
                               <div className="bill-notes">{bill.notes}</div>
                             )}
-                          </div>
+                          </SectionItemCard>
                         ))}
                     </div>
                   ) : (
@@ -261,10 +259,19 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       <Modal
         isOpen={showAddBill}
         onClose={() => setShowAddBill(false)}
+        header={editingBill ? 'Edit Bill' : 'Add New Bill'}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setShowAddBill(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" onClick={handleSaveBill}>
+              {editingBill ? 'Update Bill' : 'Add Bill'}
+            </Button>
+          </>
+        }
       >
-        <h3>{editingBill ? 'Edit Bill' : 'Add New Bill'}</h3>
-        <form onSubmit={handleSaveBill}>
-          <FormGroup label="Bill Name" required>
+        <FormGroup label="Bill Name" required>
             <input
               type="text"
               value={billName}
@@ -334,16 +341,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
               rows={2}
             />
           </FormGroup>
-
-          <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={() => setShowAddBill(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              {editingBill ? 'Update Bill' : 'Add Bill'}
-            </Button>
-          </div>
-        </form>
       </Modal>
     </div>
   );
