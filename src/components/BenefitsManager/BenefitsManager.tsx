@@ -1,9 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Benefit, RetirementElection } from '../../types/auth';
+import type { Benefit, RetirementElection, Account } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard } from '../shared';
 import './BenefitsManager.css';
+
+const getDefaultIconForType = (type: Account['type']): string => {
+  switch (type) {
+    case 'checking':
+      return '💳';
+    case 'savings':
+      return '💰';
+    case 'investment':
+      return '📈';
+    case 'other':
+      return '💵';
+    default:
+      return '💰';
+  }
+};
 
 interface BenefitsManagerProps {
   shouldScrollToRetirement?: boolean;
@@ -40,6 +55,49 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirem
   if (!budgetData) return null;
 
   const currency = budgetData.settings?.currency || 'USD';
+
+  const getPaychecksPerYear = (): number => {
+    switch (budgetData.paySettings.payFrequency) {
+      case 'weekly': return 52;
+      case 'bi-weekly': return 26;
+      case 'semi-monthly': return 24;
+      case 'monthly': return 12;
+      default: return 26;
+    }
+  };
+
+  const paychecksPerYear = getPaychecksPerYear();
+
+  const grossPayPerPaycheck = budgetData.paySettings.payType === 'salary'
+    ? (budgetData.paySettings.annualSalary || 0) / paychecksPerYear
+    : (budgetData.paySettings.hourlyRate || 0) * (budgetData.paySettings.hoursPerPayPeriod || 0);
+
+  const getBenefitPerPaycheck = (benefit: Benefit): number => {
+    if (benefit.isPercentage) {
+      return (grossPayPerPaycheck * benefit.amount) / 100;
+    }
+    return benefit.amount;
+  };
+
+  const sortedBenefits = [...budgetData.benefits].sort(
+    (a, b) => getBenefitPerPaycheck(b) - getBenefitPerPaycheck(a)
+  );
+
+  const benefitsTotalPerPaycheck = sortedBenefits.reduce(
+    (sum, benefit) => sum + getBenefitPerPaycheck(benefit),
+    0
+  );
+
+  const sortedRetirement = [...budgetData.retirement].sort((a, b) => {
+    const aTotal = calculateRetirementContributions(a).employeeAmount + calculateRetirementContributions(a).employerAmount;
+    const bTotal = calculateRetirementContributions(b).employeeAmount + calculateRetirementContributions(b).employerAmount;
+    return bTotal - aTotal;
+  });
+
+  const retirementTotalPerPaycheck = sortedRetirement.reduce((sum, election) => {
+    const { employeeAmount, employerAmount } = calculateRetirementContributions(election);
+    return sum + employeeAmount + employerAmount;
+  }, 0);
 
   // Scroll to retirement section when shouldScrollToRetirement is true
   useEffect(() => {
@@ -174,11 +232,19 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirem
       {/* Benefits Section */}
       <div className="benefits-section">
         <div className="section-header">
-          <h2>Benefits Elections</h2>
-          <p>Health insurance, FSA, HSA, and other benefit deductions</p>
-          <Button variant="primary" onClick={handleAddBenefit}>
-            + Add Benefit
-          </Button>
+          <div>
+            <h2>Benefits Elections</h2>
+            <p>Health insurance, FSA, HSA, and other benefit deductions</p>
+            <Button variant="primary" onClick={handleAddBenefit}>
+              + Add Benefit
+            </Button>
+          </div>
+          <div className="section-total">
+            <span className="section-total-label">Total Per Paycheck</span>
+            <span className="section-total-amount">
+              {formatWithSymbol(benefitsTotalPerPaycheck, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
         </div>
 
         {budgetData.benefits.length === 0 ? (
@@ -189,7 +255,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirem
           </div>
         ) : (
           <div className="benefits-list">
-            {budgetData.benefits.map(benefit => {
+            {sortedBenefits.map(benefit => {
               const accountName = benefit.deductionSource === 'account' 
                 ? budgetData.accounts.find(acc => acc.id === benefit.sourceAccountId)?.name 
                 : null;
@@ -221,11 +287,19 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirem
       {/* Retirement Section */}
       <div id="retirement-section" className="retirement-section">
         <div className="section-header">
-          <h2>Retirement Elections</h2>
-          <p>401k, 403b, IRA, and other retirement plan contributions</p>
-          <Button variant="primary" onClick={handleAddRetirement}>
-            + Add Retirement Plan
-          </Button>
+          <div>
+            <h2>Retirement Elections</h2>
+            <p>401k, 403b, IRA, and other retirement plan contributions</p>
+            <Button variant="primary" onClick={handleAddRetirement}>
+              + Add Retirement Plan
+            </Button>
+          </div>
+          <div className="section-total">
+            <span className="section-total-label">Total Per Paycheck</span>
+            <span className="section-total-amount">
+              {formatWithSymbol(retirementTotalPerPaycheck, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
         </div>
 
         {budgetData.retirement.length === 0 ? (
@@ -236,7 +310,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirem
           </div>
         ) : (
           <div className="retirement-list">
-            {budgetData.retirement.map(retirement => {
+            {sortedRetirement.map(retirement => {
               const { employeeAmount, employerAmount } = calculateRetirementContributions(retirement);
               
               return (
@@ -315,7 +389,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirem
             >
               <option value="paycheck">Paid from Paycheck</option>
               {budgetData.accounts.map((account) => (
-                <option key={account.id} value={account.id}>Paid from Account: {account.name}</option>
+                <option key={account.id} value={account.id}>{account.icon || getDefaultIconForType(account.type)} {account.name}</option>
               ))}
             </select>
           </FormGroup>
@@ -411,7 +485,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({ shouldScrollToRetirem
               >
                 <option value="paycheck">Paid from Paycheck</option>
                 {budgetData.accounts.map((account) => (
-                  <option key={account.id} value={account.id}>Paid from Account: {account.name}</option>
+                  <option key={account.id} value={account.id}>{account.icon || getDefaultIconForType(account.type)} {account.name}</option>
                 ))}
               </select>
             </FormGroup>

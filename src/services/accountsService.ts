@@ -21,6 +21,22 @@ const getDefaultColorForType = (type: Account['type']): string => {
   }
 };
 
+// Helper function to generate default icon based on account type
+const getDefaultIconForType = (type: Account['type']): string => {
+  switch (type) {
+    case 'checking':
+      return '💳'; // Credit card
+    case 'savings':
+      return '💰'; // Money bag
+    case 'investment':
+      return '📈'; // Chart increasing
+    case 'other':
+      return '💵'; // Dollar bills
+    default:
+      return '💰';
+  }
+};
+
 export class AccountsService {
   /**
    * Get all global accounts from localStorage
@@ -51,18 +67,21 @@ export class AccountsService {
         name: 'Investment',
         type: 'investment' as const,
         color: getDefaultColorForType('investment'),
+        icon: getDefaultIconForType('investment'),
       },
       {
         id: crypto.randomUUID(),
         name: 'Savings',
         type: 'savings' as const,
         color: getDefaultColorForType('savings'),
+        icon: getDefaultIconForType('savings'),
       },
       {
         id: crypto.randomUUID(),
         name: 'Checking',
         type: 'checking' as const,
         color: getDefaultColorForType('checking'),
+        icon: getDefaultIconForType('checking'),
       },
     ];
   }
@@ -96,6 +115,7 @@ export class AccountsService {
       name: name.trim(),
       type,
       color: getDefaultColorForType(type),
+      icon: getDefaultIconForType(type),
     };
     accounts.push(newAccount);
     this.saveAccounts(accounts);

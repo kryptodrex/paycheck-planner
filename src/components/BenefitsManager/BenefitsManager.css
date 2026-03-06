@@ -10,6 +10,10 @@
 
 /* Section Headers */
 .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
@@ -28,6 +32,27 @@
 
 .section-header button {
   margin-top: 0.5rem;
+}
+
+.section-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.section-total-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.section-total-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 /* Empty State */
@@ -223,6 +248,16 @@
   .benefits-manager {
     padding: 1rem;
     gap: 1.5rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-total {
+    align-items: flex-start;
+    text-align: left;
   }
 
   .benefit-item {

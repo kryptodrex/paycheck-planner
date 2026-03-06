@@ -6,7 +6,7 @@ import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import type { PaySettings, TaxSettings, Account } from '../../types/auth';
-import { Button, FormGroup, InputWithPrefix, RadioGroup } from '../shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox } from '../shared';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -146,6 +146,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         name: newAccountName.trim(),
         type: newAccountType,
         color: getColorForAccountType(newAccountType),
+        icon: getDefaultIconForType(newAccountType),
       };
       
       // For existing accounts, add to global storage immediately
@@ -256,7 +257,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 </select>
               </FormGroup>
 
-              <div className="info-box">
+              <InfoBox>
                 <h3>What you'll configure:</h3>
                 <ul>
                   <li>Your pay amount and frequency</li>
@@ -265,7 +266,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   <li>Where your net pay goes (accounts)</li>
                   <li>Your recurring bills and expenses</li>
                 </ul>
-              </div>
+              </InfoBox>
             </div>
           )}
 
@@ -434,9 +435,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 />
               </FormGroup>
 
-              <div className="info-box">
-                <strong>Note:</strong> Social Security (6.2%) and Medicare (1.45%) are automatically included.
-              </div>
+              <InfoBox>
+                <p>
+                  <strong>Note:</strong> Social Security (6.2%) and Medicare (1.45%) are automatically included.
+                </p>
+              </InfoBox>
             </div>
           )}
 
@@ -454,6 +457,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   {accounts.map((account, index) => (
                     <div key={account.id} className="account-item">
                       <div className="account-info">
+                        <span className="account-icon">{account.icon || getDefaultIconForType(account.type)}</span>
                         <div>
                           {editingAccountIndex === index ? (
                             <input
@@ -536,11 +540,13 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 </div>
               </FormGroup>
 
-              <div className="info-box">
-                <strong>Tip:</strong> {hasExistingAccounts 
-                  ? 'These accounts are shared across all your plans. Manage them anytime from Edit → Accounts.'
-                  : 'You can always add, remove, or rename accounts later from Edit → Accounts.'}
-              </div>
+              <InfoBox>
+                <p>
+                  <strong>Tip:</strong> {hasExistingAccounts 
+                    ? 'These accounts are used as templates for new plans. Manage them anytime from Edit → Accounts.'
+                    : 'You can always add, remove, or rename accounts later from Edit → Accounts.'}
+                </p>
+              </InfoBox>
             </div>
           )}
         </div>
@@ -604,4 +610,19 @@ function getColorForAccountType(type: string): string {
     other: '#6b7280',
   };
   return colors[type] || colors.other;
+}
+
+function getDefaultIconForType(type: Account['type']): string {
+  switch (type) {
+    case 'checking':
+      return '💳';
+    case 'savings':
+      return '💰';
+    case 'investment':
+      return '📈';
+    case 'other':
+      return '💵';
+    default:
+      return '💰';
+  }
 }

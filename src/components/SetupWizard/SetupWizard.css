@@ -72,35 +72,6 @@
   font-size: 0.95rem;
 }
 
-.info-box {
-  background: var(--bg-tertiary);
-  border-left: 4px solid #667eea;
-  padding: 1.25rem;
-  border-radius: 8px;
-  margin: 1.25rem 0;
-  color: var(--text-primary);
-}
-
-.info-box h3 {
-  margin: 0 0 1rem 0;
-  color: #667eea;
-  font-size: 1.1rem;
-}
-
-.info-box ul {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-
-.info-box li {
-  margin-bottom: 0.5rem;
-  color: var(--text-secondary);
-}
-
-.info-box strong {
-  color: var(--text-primary);
-}
-
 .form-group {
   margin-bottom: 1.5rem;
 }
@@ -230,6 +201,16 @@
   align-items: center;
   gap: 1rem;
   flex: 1;
+}
+
+.account-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
 }
 
 .priority-badge {

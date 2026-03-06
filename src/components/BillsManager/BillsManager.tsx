@@ -1,10 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Bill, BillFrequency } from '../../types/auth';
+import type { Bill, BillFrequency, Account } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
 import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard } from '../shared';
 import './BillsManager.css';
+
+const getDefaultIconForType = (type: Account['type']): string => {
+  switch (type) {
+    case 'checking':
+      return '💳';
+    case 'savings':
+      return '💰';
+    case 'investment':
+      return '📈';
+    case 'other':
+      return '💵';
+    default:
+      return '💰';
+  }
+};
 
 interface BillsManagerProps {
   scrollToAccountId?: string;
@@ -190,7 +205,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 <div key={account.id} id={`account-${account.id}`} className="account-section">
                   <div className="account-header">
                     <div className="account-info">
-                      <span className="account-icon">{account.icon || '💳'}</span>
+                      <span className="account-icon">{account.icon || getDefaultIconForType(account.type)}</span>
                       <div>
                         <h3>{account.name}</h3>
                         <span className="account-type">{account.type}</span>
@@ -325,7 +340,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 >
                   {budgetData.accounts.map(account => (
                     <option key={account.id} value={account.id}>
-                      {account.name}
+                      {account.icon || getDefaultIconForType(account.type)} {account.name}
                     </option>
                   ))}
                 </select>

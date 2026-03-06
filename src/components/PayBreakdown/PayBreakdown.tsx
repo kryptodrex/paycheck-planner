@@ -7,6 +7,21 @@ import { Alert, Button, InputWithPrefix } from '../shared';
 import PaySettingsModal from '../PaySettingsModal';
 import './PayBreakdown.css';
 
+const getDefaultIconForType = (type: Account['type']): string => {
+  switch (type) {
+    case 'checking':
+      return '💳';
+    case 'savings':
+      return '💰';
+    case 'investment':
+      return '📈';
+    case 'other':
+      return '💵';
+    default:
+      return '💰';
+  }
+};
+
 type AllocationCategory = {
   id: string;
   name: string;
@@ -505,7 +520,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 <React.Fragment key={fundingItem.account.id}>
                   <div className="waterfall-row waterfall-account-row">
                     <span className="waterfall-label">
-                      <span className="account-icon-small">{fundingItem.account.icon || '💰'}</span>
+                      <span className="account-icon-small">{fundingItem.account.icon || getDefaultIconForType(fundingItem.account.type)}</span>
                       {fundingItem.account.name}
                     </span>
                     {!isEditing ? (

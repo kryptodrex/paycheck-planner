@@ -5,6 +5,13 @@
   flex-direction: column;
 }
 
+.add-account-toggle-btn {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  justify-content: center;
+}
+
 /* Add Account Section */
 .add-account-section {
   margin-bottom: 1.5rem;
@@ -22,13 +29,41 @@
 
 .add-account-form {
   display: flex;
-  gap: 0.75rem;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.add-account-form .account-name-input {
+.add-account-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.add-account-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.add-account-icon-field {
+  flex-shrink: 0;
+}
+
+.add-account-name-field {
   flex: 1;
-  min-width: 0;
+  min-width: 180px;
+}
+
+.add-account-type-field {
+  min-width: 120px;
+}
+
+.add-account-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .account-type-select {
@@ -50,7 +85,8 @@
 
 .add-account-form .btn {
   white-space: nowrap;
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1.5rem;
+  align-self: flex-start;
 }
 
 .add-account-form .btn:disabled {
@@ -92,18 +128,44 @@
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
+.account-item:has(.account-edit-form) {
+  background: var(--bg-tertiary);
+  border-color: #667eea;
+  padding: 1.25rem;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
 .account-details {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .account-name-display {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.account-name-display h4 {
+.account-icon-display {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+}
+
+.account-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.account-info-text h4 {
   margin: 0;
   font-size: 1.1rem;
   color: var(--text-primary);
@@ -116,26 +178,152 @@
   text-transform: capitalize;
 }
 
-.account-name-input {
+.account-edit-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
   width: 100%;
+  flex-wrap: wrap;
+}
+
+.account-edit-form .account-icon-input {
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0.5rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  text-align: center;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.account-edit-form .account-icon-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.account-edit-form .account-name-input {
+  flex: 1;
+  min-width: 140px;
   padding: 0.75rem;
   background: var(--bg-primary);
-  border: 2px solid #667eea;
-  border-radius: 6px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
   font-size: 1rem;
   color: var(--text-primary);
   font-weight: 600;
+  transition: all 0.2s;
 }
 
-.account-name-input:focus {
+.account-edit-form .account-name-input:focus {
   outline: none;
-  border-color: #764ba2;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.account-edit-form .account-type-select {
+  min-width: 120px;
+  padding: 0.75rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.account-edit-form .account-type-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Add Account Form Inputs */
+.add-account-form .account-icon-input {
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0.5rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  text-align: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  display: block;
+}
+
+.add-account-form .account-icon-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.add-account-form .account-name-input {
+  width: 100%;
+  height: 3.5rem;
+  padding: 0 0.75rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  transition: all 0.2s;
+  display: block;
+}
+
+.add-account-form .account-name-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.add-account-form .account-type-select {
+  width: 100%;
+  height: 3.5rem;
+  padding: 0 0.75rem;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: block;
+}
+
+.add-account-form .account-type-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .account-actions {
   display: flex;
   gap: 0.5rem;
   flex-shrink: 0;
+  align-items: center;
+}
+
+.account-edit-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  justify-content: flex-end;
 }
 
 .btn-icon {
@@ -165,45 +353,69 @@
   cursor: not-allowed;
 }
 
-.btn-danger {
+.account-actions .btn-icon.btn-danger {
   color: #ef4444;
 }
 
-.btn-danger:hover:not(:disabled) {
+.account-actions .btn-icon.btn-danger:hover:not(:disabled) {
   background: #fee2e2;
   color: #dc2626;
 }
 
-.info-box-manager {
-  padding: 1rem;
-  background: var(--bg-tertiary);
-  border-left: 4px solid #667eea;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.95rem;
+.account-delete-modal {
+  max-width: 560px;
+}
+
+.account-delete-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.account-delete-content p {
+  margin: 0;
   color: var(--text-secondary);
 }
 
-.info-box-manager strong {
+.account-delete-summary {
+  margin: 0;
+  padding-left: 1.25rem;
   color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+.account-delete-footer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 1.25rem;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.account-delete-footer-main {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+.account-delete-footer-danger {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(239, 68, 68, 0.6);
+}
+
+@media (max-width: 600px) {
+  .account-delete-footer-main {
+    flex-direction: column-reverse;
+  }
+
+  .account-delete-footer-danger {
+    justify-content: stretch;
+  }
+
+  .account-delete-footer-danger .btn {
+    width: 100%;
+  }
 }
