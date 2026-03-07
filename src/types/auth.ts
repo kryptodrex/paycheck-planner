@@ -139,10 +139,23 @@ export interface Bill {
   amount: number;                // Amount due
   frequency: BillFrequency;      // How often it's due
   accountId: string;             // Which account this is paid from
+  enabled?: boolean;             // Whether bill is active (undefined defaults to true)
   dueDay?: number;               // Day of month/week it's due (if applicable)
   customFrequencyDays?: number;  // For custom frequency: days between occurrences
   category?: string;             // Optional category for organization
   notes?: string;                // Optional notes
+}
+
+/**
+ * Tab configuration for customizable dashboard tabs
+ */
+export interface TabConfig {
+  id: string;             // Tab identifier
+  label: string;          // Display label
+  icon: string;           // Emoji/icon
+  visible: boolean;       // Whether tab is currently shown
+  order: number;          // Display order (lower numbers first)
+  pinned: boolean;        // Whether tab cannot be hidden (Key Metrics, Pay Breakdown)
 }
 
 /**
@@ -154,6 +167,7 @@ export interface BudgetSettings {
   filePath?: string;                 // Where the budget is saved (optional, may not be set yet)
   encryptionEnabled?: boolean;       // Whether to encrypt budget files (undefined = not set)
   encryptionKey?: string;            // User's encryption key (only if encryption enabled)
+  tabConfigs?: TabConfig[];          // Tab visibility and order configuration
 }
 
 /**
@@ -190,7 +204,7 @@ export interface BudgetContextType {
   loading: boolean;               // Whether an operation is in progress
   
   // File operations
-  saveBudget: () => Promise<void>;                      // Save to disk
+  saveBudget: () => Promise<boolean>;                      // Save to disk, returns true on success
   loadBudget: (filePath?: string) => Promise<void>;     // Load from disk
   createNewBudget: (year: number) => void;              // Create empty plan for a year
   createDemoBudget: () => void;                         // Create demo plan with random realistic data

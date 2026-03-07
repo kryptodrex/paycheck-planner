@@ -47,6 +47,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   if (!budgetData) return null;
 
   const currency = budgetData.settings?.currency || 'USD';
+  const isBillEnabled = (bill: Bill) => bill.enabled !== false;
 
   const handleAddBill = () => {
     setEditingBill(null);
@@ -97,6 +98,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       amount: parsedBillAmount,
       frequency: billFrequency,
       accountId: billAccountId,
+      enabled: editingBill ? editingBill.enabled !== false : true,
       notes: billNotes.trim() || undefined,
     };
 
@@ -115,6 +117,10 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     if (confirm('Are you sure you want to delete this bill?')) {
       deleteBill(id);
     }
+  };
+
+  const handleToggleBillEnabled = (bill: Bill) => {
+    updateBill(bill.id, { enabled: !isBillEnabled(bill) });
   };
 
   // Group bills by account
@@ -171,6 +177,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             .map(account => {
               const accountBills = billsByAccount[account.id] || [];
               const totalMonthly = roundUpToCent(accountBills.reduce((sum, bill) => {
+                if (!isBillEnabled(bill)) return sum;
                 return sum + convertBillToMonthly(bill.amount, bill.frequency);
               }, 0));
               return { account, accountBills, totalMonthly };
@@ -197,9 +204,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                   {accountBills.length > 0 ? (
                     <div className="bills-list">
                       {accountBills
-                        .sort((a, b) => b.amount - a.amount)
+                        .sort((a, b) => {
+                          const aEnabled = isBillEnabled(a);
+                          const bEnabled = isBillEnabled(b);
+                          if (aEnabled !== bEnabled) return aEnabled ? -1 : 1;
+                          return b.amount - a.amount;
+                        })
                         .map(bill => (
-                          <SectionItemCard key={bill.id} className="bill-item">
+                          <SectionItemCard key={bill.id} className={`bill-item ${isBillEnabled(bill) ? '' : 'bill-disabled'}`}>
                             <div className="bill-main">
                               <div className="bill-info">
                                 <h4>{bill.name}</h4>
@@ -213,6 +225,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                                   <span className="frequency">{getDisplayModeLabel(displayMode)}</span>
                                 </div>
                                 <div className="bill-actions">
+                                  <Button
+                                    variant="icon"
+                                    onClick={() => handleToggleBillEnabled(bill)}
+                                    title={isBillEnabled(bill) ? 'Disable bill' : 'Enable bill'}
+                                  >
+                                    {isBillEnabled(bill) ? '⏸️' : '▶️'}
+                                  </Button>
                                   <Button
                                     variant="icon"
                                     onClick={() => handleEditBill(bill)}

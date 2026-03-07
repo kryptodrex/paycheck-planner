@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
@@ -11,7 +11,9 @@ import BenefitsManager from '../BenefitsManager';
 import TaxBreakdown from '../TaxBreakdown';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
+import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, FormGroup } from '../shared';
+import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs } from '../../utils/tabManagement';
 import './PlanDashboard.css';
 
 type TabView = 'metrics' | 'breakdown' | 'bills' | 'benefits' | 'retirement' | 'taxes';
@@ -46,8 +48,28 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [useCustomKey, setUseCustomKey] = useState(false);
   const [encryptionSaving, setEncryptionSaving] = useState(false);
   const [statusToast, setStatusToast] = useState<string | null>(null);
+  const [showTabManagementModal, setShowTabManagementModal] = useState(false);
+  const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
   const tabContentRef = useRef<HTMLDivElement | null>(null);
   const tabPanelRefs = useRef<Partial<Record<TabView, HTMLDivElement | null>>>({});
+
+  // Initialize tab configs from budget settings or use defaults
+  const tabConfigs = useMemo(() => {
+    return budgetData?.settings?.tabConfigs 
+      ? initializeTabConfigs(budgetData.settings.tabConfigs)
+      : initializeTabConfigs();
+  }, [budgetData?.settings?.tabConfigs]);
+  
+  const visibleTabs = useMemo(() => getVisibleTabs(tabConfigs), [tabConfigs]);
+  const hiddenTabs = useMemo(() => getHiddenTabs(tabConfigs), [tabConfigs]);
+
+  // Handle save with success toast
+  const handleSave = useCallback(async () => {
+    const success = await saveBudget();
+    if (success) {
+      setStatusToast('✅ Plan saved successfully');
+    }
+  }, [saveBudget]);
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -67,7 +89,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     const unsubscribeSave = window.electronAPI.onMenuEvent('save-plan', () => {
-      saveBudget();
+      handleSave();
     });
 
     const unsubscribeSettings = window.electronAPI.onMenuEvent('open-settings', () => {
@@ -91,7 +113,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribePayOptions();
       unsubscribeAccounts();
     };
-  }, [createNewBudget, loadBudget, onResetSetup, saveBudget]);
+  }, [createNewBudget, loadBudget, onResetSetup, handleSave]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -128,6 +150,72 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   const handleScrollToRetirementComplete = useCallback(() => {
     setShouldScrollToRetirement(false);
+  }, []);
+
+  // Tab management handlers
+  const handleToggleTabVisibility = useCallback((tabId: string, visible: boolean) => {
+    if (!budgetData) return;
+    
+    // Prevent hiding the last visible tab
+    if (!visible) {
+      const currentVisibleCount = tabConfigs.filter(t => t.visible).length;
+      if (currentVisibleCount <= 1) {
+        alert('Cannot hide the last visible tab. At least one tab must remain visible.');
+        return;
+      }
+    }
+    
+    const updatedConfigs = toggleTabVisibility(tabConfigs, tabId, visible);
+    updateBudgetSettings({
+      ...budgetData.settings,
+      tabConfigs: updatedConfigs,
+    });
+    
+    // If hiding the active tab, switch to metrics
+    if (!visible && activeTab === tabId) {
+      setActiveTab('metrics');
+    }
+  }, [budgetData, tabConfigs, activeTab, updateBudgetSettings]);
+
+  const handleReorderTab = useCallback((fromIndex: number, toIndex: number) => {
+    if (!budgetData) return;
+    const updatedConfigs = reorderTabs(tabConfigs, fromIndex, toIndex);
+    updateBudgetSettings({
+      ...budgetData.settings,
+      tabConfigs: updatedConfigs,
+    });
+  }, [budgetData, tabConfigs, updateBudgetSettings]);
+
+  const handleHideTab = useCallback((tabId: string) => {
+    handleToggleTabVisibility(tabId, false);
+  }, [handleToggleTabVisibility]);
+
+  const handleDragStart = useCallback((index: number) => {
+    setDraggedTabIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, _index: number) => {
+    e.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedTabIndex === null || !budgetData) return;
+
+    if (draggedTabIndex !== dropIndex) {
+      const updatedConfigs = reorderTabs(tabConfigs, draggedTabIndex, dropIndex);
+      updateBudgetSettings({
+        ...budgetData.settings,
+        tabConfigs: updatedConfigs,
+      });
+      setStatusToast('📋 Tab order updated');
+    }
+    
+    setDraggedTabIndex(null);
+  }, [draggedTabIndex, budgetData, tabConfigs, updateBudgetSettings]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedTabIndex(null);
   }, []);
 
   if (!budgetData) return null;
@@ -374,7 +462,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </Button>
           <Button
             variant="primary"
-            onClick={saveBudget}
+            onClick={handleSave}
             disabled={loading}
             className="header-btn-primary"
           >
@@ -385,53 +473,18 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
       {/* Only show tabs in full mode, not in view-only mode */}
       {!viewMode && (
-        <div className="tab-navigation">
-          <div className="tab-button-group">
-            <button
-              className={`tab-button ${activeTab === 'metrics' ? 'active' : ''}`}
-              onClick={() => handleTabClick('metrics')}
-            >
-              <span className="tab-icon">📊</span>
-              Key Metrics
-            </button>
-          </div>
-          <div className="tab-button-group">
-            <button
-              className={`tab-button ${activeTab === 'breakdown' ? 'active' : ''}`}
-              onClick={() => handleTabClick('breakdown')}
-            >
-              <span className="tab-icon">💵</span>
-              Pay Breakdown
-            </button>
-          </div>
-          <div className="tab-button-group">
-            <button
-              className={`tab-button ${activeTab === 'bills' ? 'active' : ''}`}
-              onClick={() => handleTabClick('bills', { resetBillsAnchor: true })}
-            >
-              <span className="tab-icon">📋</span>
-              Bills
-            </button>
-          </div>
-          <div className="tab-button-group">
-            <button
-              className={`tab-button ${activeTab === 'benefits' ? 'active' : ''}`}
-              onClick={() => handleTabClick('benefits')}
-            >
-              <span className="tab-icon">🏥</span>
-              Benefits
-            </button>
-          </div>
-          <div className="tab-button-group">
-            <button
-              className={`tab-button ${activeTab === 'taxes' ? 'active' : ''}`}
-              onClick={() => handleTabClick('taxes')}
-            >
-              <span className="tab-icon">💰</span>
-              Taxes
-            </button>
-          </div>
-        </div>
+        <PlanTabs
+          visibleTabs={visibleTabs}
+          activeTab={activeTab}
+          onTabClick={handleTabClick}
+          onManageTabs={() => setShowTabManagementModal(true)}
+          onHideTab={handleHideTab}
+          draggedTabIndex={draggedTabIndex}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
+        />
       )}
 
       <div className="tab-content" ref={tabContentRef}>
@@ -639,6 +692,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {showAccountsModal && (
         <AccountsManager onClose={() => setShowAccountsModal(false)} />
       )}
+
+      {/* Tab Management Modal */}
+      <TabManagementModal
+        isOpen={showTabManagementModal}
+        onClose={() => setShowTabManagementModal(false)}
+        visibleTabs={visibleTabs}
+        hiddenTabs={hiddenTabs}
+        onToggleTabVisibility={handleToggleTabVisibility}
+        onReorderTab={handleReorderTab}
+      />
     </div>
   );
 };

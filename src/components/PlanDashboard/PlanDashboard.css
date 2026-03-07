@@ -196,48 +196,6 @@
   transform: scale(1.05);
 }
 
-.tab-navigation {
-  display: flex;
-  background: var(--bg-primary);
-  box-shadow: var(--shadow-sm);
-  border-bottom: 1px solid var(--border-color);
-  overflow-x: auto;
-  flex-shrink: 0;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-}
-
-.tab-button:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-.tab-button.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.tab-icon {
-  font-size: 1.2rem;
-}
-
 .tab-content {
   flex: 1;
   overflow-y: auto;
@@ -252,6 +210,15 @@
 
 .tab-panel.active {
   display: block;
+}
+
+.view-mode-header {
+  background: var(--header-gradient);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  font-size: 0.95rem;
 }
 
 .dashboard-footer {
@@ -330,15 +297,6 @@
     font-size: 0.85rem;
   }
 
-  .tab-button {
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-  }
-
-  .tab-icon {
-    font-size: 1rem;
-  }
-
   .footer-info {
     /* flex-direction: column; */
     align-items: flex-start;
@@ -352,18 +310,6 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.8rem;
   }
-}
-
-/* Tab button group with open-in-window button */
-.tab-button-group {
-  flex: 1;
-  display: flex;
-  align-items: stretch;
-  position: relative;
-}
-
-.tab-button-group .tab-button {
-  flex: 1;
 }
 
 .view-mode-header {

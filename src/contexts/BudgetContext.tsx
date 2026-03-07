@@ -90,9 +90,10 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   /**
    * Save the current budget to disk
    * useCallback prevents recreating this function on every render (performance optimization)
+   * @returns true if save was successful, false if cancelled or failed
    */
-  const saveBudget = useCallback(async () => {
-    if (!budgetData) return;
+  const saveBudget = useCallback(async (): Promise<boolean> => {
+    if (!budgetData) return false;
 
     setLoading(true);
     try {
@@ -113,7 +114,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
       // If user canceled the dialog, filePath will be null
       if (!filePath) {
-        return;
+        return false;
       }
 
       // Update state with the new file path and settings
@@ -129,10 +130,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       // Mark as saved
       lastSavedDataRef.current = JSON.stringify(savedBudget);
       setHasUnsavedChanges(false);
+      return true;
     } catch (error) {
       console.error('Error saving budget:', error);
       // Type assertion: tell TypeScript that error is an Error object
       alert('Failed to save budget: ' + (error as Error).message);
+      return false;
     } finally {
       // Always runs, even if there's an error
       setLoading(false);
@@ -477,6 +480,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           ...prev.bills,
           {
             ...bill,
+            enabled: bill.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],

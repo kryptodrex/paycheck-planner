@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
-import { getPaychecksPerYear } from '../../utils/payPeriod';
+import { getPaychecksPerYear, convertToDisplayMode, convertFromDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import type { Account, Bill, Benefit, RetirementElection } from '../../types/auth';
 import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../shared';
@@ -50,6 +50,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const [draftAccounts, setDraftAccounts] = useState<Map<string, AllocationAccount>>(new Map());
   const [validationMessages, setValidationMessages] = useState<Map<string, ValidationMessage>>(new Map());
   const [showPaySettingsModal, setShowPaySettingsModal] = useState(false);
+  const [inputValues, setInputValues] = useState<Map<string, number>>(new Map()); // Local input values to prevent conversion flicker
 
   if (!budgetData) return null;
 
@@ -147,9 +148,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
   // Helper function to convert per-paycheck values to display values based on display mode
   const toDisplayAmount = (paycheckAmount: number) => {
-    if (displayMode === 'paycheck') return paycheckAmount;
-    if (displayMode === 'monthly') return paycheckAmount * (paychecksPerYear / 12);
-    return paycheckAmount * paychecksPerYear;
+    return convertToDisplayMode(paycheckAmount, paychecksPerYear, displayMode);
+  };
+
+  const fromDisplayAmount = (displayAmount: number) => {
+    return convertFromDisplayMode(displayAmount, paychecksPerYear, displayMode);
   };
 
   // Calculate percentages for visual bar
@@ -163,6 +166,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     if (account) {
       setDraftAccounts(prev => new Map(prev).set(accountId, { ...account }));
       setEditingAccountIds(prev => new Set(prev).add(accountId));
+      // Clear input values when starting fresh edit
+      setInputValues(new Map());
       // Clear any existing errors when starting fresh edit
       setValidationMessages(prev => {
         const next = new Map(prev);
@@ -188,6 +193,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       next.delete(accountId);
       return next;
     });
+    setInputValues(new Map());
   };
 
   const saveAccountEdit = (accountId: string) => {
@@ -198,7 +204,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       .map((category) => ({
         ...category,
         name: category.name.trim(),
-        amount: Number.isFinite(category.amount) ? roundUpToCent(Math.max(0, category.amount)) : 0,
+        amount: Number.isFinite(category.amount)
+          ? Math.round(Math.max(0, category.amount) * 1_000_000_000_000) / 1_000_000_000_000
+          : 0,
       }))
       .filter((category) => category.name.length > 0 && category.amount > 0);
 
@@ -478,7 +486,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             </div>
 
             {allocationPlan.accountFunding.map((fundingItem) => {
-              const accountAmount = roundUpToCent(toDisplayAmount(fundingItem.totalAmount));
+              const accountAmount = toDisplayAmount(fundingItem.totalAmount);
               const isEditing = editingAccountIds.has(fundingItem.account.id);
               const displayAccount = isEditing ? draftAccounts.get(fundingItem.account.id) : fundingItem.account;
               
@@ -505,13 +513,17 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
                   {isEditing ? (
                     <div className="allocation-edit-section">
+                      <div className="edit-mode-info">
+                        <span className="info-icon">ℹ️</span>
+                        <span>Editing amounts for {getDisplayModeLabel(displayMode)} view</span>
+                      </div>
                       {displayAccount.allocationCategories.length === 0 && (
                         <div className="waterfall-row waterfall-category-row">
                           <p className="category-empty">No allocations yet. Add allocations to allocate funds to this account.</p>
                         </div>
                       )}
 
-                      {displayAccount.allocationCategories.map((category) => (
+                      {[...displayAccount.allocationCategories].sort((a, b) => b.amount - a.amount).map((category) => (
                         <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${category.isBill || category.isBenefit || category.isRetirement ? 'bill-category-row' : ''}`}>
                           {category.isBill || category.isBenefit || category.isRetirement ? (
                             <>
@@ -523,7 +535,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                 className="category-name-input"
                               />
                               <div className="bill-amount-display">
-                                {formatWithSymbol(roundUpToCent(category.amount), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatWithSymbol(toDisplayAmount(category.amount), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 {category.isBill && category.billCount && category.billCount > 0 && (
                                   <span className="bill-count-badge">{category.billCount}</span>
                                 )}
@@ -534,6 +546,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                   <span className="bill-count-badge">{category.retirementCount}</span>
                                 )}
                               </div>
+                              <div className="category-spacer"></div>
                             </>
                           ) : (
                             <>
@@ -548,9 +561,18 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                 prefix={getCurrencySymbol(currency)}
                                 type="number"
                                 min="0"
-                                step="1"
-                                value={String(category.amount)}
-                                onChange={(e) => updateCategory(displayAccount.id, category.id, { amount: parseFloat(e.target.value) || 0 })}
+                                step="0.01"
+                                value={String(inputValues.has(category.id) ? inputValues.get(category.id) : toDisplayAmount(category.amount))}
+                                onChange={(e) => setInputValues(prev => new Map(prev).set(category.id, parseFloat(e.target.value) || 0))}
+                                onBlur={(e) => {
+                                  const displayValue = parseFloat(e.target.value) || 0;
+                                  updateCategory(displayAccount.id, category.id, { amount: fromDisplayAmount(displayValue) });
+                                  setInputValues(prev => {
+                                    const next = new Map(prev);
+                                    next.delete(category.id);
+                                    return next;
+                                  });
+                                }}
                               />
                               <Button variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove allocation">✕</Button>
                             </>
@@ -571,7 +593,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       )}
                     </div>
                   ) : (
-                    fundingItem.categories.length > 0 && fundingItem.categories.map((category) => (
+                    fundingItem.categories.length > 0 && [...fundingItem.categories].sort((a, b) => b.amount - a.amount).map((category) => (
                       <div key={category.id} className={`waterfall-row waterfall-category-row ${category.isBill || category.isBenefit || category.isRetirement ? 'bill-category-view' : ''}`}>
                         {category.isBill || category.isBenefit || category.isRetirement ? (
                           <button
@@ -595,7 +617,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                           </span>
                         )}
                         <span className="waterfall-amount">
-                          {category.amount === 0 ? '-' : formatWithSymbol(roundUpToCent(toDisplayAmount(category.amount)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {category.amount === 0 ? '-' : formatWithSymbol(toDisplayAmount(category.amount), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     ))
@@ -606,12 +628,12 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
             <div className="waterfall-row waterfall-footer-row">
               <span className="waterfall-label">All that remains for spending</span>
-              <span className="waterfall-amount">{formatWithSymbol(roundUpToCent(Math.max(0, toDisplayAmount(leftoverPerPaycheck))), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="waterfall-amount">{formatWithSymbol(Math.max(0, toDisplayAmount(leftoverPerPaycheck)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
               <div className="waterfall-alert-row">
                 <Alert type="warning">
-                  You are {formatWithSymbol(roundUpToCent(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck)), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(roundUpToCent(toDisplayAmount(budgetData.paySettings.minLeftover || 0)), currency, { minimumFractionDigits: 2 })}
+                  You are {formatWithSymbol(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(budgetData.paySettings.minLeftover || 0), currency, { minimumFractionDigits: 2 })}
                 </Alert>
               </div>
             )}
@@ -677,7 +699,7 @@ function normalizeAccounts(
       }));
 
     // Get bills for this account and calculate total
-    const accountBills = bills.filter(bill => bill.accountId === account.id);
+    const accountBills = bills.filter(bill => bill.accountId === account.id && bill.enabled !== false);
 
     // Get account-sourced benefits for this account and calculate total
     const accountBenefits = benefits.filter(
@@ -752,7 +774,7 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
     const categories = account.allocationCategories.map((category) => ({
       id: category.id,
       name: category.name,
-      amount: roundUpToCent(Math.max(0, category.amount || 0)),
+      amount: Math.max(0, category.amount || 0),
       isBill: category.isBill,
       billCount: category.billCount,
       isBenefit: category.isBenefit,
@@ -761,7 +783,7 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
       retirementCount: category.retirementCount,
     }));
 
-    const totalAmount = roundUpToCent(categories.reduce((sum, cat) => sum + cat.amount, 0));
+    const totalAmount = categories.reduce((sum, cat) => sum + cat.amount, 0);
 
     return {
       account,
@@ -770,8 +792,8 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
     };
   });
 
-  const totalAllocated = roundUpToCent(accountFunding.reduce((sum, item) => sum + item.totalAmount, 0));
-  const remaining = roundUpToCent(Math.max(0, netPay - totalAllocated));
+  const totalAllocated = accountFunding.reduce((sum, item) => sum + item.totalAmount, 0);
+  const remaining = Math.max(0, netPay - totalAllocated);
 
   return {
     accountFunding,

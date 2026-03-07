@@ -4,7 +4,6 @@
  */
 
 import type { PayFrequency, PaySettings } from '../types/auth';
-import { roundUpToCent } from './money';
 
 /**
  * Get the number of paychecks per year based on pay frequency
@@ -38,15 +37,41 @@ export function convertToDisplayMode(
   paychecksPerYear: number,
   displayMode: 'paycheck' | 'monthly' | 'yearly'
 ): number {
+  const roundToCent = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
+
   switch (displayMode) {
     case 'paycheck':
-      return paycheckAmount;
+      return roundToCent(paycheckAmount);
     case 'monthly':
-      return roundUpToCent((paycheckAmount * paychecksPerYear) / 12);
+      return roundToCent((paycheckAmount * paychecksPerYear) / 12);
     case 'yearly':
-      return roundUpToCent(paycheckAmount * paychecksPerYear);
+      return roundToCent(paycheckAmount * paychecksPerYear);
     default:
-      return paycheckAmount;
+      return roundToCent(paycheckAmount);
+  }
+}
+
+/**
+ * Convert a display mode amount back to per-paycheck amount
+ * @param displayAmount - Amount in the display mode
+ * @param paychecksPerYear - Number of paychecks per year (from getPaychecksPerYear)
+ * @param displayMode - The display mode ('paycheck', 'monthly', 'yearly')
+ * @returns Amount per paycheck
+ */
+export function convertFromDisplayMode(
+  displayAmount: number,
+  paychecksPerYear: number,
+  displayMode: 'paycheck' | 'monthly' | 'yearly'
+): number {
+  switch (displayMode) {
+    case 'paycheck':
+      return displayAmount;
+    case 'monthly':
+      return (displayAmount * 12) / paychecksPerYear;
+    case 'yearly':
+      return displayAmount / paychecksPerYear;
+    default:
+      return displayAmount;
   }
 }
 

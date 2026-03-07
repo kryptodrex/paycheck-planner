@@ -113,26 +113,6 @@
   font-size: 0.85rem;
 }
 
-.input-with-prefix {
-  display: flex;
-  align-items: center;
-}
-
-.input-with-prefix .prefix {
-  background: var(--bg-secondary);
-  border: 2px solid var(--border-color);
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  padding: 0.75rem 1rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.input-with-prefix input {
-  border-radius: 0 8px 8px 0 !important;
-  flex: 1;
-}
-
 .wizard-footer {
   display: flex;
   justify-content: space-between;
