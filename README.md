@@ -30,6 +30,7 @@ Built with Electron, React, TypeScript, and Vite.
   - Benefits manager
   - Tax breakdown
   - Accounts manager
+  - **Customizable tabs**: Show/hide tabs, reorder non-pinned tabs, with pinned tabs (Key Metrics, Pay Breakdown) always visible
 - **Year-based workflows**: Duplicate a plan into a new year.
 - **Security options**: Per-plan encryption can be enabled/disabled; encryption keys are stored in OS keychain.
 - **Desktop UX**: Native menu integration, keyboard shortcuts (including `Cmd/Ctrl + ,` for settings), and session/window state handling.
@@ -180,6 +181,12 @@ paycheck-planner/
 │   │   ├── SetupWizard/
 │   │   ├── WelcomeScreen/
 │   │   ├── PlanDashboard/
+│   │   │   ├── PlanTabs/
+│   │   │   │   ├── PlanTabs.tsx
+│   │   │   │   ├── TabManagementModal.tsx
+│   │   │   │   └── PlanTabs.css
+│   │   │   ├── PlanDashboard.tsx
+│   │   │   └── PlanDashboard.css
 │   │   ├── KeyMetrics/
 │   │   ├── PayBreakdown/
 │   │   ├── BillsManager/

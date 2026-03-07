@@ -43,7 +43,7 @@
     - The modal is not large enough for the content, making the account list impossible to read on a smaller window. We should make the modal larger and more responsive to accommodate the content.
     - We should add a delete button for accounts, and when an account is deleted, we should prompt the user to choose what to do with any bills or pay breakdowns that are currently using that account (e.g., reassign to another account, delete them, etc.) to prevent orphaned data and ensure a smooth user experience.
 
-- [ ] **Tab Management** - Allow for more customization of certain tabs
+- [x] **Tab Management** - Allow for more customization of certain tabs
     - Have a [+] button next to the last tab that allows users to add less commonly used tabs
         - The Benefits and Taxes should be put behind this [+] button by default since they are less commonly used, but users can choose to add them as main tabs if they want
         - Future state could allow users to create custom tabs for different categories of bills or accounts

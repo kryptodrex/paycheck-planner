@@ -23,6 +23,10 @@ This page is a high-level overview of what Paycheck Planner currently lets you d
 - View estimated taxes and deductions
 - Review key totals at a glance
 - Switch between paycheck, monthly, and yearly views (where available)
+- **Customize dashboard tabs**: Click the [+] button to show/hide tabs and reorder them
+- Hide tabs you don't use (Benefits, Taxes, etc.) or show them when needed
+- Core tabs (Key Metrics and Pay Breakdown) are always visible and pinned
+- Your tab preferences are saved with your plan
 
 ### 4) Plan Where Your Money Goes
 - Manage accounts used in your plan
