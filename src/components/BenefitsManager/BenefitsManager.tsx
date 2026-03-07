@@ -1,25 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Benefit, RetirementElection, Account } from '../../types/auth';
+import type { Benefit, RetirementElection } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
+import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../utils/payPeriod';
+import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard, Alert, ViewModeSelector, PageHeader } from '../shared';
 import './BenefitsManager.css';
-
-const getDefaultIconForType = (type: Account['type']): string => {
-    switch (type) {
-        case 'checking':
-            return '💳';
-        case 'savings':
-            return '💰';
-        case 'investment':
-            return '📈';
-        case 'other':
-            return '💵';
-        default:
-            return '💰';
-    }
-};
 
 interface BenefitsManagerProps {
     shouldScrollToRetirement?: boolean;
@@ -81,41 +68,16 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
 
     const currency = budgetData.settings?.currency || 'USD';
 
-    const getPaychecksPerYear = (): number => {
-        switch (budgetData.paySettings.payFrequency) {
-            case 'weekly': return 52;
-            case 'bi-weekly': return 26;
-            case 'semi-monthly': return 24;
-            case 'monthly': return 12;
-            default: return 26;
-        }
-    };
+    const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
 
     // Calculate gross pay per paycheck
     const getGrossPayPerPaycheck = (): number => {
-        if (budgetData.paySettings.payType === 'salary') {
-            return (budgetData.paySettings.annualSalary || 0) / getPaychecksPerYear();
-        }
-        return (budgetData.paySettings.hourlyRate || 0) * (budgetData.paySettings.hoursPerPayPeriod || 0);
+        return calculateGrossPayPerPaycheck(budgetData.paySettings);
     };
 
     // Convert per-paycheck amount to display mode
     const toDisplayAmount = (perPaycheckAmount: number): number => {
-        if (displayMode === 'paycheck') {
-            return perPaycheckAmount;
-        }
-        if (displayMode === 'yearly') {
-            return roundUpToCent(perPaycheckAmount * getPaychecksPerYear());
-        }
-        // Monthly: convert from paycheck to monthly
-        return roundUpToCent(perPaycheckAmount * getPaychecksPerYear() / 12);
-    };
-
-    // Get display mode label
-    const getDisplayLabel = (): string => {
-        if (displayMode === 'paycheck') return 'Per Paycheck';
-        if (displayMode === 'yearly') return 'Yearly';
-        return 'Monthly';
+        return convertToDisplayMode(perPaycheckAmount, paychecksPerYear, displayMode);
     };
 
     // Calculate yearly retirement contribution (employee + employer)
@@ -126,7 +88,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
         employerCapAmount: number,
         employerCapIsPercentage: boolean
     ): number => {
-        const paychecksPerYear = getPaychecksPerYear();
         const grossPayPerPaycheck = getGrossPayPerPaycheck();
 
         // Calculate employee contribution per paycheck
@@ -188,7 +149,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
             return;
         }
 
-        const paychecksPerYear = getPaychecksPerYear();
         const grossPayPerPaycheck = getGrossPayPerPaycheck();
         const yearlyLimitAmount = parseFloat(yearlyLimit);
 
@@ -245,9 +205,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
         }
     };
 
-    const grossPayPerPaycheck = budgetData.paySettings.payType === 'salary'
-        ? (budgetData.paySettings.annualSalary || 0) / getPaychecksPerYear()
-        : (budgetData.paySettings.hourlyRate || 0) * (budgetData.paySettings.hoursPerPayPeriod || 0);
+    const grossPayPerPaycheck = getGrossPayPerPaycheck();
 
     const getBenefitPerPaycheck = (benefit: Benefit): number => {
         if (benefit.isPercentage) {
@@ -500,7 +458,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     </div>
                     <div className="section-total">
                         <div>
-                            <span className="section-total-label">Total {getDisplayLabel()}</span>
+                            <span className="section-total-label">Total {getDisplayModeLabel(displayMode)}</span>
                             <span className="section-total-amount">
                                 {formatWithSymbol(toDisplayAmount(benefitsTotalPerPaycheck), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
@@ -543,7 +501,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                         </div>
                                         {displayMode !== 'paycheck' && (
                                             <div className="amount-display">
-                                                <span className="amount-label">{getDisplayLabel()}:</span>
+                                                <span className="amount-label">{getDisplayModeLabel(displayMode)}:</span>
                                                 <span className="amount">
                                                     {formatWithSymbol(benefitInDisplayMode, currency, { minimumFractionDigits: 2 })}
                                                 </span>
@@ -570,7 +528,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     </div>
                     <div className="section-total">
                         <div>
-                            <span className="section-total-label">Total {getDisplayLabel()}</span>
+                            <span className="section-total-label">Total {getDisplayModeLabel(displayMode)}</span>
                             <span className="section-total-amount">
                                 {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
@@ -617,7 +575,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                             )}
                                             {displayMode !== 'paycheck' && (
                                                 <div className="detail" style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', marginTop: '0.75rem' }}>
-                                                    <span className="label">Total {getDisplayLabel()}:</span>
+                                                    <span className="label">Total {getDisplayModeLabel(displayMode)}:</span>
                                                     <span className="value" style={{ fontWeight: '600' }}>
                                                         {formatWithSymbol(totalInDisplayMode, currency, { minimumFractionDigits: 2 })}
                                                     </span>
@@ -666,7 +624,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     </>
                 }
             >
-                <FormGroup label="Benefit Name" required>
+                <FormGroup label="Benefit Name" required error={benefitFieldErrors.name}>
                     <input
                         type="text"
                         value={benefitName}
@@ -680,10 +638,9 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         placeholder="e.g., Health Insurance, FSA"
                         required
                     />
-                    {benefitFieldErrors.name && <p className="field-error-message">{benefitFieldErrors.name}</p>}
                 </FormGroup>
 
-                <FormGroup label="Deduction Source">
+                <FormGroup label="Deduction Source" error={benefitFieldErrors.sourceAccountId}>
                     <select
                         className={benefitFieldErrors.sourceAccountId ? 'field-error' : ''}
                         value={benefitSource === 'account' ? benefitSourceAccountId : 'paycheck'}
@@ -703,15 +660,14 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     >
                         <option value="paycheck">Paid from Paycheck</option>
                         {budgetData.accounts.map((account) => (
-                            <option key={account.id} value={account.id}>{account.icon || getDefaultIconForType(account.type)} {account.name}</option>
+                            <option key={account.id} value={account.id}>{account.icon || getDefaultAccountIcon(account.type)} {account.name}</option>
                         ))}
                     </select>
-                    {benefitFieldErrors.sourceAccountId && <p className="field-error-message">{benefitFieldErrors.sourceAccountId}</p>}
                 </FormGroup>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
-                        <FormGroup label="Amount" required>
+                        <FormGroup label="Amount" required error={benefitFieldErrors.amount}>
                             <InputWithPrefix
                                 prefix={benefitIsPercentage ? '%' : getCurrencySymbol(currency)}
                                 type="number"
@@ -728,7 +684,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                 min="0"
                                 required
                             />
-                            {benefitFieldErrors.amount && <p className="field-error-message">{benefitFieldErrors.amount}</p>}
                         </FormGroup>
                     </div>
                     <div style={{ flex: 1 }}>
@@ -798,7 +753,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                 <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
                     <h4 style={{ marginTop: 0 }}>Employee Contribution</h4>
 
-                    <FormGroup label="Deduction Source">
+                    <FormGroup label="Deduction Source" error={retirementFieldErrors.sourceAccountId}>
                         <select
                             className={retirementFieldErrors.sourceAccountId ? 'field-error' : ''}
                             value={retirementSource === 'account' ? retirementSourceAccountId : 'paycheck'}
@@ -819,15 +774,14 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         >
                             <option value="paycheck">Paid from Paycheck</option>
                             {budgetData.accounts.map((account) => (
-                                <option key={account.id} value={account.id}>{account.icon || getDefaultIconForType(account.type)} {account.name}</option>
+                                <option key={account.id} value={account.id}>{account.icon || getDefaultAccountIcon(account.type)} {account.name}</option>
                             ))}
                         </select>
-                        {retirementFieldErrors.sourceAccountId && <p className="field-error-message">{retirementFieldErrors.sourceAccountId}</p>}
                     </FormGroup>
 
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <div style={{ flex: 1 }}>
-                            <FormGroup label="Amount" required>
+                            <FormGroup label="Amount" required error={retirementFieldErrors.employeeAmount}>
                                 <InputWithPrefix
                                     prefix={employeeIsPercentage ? '%' : getCurrencySymbol(currency)}
                                     type="number"
@@ -844,7 +798,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                     min="0"
                                     required
                                 />
-                                {retirementFieldErrors.employeeAmount && <p className="field-error-message">{retirementFieldErrors.employeeAmount}</p>}
                             </FormGroup>
                         </div>
                         <div style={{ flex: 1 }}>
@@ -888,7 +841,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
 
                     <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
                         <h4 style={{ marginTop: 0, marginBottom: '1rem' }}>Yearly Limit (Optional)</h4>
-                        <FormGroup label="Maximum Yearly Contribution">
+                        <FormGroup label="Maximum Yearly Contribution" error={retirementFieldErrors.yearlyLimit}>
                             <InputWithPrefix
                                 prefix={getCurrencySymbol(currency)}
                                 type="number"
@@ -904,7 +857,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                 step="0.01"
                                 min="0"
                             />
-                            {retirementFieldErrors.yearlyLimit && <p className="field-error-message">{retirementFieldErrors.yearlyLimit}</p>}
                         </FormGroup>
 
                         {yearlyLimit && parseFloat(yearlyLimit) > 0 && (
@@ -948,7 +900,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         <>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                                 <div style={{ flex: 1 }}>
-                                    <FormGroup label="Match Cap" required>
+                                    <FormGroup label="Match Cap" required error={retirementFieldErrors.employerMatchCap}>
                                         <InputWithPrefix
                                             prefix={employerMatchCapIsPercentage ? '%' : getCurrencySymbol(currency)}
                                             type="number"
@@ -965,7 +917,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                             min="0"
                                             required
                                         />
-                                        {retirementFieldErrors.employerMatchCap && <p className="field-error-message">{retirementFieldErrors.employerMatchCap}</p>}
                                     </FormGroup>
                                 </div>
                                 <div style={{ flex: 1 }}>

@@ -1,4 +1,5 @@
 import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency } from '../types/auth';
+import { getPaychecksPerYear } from './payPeriod';
 
 /**
  * Generate realistic demo budget data for app demonstration
@@ -196,21 +197,6 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-}
-
-function getPaychecksPerYear(frequency: PayFrequency): number {
-  switch (frequency) {
-    case 'weekly':
-      return 52;
-    case 'bi-weekly':
-      return 26;
-    case 'semi-monthly':
-      return 24;
-    case 'monthly':
-      return 12;
-    default:
-      return 26;
-  }
 }
 
 function roundToCents(value: number): number {

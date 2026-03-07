@@ -18,6 +18,7 @@ import type {
 import { FileStorageService } from '../services/fileStorage';
 import { KeychainService } from '../services/keychainService';
 import { roundUpToCent } from '../utils/money';
+import { getPaychecksPerYear } from '../utils/payPeriod';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
 
 // Create the context - this is the "container" for our global state
@@ -162,7 +163,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       // Migrate benefits to include deduction source fields
       data.benefits = data.benefits.map((benefit: any) => ({
         ...benefit,
-        deductionSource: benefit.deductionSource || 'paycheck',
+        deductionSource: benefit.deductionSource || (benefit.sourceAccountId ? 'account' : 'paycheck'),
         sourceAccountId: benefit.sourceAccountId,
       }));
       
@@ -197,9 +198,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           migrated.isPreTax = true;
         }
         
-        // Add deductionSource if missing (default to 'paycheck' for backward compatibility)
+        // Add deductionSource if missing (infer from sourceAccountId when possible)
         if (!('deductionSource' in migrated)) {
-          migrated.deductionSource = 'paycheck';
+          migrated.deductionSource = migrated.sourceAccountId ? 'account' : 'paycheck';
         }
         
         // Add sourceAccountId if missing
@@ -786,19 +787,6 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
     return { employeeAmount, employerAmount };
   }, [budgetData]);
-
-  /**
-   * Helper function to get number of paychecks per year
-   */
-  const getPaychecksPerYear = (frequency: string): number => {
-    switch (frequency) {
-      case 'weekly': return 52;
-      case 'bi-weekly': return 26;
-      case 'semi-monthly': return 24;
-      case 'monthly': return 12;
-      default: return 26;
-    }
-  };
 
   /**
    * Open a dialog to select where to save budget files

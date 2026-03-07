@@ -1,7 +1,7 @@
 .bills-manager {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
@@ -15,6 +15,10 @@
   cursor: pointer;
   transition: all 0.2s;
   font-size: 0.95rem;
+}
+
+.field-error {
+  border-color: #ef4444 !important;
 }
 
 .btn-primary {

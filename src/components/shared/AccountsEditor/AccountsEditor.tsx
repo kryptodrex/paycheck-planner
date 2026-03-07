@@ -1,37 +1,8 @@
 import React, { useState } from 'react';
 import type { Account } from '../../../types/auth';
+import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { Button, InfoBox } from '../';
 import './AccountsEditor.css';
-
-const getDefaultColorForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '#667eea';
-    case 'savings':
-      return '#f093fb';
-    case 'investment':
-      return '#4facfe';
-    case 'other':
-      return '#43e97b';
-    default:
-      return '#667eea';
-  }
-};
-
-const getDefaultIconForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '💳';
-    case 'savings':
-      return '💰';
-    case 'investment':
-      return '📈';
-    case 'other':
-      return '💵';
-    default:
-      return '💰';
-  }
-};
 
 interface AccountsEditorProps {
   accounts: Account[];
@@ -63,12 +34,12 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
   const [showAddAccountForm, setShowAddAccountForm] = useState(!showToggleButton);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<Account['type']>('checking');
-  const [newAccountIcon, setNewAccountIcon] = useState(getDefaultIconForType('checking'));
+  const [newAccountIcon, setNewAccountIcon] = useState(getDefaultAccountIcon('checking'));
 
   const handleStartEdit = (account: Account) => {
     setEditingId(account.id);
     setEditingName(account.name);
-    setEditingIcon(account.icon || getDefaultIconForType(account.type));
+    setEditingIcon(account.icon || getDefaultAccountIcon(account.type));
     setEditingType(account.type);
   };
 
@@ -87,9 +58,9 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
 
     onUpdate(account.id, {
       name: editingName.trim(),
-      icon: editingIcon.trim() || getDefaultIconForType(editingType),
+      icon: editingIcon.trim() || getDefaultAccountIcon(editingType),
       type: editingType,
-      color: getDefaultColorForType(editingType),
+      color: getDefaultAccountColor(editingType),
     });
     handleCancelEdit();
   };
@@ -102,13 +73,13 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
     onAdd({
       name: newAccountName.trim(),
       type: newAccountType,
-      color: getDefaultColorForType(newAccountType),
-      icon: newAccountIcon.trim() || getDefaultIconForType(newAccountType),
+      color: getDefaultAccountColor(newAccountType),
+      icon: newAccountIcon.trim() || getDefaultAccountIcon(newAccountType),
       allocationCategories: [],
     });
     setNewAccountName('');
     setNewAccountType('checking');
-    setNewAccountIcon(getDefaultIconForType('checking'));
+    setNewAccountIcon(getDefaultAccountIcon('checking'));
     if (showToggleButton) {
       setShowAddAccountForm(false);
     }
@@ -116,13 +87,10 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
 
   const handleDeleteAccount = (id: string) => {
     if (accounts.length <= minAccounts) {
-      alert(`You must have at least ${minAccounts} account${minAccounts > 1 ? 's' : ''}`);
       return;
     }
 
-    if (confirm('Are you sure you want to delete this account?')) {
-      onDelete(id);
-    }
+    onDelete(id);
   };
 
   return (
@@ -177,7 +145,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                   onChange={(e) => {
                     const newType = e.target.value as Account['type'];
                     setNewAccountType(newType);
-                    setNewAccountIcon(getDefaultIconForType(newType));
+                    setNewAccountIcon(getDefaultAccountIcon(newType));
                   }}
                 >
                   <option value="checking">Checking</option>
@@ -235,8 +203,8 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                       onChange={(e) => {
                         const newType = e.target.value as Account['type'];
                         setEditingType(newType);
-                        if (!editingIcon || editingIcon === getDefaultIconForType(account.type)) {
-                          setEditingIcon(getDefaultIconForType(newType));
+                        if (!editingIcon || editingIcon === getDefaultAccountIcon(account.type)) {
+                          setEditingIcon(getDefaultAccountIcon(newType));
                         }
                       }}
                     >
@@ -258,7 +226,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
               ) : (
                 <div className="account-name-display">
                   <span className="account-icon-display">
-                    {account.icon || getDefaultIconForType(account.type)}
+                    {account.icon || getDefaultAccountIcon(account.type)}
                   </span>
                   <div className="account-info-text">
                     <h4>{account.name}</h4>
@@ -273,7 +241,12 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                 <Button variant="icon" onClick={() => handleStartEdit(account)} title="Edit account">
                   ✎
                 </Button>
-                <Button variant="icon" onClick={() => handleDeleteAccount(account.id)} title="Delete account">
+                <Button
+                  variant="icon"
+                  onClick={() => handleDeleteAccount(account.id)}
+                  title="Delete account"
+                  disabled={accounts.length <= minAccounts}
+                >
                   🗑
                 </Button>
               </div>

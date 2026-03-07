@@ -1,8 +1,10 @@
 import React from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { BillFrequency } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
+import { getPaychecksPerYear } from '../../utils/payPeriod';
+import { convertBillToYearly } from '../../utils/billFrequency';
+import { PageHeader } from '../shared';
 import './KeyMetrics.css';
 
 const KeyMetrics: React.FC = () => {
@@ -20,7 +22,7 @@ const KeyMetrics: React.FC = () => {
 
   // Calculate total bills (annualized)
   const annualBills = roundUpToCent(budgetData.bills.reduce((sum, bill) => {
-    return sum + annualizeBillAmount(bill.amount, bill.frequency);
+    return sum + convertBillToYearly(bill.amount, bill.frequency);
   }, 0));
 
   // Calculate monthly averages
@@ -55,13 +57,10 @@ const KeyMetrics: React.FC = () => {
 
   return (
     <div className="key-metrics">
-      <div className="metrics-header">
-        <div>
-          <h2>Key Metrics</h2>
-          <p>Your financial overview at a glance</p>
-        </div>
-      </div>
-
+      <PageHeader
+        title="Key Metrics"
+        subtitle="Your financial overview at a glance"
+      />
       <div className="metrics-grid">
         {/* Income Card */}
         <div className="metric-card income-card">
@@ -232,29 +231,5 @@ const KeyMetrics: React.FC = () => {
     </div>
   );
 };
-
-// Helper functions
-function getPaychecksPerYear(frequency: string): number {
-  switch (frequency) {
-    case 'weekly': return 52;
-    case 'bi-weekly': return 26;
-    case 'semi-monthly': return 24;
-    case 'monthly': return 12;
-    default: return 26;
-  }
-}
-
-function annualizeBillAmount(amount: number, frequency: BillFrequency): number {
-  switch (frequency) {
-    case 'weekly': return amount * 52;
-    case 'bi-weekly': return amount * 26;
-    case 'monthly': return amount * 12;
-    case 'quarterly': return amount * 4;
-    case 'semi-annual': return amount * 2;
-    case 'yearly': return amount;
-    case 'custom': return amount * 12; // Default to monthly for custom
-    default: return amount * 12;
-  }
-}
 
 export default KeyMetrics;

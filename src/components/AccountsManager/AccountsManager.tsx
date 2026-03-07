@@ -33,7 +33,6 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
 
   const handleDeleteAccount = (id: string) => {
     if (accounts.length <= 1) {
-      alert('You must have at least one account');
       return;
     }
 
@@ -44,20 +43,11 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
 
     const linkedBills = budgetData.bills.filter((bill) => bill.accountId === id).length;
     const linkedBenefits = budgetData.benefits.filter(
-      (benefit) => benefit.deductionSource === 'account' && benefit.sourceAccountId === id
+      (benefit) => benefit.sourceAccountId === id
     ).length;
     const linkedRetirement = budgetData.retirement.filter(
-      (election) => election.deductionSource === 'account' && election.sourceAccountId === id
+      (election) => election.sourceAccountId === id
     ).length;
-    const totalLinkedItems = linkedBills + linkedBenefits + linkedRetirement;
-
-    if (totalLinkedItems === 0) {
-      updateBudgetData({
-        accounts: budgetData.accounts.filter((account) => account.id !== id),
-      });
-      return;
-    }
-
     const fallbackAccount = accounts.find((account) => account.id !== id);
     setDeleteTargetAccountId(fallbackAccount?.id || '');
     setDeleteDialogState({
@@ -73,7 +63,7 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
     setDeleteTargetAccountId('');
   };
 
-  const handleConfirmDelete = (mode: 'reallocate' | 'delete-all') => {
+  const handleConfirmDelete = (mode: 'reallocate' | 'delete-all' | 'delete-account') => {
     if (!budgetData || !deleteDialogState) return;
 
     const accountId = deleteDialogState.account.id;
@@ -88,13 +78,13 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
         bill.accountId === accountId ? { ...bill, accountId: deleteTargetAccountId } : bill
       );
       const updatedBenefits = budgetData.benefits.map((benefit) =>
-        benefit.deductionSource === 'account' && benefit.sourceAccountId === accountId
-          ? { ...benefit, sourceAccountId: deleteTargetAccountId }
+        benefit.sourceAccountId === accountId
+          ? { ...benefit, deductionSource: 'account' as const, sourceAccountId: deleteTargetAccountId }
           : benefit
       );
       const updatedRetirement = budgetData.retirement.map((election) =>
-        election.deductionSource === 'account' && election.sourceAccountId === accountId
-          ? { ...election, sourceAccountId: deleteTargetAccountId }
+        election.sourceAccountId === accountId
+          ? { ...election, deductionSource: 'account' as const, sourceAccountId: deleteTargetAccountId }
           : election
       );
 
@@ -110,10 +100,10 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
 
     const updatedBills = budgetData.bills.filter((bill) => bill.accountId !== accountId);
     const updatedBenefits = budgetData.benefits.filter(
-      (benefit) => !(benefit.deductionSource === 'account' && benefit.sourceAccountId === accountId)
+      (benefit) => benefit.sourceAccountId !== accountId
     );
     const updatedRetirement = budgetData.retirement.filter(
-      (election) => !(election.deductionSource === 'account' && election.sourceAccountId === accountId)
+      (election) => election.sourceAccountId !== accountId
     );
 
     updateBudgetData({
@@ -126,6 +116,11 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
   };
 
   if (!budgetData) return null;
+
+  const totalLinkedItems = deleteDialogState
+    ? deleteDialogState.linkedBills + deleteDialogState.linkedBenefits + deleteDialogState.linkedRetirement
+    : 0;
+  const hasLinkedItems = totalLinkedItems > 0;
 
   return (
     <>
@@ -162,46 +157,62 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
                 <Button variant="secondary" onClick={handleCloseDeleteDialog}>
                   Cancel
                 </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleConfirmDelete('reallocate')}
-                  disabled={!deleteTargetAccountId || deleteTargetAccountId === deleteDialogState.account.id}
-                >
-                  Re-allocate and Delete
-                </Button>
+                {hasLinkedItems ? (
+                  <Button
+                    variant="primary"
+                    onClick={() => handleConfirmDelete('reallocate')}
+                    disabled={!deleteTargetAccountId || deleteTargetAccountId === deleteDialogState.account.id}
+                  >
+                    Re-allocate and Delete
+                  </Button>
+                ) : (
+                  <Button variant="danger" onClick={() => handleConfirmDelete('delete-account')}>
+                    Delete Account
+                  </Button>
+                )}
               </div>
-              <div className="account-delete-footer-danger">
-                <Button variant="danger" onClick={() => handleConfirmDelete('delete-all')}>
-                  Delete All Linked Items
-                </Button>
-              </div>
+              {hasLinkedItems && (
+                <div className="account-delete-footer-danger">
+                  <Button variant="danger" onClick={() => handleConfirmDelete('delete-all')}>
+                    Delete All Linked Items
+                  </Button>
+                </div>
+              )}
             </div>
           }
         >
           <div className="account-delete-content">
-            <p>
-              This account is linked to existing data. Choose whether to move linked items to another account or delete them.
-            </p>
-            <ul className="account-delete-summary">
-              <li>{deleteDialogState.linkedBills} bill(s)</li>
-              <li>{deleteDialogState.linkedBenefits} benefit(s)</li>
-              <li>{deleteDialogState.linkedRetirement} retirement election(s)</li>
-            </ul>
+            {hasLinkedItems ? (
+              <>
+                <p>
+                  This account is linked to existing data. Choose whether to move linked items to another account or delete them.
+                </p>
+                <ul className="account-delete-summary">
+                  <li>{deleteDialogState.linkedBills} bill(s)</li>
+                  <li>{deleteDialogState.linkedBenefits} benefit(s)</li>
+                  <li>{deleteDialogState.linkedRetirement} retirement election(s)</li>
+                </ul>
 
-            <FormGroup label="Move linked items to" required>
-              <select
-                value={deleteTargetAccountId}
-                onChange={(e) => setDeleteTargetAccountId(e.target.value)}
-              >
-                {accounts
-                  .filter((account) => account.id !== deleteDialogState.account.id)
-                  .map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name}
-                    </option>
-                  ))}
-              </select>
-            </FormGroup>
+                <FormGroup label="Move linked items to" required>
+                  <select
+                    value={deleteTargetAccountId}
+                    onChange={(e) => setDeleteTargetAccountId(e.target.value)}
+                  >
+                    {accounts
+                      .filter((account) => account.id !== deleteDialogState.account.id)
+                      .map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.name}
+                        </option>
+                      ))}
+                  </select>
+                </FormGroup>
+              </>
+            ) : (
+              <p>
+                This account has no linked bills, benefits, or retirement elections. Deleting it will only remove the account.
+              </p>
+            )}
           </div>
         </Modal>
       )}

@@ -1,126 +1,133 @@
 .tax-breakdown {
-  padding: 1.5rem;
-  overflow-y: auto;
-  height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    overflow-y: auto;
+    height: 100%;
 }
 
 .breakdown-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .breakdown-header h2 {
-  margin: 0 0 0.25rem 0;
-  color: var(--text-primary);
-  font-size: 1.4rem;
+    margin: 0 0 0.25rem 0;
+    color: var(--text-primary);
+    font-size: 1.4rem;
 }
 
 .breakdown-header p {
-  margin: 0;
-  color: var(--text-secondary);
+    margin: 0;
+    color: var(--text-secondary);
 }
 
 .tax-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
 }
 
 .summary-section {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
 }
 
 .summary-section h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1.1rem;
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
 }
 
 .summary-table {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .summary-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: var(--bg-secondary);
-  border-radius: 6px;
-  gap: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    gap: 1rem;
 }
 
 .summary-row.total {
-  background: var(--bg-tertiary);
-  font-weight: 700;
-  border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    font-weight: 700;
+    border: 1px solid var(--border-color);
 }
 
 .summary-row .label {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
 }
 
 .summary-row .amount {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  font-size: 0.95rem;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    font-size: 0.95rem;
 }
 
 .summary-row .amount.negative {
-  color: #ef4444;
+    color: #ef4444;
 }
 
 .settings-table {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .settings-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: var(--bg-secondary);
-  border-radius: 6px;
-  gap: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    gap: 1rem;
 }
 
 .settings-row .label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
 }
 
 .settings-row .value {
-  color: var(--text-primary);
-  font-weight: 600;
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+}
+
+.field-error {
+    border-color: #ef4444 !important;
 }
 
 @media (max-width: 768px) {
-  .tax-breakdown {
-    padding: 1rem;
-  }
+    .tax-breakdown {
+        padding: 1rem;
+    }
 
-  .breakdown-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+    .breakdown-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-  .tax-summary {
-    grid-template-columns: 1fr;
-  }
+    .tax-summary {
+        grid-template-columns: 1fr;
+    }
 }

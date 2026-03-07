@@ -34,6 +34,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
+  const [copyYearError, setCopyYearError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
@@ -151,12 +152,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   }
 
   const handleCopyToNewYear = async () => {
-    const year = parseInt(newYear);
-    if (year && year >= 2000 && year <= 2100) {
-      await copyPlanToNewYear(year);
-      setShowCopyModal(false);
-      setNewYear('');
+    const year = parseInt(newYear, 10);
+    if (!year || year < 2000 || year > 2100) {
+      setCopyYearError('Please enter a valid year between 2000 and 2100.');
+      return;
     }
+
+    setCopyYearError(null);
+    await copyPlanToNewYear(year);
+    setShowCopyModal(false);
+    setNewYear('');
   };
 
   const handleGenerateEncryptionKey = () => {
@@ -511,14 +516,20 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Copy Plan Modal */}
       <Modal
         isOpen={showCopyModal}
-        onClose={() => setShowCopyModal(false)}
+        onClose={() => {
+          setShowCopyModal(false);
+          setCopyYearError(null);
+        }}
         header="Copy Plan to New Year"
         footer={
           <>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setShowCopyModal(false)}
+              onClick={() => {
+                setShowCopyModal(false);
+                setCopyYearError(null);
+              }}
             >
               Cancel
             </Button>
@@ -529,11 +540,17 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         }
       >
         <p>This will create a copy of your current plan for a different year.</p>
-          <FormGroup label="Target Year" required>
+          <FormGroup label="Target Year" required error={copyYearError || undefined}>
             <input
+              className={copyYearError ? 'field-error' : ''}
               type="number"
               value={newYear}
-              onChange={e => setNewYear(e.target.value)}
+              onChange={e => {
+                setNewYear(e.target.value);
+                if (copyYearError) {
+                  setCopyYearError(null);
+                }
+              }}
               placeholder={`${budgetData.year + 1}`}
               min="2000"
               max="2100"

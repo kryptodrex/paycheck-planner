@@ -1,31 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Bill, BillFrequency, Account } from '../../types/auth';
+import type { Bill, BillFrequency } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
+import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
+import { getDefaultAccountIcon } from '../../utils/accountDefaults';
+import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
 import './BillsManager.css';
-
-const getDefaultIconForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '💳';
-    case 'savings':
-      return '💰';
-    case 'investment':
-      return '📈';
-    case 'other':
-      return '💵';
-    default:
-      return '💰';
-  }
-};
 
 interface BillsManagerProps {
   scrollToAccountId?: string;
   displayMode: 'paycheck' | 'monthly' | 'yearly';
   onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
 }
+
+type BillFieldErrors = {
+  name?: string;
+  amount?: string;
+  accountId?: string;
+};
 
 const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
   const { budgetData, addBill, updateBill, deleteBill } = useBudget();
@@ -48,6 +42,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const [billFrequency, setBillFrequency] = useState<BillFrequency>('monthly');
   const [billAccountId, setBillAccountId] = useState('');
   const [billNotes, setBillNotes] = useState('');
+  const [billFieldErrors, setBillFieldErrors] = useState<BillFieldErrors>({});
 
   if (!budgetData) return null;
 
@@ -60,6 +55,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBillFrequency('monthly');
     setBillAccountId(budgetData.accounts[0]?.id || '');
     setBillNotes('');
+    setBillFieldErrors({});
     setShowAddBill(true);
   };
 
@@ -70,16 +66,38 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBillFrequency(bill.frequency);
     setBillAccountId(bill.accountId);
     setBillNotes(bill.notes || '');
+    setBillFieldErrors({});
     setShowAddBill(true);
   };
 
   const handleSaveBill = () => {
+    const trimmedBillName = billName.trim();
+    const parsedBillAmount = parseFloat(billAmount);
+    const errors: BillFieldErrors = {};
+
+    if (!trimmedBillName) {
+      errors.name = 'Bill name is required.';
+    }
+
+    if (!Number.isFinite(parsedBillAmount) || parsedBillAmount <= 0) {
+      errors.amount = 'Please enter a valid amount greater than zero.';
+    }
+
+    if (!billAccountId) {
+      errors.accountId = 'Please select an account.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setBillFieldErrors(errors);
+      return;
+    }
+
     const billData = {
-      name: billName,
-      amount: parseFloat(billAmount),
+      name: trimmedBillName,
+      amount: parsedBillAmount,
       frequency: billFrequency,
       accountId: billAccountId,
-      notes: billNotes || undefined,
+      notes: billNotes.trim() || undefined,
     };
 
     if (editingBill) {
@@ -90,6 +108,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
 
     setShowAddBill(false);
     setEditingBill(null);
+    setBillFieldErrors({});
   };
 
   const handleDeleteBill = (id: string) => {
@@ -107,36 +126,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     return acc;
   }, {} as Record<string, Bill[]>);
 
-  // Get paychecks per year based on pay frequency
-  const getPaychecksPerYear = (): number => {
-    const freq = budgetData.paySettings.payFrequency;
-    switch (freq) {
-      case 'weekly': return 52;
-      case 'bi-weekly': return 26;
-      case 'semi-monthly': return 24;
-      case 'monthly': return 12;
-      default: return 26;
-    }
-  };
-
-  const paychecksPerYear = getPaychecksPerYear();
+  const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
 
   // Convert monthly amount to display mode
   const toDisplayAmount = (monthlyAmount: number): number => {
-    if (displayMode === 'paycheck') {
-      return roundUpToCent(monthlyAmount * 12 / paychecksPerYear);
-    }
-    if (displayMode === 'yearly') {
-      return roundUpToCent(monthlyAmount * 12);
-    }
-    return monthlyAmount; // Already in monthly
-  };
-
-  // Get display mode label
-  const getDisplayLabel = (): string => {
-    if (displayMode === 'paycheck') return 'Per Paycheck';
-    if (displayMode === 'yearly') return 'Yearly';
-    return 'Monthly';
+    // First convert monthly to per-paycheck, then use convertToDisplayMode
+    const perPaycheckAmount = (monthlyAmount * 12) / paychecksPerYear;
+    return convertToDisplayMode(perPaycheckAmount, paychecksPerYear, displayMode);
   };
 
   return (
@@ -175,7 +171,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             .map(account => {
               const accountBills = billsByAccount[account.id] || [];
               const totalMonthly = roundUpToCent(accountBills.reduce((sum, bill) => {
-                return sum + convertToMonthly(bill.amount, bill.frequency);
+                return sum + convertBillToMonthly(bill.amount, bill.frequency);
               }, 0));
               return { account, accountBills, totalMonthly };
             })
@@ -186,14 +182,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 <div key={account.id} id={`account-${account.id}`} className="account-section">
                   <div className="account-header">
                     <div className="account-info">
-                      <span className="account-icon">{account.icon || getDefaultIconForType(account.type)}</span>
+                      <span className="account-icon">{account.icon || getDefaultAccountIcon(account.type)}</span>
                       <div>
                         <h3>{account.name}</h3>
                         <span className="account-type">{account.type}</span>
                       </div>
                     </div>
                     <div className="account-total">
-                      <span className="total-label">{getDisplayLabel()} Total</span>
+                      <span className="total-label">{getDisplayModeLabel(displayMode)} Total</span>
                       <span className="total-amount">{formatWithSymbol(toDisplayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
@@ -208,13 +204,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                               <div className="bill-info">
                                 <h4>{bill.name}</h4>
                                 <div className="bill-frequency-amount">
-                                  Paid {formatFrequency(bill.frequency)}: {formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}
+                                  Paid {formatBillFrequency(bill.frequency)}: {formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}
                                 </div>
                               </div>
                               <div className="bill-end">
                                 <div className="bill-amount">
-                                  <span className="amount">{formatWithSymbol(toDisplayAmount(convertToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
-                                  <span className="frequency">{getDisplayLabel()}</span>
+                                  <span className="amount">{formatWithSymbol(toDisplayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
+                                  <span className="frequency">{getDisplayModeLabel(displayMode)}</span>
                                 </div>
                                 <div className="bill-actions">
                                   <Button
@@ -254,11 +250,21 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       {/* Add/Edit Bill Modal */}
       <Modal
         isOpen={showAddBill}
-        onClose={() => setShowAddBill(false)}
+        onClose={() => {
+          setShowAddBill(false);
+          setBillFieldErrors({});
+        }}
         header={editingBill ? 'Edit Bill' : 'Add New Bill'}
         footer={
           <>
-            <Button type="button" variant="secondary" onClick={() => setShowAddBill(false)}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowAddBill(false);
+                setBillFieldErrors({});
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" variant="primary" onClick={handleSaveBill}>
@@ -267,27 +273,39 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           </>
         }
       >
-        <FormGroup label="Bill Name" required>
+        <FormGroup label="Bill Name" required error={billFieldErrors.name}>
             <input
               type="text"
               value={billName}
-              onChange={e => setBillName(e.target.value)}
+              onChange={e => {
+                setBillName(e.target.value);
+                if (billFieldErrors.name) {
+                  setBillFieldErrors((prev) => ({ ...prev, name: undefined }));
+                }
+              }}
               placeholder="e.g., Electric Bill, Netflix"
+              className={billFieldErrors.name ? 'field-error' : ''}
               required
             />
           </FormGroup>
 
           <div className="form-row">
             <div style={{ flex: 1 }}>
-              <FormGroup label="Amount" required>
+              <FormGroup label="Amount" required error={billFieldErrors.amount}>
                 <InputWithPrefix
                   prefix={getCurrencySymbol(currency)}
                   type="number"
                   value={billAmount}
-                  onChange={e => setBillAmount(e.target.value)}
+                  onChange={e => {
+                    setBillAmount(e.target.value);
+                    if (billFieldErrors.amount) {
+                      setBillFieldErrors((prev) => ({ ...prev, amount: undefined }));
+                    }
+                  }}
                   placeholder="0.00"
                   step="0.01"
                   min="0"
+                  className={billFieldErrors.amount ? 'field-error' : ''}
                   required
                 />
               </FormGroup>
@@ -313,15 +331,21 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
 
           <div className="form-row">
             <div style={{ flex: 1 }}>
-              <FormGroup label="Paid from Account" required>
+              <FormGroup label="Paid from Account" required error={billFieldErrors.accountId}>
                 <select
                   value={billAccountId}
-                  onChange={e => setBillAccountId(e.target.value)}
+                  onChange={e => {
+                    setBillAccountId(e.target.value);
+                    if (billFieldErrors.accountId) {
+                      setBillFieldErrors((prev) => ({ ...prev, accountId: undefined }));
+                    }
+                  }}
+                  className={billFieldErrors.accountId ? 'field-error' : ''}
                   required
                 >
                   {budgetData.accounts.map(account => (
                     <option key={account.id} value={account.id}>
-                      {account.icon || getDefaultIconForType(account.type)} {account.name}
+                      {account.icon || getDefaultAccountIcon(account.type)} {account.name}
                     </option>
                   ))}
                 </select>
@@ -341,28 +365,5 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     </div>
   );
 };
-
-// Helper functions
-function convertToMonthly(amount: number, frequency: BillFrequency): number {
-  let monthly = amount;
-  switch (frequency) {
-    case 'weekly': monthly = amount * 52 / 12; break;
-    case 'bi-weekly': monthly = amount * 26 / 12; break;
-    case 'monthly': monthly = amount; break;
-    case 'quarterly': monthly = amount * 4 / 12; break;
-    case 'semi-annual': monthly = amount * 2 / 12; break;
-    case 'yearly': monthly = amount / 12; break;
-    default: monthly = amount;
-  }
-  return roundUpToCent(monthly);
-}
-
-function formatFrequency(frequency: BillFrequency): string {
-  switch (frequency) {
-    case 'bi-weekly': return 'Bi-weekly';
-    case 'semi-annual': return 'Semi-annual';
-    default: return frequency.charAt(0).toUpperCase() + frequency.slice(1);
-  }
-}
 
 export default BillsManager;

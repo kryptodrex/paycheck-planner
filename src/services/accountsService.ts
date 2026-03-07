@@ -1,41 +1,12 @@
 // Service for managing app-wide accounts that can be reused across plans
 // Accounts are stored in localStorage and persist across sessions
 import type { Account } from '../types/auth';
+import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountDefaults';
 
 // LocalStorage key for global accounts
 const ACCOUNTS_KEY = 'paycheck-planner-accounts';
 
 // Helper function to generate color based on account type
-const getDefaultColorForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '#667eea'; // Purple
-    case 'savings':
-      return '#f093fb'; // Pink
-    case 'investment':
-      return '#4facfe'; // Blue
-    case 'other':
-      return '#43e97b'; // Green
-    default:
-      return '#667eea';
-  }
-};
-
-// Helper function to generate default icon based on account type
-const getDefaultIconForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '💳'; // Credit card
-    case 'savings':
-      return '💰'; // Money bag
-    case 'investment':
-      return '📈'; // Chart increasing
-    case 'other':
-      return '💵'; // Dollar bills
-    default:
-      return '💰';
-  }
-};
 
 export class AccountsService {
   /**
@@ -66,22 +37,22 @@ export class AccountsService {
         id: crypto.randomUUID(),
         name: 'Investment',
         type: 'investment' as const,
-        color: getDefaultColorForType('investment'),
-        icon: getDefaultIconForType('investment'),
+        color: getDefaultAccountColor('investment'),
+        icon: getDefaultAccountIcon('investment'),
       },
       {
         id: crypto.randomUUID(),
         name: 'Savings',
         type: 'savings' as const,
-        color: getDefaultColorForType('savings'),
-        icon: getDefaultIconForType('savings'),
+        color: getDefaultAccountColor('savings'),
+        icon: getDefaultAccountIcon('savings'),
       },
       {
         id: crypto.randomUUID(),
         name: 'Checking',
         type: 'checking' as const,
-        color: getDefaultColorForType('checking'),
-        icon: getDefaultIconForType('checking'),
+        color: getDefaultAccountColor('checking'),
+        icon: getDefaultAccountIcon('checking'),
       },
     ];
   }
@@ -114,8 +85,8 @@ export class AccountsService {
       id: crypto.randomUUID(),
       name: name.trim(),
       type,
-      color: getDefaultColorForType(type),
-      icon: getDefaultIconForType(type),
+      color: getDefaultAccountColor(type),
+      icon: getDefaultAccountIcon(type),
     };
     accounts.push(newAccount);
     this.saveAccounts(accounts);

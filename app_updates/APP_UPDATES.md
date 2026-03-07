@@ -39,9 +39,16 @@
   - Show a final "All that remains" summary of the total amount left after all deductions and allocations, which can be used for discretionary spending or additional savings/investments
   - For the pay settings, we want the footer to be stickied for the cancel and save buttons, so the user doesn't have to scroll down to save their changes after configuring the pay breakdown. When selecting cancel as well, it should back out into the prior screen instead of just closing the modal, since it is more of a "cancel and go back" action rather than just "cancel and stay on the same screen".
 
-- [ ] **Account Settings Fixes** - There a some improvements we need for the account settings view:
+- [x] **Account Settings Fixes** - There a some improvements we need for the account settings view:
     - The modal is not large enough for the content, making the account list impossible to read on a smaller window. We should make the modal larger and more responsive to accommodate the content.
     - We should add a delete button for accounts, and when an account is deleted, we should prompt the user to choose what to do with any bills or pay breakdowns that are currently using that account (e.g., reassign to another account, delete them, etc.) to prevent orphaned data and ensure a smooth user experience.
+
+- [ ] **Tab Management** - Allow for more customization of certain tabs
+    - Have a [+] button next to the last tab that allows users to add less commonly used tabs, or new custom tabs (e.g., for tracking specific financial goals, projects, or categories)
+    - The Benefits and Taxes should be put behind this [+] button by default since they are less commonly used, but users can choose to add them as main tabs if they want
+    - Allow user to hide tabs that they don't use often to declutter the interface, and also allow them to rearrange the order of the tabs based on their preferences
+        - They should be able to re-add hidden tabs from the [+] button, and also drag and drop to rearrange the order of the tabs
+    - Key Metrics and Pay Breakdown should always be the first two tabs and cannot be hidden since they are the core of the app, but the user can rearrange the order of the other tabs as they see fit
 
 - [ ] **Currency Conversions** - When a user changes the currency for a plan, offer to convert all existing amounts to the new currency using an exchange rate (with an option to skip conversion and just change the symbol)
     - For now, just allow user to give the exchange rate manually, but in the future we can look into integrating with a currency exchange API to get real-time rates for more accurate conversions.

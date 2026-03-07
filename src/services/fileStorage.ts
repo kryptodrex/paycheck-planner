@@ -46,6 +46,37 @@ function isBudgetData(value: unknown): value is BudgetData {
   );
 }
 
+/**
+ * Migrate/upgrade budget data to ensure all required fields exist
+ * This handles old budget files that may be missing newer fields
+ */
+function migrateBudgetData(budgetData: BudgetData): BudgetData {
+  const migrated = { ...budgetData };
+
+  // Ensure taxSettings exists with default values
+  if (!migrated.taxSettings) {
+    migrated.taxSettings = {
+      federalTaxRate: 0,
+      stateTaxRate: 0,
+      socialSecurityRate: 6.2,
+      medicareRate: 1.45,
+      additionalWithholding: 0,
+    };
+  }
+
+  // Ensure benefits array exists
+  if (!migrated.benefits) {
+    migrated.benefits = [];
+  }
+
+  // Ensure retirement array exists
+  if (!migrated.retirement) {
+    migrated.retirement = [];
+  }
+
+  return migrated;
+}
+
 export class FileStorageService {
   /**
    * Get app settings from localStorage
@@ -355,7 +386,7 @@ export class FileStorageService {
           throw new Error('Decrypted file data is not a valid budget format.');
         }
 
-        const budgetData = decryptedParsed as BudgetData;
+        const budgetData = migrateBudgetData(decryptedParsed as BudgetData);
         this.savePlanFileMapping(targetPath, budgetData.id);
         await KeychainService.saveKey(budgetData.id, encryptionKey);
         this.addRecentFile(targetPath);
@@ -364,7 +395,7 @@ export class FileStorageService {
 
       // Regular unencrypted budget file
       if (isBudgetData(parsedData)) {
-        const budgetData = parsedData as BudgetData;
+        const budgetData = migrateBudgetData(parsedData as BudgetData);
         this.savePlanFileMapping(targetPath, budgetData.id);
         this.addRecentFile(targetPath);
         return budgetData;
@@ -406,7 +437,7 @@ export class FileStorageService {
         if (!isBudgetData(parsed)) {
           throw new Error('Decrypted file data is not a valid budget format.');
         }
-        const budgetData: BudgetData = parsed;
+        const budgetData = migrateBudgetData(parsed as BudgetData);
         
         // Save the file-to-plan mapping for future reference
         this.savePlanFileMapping(targetPath, budgetData.id);

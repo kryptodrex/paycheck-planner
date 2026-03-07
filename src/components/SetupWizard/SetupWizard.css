@@ -140,41 +140,6 @@
   border-top: 1px solid var(--border-color);
   background: var(--bg-secondary);
 }
-
-.btn {
-  padding: 0.75rem 2rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-  background: var(--bg-primary);
-  color: #667eea;
-  border: 2px solid #667eea;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: var(--bg-tertiary);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 /* Account Management Styles */
 .accounts-list {
   display: flex;
@@ -257,41 +222,6 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
-}
-
-.btn-icon {
-  padding: 0.5rem;
-  background: var(--bg-tertiary);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  color: var(--text-primary);
-}
-
-.btn-icon:hover:not(:disabled) {
-  background: #667eea;
-  color: white;
-}
-
-.btn-icon:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-danger {
-  color: #ef4444;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #dc2626;
 }
 
 .add-account-form {

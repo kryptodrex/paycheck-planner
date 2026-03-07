@@ -48,6 +48,10 @@
   gap: 1.25rem;
 }
 
+.field-error {
+  border-color: #ef4444 !important;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .overview-grid {

@@ -1,7 +1,7 @@
 .benefits-manager {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   padding: 1.5rem;
   line-height: 1.6;
   overflow-y: auto;
@@ -84,13 +84,6 @@
 
 .input-with-prefix input.field-error {
   border-color: #ef4444 !important;
-}
-
-.field-error-message {
-  margin: 0.35rem 0 0;
-  color: #dc2626;
-  font-size: 0.8rem;
-  line-height: 1.35;
 }
 
 /* Empty State */

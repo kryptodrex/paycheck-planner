@@ -2,25 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
+import { getPaychecksPerYear } from '../../utils/payPeriod';
+import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import type { Account, Bill, Benefit, RetirementElection } from '../../types/auth';
 import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../shared';
 import PaySettingsModal from '../PaySettingsModal';
 import './PayBreakdown.css';
-
-const getDefaultIconForType = (type: Account['type']): string => {
-  switch (type) {
-    case 'checking':
-      return '💳';
-    case 'savings':
-      return '💰';
-    case 'investment':
-      return '📈';
-    case 'other':
-      return '💵';
-    default:
-      return '💰';
-  }
-};
 
 type AllocationCategory = {
   id: string;
@@ -501,7 +488,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 <React.Fragment key={fundingItem.account.id}>
                   <div className="waterfall-row waterfall-account-row">
                     <span className="waterfall-label">
-                      <span className="account-icon-small">{fundingItem.account.icon || getDefaultIconForType(fundingItem.account.type)}</span>
+                      <span className="account-icon-small">{fundingItem.account.icon || getDefaultAccountIcon(fundingItem.account.type)}</span>
                       {fundingItem.account.name}
                     </span>
                     {!isEditing ? (
@@ -790,16 +777,6 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
     accountFunding,
     remaining,
   };
-}
-
-function getPaychecksPerYear(frequency: string): number {
-  switch (frequency) {
-    case 'weekly': return 52;
-    case 'bi-weekly': return 26;
-    case 'semi-monthly': return 24;
-    case 'monthly': return 12;
-    default: return 26;
-  }
 }
 
 export default PayBreakdown;

@@ -147,6 +147,10 @@
   white-space: nowrap;
 }
 
+.field-error {
+  border-color: #ef4444 !important;
+}
+
 /* Header button styles - these are on the gradient background */
 .header-btn-primary {
   background: var(--bg-primary);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
+import { getDefaultAccountColor, getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
@@ -45,8 +46,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
       id: crypto.randomUUID(),
       name: 'My Checking',
       type: 'checking',
-      color: getDefaultColorForType('checking'),
-      icon: getDefaultIconForType('checking'),
+      color: getDefaultAccountColor('checking'),
+      icon: getDefaultAccountIcon('checking'),
     },
   ]);
 
@@ -470,33 +471,3 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 };
 
 export default SetupWizard;
-
-function getDefaultColorForType(type: Account['type']): string {
-  switch (type) {
-    case 'checking':
-      return '#667eea';
-    case 'savings':
-      return '#f093fb';
-    case 'investment':
-      return '#4facfe';
-    case 'other':
-      return '#43e97b';
-    default:
-      return '#667eea';
-  }
-}
-
-function getDefaultIconForType(type: Account['type']): string {
-  switch (type) {
-    case 'checking':
-      return '💳';
-    case 'savings':
-      return '💰';
-    case 'investment':
-      return '📈';
-    case 'other':
-      return '💵';
-    default:
-      return '💰';
-  }
-}

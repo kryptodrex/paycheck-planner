@@ -353,15 +353,6 @@
   cursor: not-allowed;
 }
 
-.account-actions .btn-icon.btn-danger {
-  color: #ef4444;
-}
-
-.account-actions .btn-icon.btn-danger:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
 .account-delete-modal {
   max-width: 560px;
 }

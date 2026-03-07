@@ -10,6 +10,13 @@ interface PaySettingsModalProps {
   onClose: () => void;
 }
 
+type PaySettingsFieldErrors = {
+  annualSalary?: string;
+  hourlyRate?: string;
+  hoursPerPayPeriod?: string;
+  minLeftover?: string;
+};
+
 const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) => {
   const { budgetData, updatePaySettings } = useBudget();
   
@@ -20,6 +27,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   const [editHoursPerPayPeriod, setEditHoursPerPayPeriod] = useState('');
   const [editPayFrequency, setEditPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
   const [editMinLeftover, setEditMinLeftover] = useState('0');
+  const [fieldErrors, setFieldErrors] = useState<PaySettingsFieldErrors>({});
 
   // Pre-fill form when modal opens
   useEffect(() => {
@@ -30,6 +38,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       setEditAnnualSalary(budgetData.paySettings.annualSalary?.toString() || '');
       setEditHourlyRate(budgetData.paySettings.hourlyRate?.toString() || '');
       setEditHoursPerPayPeriod(budgetData.paySettings.hoursPerPayPeriod?.toString() || '');
+      setFieldErrors({});
     }
   }, [isOpen, budgetData]);
 
@@ -50,21 +59,48 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   if (!budgetData) return null;
 
   const handleSaveSettings = () => {
-    // Save pay settings
+    const parsedAnnualSalary = parseFloat(editAnnualSalary);
+    const parsedHourlyRate = parseFloat(editHourlyRate);
+    const parsedHoursPerPayPeriod = parseFloat(editHoursPerPayPeriod);
+    const parsedMinLeftover = parseFloat(editMinLeftover);
+    const errors: PaySettingsFieldErrors = {};
+
+    if (editPayType === 'salary' && (!Number.isFinite(parsedAnnualSalary) || parsedAnnualSalary <= 0)) {
+      errors.annualSalary = 'Please enter a valid annual salary greater than zero.';
+    }
+
+    if (editPayType === 'hourly' && (!Number.isFinite(parsedHourlyRate) || parsedHourlyRate <= 0)) {
+      errors.hourlyRate = 'Please enter a valid hourly rate greater than zero.';
+    }
+
+    if (editPayType === 'hourly' && (!Number.isFinite(parsedHoursPerPayPeriod) || parsedHoursPerPayPeriod <= 0)) {
+      errors.hoursPerPayPeriod = 'Please enter valid hours per pay period greater than zero.';
+    }
+
+    if (!Number.isFinite(parsedMinLeftover) || parsedMinLeftover < 0) {
+      errors.minLeftover = 'Please enter a valid target leftover amount (zero or greater).';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
     const paySettings: PaySettings = {
       payType: editPayType,
       payFrequency: editPayFrequency,
-      minLeftover: parseFloat(editMinLeftover) || 0,
-      ...(editPayType === 'salary' 
-        ? { annualSalary: parseFloat(editAnnualSalary) || 0 }
-        : { 
-            hourlyRate: parseFloat(editHourlyRate) || 0,
-            hoursPerPayPeriod: parseFloat(editHoursPerPayPeriod) || 0
+      minLeftover: parsedMinLeftover,
+      ...(editPayType === 'salary'
+        ? { annualSalary: parsedAnnualSalary }
+        : {
+            hourlyRate: parsedHourlyRate,
+            hoursPerPayPeriod: parsedHoursPerPayPeriod
           }
       ),
     };
     updatePaySettings(paySettings);
 
+    setFieldErrors({});
     onClose();
   };
 
@@ -76,7 +112,10 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       header="Edit Pay Breakdown Settings"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={() => {
+            setFieldErrors({});
+            onClose();
+          }}>Cancel</Button>
           <Button variant="primary" onClick={handleSaveSettings}>Save Changes</Button>
         </>
       }
@@ -95,12 +134,18 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         </FormGroup>
 
         {editPayType === 'salary' ? (
-          <FormGroup label="Annual Salary">
+          <FormGroup label="Annual Salary" required error={fieldErrors.annualSalary}>
             <InputWithPrefix
+              className={fieldErrors.annualSalary ? 'field-error' : ''}
               prefix={getCurrencySymbol(budgetData.settings.currency || 'USD')}
               type="number"
               value={editAnnualSalary}
-              onChange={(e) => setEditAnnualSalary(e.target.value)}
+              onChange={(e) => {
+                setEditAnnualSalary(e.target.value);
+                if (fieldErrors.annualSalary) {
+                  setFieldErrors((prev) => ({ ...prev, annualSalary: undefined }));
+                }
+              }}
               placeholder="65000"
               min="0"
               step="100"
@@ -108,22 +153,34 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           </FormGroup>
         ) : (
           <>
-            <FormGroup label="Hourly Rate">
+            <FormGroup label="Hourly Rate" required error={fieldErrors.hourlyRate}>
               <InputWithPrefix
+                className={fieldErrors.hourlyRate ? 'field-error' : ''}
                 prefix={getCurrencySymbol(budgetData.settings.currency || 'USD')}
                 type="number"
                 value={editHourlyRate}
-                onChange={(e) => setEditHourlyRate(e.target.value)}
+                onChange={(e) => {
+                  setEditHourlyRate(e.target.value);
+                  if (fieldErrors.hourlyRate) {
+                    setFieldErrors((prev) => ({ ...prev, hourlyRate: undefined }));
+                  }
+                }}
                 placeholder="25.00"
                 min="0"
                 step="0.50"
               />
             </FormGroup>
-            <FormGroup label="Hours per Pay Period">
+            <FormGroup label="Hours per Pay Period" required error={fieldErrors.hoursPerPayPeriod}>
               <input
+                className={fieldErrors.hoursPerPayPeriod ? 'field-error' : ''}
                 type="number"
                 value={editHoursPerPayPeriod}
-                onChange={(e) => setEditHoursPerPayPeriod(e.target.value)}
+                onChange={(e) => {
+                  setEditHoursPerPayPeriod(e.target.value);
+                  if (fieldErrors.hoursPerPayPeriod) {
+                    setFieldErrors((prev) => ({ ...prev, hoursPerPayPeriod: undefined }));
+                  }
+                }}
                 placeholder="80"
                 min="0"
                 step="1"
@@ -147,15 +204,22 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           />
         </FormGroup>
 
-        <FormGroup 
+        <FormGroup
           label="Target Leftover Per Paycheck"
           helperText="The target amount you want to keep unallocated for spending. If you go below this amount, the app will alert you that you may be over-budget."
+          error={fieldErrors.minLeftover}
         >
           <InputWithPrefix
+            className={fieldErrors.minLeftover ? 'field-error' : ''}
             prefix={getCurrencySymbol(budgetData.settings.currency || 'USD')}
             type="number"
             value={editMinLeftover}
-            onChange={(e) => setEditMinLeftover(e.target.value)}
+            onChange={(e) => {
+              setEditMinLeftover(e.target.value);
+              if (fieldErrors.minLeftover) {
+                setFieldErrors((prev) => ({ ...prev, minLeftover: undefined }));
+              }
+            }}
             placeholder="0"
             min="0"
             step="10"
