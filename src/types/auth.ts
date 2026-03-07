@@ -44,6 +44,7 @@ export interface RetirementElection {
   hasEmployerMatch: boolean;               // Whether employer offers matching contributions
   employerMatchCap: number;                // Maximum employer will match (amount or percent)
   employerMatchCapIsPercentage: boolean;   // If true, cap is percentage of gross; if false, it's dollar amount
+  yearlyLimit?: number;                    // Optional yearly contribution limit (employee + employer total)
 }
 
 /**

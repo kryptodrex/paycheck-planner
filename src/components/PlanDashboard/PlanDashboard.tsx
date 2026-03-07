@@ -490,6 +490,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <BenefitsManager 
             shouldScrollToRetirement={shouldScrollToRetirement}
             onScrollToRetirementComplete={handleScrollToRetirementComplete}
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
           />
         </div>
       </div>

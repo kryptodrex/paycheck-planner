@@ -10,3 +10,5 @@ export { default as Toggle } from './Toggle';
 export { default as SectionItemCard } from './SectionItemCard';
 export { default as InfoBox } from './InfoBox';
 export { default as AccountsEditor } from './AccountsEditor';
+export { default as ViewModeSelector } from './ViewModeSelector';
+export { default as PageHeader } from './PageHeader';

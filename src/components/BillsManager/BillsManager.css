@@ -1,66 +1,10 @@
 .bills-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
-}
-
-.bills-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.bills-header > div:first-child {
-  display: flex;
-  flex-direction: column;
-}
-
-.bills-header h2 {
-  margin: 0 0 0.25rem 0;
-  color: var(--text-primary);
-  font-size: 1.4rem;
-}
-
-.bills-header p {
-  margin: 0;
-  color: var(--text-secondary);
-}
-
-.view-mode-selector {
-  display: flex;
-  gap: 0.5rem;
-  background: var(--bg-tertiary);
-  padding: 0.25rem;
-  border-radius: 8px;
-}
-
-.view-mode-selector button {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
-  color: var(--text-secondary);
-}
-
-.view-mode-selector button.active {
-  background: var(--bg-primary);
-  color: #667eea;
-  box-shadow: var(--shadow-sm);
-}
-
-.view-mode-selector button:hover:not(.active) {
-  color: var(--text-primary);
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
 }
 
 .btn {
@@ -341,29 +285,6 @@
 @media (max-width: 768px) {
   .bills-manager {
     padding: 1rem;
-  }
-
-  .bills-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .view-mode-selector {
-    width: 100%;
-  }
-
-  .view-mode-selector button {
-    flex: 1;
-    font-size: 0.85rem;
-    padding: 0.5rem;
-  }
-
-  .header-actions {
-    width: 100%;
-  }
-
-  .header-actions .btn {
-    flex: 1;
   }
 
   .account-header {

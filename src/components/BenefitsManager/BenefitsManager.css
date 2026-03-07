@@ -8,13 +8,25 @@
   height: 100%;
 }
 
+.benefits-section {
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+}
+
 /* Section Headers */
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.section-header > div:first-child {
+  display: flex;
+  flex-direction: column;
 }
 
 .section-header h2 {
@@ -36,6 +48,17 @@
 
 .section-total {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-total > button {
+  flex-shrink: 0;
+}
+
+.section-total > div {
+  display: flex;
   flex-direction: column;
   align-items: flex-end;
   text-align: right;
@@ -53,6 +76,21 @@
   font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.field-error {
+  border-color: #ef4444 !important;
+}
+
+.input-with-prefix input.field-error {
+  border-color: #ef4444 !important;
+}
+
+.field-error-message {
+  margin: 0.35rem 0 0;
+  color: #dc2626;
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 /* Empty State */
@@ -137,6 +175,22 @@
 
 .benefit-amount {
   text-align: right;
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+}
+
+.benefit-amount .amount-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.benefit-amount .amount-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .benefit-amount .amount {
@@ -178,7 +232,7 @@
 .retirement-item {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
 }
 

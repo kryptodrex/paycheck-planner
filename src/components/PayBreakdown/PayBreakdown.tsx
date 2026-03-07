@@ -3,7 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
 import type { Account, Bill, Benefit, RetirementElection } from '../../types/auth';
-import { Alert, Button, InputWithPrefix } from '../shared';
+import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../shared';
 import PaySettingsModal from '../PaySettingsModal';
 import './PayBreakdown.css';
 
@@ -319,37 +319,18 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
   return (
     <div className="pay-breakdown">
-      <div className="breakdown-header">
-        <div>
-          <h2>Pay Breakdown</h2>
-          <p>See where your paycheck goes from gross to net</p>
-        </div>
-        <div className="breakdown-header-actions">
-          <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
-            ⚙️ Pay Settings
-          </Button>
-          <div className="view-mode-selector">
-            <button 
-              className={displayMode === 'paycheck' ? 'active' : ''}
-              onClick={() => onDisplayModeChange('paycheck')}
-            >
-              Per Paycheck
-            </button>
-            <button 
-              className={displayMode === 'monthly' ? 'active' : ''}
-              onClick={() => onDisplayModeChange('monthly')}
-            >
-              Monthly
-            </button>
-            <button 
-              className={displayMode === 'yearly' ? 'active' : ''}
-              onClick={() => onDisplayModeChange('yearly')}
-            >
-              Yearly
-            </button>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Pay Breakdown"
+        subtitle="See where your paycheck goes from gross to net"
+        actions={
+          <>
+            <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
+            <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
+              ⚙️ Pay Settings
+            </Button>
+          </>
+        }
+      />
 
       <PaySettingsModal
         isOpen={showPaySettingsModal}

@@ -1,62 +1,10 @@
 .pay-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   padding: 1.5rem;
   overflow-y: auto;
   height: 100%;
-}
-
-.breakdown-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.breakdown-header h2 {
-  margin: 0 0 0.25rem 0;
-  color: var(--text-primary);
-  font-size: 1.4rem;
-}
-
-.breakdown-header p {
-  margin: 0;
-  color: var(--text-secondary);
-}
-
-.breakdown-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.view-mode-selector {
-  display: flex;
-  gap: 0.5rem;
-  background: var(--bg-tertiary);
-  padding: 0.25rem;
-  border-radius: 8px;
-}
-
-.view-mode-selector button {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s;
-  color: var(--text-secondary);
-}
-
-.view-mode-selector button.active {
-  background: var(--bg-primary);
-  color: #667eea;
-  box-shadow: var(--shadow-sm);
-}
-
-.view-mode-selector button:hover:not(.active) {
-  color: var(--text-primary);
 }
 
 .visual-flow {
@@ -65,8 +13,9 @@
   padding: 0;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
-  margin-bottom: 1.25rem;
+  /* margin-bottom: 1.25rem; */
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .flow-stage {
@@ -239,7 +188,7 @@
   padding: 2rem;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
-  margin-bottom: 2rem;
+  /* margin-bottom: 2rem; */
 }
 
 .breakdown-bar h3 {
@@ -337,7 +286,7 @@
   padding: 1.5rem;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
-  margin-bottom: 1.25rem;
+  /* margin-bottom: 1.25rem; */
 }
 
 .waterfall-header {
@@ -879,21 +828,6 @@
 @media (max-width: 768px) {
   .pay-breakdown {
     padding: 1rem;
-  }
-
-  .breakdown-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .view-mode-selector {
-    width: 100%;
-  }
-
-  .view-mode-selector button {
-    flex: 1;
-    font-size: 0.85rem;
-    padding: 0.5rem;
   }
 
   .stage-amount {

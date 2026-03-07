@@ -3,7 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import type { Bill, BillFrequency, Account } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
-import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard } from '../shared';
+import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
 import './BillsManager.css';
 
 const getDefaultIconForType = (type: Account['type']): string => {
@@ -141,37 +141,18 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
 
   return (
     <div className="bills-manager">
-      <div className="bills-header">
-        <div>
-          <h2>Bills & Expenses</h2>
-          <p>Manage your recurring bills and expenses</p>
-        </div>
-        <div className="view-mode-selector">
-          <button
-            className={displayMode === 'paycheck' ? 'active' : ''}
-            onClick={() => onDisplayModeChange('paycheck')}
-          >
-            Per Paycheck
-          </button>
-          <button
-            className={displayMode === 'monthly' ? 'active' : ''}
-            onClick={() => onDisplayModeChange('monthly')}
-          >
-            Monthly
-          </button>
-          <button
-            className={displayMode === 'yearly' ? 'active' : ''}
-            onClick={() => onDisplayModeChange('yearly')}
-          >
-            Yearly
-          </button>
-        </div>
-        <div className="header-actions">
-          <Button variant="primary" onClick={handleAddBill}>
-            + Add Bill
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Bills & Expenses"
+        subtitle="Manage your recurring bills and expenses"
+        actions={
+          <>
+            <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
+            <Button variant="primary" onClick={handleAddBill}>
+              + Add Bill
+            </Button>
+          </>
+        }
+      />
 
       {budgetData.accounts.length === 0 ? (
         <div className="empty-state">
