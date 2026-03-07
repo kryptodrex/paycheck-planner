@@ -4,6 +4,21 @@ Paycheck Planner is a local-first desktop app for paycheck-based financial plann
 
 Built with Electron, React, TypeScript, and Vite.
 
+## Table of Contents
+
+- [Current Functionality](#current-functionality)
+- [Prerequisites](#prerequisites)
+- [Development](#development)
+- [Build & Package](#build--package)
+- [CI/CD Workflows](#cicd-workflows)
+- [Storage & Security](#storage--security)
+- [Architecture (Current)](#architecture-current)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [Keeping This README Updated](#keeping-this-readme-updated)
+- [Related Docs](#related-docs)
+- [License](#license)
+
 ## Current Functionality
 
 - **Welcome flow**: Create a new year plan, open existing plan, open recent plans, or load a demo plan.
@@ -74,6 +89,57 @@ npm run build:all
 ```
 
 Outputs are written to `release/`.
+
+## CI/CD Workflows
+
+This repository uses GitHub Actions workflows in `.github/workflows/`.
+
+### 1) Test (`test.yml`)
+- **Trigger**: Pull requests targeting `develop` (`opened`, `synchronize`, `reopened`)
+- **Purpose**: Quality gate for changes before merge
+- **Runs**:
+  - `npm run lint`
+  - `npx tsc -b`
+
+### 2) Build (`build.yml`)
+- **Trigger**: Pull requests targeting `develop` (`opened`, `synchronize`, `reopened`)
+- **Purpose**: Ensure the app builds on all supported desktop platforms
+- **Matrix builds**:
+  - `macos-latest` → `npm run build:mac`
+  - `windows-latest` → `npm run build:win`
+  - `ubuntu-latest` → `npm run build:linux`
+- **Artifacts**: Uploads platform build outputs from `release/` (short retention)
+
+### 3) Version Validation (`version-validation.yml`)
+- **Trigger**: Pull requests targeting `develop` (`opened`, `synchronize`, `reopened`)
+- **Purpose**: Enforce version increments in the `version` file
+- **Behavior**:
+  - Compares PR branch `version` against `develop`
+  - Fails if not incremented
+  - Posts pass/fail comment on the PR
+
+### 4) Beta Release Build (`beta-release.yml`)
+- **Trigger**: PR to `develop` is **closed and merged**
+- **Purpose**: Produce prerelease artifacts for validation/testing from `develop`
+- **Matrix builds**: macOS, Windows, Linux
+- **Release output**:
+  - Creates GitHub **prerelease** (`prerelease: true`)
+  - Tag format: `beta-v<version>-<run_number>`
+  - Uploads available platform installers/binaries (e.g., `.dmg`, `.zip`, `.exe`, `.msi`, `.AppImage`, `.deb`)
+
+### 5) Production Release Build & Deploy (`release.yml`)
+- **Trigger**: PR to `main` is **closed and merged**
+- **Condition**: Runs only when merged branch is exactly `develop` → `main`
+- **Purpose**: Create production-ready, ship-ready release artifacts
+- **Matrix builds**: macOS, Windows, Linux
+- **Release output**:
+  - Creates GitHub **release** (`prerelease: false`)
+  - Tag format: `v<version>`
+  - Publishes cross-platform production artifacts
+
+### Branch Promotion Flow
+- Feature work merges into `develop` → triggers CI + Beta prerelease workflow
+- `develop` merges into `main` → triggers Production release workflow
 
 ## Storage & Security
 
