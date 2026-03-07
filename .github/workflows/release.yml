@@ -1,12 +1,15 @@
-name: Release Build & Deploy
+name: Production Release Build & Deploy
 
 on:
-  push:
+  pull_request:
     branches:
-      - develop
+      - main
+    types:
+      - closed
 
 jobs:
   release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'develop'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -25,6 +28,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -54,12 +58,13 @@ jobs:
   create-release:
     needs: release
     runs-on: ubuntu-latest
-    if: always() && !contains(needs.release.result, 'failure')
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'develop' && always() && !contains(needs.release.result, 'failure')
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -121,28 +126,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  create-pr:
-    needs: create-release
-    runs-on: ubuntu-latest
-    if: always() && !contains(needs.create-release.result, 'failure')
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: develop
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: merge develop into main for release"
-          title: "Release: Merge develop into main"
-          body: |
-            This PR merges the develop branch into main for the latest release.
-            
-            Please review the changes and merge when ready.
-          branch: release/merge-to-main
-          base: main
-          delete-branch: true
