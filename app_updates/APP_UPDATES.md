@@ -69,3 +69,7 @@
   - Focus on testing the core logic of the application, such as the pay breakdown calculations, encryption/decryption functions, and file storage operations
   - Use a testing framework like Jest to write and run the tests
   - Set up a test suite that can be run as part of the development process to ensure that new changes don't break existing functionality
+
+- [ ] **Allocation Rounding Consistency Follow-up** - Revisit cross-mode rounding behavior for Pay Breakdown allocations to ensure entering values in paycheck/monthly/yearly modes remains stable and predictable after save/reopen.
+  - Confirm a clear source-of-truth strategy for stored values and display conversions.
+  - Add targeted tests for mode conversion and save/blur flows to prevent regressions.
