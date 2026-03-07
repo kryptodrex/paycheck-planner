@@ -165,6 +165,7 @@ export interface BudgetSettings {
   currency: string;                  // Currency code (e.g., "USD", "EUR")
   locale: string;                    // Locale for formatting (e.g., "en-US")
   filePath?: string;                 // Where the budget is saved (optional, may not be set yet)
+  lastSavedAt?: string;              // ISO date string of last successful save to disk
   encryptionEnabled?: boolean;       // Whether to encrypt budget files (undefined = not set)
   encryptionKey?: string;            // User's encryption key (only if encryption enabled)
   tabConfigs?: TabConfig[];          // Tab visibility and order configuration

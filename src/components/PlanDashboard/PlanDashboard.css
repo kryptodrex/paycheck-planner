@@ -244,6 +244,22 @@
   white-space: nowrap;
 }
 
+.footer-file-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+  font: inherit;
+}
+
+.footer-file-link:hover {
+  color: var(--text-primary);
+}
+
 /* Form Styles */
 .form-group {
   margin-bottom: 1.25rem;

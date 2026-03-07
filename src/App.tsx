@@ -13,7 +13,7 @@ function App() {
   console.log('[APP] App component rendering...');
   
   // Get the current budget data and actions from our context
-  const { budgetData } = useBudget()
+  const { budgetData, saveBudget } = useBudget()
   console.log('[APP] Budget data available:', !!budgetData);
   
   // Track whether user has completed initial setup
@@ -73,6 +73,18 @@ function App() {
 
     return unsubscribe
   }, [])
+
+  // Expose a save hook for Electron close confirmation flow
+  useEffect(() => {
+    window.__requestSaveBeforeClose = async () => {
+      // saveBudget already returns false if there is no budget or save was canceled/failed
+      return await saveBudget();
+    };
+
+    return () => {
+      delete window.__requestSaveBeforeClose;
+    };
+  }, [saveBudget])
 
   // Check if user has already configured encryption on app load
   useEffect(() => {

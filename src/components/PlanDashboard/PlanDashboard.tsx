@@ -50,6 +50,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [statusToast, setStatusToast] = useState<string | null>(null);
   const [showTabManagementModal, setShowTabManagementModal] = useState(false);
   const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
+  const [temporarilyVisibleTab, setTemporarilyVisibleTab] = useState<TabView | null>(null);
   const tabContentRef = useRef<HTMLDivElement | null>(null);
   const tabPanelRefs = useRef<Partial<Record<TabView, HTMLDivElement | null>>>({});
 
@@ -62,6 +63,25 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   
   const visibleTabs = useMemo(() => getVisibleTabs(tabConfigs), [tabConfigs]);
   const hiddenTabs = useMemo(() => getHiddenTabs(tabConfigs), [tabConfigs]);
+  const visibleTabsForRender = useMemo(() => {
+    if (!temporarilyVisibleTab) return visibleTabs;
+
+    const alreadyVisible = visibleTabs.some((tab) => tab.id === temporarilyVisibleTab);
+    if (alreadyVisible) return visibleTabs;
+
+    const tempTab = tabConfigs.find((tab) => tab.id === temporarilyVisibleTab);
+    if (!tempTab) return visibleTabs;
+
+    const maxOrder = visibleTabs.reduce((max, tab) => Math.max(max, tab.order), -1);
+    return [...visibleTabs, { ...tempTab, visible: true, order: maxOrder + 1 }];
+  }, [visibleTabs, tabConfigs, temporarilyVisibleTab]);
+
+  useEffect(() => {
+    if (!temporarilyVisibleTab) return;
+    if (activeTab !== temporarilyVisibleTab) {
+      setTemporarilyVisibleTab(null);
+    }
+  }, [activeTab, temporarilyVisibleTab]);
 
   // Handle save with success toast
   const handleSave = useCallback(async () => {
@@ -217,6 +237,24 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const handleDragEnd = useCallback(() => {
     setDraggedTabIndex(null);
   }, []);
+
+  const openTabFromLink = useCallback((tab: TabView, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean }) => {
+    const targetTabConfig = tabConfigs.find((config) => config.id === tab);
+    const isHidden = targetTabConfig ? !targetTabConfig.visible : false;
+
+    if (options?.scrollToAccountId !== undefined) {
+      setScrollToAccountId(options.scrollToAccountId);
+    }
+    if (options?.scrollToRetirement !== undefined) {
+      setShouldScrollToRetirement(options.scrollToRetirement);
+    }
+
+    if (isHidden) {
+      setTemporarilyVisibleTab(tab);
+    }
+
+    setActiveTab(tab);
+  }, [tabConfigs]);
 
   if (!budgetData) return null;
 
@@ -380,6 +418,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
 
+  const handleRevealSavedFile = async () => {
+    if (!budgetData?.settings?.filePath || !window.electronAPI?.revealInFolder) return;
+    const result = await window.electronAPI.revealInFolder(budgetData.settings.filePath);
+    if (!result.success) {
+      setStatusToast('⚠️ Unable to open file location');
+    }
+  };
+
   return (
     <div className="plan-dashboard">
       <header className="dashboard-header">
@@ -474,7 +520,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Only show tabs in full mode, not in view-only mode */}
       {!viewMode && (
         <PlanTabs
-          visibleTabs={visibleTabs}
+          visibleTabs={visibleTabsForRender}
           activeTab={activeTab}
           onTabClick={handleTabClick}
           onManageTabs={() => setShowTabManagementModal(true)}
@@ -507,15 +553,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             displayMode={displayMode}
             onDisplayModeChange={setDisplayMode}
             onNavigateToBills={(accountId) => {
-              setScrollToAccountId(accountId);
-              setActiveTab('bills');
+              openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
             onNavigateToBenefits={() => {
-              setActiveTab('benefits');
+              openTabFromLink('benefits', { scrollToRetirement: false });
             }}
             onNavigateToRetirement={() => {
-              setShouldScrollToRetirement(true);
-              setActiveTab('benefits');
+              openTabFromLink('benefits', { scrollToRetirement: true });
             }} 
           />
         </div>
@@ -556,11 +600,18 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
       <footer className="dashboard-footer">
         <div className="footer-info">
-          <span>Last saved: {new Date(budgetData.updatedAt).toLocaleString()}</span>
+          <span>Last saved: {budgetData.settings.lastSavedAt ? new Date(budgetData.settings.lastSavedAt).toLocaleString() : 'Never'}</span>
           {budgetData.settings.filePath && (
             <>
               <span className="bullet">•</span>
-              <span>{budgetData.settings.filePath}</span>
+              <button
+                type="button"
+                className="footer-file-link"
+                onClick={handleRevealSavedFile}
+                title="Show file in folder"
+              >
+                {budgetData.settings.filePath}
+              </button>
             </>
           )}
         </div>

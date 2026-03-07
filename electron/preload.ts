@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Open file picker (for saving)
   // Takes: optional budgetName to use as default filename
   saveFileDialog: (budgetName?: string) => ipcRenderer.invoke('save-file-dialog', budgetName),
+
+  // Reveal a file in the system file browser (Finder/Explorer)
+  revealInFolder: (filePath: string) => ipcRenderer.invoke('reveal-in-folder', filePath),
   
   // Listen for menu events from the application menu bar
   // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan', 'open-settings', 'open-pay-options')

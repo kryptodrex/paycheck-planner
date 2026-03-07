@@ -1,7 +1,7 @@
 // Electron Main Process - This runs in Node.js, not the browser
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
-import { app, BrowserWindow, ipcMain, dialog, Menu, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -58,6 +58,8 @@ debug('Starting Paycheck Planner...');
 
 // Track all open plan windows
 const openWindows = new Set<BrowserWindow>();
+// Track windows that have been approved to close (to avoid close-handler recursion)
+const approvedToClose = new WeakSet<BrowserWindow>();
 // Map to track view windows and their parent plan windows
 const viewWindows = new Map<BrowserWindow, { parent: BrowserWindow; viewType: string }>();
 // Welcome window reference (shown when no plan windows are open)
@@ -201,9 +203,20 @@ function createPlanWindow(windowState?: any) {
   }
 
   // Handle window close and save state
-  window.on('close', async () => {
-    // Only save state for main plan windows, not view windows
+  window.on('close', async (event) => {
+    // View windows can close directly
     if (isViewWindow) return;
+
+    // Intercept normal window close (titlebar close / Cmd+W / Ctrl+W / app quit)
+    // and run unsaved-changes flow first.
+    if (!approvedToClose.has(window)) {
+      event.preventDefault();
+      await handleCloseWindow(window);
+      return;
+    }
+
+    // This close was explicitly approved by handleCloseWindow; allow and clear flag.
+    approvedToClose.delete(window);
     
     try {
       const bounds = window.getBounds();
@@ -639,26 +652,47 @@ async function handleCloseWindow(window: BrowserWindow) {
     if (hasUnsaved) {
       const result = await dialog.showMessageBox(window, {
         type: 'warning',
-        buttons: ['Cancel', 'Close Without Saving'],
+        buttons: ['Save', "Don't Save", 'Cancel'],
         defaultId: 0,
-        cancelId: 0,
+        cancelId: 2,
         title: 'Unsaved Changes',
         message: 'You have unsaved changes',
-        detail: 'Are you sure you want to close this window without saving?',
+        detail: 'Do you want to save your plan before closing this window?',
       });
 
-      if (result.response === 0) {
-        // User clicked Cancel
+      if (result.response === 2) {
+        // Cancel
         return;
+      }
+
+      if (result.response === 0) {
+        // Save
+        const saveSuccess = await window.webContents.executeJavaScript(
+          `(async () => {
+            if (typeof window.__requestSaveBeforeClose === 'function') {
+              try {
+                return await window.__requestSaveBeforeClose();
+              } catch {
+                return false;
+              }
+            }
+            return false;
+          })()`
+        );
+
+        if (!saveSuccess) {
+          // Save failed or user canceled save dialog
+          return;
+        }
       }
     }
 
     // Close the window
+    approvedToClose.add(window);
     window.close();
   } catch (error) {
     console.error('Error checking unsaved changes:', error);
-    // If there's an error, just close the window
-    window.close();
+    dialog.showErrorBox('Close Error', 'Unable to verify save state. The window was not closed to prevent data loss.');
   }
 }
 
@@ -904,6 +938,21 @@ ipcMain.handle('clear-session-state', async () => {
 });
 
 /**
+ * Reveal a file in the system file browser (Finder/Explorer)
+ */
+ipcMain.handle('reveal-in-folder', async (_event, filePath: string) => {
+  try {
+    if (!filePath) {
+      return { success: false, error: 'File path is required' };
+    }
+    shell.showItemInFolder(filePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+/**
  * Notify main process that a budget has been loaded
  * This transitions a welcome window to a plan window
  */
@@ -917,6 +966,60 @@ ipcMain.handle('budget-loaded', async (event) => {
     openWindows.add(window);
     if (!mainWindow) mainWindow = window;
     welcomeWindow = null;
+
+    // Attach the same close behavior as normal plan windows so unsaved-change
+    // prompts work when closing via titlebar/window controls.
+    window.on('close', async (event) => {
+      if (!approvedToClose.has(window)) {
+        event.preventDefault();
+        await handleCloseWindow(window);
+        return;
+      }
+
+      approvedToClose.delete(window);
+
+      try {
+        const bounds = window.getBounds();
+        const sessionPath = path.join(app.getPath('userData'), 'session.json');
+        let sessionData: any = {};
+
+        try {
+          const content = await fs.readFile(sessionPath, 'utf-8');
+          sessionData = JSON.parse(content);
+        } catch {
+          // File doesn't exist or is invalid, start fresh
+        }
+
+        const windowStates = (sessionData.windows || []).filter((w: any) => {
+          const existingWindow = Array.from(openWindows).find(
+            (win) => win.id === w.id && win !== window
+          );
+          return !!existingWindow;
+        });
+
+        windowStates.push({
+          id: window.id,
+          windowWidth: bounds.width,
+          windowHeight: bounds.height,
+          windowX: bounds.x,
+          windowY: bounds.y,
+        });
+
+        sessionData.windows = windowStates;
+        await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2), 'utf-8');
+      } catch (error) {
+        console.error('Error saving window state:', error);
+      }
+    });
+
+    window.on('closed', () => {
+      openWindows.delete(window);
+      if (mainWindow === window) mainWindow = null;
+
+      if (openWindows.size === 0 && !hasLiveWelcomeWindow()) {
+        createWelcomeWindow();
+      }
+    });
   }
 });
 

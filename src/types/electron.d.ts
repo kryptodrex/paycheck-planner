@@ -26,6 +26,9 @@ export interface ElectronAPI {
   // Open a save file dialog (for saving files)
   // Takes optional budgetName to use as default filename
   saveFileDialog: (budgetName?: string) => Promise<string | null>;
+
+  // Reveal a file in the system file browser (Finder/Explorer)
+  revealInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
   
   // Listen for menu events from the application menu bar
   // Takes an event name and a callback function
@@ -78,5 +81,6 @@ declare global {
   interface Window {
     electronAPI: ElectronAPI;
     __hasUnsavedChanges?: boolean;
+    __requestSaveBeforeClose?: () => Promise<boolean>;
   }
 }

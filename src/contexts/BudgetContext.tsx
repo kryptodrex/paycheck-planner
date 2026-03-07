@@ -69,6 +69,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       return;
     }
 
+    // New plans that have never been saved should always prompt on close
+    if (!budgetData.settings?.filePath) {
+      setHasUnsavedChanges(true);
+      return;
+    }
+
     const currentData = JSON.stringify(budgetData);
     if (lastSavedDataRef.current === null) {
       // First load, no changes yet
@@ -97,10 +103,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
     setLoading(true);
     try {
+      const saveTimestamp = new Date().toISOString();
+
       // Update the "last modified" timestamp
       const updatedBudget = {
         ...budgetData, // Spread operator: copy all existing properties
-        updatedAt: new Date().toISOString(),
+        updatedAt: saveTimestamp,
       };
 
       // Note: Each plan maintains its own encryptionEnabled setting (set during SetupWizard)
@@ -123,6 +131,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         settings: {
           ...updatedBudget.settings,
           filePath,
+          lastSavedAt: saveTimestamp,
         },
       };
       setBudgetData(savedBudget);
@@ -161,6 +170,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
       if (!data.retirement) {
         data.retirement = [];
+      }
+
+      // Migrate lastSavedAt for older files:
+      // If plan has a file path but no explicit lastSavedAt yet, use updatedAt as fallback.
+      if (data.settings?.filePath && !data.settings.lastSavedAt && data.updatedAt) {
+        data.settings.lastSavedAt = data.updatedAt;
       }
 
       // Migrate benefits to include deduction source fields
