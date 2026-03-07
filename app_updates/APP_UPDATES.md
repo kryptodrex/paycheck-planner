@@ -44,8 +44,9 @@
     - We should add a delete button for accounts, and when an account is deleted, we should prompt the user to choose what to do with any bills or pay breakdowns that are currently using that account (e.g., reassign to another account, delete them, etc.) to prevent orphaned data and ensure a smooth user experience.
 
 - [ ] **Tab Management** - Allow for more customization of certain tabs
-    - Have a [+] button next to the last tab that allows users to add less commonly used tabs, or new custom tabs (e.g., for tracking specific financial goals, projects, or categories)
-    - The Benefits and Taxes should be put behind this [+] button by default since they are less commonly used, but users can choose to add them as main tabs if they want
+    - Have a [+] button next to the last tab that allows users to add less commonly used tabs
+        - The Benefits and Taxes should be put behind this [+] button by default since they are less commonly used, but users can choose to add them as main tabs if they want
+        - Future state could allow users to create custom tabs for different categories of bills or accounts
     - Allow user to hide tabs that they don't use often to declutter the interface, and also allow them to rearrange the order of the tabs based on their preferences
         - They should be able to re-add hidden tabs from the [+] button, and also drag and drop to rearrange the order of the tabs
     - Key Metrics and Pay Breakdown should always be the first two tabs and cannot be hidden since they are the core of the app, but the user can rearrange the order of the other tabs as they see fit
