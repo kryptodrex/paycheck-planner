@@ -1,0 +1,119 @@
+name: Beta Release Build
+
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+jobs:
+  beta-build:
+    if: github.event.pull_request.merged == true
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+          - os: windows-latest
+            target: win
+          - os: ubuntu-latest
+            target: linux
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync version from file
+        run: npm run sync-version
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Build Electron app for ${{ matrix.target }}
+        run: npm run build:${{ matrix.target }}
+
+      - name: Upload beta artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-paycheck-planner-${{ matrix.target }}
+          path: release/
+          retention-days: 14
+
+  create-beta-release:
+    if: github.event.pull_request.merged == true
+    needs: beta-build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Read version
+        id: version
+        run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
+
+      - name: Create beta release metadata
+        id: beta_meta
+        run: |
+          TAG="beta-v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}"
+          NAME="Beta v${{ steps.version.outputs.VERSION }} (build ${{ github.run_number }})"
+
+          {
+            echo "TAG=$TAG"
+            echo "NAME=$NAME"
+            echo "BODY<<__END_BODY__"
+            echo "## Beta Release"
+            echo ""
+            echo "Merged PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
+            echo "Source: ${{ github.event.pull_request.head.ref }}"
+            echo "Target: develop"
+            echo ""
+            echo "### Artifacts"
+            echo "- macOS: DMG/ZIP build"
+            echo "- Windows: EXE/portable build"
+            echo "- Linux: AppImage/DEB build"
+            echo ""
+            echo "This is an automated prerelease generated after merging a PR into develop."
+            echo "__END_BODY__"
+          } >> $GITHUB_ENV
+
+      - name: Publish GitHub prerelease
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.NAME }}
+          body: ${{ env.BODY }}
+          files: |
+            all-artifacts/beta-paycheck-planner-mac/**/*.dmg
+            all-artifacts/beta-paycheck-planner-mac/**/*.zip
+            all-artifacts/beta-paycheck-planner-win/**/*.exe
+            all-artifacts/beta-paycheck-planner-win/**/*.msi
+            all-artifacts/beta-paycheck-planner-win/**/*.nsis.7z
+            all-artifacts/beta-paycheck-planner-linux/**/*.AppImage
+            all-artifacts/beta-paycheck-planner-linux/**/*.deb
+          draft: false
+          prerelease: true
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
