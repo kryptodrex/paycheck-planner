@@ -4,13 +4,15 @@ import './Toast.css';
 interface ToastProps {
   /** The message to display in the toast */
   message: string | null;
+  /** Visual variant for toast background and border */
+  type?: 'success' | 'warning' | 'error';
   /** Duration in milliseconds before auto-dismissing (default: 2500) */
   duration?: number;
   /** Callback when the toast should dismiss */
   onDismiss?: () => void;
 }
 
-const Toast: React.FC<ToastProps> = ({ message, duration = 2500, onDismiss }) => {
+const Toast: React.FC<ToastProps> = ({ message, type = 'success', duration = 2500, onDismiss }) => {
   useEffect(() => {
     if (!message) return;
     
@@ -24,7 +26,7 @@ const Toast: React.FC<ToastProps> = ({ message, duration = 2500, onDismiss }) =>
   if (!message) return null;
 
   return (
-    <div className="toast" role="status" aria-live="polite">
+    <div className={`toast toast-${type}`} role="status" aria-live="polite">
       {message}
     </div>
   );

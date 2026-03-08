@@ -61,14 +61,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setWindowSize: (width: number, height: number) => ipcRenderer.invoke('set-window-size', width, height),
   
   // Listen for menu events from the application menu bar
-  // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan', 'open-settings', 'open-pay-options')
+  // Takes: event name and callback function
   // Returns: () => unsubscribe function to remove listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-pay-options',
-    callback: () => void
+    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode',
+    callback: (arg?: any) => void
   ) => {
     const channel = `menu:${event}`;
-    ipcRenderer.on(channel, callback);
+    ipcRenderer.on(channel, (_event, arg) => callback(arg));
     return () => ipcRenderer.removeListener(channel, callback);
   },
 

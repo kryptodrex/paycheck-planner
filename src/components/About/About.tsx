@@ -8,17 +8,20 @@ interface AboutProps {
 }
 
 const About: React.FC<AboutProps> = ({ isOpen, onClose }) => {
-  // Handle Esc key to close
+  // Handle Esc key to close - use capture phase for reliability
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
+        e.stopPropagation();
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
+      // Use capture phase so Escape works even if child components stop propagation
+      document.addEventListener('keydown', handleKeyDown, true);
+      return () => document.removeEventListener('keydown', handleKeyDown, true);
     }
   }, [isOpen, onClose]);
 

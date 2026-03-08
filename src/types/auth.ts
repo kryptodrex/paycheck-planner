@@ -35,7 +35,8 @@ export interface Benefit {
  */
 export interface RetirementElection {
   id: string;
-  type: '401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'other'; // Type of retirement plan
+  type: '401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'pension' | 'other'; // Type of retirement plan
+  customLabel?: string;                    // Custom label when type is 'other'
   employeeContribution: number;            // Amount employee contributes per paycheck
   employeeContributionIsPercentage: boolean; // If true, amount is percentage of gross pay
   isPreTax?: boolean;                      // If true/undefined, pre-tax; if false, post-tax
@@ -181,6 +182,16 @@ export interface TabConfig {
 }
 
 /**
+ * TabPosition - Where tabs are displayed on screen
+ */
+export type TabPosition = 'top' | 'bottom' | 'left' | 'right';
+
+/**
+ * TabDisplayMode - How tabs are displayed in sidebar orientations
+ */
+export type TabDisplayMode = 'icons-only' | 'icons-with-labels';
+
+/**
  * BudgetSettings - User preferences and app configuration
  */
 export interface BudgetSettings {
@@ -191,6 +202,8 @@ export interface BudgetSettings {
   encryptionEnabled?: boolean;       // Whether to encrypt budget files (undefined = not set)
   encryptionKey?: string;            // User's encryption key (only if encryption enabled)
   tabConfigs?: TabConfig[];          // Tab visibility and order configuration
+  tabPosition?: TabPosition;         // Where tabs are displayed (default: 'top')
+  tabDisplayMode?: TabDisplayMode;   // How tabs are displayed in sidebar (default: 'icons-with-labels')
   windowSize?: {                     // Window dimensions and position when last closed
     width: number;
     height: number;
@@ -234,7 +247,7 @@ export interface BudgetContextType {
   loading: boolean;               // Whether an operation is in progress
   
   // File operations
-  saveBudget: (activeTab?: string) => Promise<boolean>;    // Save to disk with optional active tab, returns true on success
+  saveBudget: (activeTab?: string, budgetOverride?: Partial<BudgetData>) => Promise<boolean>;    // Save to disk with optional active tab and override data, returns true on success
   saveWindowState: (width: number, height: number, x: number, y: number, activeTab?: string) => Promise<void>; // Save only window state
   loadBudget: (filePath?: string) => Promise<void>;     // Load from disk
   createNewBudget: (year: number) => void;              // Create empty plan for a year

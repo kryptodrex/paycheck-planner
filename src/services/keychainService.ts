@@ -17,15 +17,22 @@ export class KeychainService {
       throw new Error('Electron API not available');
     }
 
+    const account = `${ACCOUNT_NAME}:${planId}`;
+    console.log(`[KeychainService] Saving key for account: ${account}`);
+    
     const result = await window.electronAPI.saveKeychainKey(
       SERVICE_NAME,
-      `${ACCOUNT_NAME}:${planId}`,
+      account,
       key
     );
 
     if (!result.success) {
-      throw new Error(result.error || 'Failed to save encryption key to keychain');
+      const errorMsg = result.error || 'Failed to save encryption key to keychain';
+      console.error(`[KeychainService] Save failed: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
+    
+    console.log(`[KeychainService] Successfully saved key for account: ${account}`);
   }
 
   /**
@@ -38,13 +45,17 @@ export class KeychainService {
       throw new Error('Electron API not available');
     }
 
+    const account = `${ACCOUNT_NAME}:${planId}`;
+    
     const result = await window.electronAPI.getKeychainKey(
       SERVICE_NAME,
-      `${ACCOUNT_NAME}:${planId}`
+      account
     );
 
     if (!result.success) {
-      throw new Error(result.error || 'Failed to retrieve encryption key from keychain');
+      const errorMsg = result.error || 'Failed to retrieve encryption key from keychain';
+      console.error(`[KeychainService] Get failed for ${account}: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
     return result.key || null;

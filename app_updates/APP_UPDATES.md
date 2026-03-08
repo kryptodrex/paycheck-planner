@@ -58,7 +58,7 @@
     - Loans tab for managing any debts or loans, with details like interest rates, payment or loan amortization schedules, etc.
         - This could be for a home Mortgage, student loans, car loans, or any other type of debt the user wants to track easily
 
-- [ ] **Custom Tab Display Modes** - Allow users to show tabs on the left, right, top, or bottom of the screen based on their preference for better accessibility and workflow customization
+- [x] **Custom Tab Display Modes** - Allow users to show tabs on the left, right, top, or bottom of the screen based on their preference for better accessibility and workflow customization
   - This would involve making the tab component more flexible to support different orientations and placements around the main content area
   - Users could choose to have tabs on the left side for easier vertical navigation, or on the top for a more traditional layout, etc.
   - For tabs on the left or right in a sidebar, we could also allow users to choose between icons only (for a more compact view) or icons with labels for easier identification, with a pleasant animation for expanding/collapsing the sidebar if they choose the icons-only view. 

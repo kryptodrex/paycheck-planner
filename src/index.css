@@ -27,6 +27,10 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --accent-primary: #667eea;
   --accent-hover: #5568d3;
+  --tab-drag-indicator: #667eea;
+  --tab-drag-indicator-ring: rgba(102, 126, 234, 0.2);
+  --tab-drag-outline: rgba(102, 126, 234, 0.65);
+  --tab-drag-fill: rgba(102, 126, 234, 0.08);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
@@ -53,6 +57,10 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   --accent-primary: #7c3aed;
   --accent-hover: #6d28d9;
+  --tab-drag-indicator: #a5b4fc;
+  --tab-drag-indicator-ring: rgba(165, 180, 252, 0.3);
+  --tab-drag-outline: rgba(165, 180, 252, 0.8);
+  --tab-drag-fill: rgba(165, 180, 252, 0.16);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;

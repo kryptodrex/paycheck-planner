@@ -5,7 +5,7 @@ export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'benefits' | '
 
 /**
  * Get the default tab configuration
- * Benefits, Taxes, and Loans start hidden by default
+ * All tabs are visible by default, allowing users to hide them as needed
  */
 export function getDefaultTabConfigs(): TabConfig[] {
   return [
@@ -37,7 +37,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       id: 'loans',
       label: 'Loans',
       icon: '🏦',
-      visible: false, // Hidden by default
+      visible: true,
       order: 3,
       pinned: false,
     },
@@ -45,7 +45,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       id: 'benefits',
       label: 'Benefits',
       icon: '🏥',
-      visible: false, // Hidden by default
+      visible: true,
       order: 4,
       pinned: false,
     },
@@ -53,7 +53,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       id: 'taxes',
       label: 'Taxes',
       icon: '💰',
-      visible: false, // Hidden by default
+      visible: true,
       order: 5,
       pinned: false,
     },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Button, Modal } from '../shared';
 import './Settings.css';
@@ -23,20 +23,6 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     }
     return { themeMode: 'light' as ThemeOption };
   });
-
-  // Handle Esc key to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, onClose]);
 
   const handleThemeModeChange = (mode: ThemeOption) => {
     setSettings((prev) => {

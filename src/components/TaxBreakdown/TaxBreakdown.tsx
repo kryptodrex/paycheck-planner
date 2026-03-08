@@ -3,6 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
 import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../shared';
+import { GlossaryTerm } from '../Glossary';
 import './TaxBreakdown.css';
 
 interface TaxBreakdownProps {
@@ -106,32 +107,32 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
             />
             <div className="tax-summary">
                 <div className="summary-section">
-                    <h3>Gross vs. Net Pay ({getDisplayModeLabel(displayMode)})</h3>
+                    <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm> vs. <GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> ({getDisplayModeLabel(displayMode)})</h3>
                     <div className="summary-table">
                         <div className="summary-row">
-                            <span className="label">Gross Pay</span>
+                            <span className="label"><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></span>
                             <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.grossPay, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="summary-row">
-                            <span className="label">Total Taxes</span>
+                            <span className="label"><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></span>
                             <span className="amount negative">-{formatWithSymbol(convertToDisplayMode(breakdown.totalTaxes, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="summary-row total">
-                            <span className="label">Net Pay</span>
+                            <span className="label"><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm></span>
                             <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.netPay, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="summary-section">
-                    <h3>Tax Breakdown ({getDisplayModeLabel(displayMode)})</h3>
+                    <h3><GlossaryTerm termId="withholding">Tax Breakdown</GlossaryTerm> ({getDisplayModeLabel(displayMode)})</h3>
                     <div className="summary-table">
                         <div className="summary-row">
-                            <span className="label">Federal Tax ({taxSettings.federalTaxRate}%)</span>
+                            <span className="label"><GlossaryTerm termId="federal-tax">Federal Tax</GlossaryTerm> ({taxSettings.federalTaxRate}%)</span>
                             <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.federalTax, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="summary-row">
-                            <span className="label">State Tax ({taxSettings.stateTaxRate}%)</span>
+                            <span className="label"><GlossaryTerm termId="state-tax">State Tax</GlossaryTerm> ({taxSettings.stateTaxRate}%)</span>
                             <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.stateTax, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="summary-row">
@@ -144,12 +145,12 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                         </div>
                         {breakdown.additionalWithholding > 0 && (
                             <div className="summary-row">
-                                <span className="label">Additional Withholding</span>
+                                <span className="label"><GlossaryTerm termId="withholding">Additional Withholding</GlossaryTerm></span>
                                 <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.additionalWithholding, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         )}
                         <div className="summary-row total">
-                            <span className="label">Total Taxes</span>
+                            <span className="label"><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></span>
                             <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.totalTaxes, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                     </div>
@@ -198,7 +199,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                     </>
                 }
             >
-                <FormGroup label="Federal Tax Rate (%)" required error={fieldErrors.federalTaxRate}>
+                <FormGroup label={<><GlossaryTerm termId="federal-tax">Federal Tax Rate (%)</GlossaryTerm></>} required error={fieldErrors.federalTaxRate}>
                     <input
                         className={fieldErrors.federalTaxRate ? 'field-error' : ''}
                         type="number"
@@ -215,7 +216,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                     />
                 </FormGroup>
 
-                <FormGroup label="State Tax Rate (%)" required error={fieldErrors.stateTaxRate}>
+                <FormGroup label={<><GlossaryTerm termId="state-tax">State Tax Rate (%)</GlossaryTerm></>} required error={fieldErrors.stateTaxRate}>
                     <input
                         className={fieldErrors.stateTaxRate ? 'field-error' : ''}
                         type="number"
@@ -232,7 +233,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                     />
                 </FormGroup>
 
-                <FormGroup label="Additional Withholding per Paycheck" error={fieldErrors.additionalWithholding}>
+                <FormGroup label={<><GlossaryTerm termId="withholding">Additional Withholding per Paycheck</GlossaryTerm></>} error={fieldErrors.additionalWithholding}>
                     <InputWithPrefix
                         className={fieldErrors.additionalWithholding ? 'field-error' : ''}
                         prefix={getCurrencySymbol(currency)}

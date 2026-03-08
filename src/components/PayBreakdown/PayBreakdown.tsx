@@ -7,6 +7,7 @@ import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import type { Account, Bill, Benefit, RetirementElection } from '../../types/auth';
 import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../shared';
 import PaySettingsModal from '../PaySettingsModal';
+import { GlossaryTerm } from '../Glossary';
 import './PayBreakdown.css';
 
 type AllocationCategory = {
@@ -337,7 +338,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         <div className="flow-stage">
           <div className="stage-label">START</div>
           <div className="stage-box gross-box">
-            <h3>Gross Pay</h3>
+            <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">
               {budgetData.paySettings.payType === 'salary' 
@@ -352,7 +353,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         {displayBreakdown.preTaxDeductions > 0 && (
           <div className="flow-stage">
             <div className="stage-box deduction-box">
-              <h3>Pre-Tax Deductions</h3>
+              <h3><GlossaryTerm termId="pre-tax-deduction">Pre-Tax Deductions</GlossaryTerm></h3>
               <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <div className="stage-detail">
                 {totalPreTaxItemCount} deduction(s)
@@ -364,7 +365,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
         <div className="flow-stage">
           <div className="stage-box taxable-box">
-            <h3>Taxable Income</h3>
+            <h3><GlossaryTerm termId="taxable-income">Taxable Income</GlossaryTerm></h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">Subject to taxes</div>
           </div>
@@ -373,15 +374,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
         <div className="flow-stage">
           <div className="stage-box taxes-box">
-            <h3>Total Taxes</h3>
+            <h3><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></h3>
             <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.totalTaxes, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-breakdown">
               <div className="breakdown-item">
-                <span>Federal Tax ({budgetData.taxSettings.federalTaxRate}%)</span>
+                <span><GlossaryTerm termId="federal-tax">Federal Tax</GlossaryTerm> ({budgetData.taxSettings.federalTaxRate}%)</span>
                 <span>{formatWithSymbol(displayBreakdown.federalTax, currency, { maximumFractionDigits: 2 })}</span>
               </div>
               <div className="breakdown-item">
-                <span>State Tax ({budgetData.taxSettings.stateTaxRate}%)</span>
+                <span><GlossaryTerm termId="state-tax">State Tax</GlossaryTerm> ({budgetData.taxSettings.stateTaxRate}%)</span>
                 <span>{formatWithSymbol(displayBreakdown.stateTax, currency, { maximumFractionDigits: 2 })}</span>
               </div>
               <div className="breakdown-item">
@@ -406,7 +407,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         {displayBreakdown.postTaxDeductions > 0 && (
           <div className="flow-stage">
             <div className="stage-box postax-box">
-              <h3>Post-Tax Deductions</h3>
+              <h3><GlossaryTerm termId="post-tax-deduction">Post-Tax Deductions</GlossaryTerm></h3>
               <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               <div className="stage-detail">
                 {postTaxDeductionCount} deduction(s)
@@ -419,7 +420,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         <div className="flow-stage">
           <div className="stage-label">RESULT</div>
           <div className="stage-box net-box">
-            <h3>Net Pay (Take Home)</h3>
+            <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
           </div>
@@ -476,7 +477,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       {budgetData.accounts.length > 0 && (
         <div className="waterfall-breakdown">
           <div className="waterfall-header">
-            <h3>After-Tax Allocations</h3>
+            <h3>After-Tax <GlossaryTerm termId="allocation">Allocations</GlossaryTerm></h3>
           </div>
           
           <div className="waterfall-table">
@@ -627,7 +628,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             })}
 
             <div className="waterfall-row waterfall-footer-row">
-              <span className="waterfall-label">All that remains for spending</span>
+              <span className="waterfall-label">All that remains (<GlossaryTerm termId="residual-amount">residual amount</GlossaryTerm>) for spending</span>
               <span className="waterfall-amount">{formatWithSymbol(Math.max(0, toDisplayAmount(leftoverPerPaycheck)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (

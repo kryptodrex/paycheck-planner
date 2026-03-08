@@ -7,6 +7,48 @@
   overflow: hidden;
 }
 
+/* Content wrapper sits between header and footer */
+.plan-dashboard-content-wrapper {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Layout variants based on tab position */
+.plan-dashboard.layout-with-tabs-top .plan-dashboard-content-wrapper,
+.plan-dashboard.layout-with-tabs-bottom .plan-dashboard-content-wrapper {
+  flex-direction: column;
+}
+
+.plan-dashboard.layout-with-tabs-left .plan-dashboard-content-wrapper {
+  flex-direction: row;
+}
+
+.plan-dashboard.layout-with-tabs-right .plan-dashboard-content-wrapper {
+  flex-direction: row;
+}
+
+/* Main content area wrapper */
+.plan-dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Tab content positioning */
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  min-height: 0;
+  min-width: 0;
+}
+
 .plan-loading-screen {
   height: 100vh;
   width: 100%;
@@ -69,6 +111,15 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   gap: 1rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.dashboard-footer {
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
   flex-shrink: 0;
 }
 
@@ -302,13 +353,6 @@
   transform: scale(1.05);
 }
 
-.tab-content {
-  flex: 1;
-  overflow-y: auto;
-  background: var(--bg-secondary);
-  min-height: 0;
-}
-
 .tab-panel {
   display: none;
   height: 100%;
@@ -325,16 +369,6 @@
   font-weight: 600;
   text-align: center;
   font-size: 0.95rem;
-}
-
-.dashboard-footer {
-  background: var(--bg-primary);
-  border-top: 1px solid var(--border-color);
-  padding: 0.75rem 1.5rem;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  flex-shrink: 0;
-  margin-top: auto;
 }
 
 .footer-info {

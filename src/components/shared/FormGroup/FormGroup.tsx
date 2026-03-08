@@ -3,7 +3,7 @@ import './FormGroup.css';
 
 interface FormGroupProps {
   /** Label text */
-  label?: string;
+  label?: React.ReactNode;
   /** Small helper text */
   helperText?: string;
   /** Error message */

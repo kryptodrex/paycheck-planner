@@ -1,7 +1,7 @@
 // Electron Main Process - This runs in Node.js, not the browser
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
-import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell, globalShortcut } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
@@ -12,12 +12,18 @@ const require = createRequire(import.meta.url);
 
 // Load keytar dynamically to avoid bundling issues with native modules
 let keytar: any = null;
+let keytarLoadError: string | null = null;
+
 const loadKeytar = () => {
-  if (!keytar) {
+  if (!keytar && !keytarLoadError) {
     try {
       keytar = require('keytar');
+      console.log('Keytar module loaded successfully');
     } catch (error) {
-      console.error('Failed to load keytar module:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      keytarLoadError = `Failed to load keytar: ${errorMsg}`;
+      console.error(keytarLoadError);
+      console.error('Keychain storage will not be available. Encryption keys must be entered manually each time.');
     }
   }
   return keytar;
@@ -409,6 +415,9 @@ async function createWindow() {
 
   // Create application menu with File and Edit options
   createApplicationMenu();
+  
+  // Register global keyboard shortcuts (fallback for menu accelerators)
+  registerGlobalShortcuts();
 }
 
 /**
@@ -427,7 +436,12 @@ function createApplicationMenu() {
       submenu: [
         {
           label: `About ${app.name}`,
-          role: 'about',
+          click: () => {
+            const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+            if (targetWindow) {
+              targetWindow.webContents.send('menu:open-about');
+            }
+          },
         },
         { type: 'separator' },
         {
@@ -575,6 +589,62 @@ function createApplicationMenu() {
     label: 'View',
     submenu: [
       {
+        label: 'Tab Position',
+        submenu: [
+          {
+            label: 'Top',
+            accelerator: isMac ? 'Cmd+Shift+T' : 'Ctrl+Shift+T',
+            click: () => {
+              const focusedWindow = BrowserWindow.getFocusedWindow();
+              if (focusedWindow) {
+                focusedWindow.webContents.send('menu:set-tab-position', 'top');
+              }
+            },
+          },
+          {
+            label: 'Bottom',
+            accelerator: isMac ? 'Cmd+Shift+B' : 'Ctrl+Shift+B',
+            click: () => {
+              const focusedWindow = BrowserWindow.getFocusedWindow();
+              if (focusedWindow) {
+                focusedWindow.webContents.send('menu:set-tab-position', 'bottom');
+              }
+            },
+          },
+          {
+            label: 'Left',
+            accelerator: isMac ? 'Cmd+Shift+L' : 'Ctrl+Shift+L',
+            click: () => {
+              const focusedWindow = BrowserWindow.getFocusedWindow();
+              if (focusedWindow) {
+                focusedWindow.webContents.send('menu:set-tab-position', 'left');
+              }
+            },
+          },
+          {
+            label: 'Right',
+            accelerator: isMac ? 'Cmd+Shift+R' : 'Ctrl+Shift+R',
+            click: () => {
+              const focusedWindow = BrowserWindow.getFocusedWindow();
+              if (focusedWindow) {
+                focusedWindow.webContents.send('menu:set-tab-position', 'right');
+              }
+            },
+          },
+        ],
+      },
+      {
+        label: 'Toggle Tab Display Mode',
+        accelerator: isMac ? 'Cmd+Shift+D' : 'Ctrl+Shift+D',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:toggle-tab-display-mode');
+          }
+        },
+      },
+      { type: 'separator' },
+      {
         label: 'Toggle Developer Tools',
         accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
         click: () => {
@@ -609,26 +679,64 @@ function createApplicationMenu() {
     ],
   });
 
-  // Help menu (for Windows/Linux - macOS has native About)
-  if (!isMac) {
-    template.push({
-      label: 'Help',
-      submenu: [
-        {
-          label: `About ${app.name}`,
-          click: () => {
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              focusedWindow.webContents.send('menu:open-about');
-            }
-          },
+  // Help menu (all platforms)
+  template.push({
+    label: 'Help',
+    submenu: [
+      {
+        label: 'Glossary of Terms',
+        accelerator: isMac ? 'Cmd+Shift+/' : 'Ctrl+Shift+/',
+        click: () => {
+          const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+          if (targetWindow) {
+            targetWindow.webContents.send('menu:open-glossary');
+          }
         },
-      ],
-    });
-  }
+      },
+      { type: 'separator' },
+      {
+        label: 'Keyboard Shortcuts',
+        click: async () => {
+          await dialog.showMessageBox({
+            type: 'info',
+            title: 'Keyboard Shortcuts',
+            message: 'Common shortcuts',
+            detail:
+              `${isMac ? 'Cmd' : 'Ctrl'}+, : Open Settings\n` +
+              `${isMac ? 'Cmd' : 'Ctrl'}+S : Save Plan\n` +
+              `${isMac ? 'Cmd' : 'Ctrl'}+O : Open Plan\n` +
+              `${isMac ? 'Cmd' : 'Ctrl'}+Shift+/ : Open Glossary\n` +
+              'Esc : Close open modal/dialog',
+          });
+        },
+      },
+    ],
+  });
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
+}
+
+/**
+ * Register global keyboard shortcuts that work even when web content has focus
+ * These provide a fallback for menu accelerators which don't always work with focused form elements
+ */
+function registerGlobalShortcuts() {
+  try {
+    // Register Cmd+, (Mac) and Ctrl+, (Windows/Linux) for Settings
+    const settingsShortcut = process.platform === 'darwin' ? 'Cmd+,' : 'Ctrl+,';
+    globalShortcut.register(settingsShortcut, () => {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (focusedWindow) {
+        focusedWindow.webContents.send('menu:open-settings');
+        debug(`Settings shortcut triggered via globalShortcut (${settingsShortcut})`);
+      }
+    });
+
+    debug('Global shortcuts registered successfully');
+  } catch (error) {
+    console.error('Failed to register global shortcuts:', error);
+  }
 }
 
 /**
@@ -1124,16 +1232,27 @@ ipcMain.handle('save-keychain-key', async (event, service: string, account: stri
     if (!service || !account || !password) {
       throw new Error('Service, account, and password are required');
     }
-    debug(`Saving keychain key for ${service}:${account}`);
+    debug(`[MAIN] Saving keychain key for ${service}:${account}`);
     const kt = loadKeytar();
     if (!kt) {
-      throw new Error('Keytar module could not be loaded');
+      const error = keytarLoadError || 'Keytar module could not be loaded';
+      debug(`[MAIN] Cannot save to keychain: ${error}`);
+      return { success: false, error };
     }
     await kt.setPassword(service, account, password);
+    debug(`[MAIN] Successfully saved keychain key for ${service}:${account}`);
     return { success: true };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    debug(`Failed to save keychain key: ${errorMsg}`);
+    // Get detailed error information
+    let errorMsg = 'Unknown error';
+    if (error instanceof Error) {
+      errorMsg = error.message;
+      // Include stack trace for debugging
+      debug(`[MAIN] Full error details:`, error);
+    } else {
+      errorMsg = String(error);
+    }
+    debug(`[MAIN] Failed to save keychain key: ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
 });
@@ -1146,21 +1265,31 @@ ipcMain.handle('get-keychain-key', async (event, service: string, account: strin
     if (!service || !account) {
       throw new Error('Service and account are required');
     }
-    debug(`Retrieving keychain key for ${service}:${account}`);
+    debug(`[MAIN] Retrieving keychain key for ${service}:${account}`);
     const kt = loadKeytar();
     if (!kt) {
-      throw new Error('Keytar module could not be loaded');
+      const error = keytarLoadError || 'Keytar module could not be loaded';
+      debug(`[MAIN] Cannot retrieve from keychain: ${error}`);
+      return { success: false, error };
     }
     const password = await kt.getPassword(service, account);
     if (password) {
+      debug(`[MAIN] Successfully retrieved keychain key for ${service}:${account}`);
       return { success: true, key: password };
     } else {
-      debug(`Keychain key not found for ${service}:${account}`);
+      debug(`[MAIN] Keychain key not found for ${service}:${account}`);
       return { success: true, key: null };
     }
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    debug(`Failed to retrieve keychain key: ${errorMsg}`);
+    // Get detailed error information
+    let errorMsg = 'Unknown error';
+    if (error instanceof Error) {
+      errorMsg = error.message;
+      debug(`[MAIN] Full error details:`, error);
+    } else {
+      errorMsg = String(error);
+    }
+    debug(`[MAIN] Failed to retrieve keychain key: ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
 });

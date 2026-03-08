@@ -279,6 +279,206 @@ export class FileStorageService {
   }
 
   /**
+   * Show an in-app encryption key prompt that works in Electron sandboxed renderers.
+   */
+  private static async requestEncryptionKeyInput(message: string): Promise<string | null> {
+    // Prefer native prompt when available (e.g., browser dev/testing environments).
+    if (typeof window.prompt === 'function') {
+      try {
+        const key = window.prompt(message);
+        if (key === null) return null;
+        const trimmed = key.trim();
+        return trimmed ? trimmed : null;
+      } catch {
+        // Some Electron/sandboxed renderers expose prompt() but throw "not supported".
+        // Fall through to custom dialog implementation below.
+      }
+    }
+
+    if (!document?.body) {
+      throw new Error('Encryption key input is unavailable in this environment.');
+    }
+
+    return new Promise<string | null>((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.inset = '0';
+      overlay.style.background = 'rgba(0, 0, 0, 0.45)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.zIndex = '99999';
+
+      const dialog = document.createElement('div');
+      dialog.style.width = 'min(520px, calc(100vw - 32px))';
+      dialog.style.background = '#1f1f1f';
+      dialog.style.color = '#f2f2f2';
+      dialog.style.border = '1px solid #3a3a3a';
+      dialog.style.borderRadius = '12px';
+      dialog.style.padding = '16px';
+      dialog.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.35)';
+      dialog.style.fontFamily = 'system-ui, -apple-system, Segoe UI, sans-serif';
+
+      const title = document.createElement('div');
+      title.textContent = 'Enter Encryption Key';
+      title.style.fontSize = '16px';
+      title.style.fontWeight = '600';
+      title.style.marginBottom = '8px';
+
+      const body = document.createElement('div');
+      body.textContent = message;
+      body.style.fontSize = '13px';
+      body.style.lineHeight = '1.4';
+      body.style.whiteSpace = 'pre-line';
+      body.style.marginBottom = '12px';
+
+      const input = document.createElement('input');
+      input.type = 'password';
+      input.autocomplete = 'off';
+      input.style.width = '100%';
+      input.style.boxSizing = 'border-box';
+      input.style.padding = '10px 12px';
+      input.style.borderRadius = '8px';
+      input.style.border = '1px solid #4a4a4a';
+      input.style.background = '#111';
+      input.style.color = '#fff';
+      input.style.marginBottom = '14px';
+
+      const actions = document.createElement('div');
+      actions.style.display = 'flex';
+      actions.style.justifyContent = 'flex-end';
+      actions.style.gap = '8px';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.padding = '8px 12px';
+      cancelBtn.style.borderRadius = '8px';
+      cancelBtn.style.border = '1px solid #555';
+      cancelBtn.style.background = '#2a2a2a';
+      cancelBtn.style.color = '#fff';
+      cancelBtn.style.cursor = 'pointer';
+
+      const submitBtn = document.createElement('button');
+      submitBtn.textContent = 'Continue';
+      submitBtn.style.padding = '8px 12px';
+      submitBtn.style.borderRadius = '8px';
+      submitBtn.style.border = '1px solid #4e9bff';
+      submitBtn.style.background = '#2b6fd8';
+      submitBtn.style.color = '#fff';
+      submitBtn.style.cursor = 'pointer';
+
+      const cleanup = (value: string | null) => {
+        document.removeEventListener('keydown', onKeyDown, true);
+        overlay.remove();
+        resolve(value);
+      };
+
+      const submit = () => {
+        const trimmed = input.value.trim();
+        if (!trimmed) {
+          input.focus();
+          return;
+        }
+        cleanup(trimmed);
+      };
+
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          cleanup(null);
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submit();
+        }
+      };
+
+      cancelBtn.addEventListener('click', () => cleanup(null));
+      submitBtn.addEventListener('click', submit);
+      document.addEventListener('keydown', onKeyDown, true);
+
+      actions.appendChild(cancelBtn);
+      actions.appendChild(submitBtn);
+      dialog.appendChild(title);
+      dialog.appendChild(body);
+      dialog.appendChild(input);
+      dialog.appendChild(actions);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      input.focus();
+    });
+  }
+
+  /**
+   * Prompt user for encryption key and validate it by attempting decryption
+   * @param encryptedPayload - The encrypted data to test the key against
+   * @param planId - The plan ID to save the key to keychain if successful
+   * @returns The validated encryption key, or null if user canceled or key was invalid after retries
+   */
+  private static async promptForEncryptionKey(
+    encryptedPayload: string,
+    planId: string
+  ): Promise<string | null> {
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      const key = await this.requestEncryptionKeyInput(
+        attempts === 0
+          ? 'This file is encrypted but the key was not found in your keychain.\n\nPlease enter your encryption key to decrypt this file:'
+          : `Incorrect encryption key. Please try again (Attempt ${attempts + 1}/${maxAttempts}):`
+      );
+
+      // User canceled
+      if (key === null) {
+        return null;
+      }
+
+      // User entered empty string
+      if (key.trim() === '') {
+        attempts++;
+        continue;
+      }
+
+      // Try to decrypt with this key
+      try {
+        const decryptedData = this.decrypt(encryptedPayload, key);
+        // Try to parse as JSON to validate
+        const parsed = JSON.parse(decryptedData);
+        
+        // Validate it's actually budget data
+        if (isBudgetData(parsed)) {
+          // Valid key! Save it to keychain for next time
+          try {
+            await KeychainService.saveKey(planId, key);
+            console.log('[FileStorage] Successfully saved recovered encryption key to keychain');
+          } catch (error) {
+            console.warn('[FileStorage] Could not save recovered key to keychain:', error);
+            // Don't fail - the key works, keychain save is just a convenience
+          }
+          return key;
+        }
+      } catch {
+        // Decryption or parsing failed - wrong key
+        attempts++;
+      }
+    }
+
+    // Max attempts reached
+    alert(`Failed to decrypt file after ${maxAttempts} attempts. Please check your encryption key.`);
+    return null;
+  }
+
+  /**
+   * Async variant for save flow to support in-app dialog input.
+   */
+  private static async promptForEncryptionKeyForSaveAsync(): Promise<string | null> {
+    return this.requestEncryptionKeyInput(
+      'Encryption is enabled for this plan, but no key was found in keychain.\n\nPlease enter your encryption key to save this plan:'
+    );
+  }
+
+  /**
    * Save budget data to a file
    * Handles serialization and optional encryption
    * Keys are stored in the system keychain, not in the file
@@ -320,21 +520,48 @@ export class FileStorageService {
     // Check if encryption is enabled
     let dataToSave = jsonData;
     if (budgetData.settings.encryptionEnabled) {
+      // Validate budget ID before attempting keychain operations
+      if (!budgetData.id || budgetData.id.trim() === '') {
+        throw new Error('Invalid budget ID - cannot save encryption key');
+      }
+      
       // Get the encryption key - it should be in the keychain or in the current budget data
       let encryptionKey: string | undefined = budgetData.settings.encryptionKey;
       
       if (!encryptionKey) {
         // Try to get from keychain
-        const keychainKey = await KeychainService.getKey(budgetData.id);
-        encryptionKey = keychainKey || undefined;
+        try {
+          const keychainKey = await KeychainService.getKey(budgetData.id);
+          encryptionKey = keychainKey || undefined;
+        } catch (error) {
+          console.warn('Failed to retrieve key from keychain, will prompt for key:', error);
+        }
       }
       
       if (!encryptionKey) {
-        throw new Error('Encryption is enabled but no encryption key is available');
+        // New encrypted plans may not have a keychain entry yet.
+        // Prompt the user so save can proceed and then persist to keychain.
+        const enteredKey = await this.promptForEncryptionKeyForSaveAsync();
+        if (!enteredKey) {
+          throw new Error('Encryption is enabled but no encryption key was provided');
+        }
+        encryptionKey = enteredKey;
       }
       
-      // Save the key to keychain for future loads
-      await KeychainService.saveKey(budgetData.id, encryptionKey);
+      // Try to save the key to keychain for future loads (only if not already saved)
+      try {
+        const existingKey = await KeychainService.getKey(budgetData.id);
+        if (!existingKey || existingKey !== encryptionKey) {
+          await KeychainService.saveKey(budgetData.id, encryptionKey);
+          console.log('[FileStorage] Saved encryption key to keychain');
+        }
+      } catch (error) {
+        // Don't fail the save operation if keychain save fails - the file can still be saved
+        // Just log the error for troubleshooting
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.warn('[FileStorage] Could not save key to keychain:', errorMsg);
+        console.warn('[FileStorage] Encryption will work, but key may need to be re-entered next time.');
+      }
       
       // Encrypt the JSON data for security
       const encryptedPayload = this.encrypt(jsonData, encryptionKey);
@@ -403,12 +630,19 @@ export class FileStorageService {
       // New encrypted format: use embedded plan ID metadata to fetch key
       if (isEncryptedBudgetEnvelopeV1(parsedData)) {
         const envelope = parsedData;
-        const encryptionKey = await KeychainService.getKey(envelope.planId);
+        let encryptionKey = await KeychainService.getKey(envelope.planId);
 
+        // If key not found in keychain, prompt user to enter it
         if (!encryptionKey) {
-          throw new Error(
-            'This file is encrypted but no key was found for this plan in your keychain.'
-          );
+          console.warn('[FileStorage] Encryption key not found in keychain, prompting user');
+          encryptionKey = await this.promptForEncryptionKey(envelope.payload, envelope.planId);
+          
+          // User canceled or failed to provide valid key
+          if (!encryptionKey) {
+            throw new Error(
+              'This file is encrypted but no valid key was provided. Cannot open file.'
+            );
+          }
         }
 
         const decryptedData = this.decrypt(envelope.payload, encryptionKey);
@@ -421,7 +655,14 @@ export class FileStorageService {
         const budgetData = migrateBudgetData(decryptedParsed as BudgetData);
         budgetData.settings = { ...budgetData.settings, filePath: targetPath };
         this.savePlanFileMapping(targetPath, budgetData.id);
-        await KeychainService.saveKey(budgetData.id, encryptionKey);
+        
+        // Ensure key is in keychain (may have been recovered)
+        try {
+          await KeychainService.saveKey(budgetData.id, encryptionKey);
+        } catch (error) {
+          console.warn('[FileStorage] Could not save encryption key to keychain:', error);
+        }
+        
         this.addRecentFileForPlan(targetPath, budgetData.id);
         return budgetData;
       }
@@ -453,17 +694,73 @@ export class FileStorageService {
         }
       }
       
-      // If we don't have a key yet, we need to ask the user or get the key some other way
+      // If we don't have a key yet, try to prompt the user for it
       if (!encryptionKey) {
+        console.warn('[FileStorage] Legacy encrypted file with no keychain entry, prompting user');
+        
+        // For legacy format, we need to try decryption first to get the plan ID
+        // So we'll use a special flow where we ask for the key and validate it
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+          const key = await this.requestEncryptionKeyInput(
+            attempts === 0
+              ? 'This file is encrypted but the key was not found in your keychain.\n\nPlease enter your encryption key to decrypt this file:'
+              : `Incorrect encryption key. Please try again (Attempt ${attempts + 1}/${maxAttempts}):`
+          );
+
+          // User canceled
+          if (key === null) {
+            throw new Error('File decryption canceled by user.');
+          }
+
+          // User entered empty string
+          if (key.trim() === '') {
+            attempts++;
+            continue;
+          }
+
+          // Try to decrypt with this key
+          try {
+            const decryptedData = this.decrypt(fileData, key);
+            const parsed: unknown = JSON.parse(decryptedData);
+            
+            if (isBudgetData(parsed)) {
+              // Success! This is the correct key
+              const budgetData = migrateBudgetData(parsed as BudgetData);
+              budgetData.settings = { ...budgetData.settings, filePath: targetPath };
+              
+              // Save the file-to-plan mapping for future reference
+              this.savePlanFileMapping(targetPath, budgetData.id);
+              
+              // Save the recovered key to keychain
+              try {
+                await KeychainService.saveKey(budgetData.id, key);
+                console.log('[FileStorage] Successfully saved recovered encryption key to keychain');
+              } catch (error) {
+                console.warn('[FileStorage] Could not save recovered key to keychain:', error);
+              }
+              
+              // Add to recent files on successful load
+              this.addRecentFileForPlan(targetPath, budgetData.id);
+              
+              return budgetData;
+            }
+          } catch {
+            // Wrong key or corrupted data
+            attempts++;
+          }
+        }
+        
+        // Max attempts reached
         throw new Error(
-          'This file appears to be encrypted but no encryption key was found. ' +
-          'Please ensure the encryption key for this plan is set up correctly in the keychain, ' +
-          'or provide the encryption key manually.'
+          `Failed to decrypt file after ${maxAttempts} attempts. The encryption key may be incorrect.`
         );
       }
 
       try {
-        // Decrypt the file contents
+        // We have a key from keychain, try to decrypt
         const decryptedData = this.decrypt(fileData, encryptionKey);
         
         // Parse JSON back into a JavaScript object (deserialization)
@@ -478,7 +775,11 @@ export class FileStorageService {
         this.savePlanFileMapping(targetPath, budgetData.id);
         
         // Ensure the key is stored in keychain with the correct plan ID
-        await KeychainService.saveKey(budgetData.id, encryptionKey);
+        try {
+          await KeychainService.saveKey(budgetData.id, encryptionKey);
+        } catch (error) {
+          console.warn('[FileStorage] Could not save encryption key to keychain:', error);
+        }
         
         // Add to recent files on successful load
         this.addRecentFileForPlan(targetPath, budgetData.id);

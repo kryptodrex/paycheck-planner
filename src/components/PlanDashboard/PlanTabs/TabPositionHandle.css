@@ -1,0 +1,98 @@
+/* Tab Position Handle - Draggable area to reposition tabs */
+.tab-position-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  cursor: grab;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  user-select: none;
+  /* border-right: 1px solid var(--border-color); */
+  background: var(--bg-secondary);
+}
+
+.tab-position-handle:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+}
+
+.tab-position-handle:active {
+  cursor: grabbing;
+}
+
+.tab-position-grip {
+  font-size: 1.2rem;
+  line-height: 1;
+  letter-spacing: -0.1rem;
+  font-weight: bold;
+}
+
+/* Position Indicators - Visual feedback during drag */
+.tab-position-indicator {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  background: rgba(102, 126, 234, 0.15);
+  border: 3px dashed #667eea;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-position-indicator-top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+}
+
+.tab-position-indicator-bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+}
+
+.tab-position-indicator-left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 200px;
+}
+
+.tab-position-indicator-right {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 200px;
+}
+
+.tab-position-indicator-label {
+  background: #667eea;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  animation: tab-position-label-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes tab-position-label-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tab-position-indicator-left,
+  .tab-position-indicator-right {
+    width: 120px;
+  }
+}

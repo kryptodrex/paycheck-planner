@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Benefit, RetirementElection } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { roundUpToCent } from '../../utils/money';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard, Alert, ViewModeSelector, PageHeader } from '../shared';
+import { GlossaryTerm } from '../Glossary';
 import './BenefitsManager.css';
 
 interface BenefitsManagerProps {
@@ -26,6 +26,7 @@ type RetirementFieldErrors = {
     sourceAccountId?: string;
     employerMatchCap?: string;
     yearlyLimit?: string;
+    customLabel?: string;
 };
 
 const BenefitsManager: React.FC<BenefitsManagerProps> = ({ 
@@ -50,15 +51,16 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     const [benefitSourceAccountId, setBenefitSourceAccountId] = useState('');
 
     // Retirement form state
-    const [retirementType, setRetirementType] = useState<'401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'other'>('401k');
+    const [retirementType, setRetirementType] = useState<'401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'pension' | 'other'>('401k');
+    const [retirementCustomLabel, setRetirementCustomLabel] = useState('');
     const [employeeAmount, setEmployeeAmount] = useState('');
-    const [employeeIsPercentage, setEmployeeIsPercentage] = useState(false);
+    const [employeeIsPercentage, setEmployeeIsPercentage] = useState(true);
     const [retirementSource, setRetirementSource] = useState<'paycheck' | 'account'>('paycheck');
     const [retirementSourceAccountId, setRetirementSourceAccountId] = useState('');
     const [retirementIsPreTax, setRetirementIsPreTax] = useState(true);
     const [employerMatchOption, setEmployerMatchOption] = useState<'no-match' | 'has-match'>('no-match');
     const [employerMatchCap, setEmployerMatchCap] = useState('');
-    const [employerMatchCapIsPercentage, setEmployerMatchCapIsPercentage] = useState(false);
+    const [employerMatchCapIsPercentage, setEmployerMatchCapIsPercentage] = useState(true);
     const [yearlyLimit, setYearlyLimit] = useState('');
     const [benefitFieldErrors, setBenefitFieldErrors] = useState<BenefitFieldErrors>({});
     const [retirementFieldErrors, setRetirementFieldErrors] = useState<RetirementFieldErrors>({});
@@ -223,11 +225,14 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
         0
     );
 
-    const sortedRetirement = [...budgetData.retirement].sort((a, b) => {
+    const sortedRetirement = [...(budgetData.retirement || [])].sort((a, b) => {
         const aTotal = calculateRetirementContributions(a).employeeAmount + calculateRetirementContributions(a).employerAmount;
         const bTotal = calculateRetirementContributions(b).employeeAmount + calculateRetirementContributions(b).employerAmount;
         return bTotal - aTotal;
     });
+
+    // Debug: Log retirement data
+    console.log('[BenefitsManager] Rendering with retirement count:', budgetData.retirement?.length || 0);
 
     const retirementTotalPerPaycheck = sortedRetirement.reduce((sum, election) => {
         const { employeeAmount, employerAmount } = calculateRetirementContributions(election);
@@ -329,14 +334,15 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     const handleAddRetirement = () => {
         setEditingRetirement(null);
         setRetirementType('401k');
+        setRetirementCustomLabel('');
         setEmployeeAmount('');
-        setEmployeeIsPercentage(false);
+        setEmployeeIsPercentage(true);
         setRetirementSource('paycheck');
         setRetirementSourceAccountId('');
         setRetirementIsPreTax(true);
         setEmployerMatchOption('no-match');
         setEmployerMatchCap('');
-        setEmployerMatchCapIsPercentage(false);
+        setEmployerMatchCapIsPercentage(true);
         setYearlyLimit('');
         setRetirementFieldErrors({});
         setRetirementFormMessage(null);
@@ -346,6 +352,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     const handleEditRetirement = (election: RetirementElection) => {
         setEditingRetirement(election);
         setRetirementType(election.type);
+        setRetirementCustomLabel(election.customLabel || '');
         setEmployeeAmount(election.employeeContribution.toString());
         setEmployeeIsPercentage(election.employeeContributionIsPercentage);
         setRetirementSource(election.deductionSource || 'paycheck');
@@ -370,6 +377,10 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
 
         if (!Number.isFinite(parsedEmployeeContribution) || parsedEmployeeContribution < 0) {
             errors.employeeAmount = 'Please enter a valid employee contribution amount.';
+        }
+
+        if (retirementType === 'other' && !retirementCustomLabel.trim()) {
+            errors.customLabel = 'Please enter a custom plan name for "Other" retirement type.';
         }
 
         if (isAccountSource && !retirementSourceAccountId) {
@@ -412,6 +423,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
 
         const retirementData = {
             type: retirementType,
+            customLabel: retirementType === 'other' ? retirementCustomLabel.trim() : undefined,
             employeeContribution: parsedEmployeeContribution,
             employeeContributionIsPercentage: employeeIsPercentage,
             isPreTax: isAccountSource ? false : retirementIsPreTax,
@@ -453,7 +465,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
             <div className="benefits-section">
                 <div className="section-header">
                     <div>
-                        <h2>Benefits Elections</h2>
+                        <h2><GlossaryTerm termId="benefit">Benefits</GlossaryTerm> Elections</h2>
                         <p>Health insurance, FSA, HSA, and other benefit deductions</p>
                     </div>
                     <div className="section-total">
@@ -523,7 +535,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
             <div id="retirement-section" className="benefits-section">
                 <div className="section-header">
                     <div>
-                        <h2>Retirement Elections</h2>
+                        <h2><GlossaryTerm termId="retirement-contribution">Retirement</GlossaryTerm> Elections</h2>
                         <p>401k, 403b, IRA, and other retirement plan contributions</p>
                     </div>
                     <div className="section-total">
@@ -539,7 +551,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     </div>
                 </div>
 
-                {budgetData.retirement.length === 0 ? (
+                {!budgetData.retirement || budgetData.retirement.length === 0 ? (
                     <div className="empty-state">
                         <div className="empty-icon">🏦</div>
                         <h3>No Retirement Plans Yet</h3>
@@ -551,14 +563,17 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                             const { employeeAmount, employerAmount } = calculateRetirementContributions(retirement);
                             const totalPerPaycheck = employeeAmount + employerAmount;
                             const totalInDisplayMode = toDisplayAmount(totalPerPaycheck);
+                            const displayLabel = retirement.type === 'other' && retirement.customLabel 
+                                ? retirement.customLabel 
+                                : retirement.type.toUpperCase();
 
                             return (
                                 <SectionItemCard key={retirement.id} className="retirement-item">
                                     <div className="retirement-info">
-                                        <h4>{retirement.type.toUpperCase()}</h4>
+                                        <h4>{displayLabel}</h4>
                                         <div className="retirement-details">
                                             <div className="detail">
-                                                <span className="label">Employee Contribution:</span>
+                                                <span className="label"><GlossaryTerm termId="retirement-contribution">Employee Contribution</GlossaryTerm>:</span>
                                                 <span className="value">
                                                     {formatWithSymbol(employeeAmount || 0, currency, { minimumFractionDigits: 2 })} per paycheck
                                                     {retirement.employeeContributionIsPercentage && ` (${retirement.employeeContribution}%)`}
@@ -566,7 +581,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                             </div>
                                             {retirement.hasEmployerMatch && (
                                                 <div className="detail">
-                                                    <span className="label">Employer Match:</span>
+                                                    <span className="label"><GlossaryTerm termId="employer-match">Employer Match</GlossaryTerm>:</span>
                                                     <span className="value">
                                                         {formatWithSymbol(employerAmount || 0, currency, { minimumFractionDigits: 2 })} per paycheck
                                                         (up to {retirement.employerMatchCapIsPercentage ? `${retirement.employerMatchCap || 0}%` : formatWithSymbol(retirement.employerMatchCap || 0, currency, { minimumFractionDigits: 2 })})
@@ -583,7 +598,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                             )}
                                             {retirement.yearlyLimit && (
                                                 <div className="detail">
-                                                    <span className="label">Yearly Limit:</span>
+                                                    <span className="label"><GlossaryTerm termId="annual-contribution-limit">Yearly Limit</GlossaryTerm>:</span>
                                                     <span className="value">
                                                         {formatWithSymbol(retirement.yearlyLimit, currency, { minimumFractionDigits: 2 })} max per year
                                                     </span>
@@ -665,8 +680,8 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     </select>
                 </FormGroup>
 
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                    <div style={{ flex: 1 }}>
+                <div id="benefit-amount-container" style={{ display: 'flex', gap: '1rem' }}>
+                    <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                         <FormGroup label="Amount" required error={benefitFieldErrors.amount}>
                             <InputWithPrefix
                                 prefix={!benefitIsPercentage ? getCurrencySymbol(currency) : ''}
@@ -687,7 +702,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                             />
                         </FormGroup>
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: '0 0 240px' }}>
                         <FormGroup label="Type">
                             <select value={benefitIsPercentage ? 'percentage' : 'amount'} onChange={e => setBenefitIsPercentage(e.target.value === 'percentage')}>
                                 <option value="amount">Fixed Amount</option>
@@ -741,18 +756,37 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     </>
                 }
             >
-                <FormGroup label="Plan Type" required>
+                <FormGroup label={<><GlossaryTerm termId="retirement-contribution">Plan Type</GlossaryTerm></>} required>
                     <select value={retirementType} onChange={e => setRetirementType(e.target.value as any)} required>
                         <option value="401k">401(k)</option>
                         <option value="403b">403(b)</option>
                         <option value="roth-ira">Roth IRA</option>
                         <option value="traditional-ira">Traditional IRA</option>
+                        <option value="pension">Pension</option>
                         <option value="other">Other</option>
                     </select>
                 </FormGroup>
 
+                {retirementType === 'other' && (
+                    <FormGroup label="Custom Plan Name" required error={retirementFieldErrors.customLabel}>
+                        <input
+                            type="text"
+                            value={retirementCustomLabel}
+                            className={retirementFieldErrors.customLabel ? 'field-error' : ''}
+                            onChange={e => {
+                                setRetirementCustomLabel(e.target.value);
+                                if (retirementFieldErrors.customLabel) {
+                                    setRetirementFieldErrors((prev) => ({ ...prev, customLabel: undefined }));
+                                }
+                            }}
+                            placeholder="e.g., 457(b), Solo 401(k), SIMPLE IRA"
+                            required
+                        />
+                    </FormGroup>
+                )}
+
                 <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-                    <h4 style={{ marginTop: 0 }}>Employee Contribution</h4>
+                    <h4 style={{ marginTop: 0 }}><GlossaryTerm termId="retirement-contribution">Employee Contribution</GlossaryTerm></h4>
 
                     <FormGroup label="Deduction Source" error={retirementFieldErrors.sourceAccountId}>
                         <select
@@ -780,8 +814,8 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         </select>
                     </FormGroup>
 
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                        <div style={{ flex: 1 }}>
+                    <div id="retirement-amount-container" style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                        <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                             <FormGroup label="Amount" required error={retirementFieldErrors.employeeAmount}>
                                 <InputWithPrefix
                                     prefix={!employeeIsPercentage ? getCurrencySymbol(currency) : ''}
@@ -802,7 +836,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                 />
                             </FormGroup>
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: '0 0 240px' }}>
                             <FormGroup label="Type">
                                 <select value={employeeIsPercentage ? 'percentage' : 'amount'} onChange={e => setEmployeeIsPercentage(e.target.value === 'percentage')}>
                                     <option value="amount">Fixed Amount</option>
@@ -814,7 +848,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
 
                     {retirementSource === 'paycheck' && (
                         <div style={{ marginTop: '1rem' }}>
-                            <FormGroup label="Tax Treatment">
+                            <FormGroup label={<><GlossaryTerm termId="pre-tax-deduction">Tax Treatment</GlossaryTerm></>}>
                                 <RadioGroup
                                     name="taxTreatment"
                                     value={retirementIsPreTax ? 'pre-tax' : 'post-tax'}
@@ -842,8 +876,8 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     )}
 
                     <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
-                        <h4 style={{ marginTop: 0, marginBottom: '1rem' }}>Yearly Limit (Optional)</h4>
-                        <FormGroup label="Maximum Yearly Contribution" error={retirementFieldErrors.yearlyLimit}>
+                        <h4 style={{ marginTop: 0, marginBottom: '1rem' }}><GlossaryTerm termId="annual-contribution-limit">Yearly Limit</GlossaryTerm> (Optional)</h4>
+                        <FormGroup label={<><GlossaryTerm termId="annual-contribution-limit">Maximum Yearly Contribution</GlossaryTerm></>} error={retirementFieldErrors.yearlyLimit}>
                             <InputWithPrefix
                                 prefix={getCurrencySymbol(currency)}
                                 type="number"
@@ -883,9 +917,9 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                 </div>
 
                 <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem' }}>
-                    <h4 style={{ marginTop: 0, marginBottom: '1rem' }}>Employer Match (Optional)</h4>
+                    <h4 style={{ marginTop: 0, marginBottom: '1rem' }}><GlossaryTerm termId="employer-match">Employer Match</GlossaryTerm> (Optional)</h4>
 
-                    <FormGroup label="Employer Match Availability">
+                    <FormGroup label={<><GlossaryTerm termId="employer-match">Employer Match Availability</GlossaryTerm></>}>
                         <RadioGroup
                             name="employerMatch"
                             value={employerMatchOption}
@@ -902,7 +936,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         <>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                                 <div style={{ flex: 1 }}>
-                                    <FormGroup label="Match Cap" required error={retirementFieldErrors.employerMatchCap}>
+                                    <FormGroup label={<><GlossaryTerm termId="employer-match">Match Cap</GlossaryTerm></>} required error={retirementFieldErrors.employerMatchCap}>
                                         <InputWithPrefix
                                             prefix={!employerMatchCapIsPercentage ? getCurrencySymbol(currency) : ''}
                                             suffix={employerMatchCapIsPercentage ? '%' : ''}
@@ -923,7 +957,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                     </FormGroup>
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <FormGroup label="Cap Type">
+                                    <FormGroup label={<><GlossaryTerm termId="employer-match">Cap Type</GlossaryTerm></>}>
                                         <select value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={e => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
                                             <option value="percentage">% of Gross Pay</option>
                                             <option value="amount">Fixed Amount</option>

@@ -1,11 +1,13 @@
 // Main App component - decides whether to show setup, welcome screen, or dashboard
 import { useState, useEffect } from 'react'
 import { useBudget } from './contexts/BudgetContext'
+import { useGlobalKeyboardShortcuts } from './hooks'
 import EncryptionSetup from './components/EncryptionSetup'
 import WelcomeScreen from './components/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
 import Settings from './components/Settings'
 import About from './components/About'
+import Glossary from './components/Glossary'
 import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
@@ -27,6 +29,10 @@ function App() {
   const [showSettings, setShowSettings] = useState(false)
   // Track if about modal is open
   const [showAbout, setShowAbout] = useState(false)
+  // Track if glossary modal is open
+  const [showGlossary, setShowGlossary] = useState(false)
+  // Track requested glossary term when opened from inline tooltips
+  const [initialGlossaryTermId, setInitialGlossaryTermId] = useState<string | null>(null)
 
   // Check view mode and session restore flag on mount
   useEffect(() => {
@@ -36,21 +42,15 @@ function App() {
     }
   }, [])
 
-  // Handle keyboard shortcuts for settings (Cmd+, or Ctrl+,)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toLowerCase().includes('mac')
-      const ctrlKey = isMac ? e.metaKey : e.ctrlKey
-      
-      if (ctrlKey && e.key === ',') {
-        e.preventDefault()
-        setShowSettings(true)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  // Register global keyboard shortcuts
+  useGlobalKeyboardShortcuts([
+    {
+      key: ',',
+      mac: true,        // Cmd+, on Mac
+      windows: true,    // Ctrl+, on Windows/Linux
+      callback: () => setShowSettings(true),
+    },
+  ])
 
   // Listen for settings menu event from Electron menu
   useEffect(() => {
@@ -72,6 +72,32 @@ function App() {
     })
 
     return unsubscribe
+  }, [])
+
+  // Listen for glossary menu event from Electron Help menu
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent('open-glossary', () => {
+      setInitialGlossaryTermId(null)
+      setShowGlossary(true)
+    })
+
+    return unsubscribe
+  }, [])
+
+  // Open glossary from in-app term tooltips
+  useEffect(() => {
+    type OpenGlossaryEvent = CustomEvent<{ termId?: string }>;
+
+    const handleOpenGlossary = (event: Event) => {
+      const detail = (event as OpenGlossaryEvent).detail;
+      setInitialGlossaryTermId(detail?.termId || null)
+      setShowGlossary(true)
+    }
+
+    window.addEventListener('app:open-glossary', handleOpenGlossary as EventListener)
+    return () => window.removeEventListener('app:open-glossary', handleOpenGlossary as EventListener)
   }, [])
 
   // Expose a save hook for Electron close confirmation flow
@@ -173,6 +199,14 @@ function App() {
         </>
       )}
       <About isOpen={showAbout} onClose={() => setShowAbout(false)} />
+      <Glossary
+        isOpen={showGlossary}
+        initialTermId={initialGlossaryTermId}
+        onClose={() => {
+          setShowGlossary(false)
+          setInitialGlossaryTermId(null)
+        }}
+      />
     </>
   )
 }

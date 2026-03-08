@@ -5,6 +5,7 @@ import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader, RadioGroup, ProgressBar } from '../shared';
+import { GlossaryTerm } from '../Glossary';
 import './LoansManager.css';
 
 interface LoansManagerProps {
@@ -367,7 +368,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
     <div className="loans-manager">
       <PageHeader
         title="Loans & Debts"
-        subtitle="Track your loans, mortgages, and other debts"
+        subtitle="Track your loans, mortgages, and other debts with payment and amortization details"
         actions={
           <>
             <ViewModeSelector
@@ -464,18 +465,18 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                                 }
                               />
                               <div className="loan-payment-split">
-                                <span className="payment-split-title">Payment Split (Monthly)</span>
+                                <span className="payment-split-title"><GlossaryTerm termId="loan-payment-split">Payment Split</GlossaryTerm> (Monthly)</span>
                                 <div className="payment-split-row">
-                                  <span>Principal</span>
+                                  <span><GlossaryTerm termId="loan-principal">Principal</GlossaryTerm></span>
                                   <span>{formatWithSymbol(paymentSplit.principal, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className="payment-split-row">
-                                  <span>Interest</span>
+                                  <span><GlossaryTerm termId="interest-rate-apr">Interest</GlossaryTerm></span>
                                   <span>{formatWithSymbol(paymentSplit.interest, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 {paymentSplit.insurance > 0 && (
                                   <div className="payment-split-row">
-                                    <span>Insurance (PMI/GAP)</span>
+                                    <span><GlossaryTerm termId="mortgage-insurance">Insurance (PMI/GAP)</GlossaryTerm></span>
                                     <span>{formatWithSymbol(paymentSplit.insurance, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                   </div>
                                 )}
@@ -486,7 +487,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                               </div>
                               <div className="loan-stats">
                                 <div className="loan-stat">
-                                  <span className="stat-label">Interest Rate</span>
+                                  <span className="stat-label"><GlossaryTerm termId="interest-rate-apr">Interest Rate</GlossaryTerm></span>
                                   <span className="stat-value">{loan.interestRate}%</span>
                                 </div>
                                 {remainingYears && (
@@ -603,7 +604,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           </select>
         </FormGroup>
 
-        <FormGroup label="Original Principal Amount" required error={loanFieldErrors.principal}>
+        <FormGroup label={<><GlossaryTerm termId="loan-principal">Original Principal Amount</GlossaryTerm></>} required error={loanFieldErrors.principal}>
           <InputWithPrefix
             prefix={getCurrencySymbol(currency)}
             type="number"
@@ -621,7 +622,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           />
         </FormGroup>
 
-        <FormGroup label="Current Balance" required error={loanFieldErrors.currentBalance}>
+        <FormGroup label={<><GlossaryTerm termId="loan-balance">Current Balance</GlossaryTerm></>} required error={loanFieldErrors.currentBalance}>
           <InputWithPrefix
             prefix={getCurrencySymbol(currency)}
             type="number"
@@ -639,7 +640,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           />
         </FormGroup>
 
-        <FormGroup label="Annual Interest Rate (%)" required error={loanFieldErrors.interestRate}>
+        <FormGroup label={<><GlossaryTerm termId="interest-rate-apr">Annual Interest Rate (%)</GlossaryTerm></>} required error={loanFieldErrors.interestRate}>
           <input
             type="number"
             value={loanInterestRate}
@@ -656,7 +657,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           />
         </FormGroup>
 
-        <FormGroup label="Monthly Payment" required error={loanFieldErrors.monthlyPayment}>
+        <FormGroup label={<><GlossaryTerm termId="loan-payment-split">Monthly Payment</GlossaryTerm></>} required error={loanFieldErrors.monthlyPayment}>
           <InputWithPrefix
             prefix={getCurrencySymbol(currency)}
             type="number"
@@ -676,7 +677,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
 
         {isInsuranceEligibleLoanType(loanType) && (
           <>
-            <FormGroup label="Mortgage Insurance (PMI/GAP/etc.)" helperText="Add optional insurance to this loan">
+            <FormGroup label={<><GlossaryTerm termId="mortgage-insurance">Mortgage Insurance (PMI/GAP/etc.)</GlossaryTerm></>} helperText="Add optional insurance to this loan">
               <RadioGroup
                 name="insurance-enabled"
                 value={loanInsuranceEnabled ? 'enabled' : 'disabled'}
@@ -818,7 +819,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
         </FormGroup>
 
         <FormGroup
-          label="Loan Term"
+          label={<><GlossaryTerm termId="loan-term">Loan Term</GlossaryTerm></>}
           helperText="Optional: Enter duration in months or years"
           error={loanFieldErrors.termMonths}
         >
@@ -874,10 +875,10 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           return (
             <div className="loan-schedule-content">
               <p className="loan-schedule-description">
-                This payment schedule shows how each monthly payment reduces your loan balance over time. 
-                Early payments go mostly toward interest, while later payments pay down more principal. 
+                This <GlossaryTerm termId="amortization-schedule">amortization schedule</GlossaryTerm> shows how each monthly payment reduces your loan balance over time. 
+                Early payments go mostly toward <GlossaryTerm termId="interest-rate-apr">interest</GlossaryTerm>, while later payments pay down more <GlossaryTerm termId="loan-principal">principal</GlossaryTerm>. 
                 The <strong>Beginning Balance</strong> is what you owe at the start of each month, and the <strong>Ending Balance</strong> is what remains after your payment. 
-                Insurance (PMI/GAP) is included while active and will drop off automatically when your balance reaches the specified threshold.
+                <GlossaryTerm termId="mortgage-insurance">Insurance (PMI/GAP)</GlossaryTerm> is included while active and will drop off automatically when your balance reaches the specified threshold.
               </p>
               {schedule.length === 0 ? (
                 <div className="loan-schedule-empty">
@@ -890,12 +891,12 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                       <tr>
                         <th>Payment #</th>
                         <th>Payment Date</th>
-                        <th>Beginning Balance</th>
+                        <th><GlossaryTerm termId="loan-balance">Beginning Balance</GlossaryTerm></th>
                         <th>Payment Amount</th>
-                        <th>Principal</th>
-                        <th>Interest</th>
-                        <th>Ending Balance</th>
-                        <th>Insurance Payment</th>
+                        <th><GlossaryTerm termId="loan-principal">Principal</GlossaryTerm></th>
+                        <th><GlossaryTerm termId="interest-rate-apr">Interest</GlossaryTerm></th>
+                        <th><GlossaryTerm termId="loan-balance">Ending Balance</GlossaryTerm></th>
+                        <th><GlossaryTerm termId="mortgage-insurance">Insurance Payment</GlossaryTerm></th>
                       </tr>
                     </thead>
                     <tbody>

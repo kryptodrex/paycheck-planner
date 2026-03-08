@@ -43,13 +43,6 @@
   font-size: 0.95rem;
 }
 
-.encryption-config-panel .encryption-note {
-  text-align: center;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0.75rem 0 0 0;
-}
-
 .encryption-config-panel .encryption-key-radio {
   margin: 1.25rem 0;
   text-align: left;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { RadioGroup } from '../shared';
+import { Alert, RadioGroup } from '../shared';
 import './EncryptionConfigPanel.css';
 
 interface EncryptionConfigPanelProps {
@@ -108,6 +108,11 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                 ]}
             />
 
+            <Alert type="error">
+                <strong>Important:</strong> Save a backup of your encryption key in a secure location.
+                If this key is lost (for example, keychain data is removed), encrypted plan files cannot be recovered.
+            </Alert>
+
             <div className="encryption-key-radio">
                 <h4 style={{marginTop: 0}}>Encryption Key Details</h4>
                 {!useCustomKey && (
@@ -148,10 +153,6 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                     </div>
                 )}
             </div>
-
-            <p className="encryption-note">
-                ❗️ Your encryption key is stored securely in your computer's keychain, but it is recommended to also keep a backup saved in another secure location.
-            </p>
         </div>
     );
 };

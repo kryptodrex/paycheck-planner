@@ -5,6 +5,7 @@ import { roundUpToCent } from '../../utils/money';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { convertBillToYearly } from '../../utils/billFrequency';
 import { PageHeader } from '../shared';
+import { GlossaryTerm } from '../Glossary';
 import './KeyMetrics.css';
 
 const KeyMetrics: React.FC = () => {
@@ -85,7 +86,7 @@ const KeyMetrics: React.FC = () => {
         {/* Taxes Card */}
         <div className="metric-card taxes-card">
           <div className="metric-icon">🏛️</div>
-          <h3>Taxes</h3>
+          <h3><GlossaryTerm termId="withholding">Taxes</GlossaryTerm></h3>
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
@@ -105,7 +106,7 @@ const KeyMetrics: React.FC = () => {
         {/* Net Pay Card */}
         <div className="metric-card net-card">
           <div className="metric-icon">✅</div>
-          <h3>Net Pay (Take Home)</h3>
+          <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
@@ -145,7 +146,7 @@ const KeyMetrics: React.FC = () => {
         {/* Remaining Card */}
         <div className="metric-card remaining-card">
           <div className="metric-icon">💵</div>
-          <h3>Remaining (After Bills)</h3>
+          <h3><GlossaryTerm termId="residual-amount">Remaining</GlossaryTerm> (After Bills)</h3>
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Yearly</span>
@@ -165,7 +166,7 @@ const KeyMetrics: React.FC = () => {
         {/* Savings Rate Card */}
         <div className="metric-card savings-card">
           <div className="metric-icon">🏦</div>
-          <h3>Savings Rate</h3>
+          <h3><GlossaryTerm termId="allocation">Savings Rate</GlossaryTerm></h3>
           <div className="metric-values">
             <div className="metric-primary">
               <span className="label">Rate</span>
@@ -192,7 +193,7 @@ const KeyMetrics: React.FC = () => {
             style={{ width: '100%' }}
             title={`Gross Income: ${formatWithSymbol(annualGross, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Gross: {getCurrencySymbol(currency)}{(annualGross / 1000).toFixed(0)}k</span>
+            <span><GlossaryTerm termId="gross-pay">Gross</GlossaryTerm>: {getCurrencySymbol(currency)}{(annualGross / 1000).toFixed(0)}k</span>
           </div>
           <div className="flow-arrow">→</div>
           <div 
@@ -200,7 +201,7 @@ const KeyMetrics: React.FC = () => {
             style={{ width: `${(annualTaxes / annualGross) * 100}%` }}
             title={`Taxes: ${formatWithSymbol(annualTaxes, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Taxes: {getCurrencySymbol(currency)}{(annualTaxes / 1000).toFixed(0)}k</span>
+            <span><GlossaryTerm termId="withholding">Taxes</GlossaryTerm>: {getCurrencySymbol(currency)}{(annualTaxes / 1000).toFixed(0)}k</span>
           </div>
           <div className="flow-arrow">→</div>
           <div 
@@ -208,7 +209,7 @@ const KeyMetrics: React.FC = () => {
             style={{ width: `${(annualNet / annualGross) * 100}%` }}
             title={`Net Pay: ${formatWithSymbol(annualNet, currency, { maximumFractionDigits: 0 })}`}
           >
-            <span>Net: {getCurrencySymbol(currency)}{(annualNet / 1000).toFixed(0)}k</span>
+            <span><GlossaryTerm termId="net-pay">Net</GlossaryTerm>: {getCurrencySymbol(currency)}{(annualNet / 1000).toFixed(0)}k</span>
           </div>
           <div className="flow-arrow">→</div>
           <div 

@@ -99,7 +99,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
    * useCallback prevents recreating this function on every render (performance optimization)
    * @returns true if save was successful, false if cancelled or failed
    */
-  const saveBudget = useCallback(async (activeTab?: string): Promise<boolean> => {
+  const saveBudget = useCallback(async (activeTab?: string, budgetOverride?: Partial<BudgetData>): Promise<boolean> => {
     if (!budgetData) return false;
 
     setLoading(true);
@@ -116,9 +116,28 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         // Continue without window size if this fails
       }
 
+      const baseBudget = budgetOverride
+        ? {
+            ...budgetData,
+            ...budgetOverride,
+            // Explicitly preserve arrays that shouldn't be overridden
+            benefits: budgetOverride.benefits ?? budgetData.benefits,
+            retirement: budgetOverride.retirement ?? budgetData.retirement,
+            bills: budgetOverride.bills ?? budgetData.bills,
+            accounts: budgetOverride.accounts ?? budgetData.accounts,
+            settings: {
+              ...budgetData.settings,
+              ...(budgetOverride.settings || {}),
+            },
+          }
+        : budgetData;
+
+      // Debug: Log retirement array length during save
+      console.log('[SAVE] Retirement count:', baseBudget.retirement?.length || 0);
+
       // Update the "last modified" timestamp
       const updatedBudget = {
-        ...budgetData, // Spread operator: copy all existing properties
+        ...baseBudget, // Spread operator: copy all existing properties
         updatedAt: saveTimestamp,
       };
 
@@ -128,7 +147,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       // Save to file and get back the file path
       const filePath = await FileStorageService.saveBudget(
         updatedBudget,
-        budgetData.settings.filePath
+        updatedBudget.settings.filePath
       );
 
       // If user canceled the dialog, filePath will be null
@@ -148,6 +167,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         },
       };
       setBudgetData(savedBudget);
+      console.log('[SAVE] Setting saved budget with retirement count:', savedBudget.retirement?.length || 0);
       
       // Mark as saved
       lastSavedDataRef.current = JSON.stringify(savedBudget);

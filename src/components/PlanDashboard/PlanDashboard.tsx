@@ -1,4 +1,11 @@
+type StatusToastType = 'success' | 'warning' | 'error';
+
+interface StatusToastState {
+  message: string;
+  type: StatusToastType;
+}
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { useBudget } from '../../contexts/BudgetContext';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
@@ -16,6 +23,7 @@ import ExportModal from '../ExportModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, FormGroup } from '../shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs } from '../../utils/tabManagement';
+import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/auth';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
@@ -29,7 +37,7 @@ interface PlanDashboardProps {
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
-  const validTabs: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'benefits', 'retirement'];
+  const validTabs: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'benefits'];
   const getInitialTab = () => {
     if (viewMode && validTabs.includes(viewMode as TabId)) {
       return viewMode as TabId;
@@ -62,15 +70,22 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [generatedKey, setGeneratedKey] = useState('');
   const [useCustomKey, setUseCustomKey] = useState(false);
   const [encryptionSaving, setEncryptionSaving] = useState(false);
-  const [statusToast, setStatusToast] = useState<string | null>(null);
+  const [statusToast, setStatusToast] = useState<StatusToastState | null>(null);
   const [showTabManagementModal, setShowTabManagementModal] = useState(false);
   const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
   const [temporarilyVisibleTab, setTemporarilyVisibleTab] = useState<TabId | null>(null);
   const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
+  const [tabPosition, setTabPosition] = useState<TabPosition>('left');
+  const [tabDisplayMode, setTabDisplayMode] = useState<TabDisplayMode>('icons-with-labels');
   const tabContentRef = useRef<HTMLDivElement | null>(null);
   const tabPanelRefs = useRef<Partial<Record<TabId, HTMLDivElement | null>>>({});
   const planLoadingStartRef = useRef<number | null>(null);
   const planLoadingTimeoutRef = useRef<number | null>(null);
+  const dragCurrentIndexRef = useRef<number | null>(null);
+  const dragStartIndexRef = useRef<number | null>(null);
+  const movedDuringDragRef = useRef(false);
+  const latestTabConfigsRef = useRef<TabConfig[]>([]);
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
@@ -95,6 +110,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   }, [visibleTabs, tabConfigs, temporarilyVisibleTab]);
 
   useEffect(() => {
+    latestTabConfigsRef.current = tabConfigs;
+  }, [tabConfigs]);
+
+  useEffect(() => {
     if (!temporarilyVisibleTab) return;
     if (activeTab !== temporarilyVisibleTab) {
       setTemporarilyVisibleTab(null);
@@ -116,7 +135,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   }, [budgetData?.id, viewMode]);
 
-  // Keep window.__currentActiveTab in sync for save on close
+  // Keep window.__currentActive Tab in sync for save on close
   useEffect(() => {
     (window as any).__currentActiveTab = activeTab;
     return () => {
@@ -124,13 +143,58 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     };
   }, [activeTab]);
 
+  // Initialize tab position and display mode from budget settings
+  useEffect(() => {
+    if (budgetData?.settings?.tabPosition) {
+      setTabPosition(budgetData.settings.tabPosition);
+    }
+    if (budgetData?.settings?.tabDisplayMode) {
+      setTabDisplayMode(budgetData.settings.tabDisplayMode);
+    }
+  }, [budgetData?.id]);
+
+  // Handle tab position changes
+  const handleTabPositionChange = useCallback((newPosition: TabPosition) => {
+    if (newPosition === tabPosition || !budgetData) return;
+    
+    setTabPosition(newPosition);
+    
+    // Update settings immediately, preserving all existing properties
+    updateBudgetSettings({
+      ...budgetData.settings,
+      tabPosition: newPosition,
+    });
+  }, [tabPosition, budgetData, updateBudgetSettings]);
+
+  // Handle tab display mode changes
+  const handleTabDisplayModeChange = useCallback((newMode: TabDisplayMode) => {
+    if (newMode === tabDisplayMode || !budgetData) return;
+    
+    setTabDisplayMode(newMode);
+    
+    // Update settings immediately, preserving all existing properties
+    updateBudgetSettings({
+      ...budgetData.settings,
+      tabDisplayMode: newMode,
+    });
+  }, [tabDisplayMode, budgetData, updateBudgetSettings]);
+
   // Handle save with success toast
   const handleSave = useCallback(async () => {
-    const success = await saveBudget(activeTab);
+    if (!budgetData) return;
+
+    const success = await saveBudget(activeTab, {
+      settings: {
+        ...budgetData.settings,
+        tabConfigs: latestTabConfigsRef.current,
+        tabPosition,
+        tabDisplayMode,
+      },
+    });
     if (success) {
-      setStatusToast('✅ Plan saved successfully');
+      setStatusToast({ message: 'Saved successfully', type: 'success' });
     }
-  }, [saveBudget, activeTab]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode]);
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -165,6 +229,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       setShowAccountsModal(true);
     });
 
+    const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent('set-tab-position', (position: TabPosition) => {
+      handleTabPositionChange(position);
+    });
+
+    const unsubscribeToggleDisplayMode = window.electronAPI.onMenuEvent('toggle-tab-display-mode', () => {
+      const newMode: TabDisplayMode = tabDisplayMode === 'icons-only' ? 'icons-with-labels' : 'icons-only';
+      handleTabDisplayModeChange(newMode);
+    });
+
     return () => {
       unsubscribeNew();
       unsubscribeOpen();
@@ -173,8 +246,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeSettings();
       unsubscribePayOptions();
       unsubscribeAccounts();
+      unsubscribeSetTabPosition();
+      unsubscribeToggleDisplayMode();
     };
-  }, [createNewBudget, loadBudget, onResetSetup, handleSave]);
+  }, [createNewBudget, loadBudget, onResetSetup, handleSave, handleTabPositionChange, handleTabDisplayModeChange, tabDisplayMode]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -184,21 +259,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       console.error('Failed to save session state:', error);
     });
   }, [activeTab, budgetData?.settings?.filePath]);
-
-  // Handle Esc key to close Copy Plan modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showCopyModal) {
-        setShowCopyModal(false);
-        setNewYear('');
-      }
-    };
-
-    if (showCopyModal) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [showCopyModal]);
 
   // Auto-dismiss status toast
   useEffect(() => {
@@ -279,6 +339,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const handleReorderTab = useCallback((fromIndex: number, toIndex: number) => {
     if (!budgetData) return;
     const updatedConfigs = reorderTabs(tabConfigs, fromIndex, toIndex);
+    latestTabConfigsRef.current = updatedConfigs;
     updateBudgetSettings({
       ...budgetData.settings,
       tabConfigs: updatedConfigs,
@@ -291,30 +352,58 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   const handleDragStart = useCallback((index: number) => {
     setDraggedTabIndex(index);
+    setDropTargetIndex(index);
+    dragCurrentIndexRef.current = index;
+    dragStartIndexRef.current = index;
+    movedDuringDragRef.current = false;
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, _index: number) => {
+  const handleDragOver = useCallback((e: React.DragEvent, hoverIndex: number) => {
     e.preventDefault();
-  }, []);
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetIndex(hoverIndex);
 
-  const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
+    if (!budgetData) return;
+
+    const currentIndex = dragCurrentIndexRef.current;
+    if (currentIndex === null || currentIndex === hoverIndex) return;
+
+    const updatedConfigs = reorderTabs(latestTabConfigsRef.current, currentIndex, hoverIndex);
+    latestTabConfigsRef.current = updatedConfigs;
+    updateBudgetSettings({
+      ...budgetData.settings,
+      tabConfigs: updatedConfigs,
+    });
+
+    dragCurrentIndexRef.current = hoverIndex;
+    setDraggedTabIndex(hoverIndex);
+    movedDuringDragRef.current = true;
+  }, [budgetData, tabConfigs, updateBudgetSettings]);
+
+  const handleDrop = useCallback((e: React.DragEvent, _dropIndex: number) => {
     e.preventDefault();
-    if (draggedTabIndex === null || !budgetData) return;
 
-    if (draggedTabIndex !== dropIndex) {
-      const updatedConfigs = reorderTabs(tabConfigs, draggedTabIndex, dropIndex);
-      updateBudgetSettings({
-        ...budgetData.settings,
-        tabConfigs: updatedConfigs,
-      });
-      setStatusToast('📋 Tab order updated');
+    if (movedDuringDragRef.current) {
+      setStatusToast({ message: '📋 Tab order updated', type: 'success' });
     }
-    
-    setDraggedTabIndex(null);
-  }, [draggedTabIndex, budgetData, tabConfigs, updateBudgetSettings]);
+
+    flushSync(() => {
+      setDraggedTabIndex(null);
+      setDropTargetIndex(null);
+    });
+    dragCurrentIndexRef.current = null;
+    dragStartIndexRef.current = null;
+    movedDuringDragRef.current = false;
+  }, []);
 
   const handleDragEnd = useCallback(() => {
-    setDraggedTabIndex(null);
+    flushSync(() => {
+      setDraggedTabIndex(null);
+      setDropTargetIndex(null);
+    });
+    dragCurrentIndexRef.current = null;
+    dragStartIndexRef.current = null;
+    movedDuringDragRef.current = false;
   }, []);
 
   const openTabFromLink = useCallback((tab: TabId, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean }) => {
@@ -418,13 +507,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
     // Validate name
     if (!nextName) {
-      setStatusToast('⚠️ Plan name cannot be empty');
+      setStatusToast({ message: '⚠️ Plan name cannot be empty', type: 'warning' });
       return;
     }
 
     // Validate year
     if (isNaN(nextYear) || nextYear < 2000 || nextYear > 2100) {
-      setStatusToast('⚠️ Please enter a valid year (2000-2100)');
+      setStatusToast({ message: '⚠️ Please enter a valid year (2000-2100)', type: 'warning' });
       return;
     }
 
@@ -439,7 +528,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
     // Update both fields
     updateBudgetData({ name: nextName, year: nextYear });
-    setStatusToast('✏️ Plan updated');
+    setStatusToast({ message: '✏️ Plan updated', type: 'success' });
     setIsEditingPlanName(false);
   };
 
@@ -481,11 +570,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         encryptionEnabled: Boolean(encryptionEnabled),
       });
       
-      setStatusToast(
-        encryptionEnabled
+      setStatusToast({
+        message: encryptionEnabled
           ? '🔒 Encryption enabled for this plan'
-          : '📄 Encryption disabled for this plan'
-      );
+          : '📄 Encryption disabled for this plan',
+        type: 'success',
+      });
       handleEncryptionModalClose();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -533,18 +623,44 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setActiveTab(tab);
   };
 
+  // Handle keyboard shortcuts for tab switching (Cmd+1, Cmd+2, etc.)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Cmd (Mac) or Ctrl (Windows/Linux) is pressed
+      const modifierKey = e.metaKey || e.ctrlKey;
+      
+      if (!modifierKey || e.shiftKey || e.altKey) return;
+
+      // Check for number keys 1-6
+      const num = parseInt(e.key);
+      if (isNaN(num) || num < 1 || num > 6) return;
+
+      // Get the tab at the index (num - 1)
+      const targetTab = visibleTabs[num - 1];
+      if (!targetTab) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      handleTabClick(targetTab.id as TabId);
+    };
+
+    // Use capture phase so this handler runs even if child components stop propagation
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [visibleTabs, handleTabClick]);
+
   const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
 
   const handleRevealSavedFile = async () => {
     if (!budgetData?.settings?.filePath || !window.electronAPI?.revealInFolder) return;
     const result = await window.electronAPI.revealInFolder(budgetData.settings.filePath);
     if (!result.success) {
-      setStatusToast('⚠️ Unable to open file location');
+      setStatusToast({ message: '⚠️ Unable to open file location', type: 'error' });
     }
   };
 
   return (
-    <div className="plan-dashboard">
+    <div className={`plan-dashboard layout-with-tabs-${tabPosition}`}>
       <header className="dashboard-header">
         <div className="header-left">
           <div className="plan-title-block">
@@ -671,23 +787,53 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         </div>
       </header>
 
-      {/* Only show tabs in full mode, not in view-only mode */}
-      {!viewMode && (
-        <PlanTabs
-          visibleTabs={visibleTabsForRender}
-          activeTab={activeTab}
-          onTabClick={handleTabClick}
-          onManageTabs={() => setShowTabManagementModal(true)}
-          onHideTab={handleHideTab}
-          draggedTabIndex={draggedTabIndex}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onDragEnd={handleDragEnd}
-        />
-      )}
+      {/* Content area wrapper (contains tabs for left/right, content for all) */}
+      <div className="plan-dashboard-content-wrapper">
+        {/* Tabs on left (inside content wrapper) */}
+        {!viewMode && tabPosition === 'left' && (
+          <PlanTabs
+            visibleTabs={visibleTabsForRender}
+            activeTab={activeTab}
+            onTabClick={handleTabClick}
+            onManageTabs={() => setShowTabManagementModal(true)}
+            onHideTab={handleHideTab}
+            draggedTabIndex={draggedTabIndex}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
+            dropTargetIndex={dropTargetIndex}
+            tabPosition={tabPosition}
+            tabDisplayMode={tabDisplayMode}
+            onTabPositionChange={handleTabPositionChange}
+            onTabDisplayModeChange={handleTabDisplayModeChange}
+          />
+        )}
 
-      <div className="tab-content" ref={tabContentRef}>
+        {/* Main content area */}
+        <div className="plan-dashboard-main">
+          {/* Tabs on top (after header) */}
+          {!viewMode && tabPosition === 'top' && (
+            <PlanTabs
+              visibleTabs={visibleTabsForRender}
+              activeTab={activeTab}
+              onTabClick={handleTabClick}
+              onManageTabs={() => setShowTabManagementModal(true)}
+              onHideTab={handleHideTab}
+              draggedTabIndex={draggedTabIndex}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+              dropTargetIndex={dropTargetIndex}
+              tabPosition={tabPosition}
+              tabDisplayMode={tabDisplayMode}
+              onTabPositionChange={handleTabPositionChange}
+              onTabDisplayModeChange={handleTabDisplayModeChange}
+            />
+          )}
+
+          <div className="tab-content" ref={tabContentRef}>
         {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
         <div
           className={`tab-panel ${activeTab === 'metrics' ? 'active' : ''}`}
@@ -766,6 +912,52 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         </div>
       </div>
 
+          {/* Tabs on bottom (after content) */}
+          {!viewMode && tabPosition === 'bottom' && (
+            <PlanTabs
+              visibleTabs={visibleTabsForRender}
+              activeTab={activeTab}
+              onTabClick={handleTabClick}
+              onManageTabs={() => setShowTabManagementModal(true)}
+              onHideTab={handleHideTab}
+              draggedTabIndex={draggedTabIndex}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+              dropTargetIndex={dropTargetIndex}
+              tabPosition={tabPosition}
+              tabDisplayMode={tabDisplayMode}
+              onTabPositionChange={handleTabPositionChange}
+              onTabDisplayModeChange={handleTabDisplayModeChange}
+            />
+          )}
+        </div>
+        {/* End plan-dashboard-main */}
+
+        {/* Tabs on right (inside content wrapper, after main) */}
+        {!viewMode && tabPosition === 'right' && (
+          <PlanTabs
+            visibleTabs={visibleTabsForRender}
+            activeTab={activeTab}
+            onTabClick={handleTabClick}
+            onManageTabs={() => setShowTabManagementModal(true)}
+            onHideTab={handleHideTab}
+            draggedTabIndex={draggedTabIndex}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
+            dropTargetIndex={dropTargetIndex}
+            tabPosition={tabPosition}
+            tabDisplayMode={tabDisplayMode}
+            onTabPositionChange={handleTabPositionChange}
+            onTabDisplayModeChange={handleTabDisplayModeChange}
+          />
+        )}
+      </div>
+      {/* End plan-dashboard-content-wrapper */}
+
       <footer className="dashboard-footer">
         <div className="footer-info">
           <span>Last saved: {budgetData.settings.lastSavedAt ? new Date(budgetData.settings.lastSavedAt).toLocaleString() : 'Never'}</span>
@@ -791,6 +983,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         onClose={() => {
           setShowCopyModal(false);
           setCopyYearError(null);
+          setNewYear('');
         }}
         header="Copy Plan to New Year"
         footer={
@@ -801,6 +994,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               onClick={() => {
                 setShowCopyModal(false);
                 setCopyYearError(null);
+                setNewYear('');
               }}
             >
               Cancel
@@ -901,7 +1095,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
       {statusToast && (
         <Toast 
-          message={statusToast}
+          message={statusToast.message}
+          type={statusToast.type}
           duration={2500}
           onDismiss={() => setStatusToast(null)}
         />
