@@ -746,7 +746,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             tabPanelRefs.current.taxes = element;
           }}
         >
-          <TaxBreakdown />
+          <TaxBreakdown 
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
+          />
         </div>
         <div
           className={`tab-panel ${activeTab === 'benefits' ? 'active' : ''}`}

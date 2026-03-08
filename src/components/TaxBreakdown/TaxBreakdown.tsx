@@ -5,10 +5,14 @@ import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '
 import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../shared';
 import './TaxBreakdown.css';
 
-const TaxBreakdown: React.FC = () => {
+interface TaxBreakdownProps {
+  displayMode: 'paycheck' | 'monthly' | 'yearly';
+  onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
+}
+
+const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeChange }) => {
     const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
     const [showEditModal, setShowEditModal] = useState(false);
-    const [displayMode, setDisplayMode] = useState<'paycheck' | 'monthly' | 'yearly'>('paycheck');
     const [editForm, setEditForm] = useState({
         federalTaxRate: 0,
         stateTaxRate: 0,
@@ -93,7 +97,7 @@ const TaxBreakdown: React.FC = () => {
                 subtitle="View and manage your tax withholding information"
                 actions={
                     <>
-                        <ViewModeSelector mode={displayMode} onChange={setDisplayMode} />
+                        <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
                         <Button variant="secondary" onClick={handleEditStart}>
                             ⚙️ Edit Tax Settings
                         </Button>
