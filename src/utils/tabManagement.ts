@@ -1,11 +1,11 @@
 // Utility functions for managing dashboard tabs
 import type { TabConfig } from '../types/auth';
 
-export type TabId = 'metrics' | 'breakdown' | 'bills' | 'benefits' | 'taxes';
+export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'benefits' | 'taxes' | 'retirement';
 
 /**
  * Get the default tab configuration
- * Benefits and Taxes start hidden by default
+ * Benefits, Taxes, and Loans start hidden by default
  */
 export function getDefaultTabConfigs(): TabConfig[] {
   return [
@@ -34,11 +34,19 @@ export function getDefaultTabConfigs(): TabConfig[] {
       pinned: false,
     },
     {
+      id: 'loans',
+      label: 'Loans',
+      icon: '🏦',
+      visible: false, // Hidden by default
+      order: 3,
+      pinned: false,
+    },
+    {
       id: 'benefits',
       label: 'Benefits',
       icon: '🏥',
       visible: false, // Hidden by default
-      order: 3,
+      order: 4,
       pinned: false,
     },
     {
@@ -46,7 +54,15 @@ export function getDefaultTabConfigs(): TabConfig[] {
       label: 'Taxes',
       icon: '💰',
       visible: false, // Hidden by default
-      order: 4,
+      order: 5,
+      pinned: false,
+    },
+    {
+      id: 'retirement',
+      label: 'Retirement',
+      icon: '🪙',
+      visible: false, // Hidden by default
+      order: 6,
       pinned: false,
     },
   ];

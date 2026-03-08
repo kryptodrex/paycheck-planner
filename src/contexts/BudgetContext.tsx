@@ -13,7 +13,8 @@ import type {
   Bill,
   Benefit,
   RetirementElection,
-  PaycheckBreakdown
+  PaycheckBreakdown,
+  Loan
 } from '../types/auth';
 import { FileStorageService } from '../services/fileStorage';
 import { KeychainService } from '../services/keychainService';
@@ -595,6 +596,57 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, []);
 
   /**
+   * Add a new loan
+   */
+  const addLoan = useCallback((loan: Omit<Loan, 'id'>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        loans: [
+          ...prev.loans,
+          {
+            ...loan,
+            enabled: loan.enabled !== false,
+            id: crypto.randomUUID(),
+          },
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Update an existing loan
+   */
+  const updateLoan = useCallback((id: string, loan: Partial<Loan>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        loans: prev.loans.map((l) =>
+          l.id === id ? { ...l, ...loan } : l
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Delete a loan
+   */
+  const deleteLoan = useCallback((id: string) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        loans: prev.loans.filter((l) => l.id !== id),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
    * Add a new benefit
    */
   const addBenefit = useCallback((benefit: Omit<Benefit, 'id'>) => {
@@ -922,6 +974,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     deleteRetirementElection,
     calculatePaycheckBreakdown,
     calculateRetirementContributions,
+    addLoan,
+    updateLoan,
+    deleteLoan,
   };
 
   // Provide the value to all children components

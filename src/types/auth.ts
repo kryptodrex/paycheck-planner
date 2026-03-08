@@ -62,6 +62,7 @@ export interface BudgetData {
   taxSettings: TaxSettings;      // Tax configuration
   accounts: Account[];           // User's accounts (checking, savings, etc.)
   bills: Bill[];                 // Recurring bills and expenses
+  loans: Loan[];                 // Loans and debts
   settings: BudgetSettings;      // User preferences
   createdAt: string;            // ISO date string when created
   updatedAt: string;            // ISO date string when last modified
@@ -143,6 +144,24 @@ export interface Bill {
   dueDay?: number;               // Day of month/week it's due (if applicable)
   customFrequencyDays?: number;  // For custom frequency: days between occurrences
   category?: string;             // Optional category for organization
+  notes?: string;                // Optional notes
+}
+
+/**
+ * Loan - A debt or loan with payment tracking
+ */
+export interface Loan {
+  id: string;
+  name: string;                  // Loan description (e.g., "Mortgage", "Car Loan")
+  type: 'mortgage' | 'auto' | 'student' | 'personal' | 'credit-card' | 'other';
+  principal: number;             // Original loan amount
+  currentBalance: number;        // Current remaining balance
+  interestRate: number;          // Annual interest rate (percentage)
+  monthlyPayment: number;        // Monthly payment amount
+  accountId: string;             // Which account payments come from
+  startDate: string;             // ISO date string when loan started
+  termMonths?: number;           // Total loan term in months (optional)
+  enabled?: boolean;             // Whether loan is active (undefined defaults to true)
   notes?: string;                // Optional notes
 }
 
@@ -245,6 +264,11 @@ export interface BudgetContextType {
   addBill: (bill: Omit<Bill, 'id'>) => void;
   updateBill: (id: string, bill: Partial<Bill>) => void;
   deleteBill: (id: string) => void;
+  
+  // Loan operations
+  addLoan: (loan: Omit<Loan, 'id'>) => void;
+  updateLoan: (id: string, loan: Partial<Loan>) => void;
+  deleteLoan: (id: string) => void;
   
   // Benefit operations
   addBenefit: (benefit: Omit<Benefit, 'id'>) => void;

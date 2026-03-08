@@ -2,7 +2,7 @@ import React from 'react';
 import type { TabConfig } from '../../../types/auth';
 import './PlanTabs.css';
 
-type TabView = 'metrics' | 'breakdown' | 'bills' | 'benefits' | 'retirement' | 'taxes';
+type TabView = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'benefits' | 'taxes';
 
 interface PlanTabsProps {
   visibleTabs: TabConfig[];

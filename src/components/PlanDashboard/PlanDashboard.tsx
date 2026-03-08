@@ -7,16 +7,19 @@ import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import KeyMetrics from '../KeyMetrics';
 import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
+import LoansManager from '../LoansManager';
 import BenefitsManager from '../BenefitsManager';
 import TaxBreakdown from '../TaxBreakdown';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
+import ExportModal from '../ExportModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, FormGroup } from '../shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs } from '../../utils/tabManagement';
 import './PlanDashboard.css';
 
-type TabView = 'metrics' | 'breakdown' | 'bills' | 'benefits' | 'retirement' | 'taxes';
+import type { TabId } from '../../utils/tabManagement';
+
 type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
 
 interface PlanDashboardProps {
@@ -26,21 +29,21 @@ interface PlanDashboardProps {
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
-  const validTabs: TabView[] = ['metrics', 'breakdown', 'bills', 'taxes', 'benefits', 'retirement'];
+  const validTabs: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'benefits', 'retirement'];
   const getInitialTab = () => {
-    if (viewMode && validTabs.includes(viewMode as TabView)) {
-      return viewMode as TabView;
+    if (viewMode && validTabs.includes(viewMode as TabId)) {
+      return viewMode as TabId;
     }
 
     const savedTab = budgetData?.settings?.activeTab;
-    if (savedTab && validTabs.includes(savedTab as TabView)) {
-      return savedTab as TabView;
+    if (savedTab && validTabs.includes(savedTab as TabId)) {
+      return savedTab as TabId;
     }
 
-    return 'metrics' as TabView;
+    return 'metrics' as TabId;
   };
 
-  const [activeTab, setActiveTab] = useState<TabView>(getInitialTab);
+  const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
@@ -50,6 +53,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [isEditingPlanName, setIsEditingPlanName] = useState(false);
   const [draftPlanName, setDraftPlanName] = useState('');
   const [draftYear, setDraftYear] = useState('');
@@ -61,10 +65,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [statusToast, setStatusToast] = useState<string | null>(null);
   const [showTabManagementModal, setShowTabManagementModal] = useState(false);
   const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
-  const [temporarilyVisibleTab, setTemporarilyVisibleTab] = useState<TabView | null>(null);
+  const [temporarilyVisibleTab, setTemporarilyVisibleTab] = useState<TabId | null>(null);
   const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
   const tabContentRef = useRef<HTMLDivElement | null>(null);
-  const tabPanelRefs = useRef<Partial<Record<TabView, HTMLDivElement | null>>>({});
+  const tabPanelRefs = useRef<Partial<Record<TabId, HTMLDivElement | null>>>({});
   const planLoadingStartRef = useRef<number | null>(null);
   const planLoadingTimeoutRef = useRef<number | null>(null);
 
@@ -99,16 +103,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   // Restore active tab before paint to avoid flashing default tab
   useLayoutEffect(() => {
-    if (viewMode && validTabs.includes(viewMode as TabView)) {
-      if (activeTab !== (viewMode as TabView)) {
-        setActiveTab(viewMode as TabView);
+    if (viewMode && validTabs.includes(viewMode as TabId)) {
+      if (activeTab !== (viewMode as TabId)) {
+        setActiveTab(viewMode as TabId);
       }
       return;
     }
 
     const savedTab = budgetData?.settings?.activeTab;
-    if (savedTab && validTabs.includes(savedTab as TabView) && activeTab !== (savedTab as TabView)) {
-      setActiveTab(savedTab as TabView);
+    if (savedTab && validTabs.includes(savedTab as TabId) && activeTab !== (savedTab as TabId)) {
+      setActiveTab(savedTab as TabId);
     }
   }, [budgetData?.id, viewMode]);
 
@@ -313,7 +317,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setDraggedTabIndex(null);
   }, []);
 
-  const openTabFromLink = useCallback((tab: TabView, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean }) => {
+  const openTabFromLink = useCallback((tab: TabId, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean }) => {
     const targetTabConfig = tabConfigs.find((config) => config.id === tab);
     const isHidden = targetTabConfig ? !targetTabConfig.visible : false;
 
@@ -490,7 +494,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   };
 
-  const scrollTabToTop = (tab: TabView) => {
+  const scrollTabToTop = (tab: TabId) => {
     tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
 
     const panel = tabPanelRefs.current[tab];
@@ -515,7 +519,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
   };
 
-  const handleTabClick = (tab: TabView, options?: { resetBillsAnchor?: boolean }) => {
+  const handleTabClick = (tab: TabId, options?: { resetBillsAnchor?: boolean }) => {
     if (activeTab === tab) {
       scrollTabToTop(tab);
       return;
@@ -647,13 +651,22 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           >
             📋 Copy Plan
           </Button>
+          {/* Disabled until PDF export is fully implemented */}
+          {/* <Button
+            variant="secondary"
+            onClick={() => setShowExportModal(true)}
+            title="Export plan to PDF"
+            className="header-btn-secondary"
+          >
+            📄 Export PDF
+          </Button> */}
           <Button
             variant="primary"
             onClick={handleSave}
             disabled={loading}
             className="header-btn-primary"
           >
-            {loading ? 'Saving...' : '💾 Save'}
+            💾 Save
           </Button>
         </div>
       </header>
@@ -712,6 +725,17 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <BillsManager 
             scrollToAccountId={scrollToAccountId}
+            displayMode={displayMode}
+            onDisplayModeChange={setDisplayMode}
+          />
+        </div>
+        <div
+          className={`tab-panel ${activeTab === 'loans' ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current.loans = element;
+          }}
+        >
+          <LoansManager 
             displayMode={displayMode}
             onDisplayModeChange={setDisplayMode}
           />
@@ -893,6 +917,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         hiddenTabs={hiddenTabs}
         onToggleTabVisibility={handleToggleTabVisibility}
         onReorderTab={handleReorderTab}
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
       />
     </div>
   );

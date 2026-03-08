@@ -27,6 +27,14 @@ export interface ElectronAPI {
   // Takes optional budgetName to use as default filename
   saveFileDialog: (budgetName?: string) => Promise<string | null>;
 
+  // Open a save PDF dialog (for exporting PDFs)
+  // Takes optional budgetName to use as default filename
+  savePdfDialog: (budgetName?: string) => Promise<string | null>;
+
+  // Export PDF data to a file
+  // Returns whether it succeeded and any error message
+  exportPdf: (filePath: string, pdfData: Uint8Array) => Promise<{ success: boolean; error?: string }>;
+
   // Reveal a file in the system file browser (Finder/Explorer)
   revealInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
   

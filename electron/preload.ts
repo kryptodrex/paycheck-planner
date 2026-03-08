@@ -42,6 +42,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Takes: optional budgetName to use as default filename
   saveFileDialog: (budgetName?: string) => ipcRenderer.invoke('save-file-dialog', budgetName),
 
+  // Open PDF save file picker
+  // Takes: optional budgetName to use as default filename
+  savePdfDialog: (budgetName?: string) => ipcRenderer.invoke('save-pdf-dialog', budgetName),
+
+  // Export PDF data to a file
+  // Takes: filePath and PDF data as Uint8Array
+  // Returns: { success: boolean, error?: string }
+  exportPdf: (filePath: string, pdfData: Uint8Array) => ipcRenderer.invoke('export-pdf', filePath, pdfData),
+
   // Reveal a file in the system file browser (Finder/Explorer)
   revealInFolder: (filePath: string) => ipcRenderer.invoke('reveal-in-folder', filePath),
   

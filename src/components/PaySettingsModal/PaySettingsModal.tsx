@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { PaySettings } from '../../types/auth';
-import { getCurrencySymbol } from '../../utils/currency';
+import type { BudgetData, PaySettings } from '../../types/auth';
+import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
 import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup } from '../shared';
 import './PaySettingsModal.css';
 
@@ -18,7 +18,7 @@ type PaySettingsFieldErrors = {
 };
 
 const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) => {
-  const { budgetData, updatePaySettings } = useBudget();
+  const { budgetData, updateBudgetData } = useBudget();
   
   // Form state
   const [editPayType, setEditPayType] = useState<'salary' | 'hourly'>('salary');
@@ -27,14 +27,21 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   const [editHoursPerPayPeriod, setEditHoursPerPayPeriod] = useState('');
   const [editPayFrequency, setEditPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
   const [editMinLeftover, setEditMinLeftover] = useState('0');
+  const [editCurrency, setEditCurrency] = useState('USD');
+  const [originalCurrency, setOriginalCurrency] = useState('USD');
+  const [exchangeRate, setExchangeRate] = useState('');
   const [fieldErrors, setFieldErrors] = useState<PaySettingsFieldErrors>({});
 
   // Pre-fill form when modal opens
   useEffect(() => {
     if (isOpen && budgetData) {
+      const currentCurrency = budgetData.settings.currency || 'USD';
       setEditPayType(budgetData.paySettings.payType);
       setEditPayFrequency(budgetData.paySettings.payFrequency);
       setEditMinLeftover(budgetData.paySettings.minLeftover?.toString() || '0');
+      setEditCurrency(currentCurrency);
+      setOriginalCurrency(currentCurrency);
+      setExchangeRate('');
       setEditAnnualSalary(budgetData.paySettings.annualSalary?.toString() || '');
       setEditHourlyRate(budgetData.paySettings.hourlyRate?.toString() || '');
       setEditHoursPerPayPeriod(budgetData.paySettings.hoursPerPayPeriod?.toString() || '');
@@ -57,6 +64,59 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   }, [isOpen, onClose]);
 
   if (!budgetData) return null;
+
+  const roundCurrency = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+  const convertBudgetAmounts = (data: BudgetData, exchangeRate: number): BudgetData => {
+    const convert = (value: number | undefined) => {
+      if (typeof value !== 'number' || !Number.isFinite(value)) return value;
+      return roundCurrency(value * exchangeRate);
+    };
+
+    return {
+      ...data,
+      paySettings: {
+        ...data.paySettings,
+        annualSalary: convert(data.paySettings.annualSalary),
+        hourlyRate: convert(data.paySettings.hourlyRate),
+        minLeftover: convert(data.paySettings.minLeftover),
+      },
+      preTaxDeductions: data.preTaxDeductions.map((deduction) => ({
+        ...deduction,
+        amount: deduction.isPercentage ? deduction.amount : convert(deduction.amount) || 0,
+      })),
+      benefits: data.benefits.map((benefit) => ({
+        ...benefit,
+        amount: benefit.isPercentage ? benefit.amount : convert(benefit.amount) || 0,
+      })),
+      retirement: data.retirement.map((election) => ({
+        ...election,
+        employeeContribution: election.employeeContributionIsPercentage
+          ? election.employeeContribution
+          : convert(election.employeeContribution) || 0,
+        employerMatchCap: election.employerMatchCapIsPercentage
+          ? election.employerMatchCap
+          : convert(election.employerMatchCap) || 0,
+        yearlyLimit: convert(election.yearlyLimit),
+      })),
+      taxSettings: {
+        ...data.taxSettings,
+        additionalWithholding: convert(data.taxSettings.additionalWithholding) || 0,
+      },
+      accounts: data.accounts.map((account) => ({
+        ...account,
+        allocation: convert(account.allocation),
+        allocationCategories: (account.allocationCategories || []).map((category) => ({
+          ...category,
+          amount: convert(category.amount) || 0,
+        })),
+      })),
+      bills: data.bills.map((bill) => ({
+        ...bill,
+        amount: convert(bill.amount) || 0,
+      })),
+    };
+  };
 
   const handleSaveSettings = () => {
     const parsedAnnualSalary = parseFloat(editAnnualSalary);
@@ -98,7 +158,29 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           }
       ),
     };
-    updatePaySettings(paySettings);
+
+    const currencyChanged = editCurrency !== originalCurrency;
+
+    let updatedBudget: BudgetData = {
+      ...budgetData,
+      paySettings,
+      settings: {
+        ...budgetData.settings,
+        currency: editCurrency,
+      },
+    };
+
+    // If currency changed and exchange rate provided, convert amounts
+    if (currencyChanged && exchangeRate.trim() !== '') {
+      const parsedExchangeRate = parseFloat(exchangeRate);
+      if (!Number.isFinite(parsedExchangeRate) || parsedExchangeRate <= 0) {
+        alert('Please enter a valid exchange rate greater than zero, or leave it blank to skip conversion.');
+        return;
+      }
+      updatedBudget = convertBudgetAmounts(updatedBudget, parsedExchangeRate);
+    }
+
+    updateBudgetData(updatedBudget);
 
     setFieldErrors({});
     onClose();
@@ -114,6 +196,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         <>
           <Button variant="secondary" onClick={() => {
             setFieldErrors({});
+            setExchangeRate('');
             onClose();
           }}>Cancel</Button>
           <Button variant="primary" onClick={handleSaveSettings}>Save Changes</Button>
@@ -133,11 +216,37 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           />
         </FormGroup>
 
+        <FormGroup label="Currency" helperText="Select the currency for this plan.">
+          <select value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
+            {CURRENCIES.map((currency) => (
+              <option key={currency.code} value={currency.code}>
+                {currency.flag} {currency.code} - {currency.name}
+              </option>
+            ))}
+          </select>
+        </FormGroup>
+
+        {editCurrency !== originalCurrency && (
+          <FormGroup 
+            label="Exchange Rate (Optional)" 
+            helperText={`Enter the exchange rate from ${originalCurrency} to ${editCurrency} to convert all existing amounts. Example: if 1 ${originalCurrency} = 0.92 ${editCurrency}, enter 0.92. To convert back, calculate the inverse rate (1 ÷ original_rate) for best precision instead of rounding. Leave blank to only change the currency symbol without converting amounts.`}
+          >
+            <input
+              type="number"
+              value={exchangeRate}
+              onChange={(e) => setExchangeRate(e.target.value)}
+              placeholder="e.g., 0.92"
+              min="0"
+              step="0.00000001"
+            />
+          </FormGroup>
+        )}
+
         {editPayType === 'salary' ? (
           <FormGroup label="Annual Salary" required error={fieldErrors.annualSalary}>
             <InputWithPrefix
               className={fieldErrors.annualSalary ? 'field-error' : ''}
-              prefix={getCurrencySymbol(budgetData.settings.currency || 'USD')}
+              prefix={getCurrencySymbol(editCurrency)}
               type="number"
               value={editAnnualSalary}
               onChange={(e) => {
@@ -156,7 +265,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
             <FormGroup label="Hourly Rate" required error={fieldErrors.hourlyRate}>
               <InputWithPrefix
                 className={fieldErrors.hourlyRate ? 'field-error' : ''}
-                prefix={getCurrencySymbol(budgetData.settings.currency || 'USD')}
+                prefix={getCurrencySymbol(editCurrency)}
                 type="number"
                 value={editHourlyRate}
                 onChange={(e) => {
@@ -211,7 +320,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         >
           <InputWithPrefix
             className={fieldErrors.minLeftover ? 'field-error' : ''}
-            prefix={getCurrencySymbol(budgetData.settings.currency || 'USD')}
+            prefix={getCurrencySymbol(editCurrency)}
             type="number"
             value={editMinLeftover}
             onChange={(e) => {

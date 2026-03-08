@@ -528,6 +528,7 @@ export class FileStorageService {
         },
       ],
       bills: [],
+      loans: [],
       benefits: [],
       retirement: [],
       settings: {

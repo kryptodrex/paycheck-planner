@@ -51,8 +51,22 @@
         - They should be able to re-add hidden tabs from the [+] button, and also drag and drop to rearrange the order of the tabs
     - Key Metrics and Pay Breakdown should always be the first two tabs and cannot be hidden since they are the core of the app, but the user can rearrange the order of the other tabs as they see fit
 
-- [ ] **Currency Conversions** - When a user changes the currency for a plan, offer to convert all existing amounts to the new currency using an exchange rate (with an option to skip conversion and just change the symbol)
+- [x] **Currency Conversions** - When a user changes the currency for a plan, offer to convert all existing amounts to the new currency using an exchange rate (with an option to skip conversion and just change the symbol)
     - For now, just allow user to give the exchange rate manually, but in the future we can look into integrating with a currency exchange API to get real-time rates for more accurate conversions.
+
+- [ ] **More options for saving plans** - In addition to saving plans as local `.budget` files, we want to add more options for saving and exporting plans:
+    - Ability to save as an Excel file instead of just a JSON-based `.budget` file, for users who want to manipulate their plans in spreadsheet software
+        - We can create a well-formatted Excel file with separate sheets for pay breakdown, bills, accounts, etc. using a library like SheetJS
+        - Depending on the Encryption method selected, if the user saves as an Excel file we can adjust the encryption approach (e.g., encrypting the Excel file with a password, or providing an unencrypted export option for users who want to use Excel's built-in password protection)
+        - This Excel file should still be able to be opened and edited in the Paycheck Planner app, allowing for a more flexible workflow for users who want to use both the app and spreadsheet software for managing their plans
+    - Ability to export the plan as a PDF for easy sharing and printing
+        - For PDF export, we can use a library like jsPDF to generate a nicely formatted PDF that includes all the relevant information from the plan (pay breakdown, bills, accounts, etc.) in a clean layout
+        - The PDF export should also respect the encryption settings of the plan, either by providing an unencrypted export option or by encrypting the PDF with a password of the user's choice if the plan is encrypted
+
+- [ ] **More Tab options** - Add more tabs for some new categories, including:
+    - Loans tab for managing any debts or loans, with details like interest rates, payment or loan amortization schedules, etc.
+        - This could be for a home Mortgage, student loans, car loans, or any other type of debt the user wants to track easily
+    - Custom category tabs that users can create and customize based on their needs (e.g., "Travel", "Education", etc.)
 
 - [ ] **More theme options** - Add more theme options beyond just light/dark/system, such as:
   - Custom color themes (allow users to choose their own primary/secondary colors)
@@ -60,10 +74,6 @@
   - High contrast mode for better accessibility
   - Font size adjustments for better readability
     - Allow users to increase font size via zoom settings, which should be under the View menu in the menu bar, and also accessible via keyboard shortcuts (e.g., Cmd + Plus to zoom in, Cmd + Minus to zoom out, Cmd + 0 to reset zoom)
-
-- [ ] **Export the Plan** - Add ability to export the plan as a PDF or CSV for easy sharing and printing
-    - For PDF export, we can use a library like jsPDF to generate a nicely formatted PDF that includes all the relevant information from the plan (pay breakdown, bills, accounts, etc.) in a clean layout
-    - For CSV export, we can allow users to export their bills and pay breakdowns in a CSV format that can be opened in Excel or Google Sheets for further analysis and manipulation
 
 - [ ] **Unit tests** - Add unit tests for critical components and functions to improve reliability and catch bugs early
   - Focus on testing the core logic of the application, such as the pay breakdown calculations, encryption/decryption functions, and file storage operations
@@ -81,3 +91,17 @@
   - Consider leap year support for custom day-based frequencies (365 vs 366).
   - Decide whether month/day-aware calculations should affect paycheck, bill, and annual/monthly conversion views, or remain fixed-frequency averages.
   - Add targeted tests for leap-year and non-leap-year scenarios to validate expected behavior.
+
+- [ ] **Plan Comparison View** - Add a feature to compare two plans side-by-side to analyze differences in pay breakdowns, bills, and accounts across years or scenarios.
+  - Allow users to select two plans (e.g., current year vs next year) and display them in a split view with synchronized scrolling.
+  - Highlight differences in key metrics, pay breakdowns, and bill allocations for easy comparison.
+  - This would be especially useful for users who want to see the impact of changes they are considering for the next year before committing to them.
+
+- [ ] **Currency Conversion Precision** - Improve currency conversion to minimize rounding errors when converting between currencies multiple times.
+  - Issue: Converting currency with manual exchange rates can accumulate rounding errors. Example: $65,000 → ¥10,255,700 (at 157.78) → $64,610.91 (at 0.0063) results in ~$389 loss due to imprecise inverse rate.
+  - Potential solutions:
+    - Calculate and display the inverse exchange rate automatically when user enters a rate (e.g., "Inverse rate: 1 JPY = 0.00633839 USD")
+    - Store original currency and amounts as metadata, allowing "revert to original currency" without loss
+    - Increase decimal precision for exchange rates (support more decimal places)
+    - Warn users when exchange rate appears to be an imprecise inverse of a recent conversion
+  - Consider integration with live exchange rate API for precise real-time rates (previously mentioned in Currency Conversions feature)

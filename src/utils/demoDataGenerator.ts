@@ -1,4 +1,4 @@
-import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency } from '../types/auth';
+import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency, Loan } from '../types/auth';
 import { getPaychecksPerYear } from './payPeriod';
 
 /**
@@ -166,6 +166,133 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     });
   }
 
+  // Generate demo loans based on income level and random selection
+  const loans: Loan[] = [];
+  
+  // Mortgage (30-40% of monthly gross for higher earners)
+  if (annualGrossPay >= 50000 && Math.random() > 0.5) {
+    const mortgagePercent = randomBetween(0.25, 0.35);
+    const monthlyPayment = roundToCents(monthlyGross * mortgagePercent);
+    const interestRate = randomBetween(3.5, 6.5);
+    const termMonths = 360; // 30-year mortgage
+    const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
+    const monthsElapsed = Math.floor(Math.random() * 120); // 0-10 years into mortgage
+    const currentBalance = roundToCents(calculateRemainingBalance(principal, interestRate, termMonths, monthsElapsed));
+    
+    loans.push({
+      id: crypto.randomUUID(),
+      name: 'Home Mortgage',
+      type: 'mortgage',
+      principal,
+      currentBalance,
+      interestRate,
+      monthlyPayment,
+      accountId: checkingId,
+      startDate: new Date(year - Math.floor(monthsElapsed / 12), (new Date().getMonth() - (monthsElapsed % 12) + 12) % 12).toISOString().split('T')[0],
+      termMonths,
+      enabled: true,
+    });
+  }
+
+  // Auto loan (10-15% of monthly gross)
+  if (annualGrossPay >= 35000 && Math.random() > 0.4) {
+    const autoPercent = randomBetween(0.08, 0.14);
+    const monthlyPayment = roundToCents(monthlyGross * autoPercent);
+    const interestRate = randomBetween(3.0, 8.5);
+    const termMonths = Math.random() > 0.5 ? 60 : 72; // 5 or 6 years
+    const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
+    const monthsElapsed = Math.floor(Math.random() * (termMonths * 0.7)); // Up to 70% through loan
+    const currentBalance = roundToCents(calculateRemainingBalance(principal, interestRate, termMonths, monthsElapsed));
+    
+    loans.push({
+      id: crypto.randomUUID(),
+      name: 'Car Loan',
+      type: 'auto',
+      principal,
+      currentBalance,
+      interestRate,
+      monthlyPayment,
+      accountId: checkingId,
+      startDate: new Date(year - Math.floor(monthsElapsed / 12), (new Date().getMonth() - (monthsElapsed % 12) + 12) % 12).toISOString().split('T')[0],
+      termMonths,
+      enabled: true,
+    });
+  }
+
+  // Student loans (8-12% of monthly gross for younger/mid-career earners)
+  if (annualGrossPay >= 30000 && annualGrossPay < 90000 && Math.random() > 0.5) {
+    const studentPercent = randomBetween(0.07, 0.12);
+    const monthlyPayment = roundToCents(monthlyGross * studentPercent);
+    const interestRate = randomBetween(4.5, 7.0);
+    const termMonths = 120; // 10-year standard repayment
+    const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
+    const monthsElapsed = Math.floor(Math.random() * 84); // Up to 7 years in
+    const currentBalance = roundToCents(calculateRemainingBalance(principal, interestRate, termMonths, monthsElapsed));
+    
+    loans.push({
+      id: crypto.randomUUID(),
+      name: 'Student Loans',
+      type: 'student',
+      principal,
+      currentBalance,
+      interestRate,
+      monthlyPayment,
+      accountId: checkingId,
+      startDate: new Date(year - Math.floor(monthsElapsed / 12), (new Date().getMonth() - (monthsElapsed % 12) + 12) % 12).toISOString().split('T')[0],
+      termMonths,
+      enabled: true,
+    });
+  }
+
+  // Credit card debt (2-5% of monthly gross, higher chance for lower earners)
+  const creditCardChance = annualGrossPay < 45000 ? 0.4 : 0.6;
+  if (Math.random() > creditCardChance) {
+    const ccPercent = randomBetween(0.02, 0.05);
+    const monthlyPayment = roundToCents(monthlyGross * ccPercent);
+    const interestRate = randomBetween(15.0, 24.9);
+    const currentBalance = roundToCents(monthlyPayment * randomBetween(12, 36)); // 1-3 years worth
+    const principal = currentBalance; // Credit cards don't have fixed principal
+    
+    loans.push({
+      id: crypto.randomUUID(),
+      name: 'Credit Card',
+      type: 'credit-card',
+      principal,
+      currentBalance,
+      interestRate,
+      monthlyPayment,
+      accountId: checkingId,
+      startDate: new Date(year - 1, new Date().getMonth()).toISOString().split('T')[0],
+      termMonths: Math.ceil(currentBalance / monthlyPayment), // Estimated payoff time
+      enabled: true,
+    });
+  }
+
+  // Personal loan (5-10% of monthly gross, occasional)
+  if (Math.random() > 0.75) {
+    const personalPercent = randomBetween(0.05, 0.09);
+    const monthlyPayment = roundToCents(monthlyGross * personalPercent);
+    const interestRate = randomBetween(7.0, 15.0);
+    const termMonths = Math.random() > 0.5 ? 36 : 60; // 3 or 5 years
+    const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
+    const monthsElapsed = Math.floor(Math.random() * (termMonths * 0.5)); // Up to halfway through
+    const currentBalance = roundToCents(calculateRemainingBalance(principal, interestRate, termMonths, monthsElapsed));
+    
+    loans.push({
+      id: crypto.randomUUID(),
+      name: 'Personal Loan',
+      type: 'personal',
+      principal,
+      currentBalance,
+      interestRate,
+      monthlyPayment,
+      accountId: checkingId,
+      startDate: new Date(year - Math.floor(monthsElapsed / 12), (new Date().getMonth() - (monthsElapsed % 12) + 12) % 12).toISOString().split('T')[0],
+      termMonths,
+      enabled: true,
+    });
+  }
+
   return {
     id: crypto.randomUUID(),
     name: `${year} Demo Plan`,
@@ -186,6 +313,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     },
     accounts,
     bills,
+    loans,
     benefits,
     retirement,
     settings: {
@@ -238,4 +366,47 @@ function estimateAnnualNetPay(params: {
 
   const netPerPaycheck = Math.max(0, taxableIncome - taxesPerPaycheck);
   return roundToCents(netPerPaycheck * params.paychecksPerYear);
+}
+
+/**
+ * Calculate the original principal amount for a loan given monthly payment, rate, and term
+ * Uses the loan payment formula: P = M * [(1 + r)^n - 1] / [r * (1 + r)^n]
+ */
+function calculatePrincipal(monthlyPayment: number, annualInterestRate: number, termMonths: number): number {
+  const monthlyRate = annualInterestRate / 100 / 12;
+  
+  if (monthlyRate === 0) {
+    return monthlyPayment * termMonths;
+  }
+  
+  const factor = Math.pow(1 + monthlyRate, termMonths);
+  const principal = monthlyPayment * (factor - 1) / (monthlyRate * factor);
+  
+  return principal;
+}
+
+/**
+ * Calculate the remaining balance on a loan after a certain number of months
+ * Uses amortization formula: B = P * [(1 + r)^n - (1 + r)^p] / [(1 + r)^n - 1]
+ */
+function calculateRemainingBalance(
+  principal: number,
+  annualInterestRate: number,
+  termMonths: number,
+  monthsElapsed: number
+): number {
+  if (monthsElapsed >= termMonths) return 0;
+  if (monthsElapsed === 0) return principal;
+  
+  const monthlyRate = annualInterestRate / 100 / 12;
+  
+  if (monthlyRate === 0) {
+    return principal * (1 - monthsElapsed / termMonths);
+  }
+  
+  const factorTotal = Math.pow(1 + monthlyRate, termMonths);
+  const factorElapsed = Math.pow(1 + monthlyRate, monthsElapsed);
+  const balance = principal * (factorTotal - factorElapsed) / (factorTotal - 1);
+  
+  return Math.max(0, balance);
 }

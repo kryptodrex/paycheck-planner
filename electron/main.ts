@@ -890,6 +890,39 @@ ipcMain.handle('save-file-dialog', async (event, budgetName?: string) => {
 });
 
 /**
+ * Save PDF dialog
+ * Opens a native file picker for saving PDF exports
+ */
+ipcMain.handle('save-pdf-dialog', async (event, budgetName?: string) => {
+  const fileName = budgetName ? `${budgetName}.pdf` : 'budget-export.pdf';
+  const result = await dialog.showSaveDialog({
+    filters: [
+      { name: 'PDF Files', extensions: ['pdf'] },
+    ],
+    defaultPath: fileName,
+  });
+
+  if (!result.canceled && result.filePath) {
+    return result.filePath;
+  }
+  return null;
+});
+
+/**
+ * Export PDF
+ * Saves PDF data to a file
+ */
+ipcMain.handle('export-pdf', async (event, filePath: string, pdfData: Uint8Array) => {
+  try {
+    await fs.writeFile(filePath, Buffer.from(pdfData));
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error saving PDF:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+/**
  * Open a view window
  * Creates a new window showing a specific view (metrics, breakdown, bills, accounts)
  */
