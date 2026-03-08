@@ -86,6 +86,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const dragStartIndexRef = useRef<number | null>(null);
   const movedDuringDragRef = useRef(false);
   const latestTabConfigsRef = useRef<TabConfig[]>([]);
+  const handleSaveRef = useRef<(() => Promise<void>) | null>(null);
+  const handleTabPositionChangeRef = useRef<((position: TabPosition) => void) | null>(null);
+  const handleTabDisplayModeChangeRef = useRef<((mode: TabDisplayMode) => void) | null>(null);
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
@@ -196,6 +199,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode]);
 
+  // Keep refs updated with latest handlers to prevent event listener duplication
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+    handleTabPositionChangeRef.current = handleTabPositionChange;
+    handleTabDisplayModeChangeRef.current = handleTabDisplayModeChange;
+  }, [handleSave, handleTabPositionChange, handleTabDisplayModeChange]);
+
   // Listen for menu events from Electron
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return;
@@ -214,7 +224,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     const unsubscribeSave = window.electronAPI.onMenuEvent('save-plan', () => {
-      handleSave();
+      handleSaveRef.current?.();
     });
 
     const unsubscribeSettings = window.electronAPI.onMenuEvent('open-settings', () => {
@@ -230,12 +240,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent('set-tab-position', (position: TabPosition) => {
-      handleTabPositionChange(position);
+      handleTabPositionChangeRef.current?.(position);
     });
 
     const unsubscribeToggleDisplayMode = window.electronAPI.onMenuEvent('toggle-tab-display-mode', () => {
       const newMode: TabDisplayMode = tabDisplayMode === 'icons-only' ? 'icons-with-labels' : 'icons-only';
-      handleTabDisplayModeChange(newMode);
+      handleTabDisplayModeChangeRef.current?.(newMode);
     });
 
     return () => {
@@ -249,7 +259,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeSetTabPosition();
       unsubscribeToggleDisplayMode();
     };
-  }, [createNewBudget, loadBudget, onResetSetup, handleSave, handleTabPositionChange, handleTabDisplayModeChange, tabDisplayMode]);
+  }, []);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {

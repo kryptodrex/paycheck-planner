@@ -68,8 +68,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     callback: (arg?: any) => void
   ) => {
     const channel = `menu:${event}`;
-    ipcRenderer.on(channel, (_event, arg) => callback(arg));
-    return () => ipcRenderer.removeListener(channel, callback);
+    const listener = (_event: any, arg?: any) => callback(arg);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
   },
 
   // Listen for view window open requests
