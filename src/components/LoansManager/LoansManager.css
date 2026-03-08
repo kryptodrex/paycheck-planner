@@ -332,7 +332,7 @@
   padding: 0.55rem 0.65rem;
   border-bottom: 1px solid var(--border-color-light);
   font-size: 0.82rem;
-  text-align: right;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -345,13 +345,6 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
   z-index: 1;
-}
-
-.loans-manager .loan-schedule-table th:first-child,
-.loans-manager .loan-schedule-table th:nth-child(2),
-.loans-manager .loan-schedule-table td:first-child,
-.loans-manager .loan-schedule-table td:nth-child(2) {
-  text-align: left;
 }
 
 .loans-manager .loan-schedule-table tbody tr:nth-child(even) {

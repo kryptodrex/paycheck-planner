@@ -509,11 +509,12 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
 
                             <div className="loan-actions">
                               <Button
-                                variant="icon"
+                                variant="secondary"
                                 onClick={() => setScheduleLoan(loan)}
-                                title="View amortization schedule"
+                                title="View payment plan"
+                                className="payment-plan-btn"
                               >
-                                📊
+                                📊 Payment Plan
                               </Button>
                               <Button
                                 variant="icon"
@@ -861,7 +862,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
         isOpen={Boolean(scheduleLoan)}
         onClose={() => setScheduleLoan(null)}
         contentClassName="loan-schedule-modal"
-        header={scheduleLoan ? `${scheduleLoan.name} Amortization Schedule` : 'Amortization Schedule'}
+        header={scheduleLoan ? `${scheduleLoan.name} Payment Schedule` : 'Payment Schedule'}
         footer={
           <Button variant="secondary" onClick={() => setScheduleLoan(null)}>
             Close
@@ -873,7 +874,10 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           return (
             <div className="loan-schedule-content">
               <p className="loan-schedule-description">
-                Estimated monthly payment breakdown from current balance forward. Insurance is included while active.
+                This payment schedule shows how each monthly payment reduces your loan balance over time. 
+                Early payments go mostly toward interest, while later payments pay down more principal. 
+                The <strong>Beginning Balance</strong> is what you owe at the start of each month, and the <strong>Ending Balance</strong> is what remains after your payment. 
+                Insurance (PMI/GAP) is included while active and will drop off automatically when your balance reaches the specified threshold.
               </p>
               {schedule.length === 0 ? (
                 <div className="loan-schedule-empty">
@@ -884,14 +888,14 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                   <table className="loan-schedule-table">
                     <thead>
                       <tr>
-                        <th>Pmt. #</th>
-                        <th>Pmt. Date</th>
+                        <th>Payment #</th>
+                        <th>Payment Date</th>
                         <th>Beginning Balance</th>
                         <th>Payment Amount</th>
-                        <th>Principal Portion</th>
-                        <th>Interest Portion</th>
+                        <th>Principal</th>
+                        <th>Interest</th>
                         <th>Ending Balance</th>
-                        <th>PMI Pmt.</th>
+                        <th>Insurance Payment</th>
                       </tr>
                     </thead>
                     <tbody>
