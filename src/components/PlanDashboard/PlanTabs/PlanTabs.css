@@ -42,8 +42,8 @@
 }
 
 .tab-button.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
   background: rgba(102, 126, 234, 0.1);
 }
 
@@ -171,7 +171,7 @@
 
 .tab-close-button:hover {
   background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  color: var(--error-color);
   transform: scale(1.15);
 }
 
@@ -182,7 +182,7 @@
 .tab-close-button:focus-visible {
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
   background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  color: var(--error-color);
   outline: none !important;
 }
 
@@ -201,7 +201,7 @@
 .manage-tabs-button:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border-bottom-color: #667eea !important;
+  border-bottom-color: var(--accent-primary) !important;
 }
 
 .manage-tabs-button:focus {
@@ -294,7 +294,7 @@
 }
 
 .tab-position-top .tab-button.active {
-  border-bottom-color: #667eea;
+  border-bottom-color: var(--accent-primary);
 }
 
 /* Bottom Position */
@@ -316,7 +316,7 @@
 }
 
 .tab-position-bottom .tab-button.active {
-  border-top-color: #667eea;
+  border-top-color: var(--accent-primary);
 }
 
 /* Left Position (Sidebar) */
@@ -347,7 +347,7 @@
 }
 
 .tab-position-left .tab-button.active {
-  border-right-color: #667eea;
+  border-right-color: var(--accent-primary);
 }
 
 .tab-position-left .manage-tabs-button {
@@ -385,7 +385,7 @@
 }
 
 .tab-position-right .tab-button.active {
-  border-left-color: #667eea;
+  border-left-color: var(--accent-primary);
 }
 
 .tab-position-right .manage-tabs-button {

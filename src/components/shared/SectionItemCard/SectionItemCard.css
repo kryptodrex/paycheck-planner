@@ -7,7 +7,7 @@
 }
 
 .section-item-card:hover {
-  border-color: #667eea;
+  border-color: var(--accent-primary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }

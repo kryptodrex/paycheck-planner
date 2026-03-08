@@ -1,5 +1,6 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { FileStorageService } from '../../services/fileStorage';
 import { glossaryTerms } from '../../data/glossary';
 import './GlossaryTerm.css';
 
@@ -12,24 +13,25 @@ interface GlossaryTermProps {
 const GlossaryTerm: React.FC<GlossaryTermProps> = ({ termId, children, className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const [termsEnabled, setTermsEnabled] = useState(() => {
+    return FileStorageService.getAppSettings().glossaryTermsEnabled !== false;
+  });
   const anchorRef = useRef<HTMLSpanElement | null>(null);
 
   const term = useMemo(() => glossaryTerms.find((item) => item.id === termId), [termId]);
 
-  if (!term) {
-    return <>{children}</>;
-  }
-
-  const openGlossary = () => {
-    window.dispatchEvent(
-      new CustomEvent('app:open-glossary', {
-        detail: { termId },
-      })
-    );
-  };
+  useEffect(() => {
+    const handleChange = (event: Event) => {
+      const e = event as CustomEvent<{ enabled: boolean }>;
+      setTermsEnabled(e.detail.enabled);
+      if (!e.detail.enabled) setIsOpen(false);
+    };
+    window.addEventListener('glossary-terms-changed', handleChange as EventListener);
+    return () => window.removeEventListener('glossary-terms-changed', handleChange as EventListener);
+  }, []);
 
   useLayoutEffect(() => {
-    if (!isOpen || !anchorRef.current) return;
+    if (!isOpen || !termsEnabled || !anchorRef.current) return;
 
     const updatePosition = () => {
       if (!anchorRef.current) return;
@@ -65,7 +67,20 @@ const GlossaryTerm: React.FC<GlossaryTermProps> = ({ termId, children, className
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [isOpen]);
+  }, [isOpen, termsEnabled]);
+
+  // Unknown term or glossary disabled: render children as plain text
+  if (!term || !termsEnabled) {
+    return <>{children}</>;
+  }
+
+  const openGlossary = () => {
+    window.dispatchEvent(
+      new CustomEvent('app:open-glossary', {
+        detail: { termId },
+      })
+    );
+  };
 
   return (
     <span

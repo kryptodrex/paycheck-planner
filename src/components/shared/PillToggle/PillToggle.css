@@ -1,0 +1,79 @@
+/* Pill Toggle - Segmented control with sliding active state */
+.pill-toggle {
+  display: inline-flex;
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 4px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.pill-toggle.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sliding background indicator */
+.pill-toggle-slider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  background: var(--accent-primary);
+  border-radius: 1rem;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  z-index: 0;
+}
+
+[data-theme='dark'] .pill-toggle-slider {
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+}
+
+.pill-toggle-slider.active {
+  transform: translateX(100%);
+}
+
+.pill-toggle-option {
+  flex: 1;
+  min-width: 80px;
+  padding: 0.625rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 1rem;
+  transition: color 0.2s, font-weight 0.2s;
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.pill-toggle-option:hover:not(.active):not(:disabled) {
+  color: var(--text-primary);
+}
+
+.pill-toggle-option.active {
+  color: white;
+  font-weight: 600;
+}
+
+.pill-toggle-option:disabled {
+  cursor: not-allowed;
+}
+
+/* Focus styles for accessibility */
+.pill-toggle-option:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] .pill-toggle {
+  background: var(--bg-tertiary);
+}

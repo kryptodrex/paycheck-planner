@@ -305,13 +305,13 @@
 }
 
 .field-error {
-  border-color: #ef4444 !important;
+  border-color: var(--error-color) !important;
 }
 
 /* Header button styles - these are on the gradient background */
 .header-btn-primary {
   background: var(--bg-primary);
-  color: #667eea;
+  color: var(--accent-primary);
 }
 
 .header-btn-primary:hover:not(:disabled) {
@@ -427,7 +427,7 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent-primary);
 }
 
 @media (max-width: 768px) {

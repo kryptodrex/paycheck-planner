@@ -75,7 +75,7 @@
 }
 
 .stage-amount.negative {
-  color: #ef4444;
+  color: var(--error-color);
 }
 
 .stage-detail {
@@ -220,15 +220,15 @@
 }
 
 .pretax-segment {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: linear-gradient(135deg, var(--warning-color), var(--alert-warning-text));
 }
 
 .tax-segment {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, var(--error-color), var(--alert-error-text));
 }
 
 .net-segment {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, var(--info-color), var(--info-color-dark));
 }
 
 .bar-labels {
@@ -253,15 +253,15 @@
 }
 
 .pretax-dot {
-  background: #f59e0b;
+  background: var(--warning-color);
 }
 
 .tax-dot {
-  background: #ef4444;
+  background: var(--error-color);
 }
 
 .net-dot {
-  background: #3b82f6;
+  background: var(--info-color);
 }
 
 /* Account Allocations */
@@ -327,7 +327,7 @@
 }
 
 .waterfall-header-row {
-  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+  /* background: var(--header-gradient); */
   background: var(--header-gradient);
   color: white;
   font-weight: 700;
@@ -422,7 +422,7 @@
 /* Inline Editing Styles */
 .allocation-edit-section {
   background: var(--bg-primary);
-  border-left: 3px solid #667eea;
+  border-left: 3px solid var(--accent-primary);
   margin-left: 0.75rem;
 }
 
@@ -454,7 +454,7 @@
 
 .category-name-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent-primary);
 }
 
 /* Override InputWithPrefix styling in category edit rows for uniform height */
@@ -466,7 +466,7 @@
 }
 
 .category-edit-row .input-with-prefix:focus-within {
-  border-color: #667eea;
+  border-color: var(--accent-primary);
 }
 
 .category-edit-row .input-with-prefix .prefix {
@@ -499,7 +499,7 @@
 
 .category-edit-row .btn-icon:hover {
   background: rgba(239, 68, 68, 0.2) !important;
-  color: #ef4444 !important;
+  color: var(--error-color) !important;
   transform: scale(1.15);
 }
 
@@ -510,7 +510,7 @@
 .category-edit-row .btn-icon:focus-visible {
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
   background: rgba(239, 68, 68, 0.2) !important;
-  color: #ef4444 !important;
+  color: var(--error-color) !important;
   outline: none;
 }
 
@@ -563,7 +563,7 @@
   min-width: 20px;
   height: 20px;
   padding: 0 0.35rem;
-  background: #667eea;
+  background: var(--accent-primary);
   color: white;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -616,15 +616,15 @@
 }
 
 .validation-message.validation-error {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #dc2626;
+  background: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
+  color: var(--alert-error-text);
 }
 
 .validation-message.validation-warning {
-  background: #fffbeb;
-  border: 1px solid #fbbf24;
-  color: #d97706;
+  background: var(--alert-warning-bg);
+  border: 1px solid var(--alert-warning-border);
+  color: var(--alert-warning-text);
 }
 
 /* Dark mode support for validation messages */
@@ -632,13 +632,13 @@
   .validation-message.validation-error {
     background: rgba(220, 38, 38, 0.1);
     border-color: rgba(220, 38, 38, 0.3);
-    color: #fca5a5;
+    color: var(--alert-error-border);
   }
 
   .validation-message.validation-warning {
     background: rgba(217, 119, 6, 0.1);
     border-color: rgba(217, 119, 6, 0.3);
-    color: #fbbf24;
+    color: var(--alert-warning-border);
   }
 }
 
@@ -707,7 +707,7 @@
 }
 
 .account-allocations .btn-secondary:hover:not(:disabled) {
-  border-color: #667eea;
+  border-color: var(--accent-primary);
   background: var(--bg-primary);
 }
 
@@ -742,7 +742,7 @@
 .allocation-amount {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #667eea;
+  color: var(--accent-primary);
 }
 
 .allocation-meta {
@@ -818,7 +818,7 @@
 }
 
 .remainder-badge {
-  background: #667eea;
+  background: var(--accent-primary);
   color: white;
   padding: 0.25rem 0.75rem;
   border-radius: 4px;

@@ -12,8 +12,8 @@
 }
 
 .error-banner {
-  background: #fef3c7;
-  border: 2px solid #fbbf24;
+  background: var(--alert-warning-bg);
+  border: 2px solid var(--alert-warning-border);
   border-radius: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -25,7 +25,7 @@
   align-items: flex-start;
   gap: 1rem;
   padding: 1rem;
-  color: #92400e;
+  color: var(--alert-warning-text);
 }
 
 .error-icon {
@@ -54,7 +54,7 @@
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
-  color: #92400e;
+  color: var(--alert-warning-text);
   padding: 0;
   flex-shrink: 0;
   opacity: 0.7;
@@ -114,12 +114,12 @@
 }
 
 .btn-primary {
-  background: #667eea;
+  background: var(--accent-primary);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #5568d3;
+  background: var(--accent-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
@@ -193,7 +193,7 @@
 
 .recent-file-item:hover:not(.disabled) {
   background: var(--bg-tertiary);
-  border-color: #667eea;
+  border-color: var(--accent-primary);
 }
 
 .recent-file-item.disabled {
@@ -235,7 +235,7 @@
 
 .recent-file-remove:hover:not(:disabled) {
   opacity: 1;
-  color: #ef4444;
+  color: var(--error-color);
   transform: scale(1.1);
 }
 
@@ -273,7 +273,7 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent-primary);
 }
 
 .button-group {

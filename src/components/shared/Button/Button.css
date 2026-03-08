@@ -18,7 +18,7 @@
 /* Primary button */
 .btn-primary {
   background: var(--bg-primary);
-  color: #667eea;
+  color: var(--accent-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -49,12 +49,12 @@
 
 /* Danger button */
 .btn-danger {
-  background: #ef4444;
+  background: var(--error-color);
   color: white;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #dc2626;
+  background: var(--alert-error-text);
   transform: translateY(-2px);
 }
 
@@ -91,11 +91,11 @@
 }
 
 .btn-icon.btn-danger {
-  color: #ef4444;
+  color: var(--error-color);
 }
 
 .btn-icon.btn-danger:hover:not(:disabled) {
-  color: #dc2626;
+  color: var(--alert-error-text);
 }
 
 /* Size variants */

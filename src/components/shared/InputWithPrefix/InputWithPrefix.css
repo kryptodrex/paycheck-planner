@@ -55,7 +55,7 @@
 }
 
 .input-with-prefix:focus-within {
-  border-color: #667eea;
+  border-color: var(--accent-primary);
 }
 
 @media (max-width: 600px) {

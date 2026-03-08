@@ -18,6 +18,7 @@
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
+  --text-inverse: #ffffff;
   --border-color: #e5e7eb;
   --border-color-light: #f3f4f6;
   --progress-fill: #667eea;
@@ -27,6 +28,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --accent-primary: #667eea;
   --accent-hover: #5568d3;
+  --accent-secondary: #764ba2;
   --tab-drag-indicator: #667eea;
   --tab-drag-indicator-ring: rgba(102, 126, 234, 0.2);
   --tab-drag-outline: rgba(102, 126, 234, 0.65);
@@ -34,8 +36,33 @@
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
+  --info-color: #3b82f6;
+  --info-color-dark: #2563eb;
+  --violet-color: #8b5cf6;
+  --cyan-color: #06b6d4;
+  
+  /* Alert backgrounds */
+  --alert-error-bg: #fef2f2;
+  --alert-error-border: #fca5a5;
+  --alert-error-text: #dc2626;
+  --alert-warning-bg: #fffbeb;
+  --alert-warning-border: #fbbf24;
+  --alert-warning-text: #d97706;
+  --alert-success-bg: #f0fdf4;
+  --alert-success-border: #86efac;
+  --alert-success-text: #16a34a;
+  --alert-info-bg: #f0f9ff;
+  --alert-info-border: #7dd3fc;
+  --alert-info-text: #0369a1;
+  
+  /* Toggle colors */
+  --toggle-bg-inactive: #d1d5db;
+  --toggle-bg-active: #3b82f6;
+  
   --link-color: #646cff;
   --link-hover: #535bf2;
+  --logo-glow-primary: #646cffaa;
+  --logo-glow-secondary: #61dafbaa;
   --header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --header-text-secondary: rgba(255, 255, 255, 0.9);
 }
@@ -48,6 +75,7 @@
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;
   --text-tertiary: #9ca3af;
+  --text-inverse: #ffffff;
   --border-color: #374151;
   --border-color-light: #2d2d2d;
   --progress-fill: #667eea;
@@ -57,6 +85,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   --accent-primary: #7c3aed;
   --accent-hover: #6d28d9;
+  --accent-secondary: #9333ea;
   --tab-drag-indicator: #a5b4fc;
   --tab-drag-indicator-ring: rgba(165, 180, 252, 0.3);
   --tab-drag-outline: rgba(165, 180, 252, 0.8);
@@ -64,8 +93,33 @@
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
+  --info-color: #60a5fa;
+  --info-color-dark: #3b82f6;
+  --violet-color: #a78bfa;
+  --cyan-color: #06b6d4;
+  
+  /* Alert backgrounds - dark theme variants */
+  --alert-error-bg: #2d1f1f;
+  --alert-error-border: #7f1d1d;
+  --alert-error-text: #fca5a5;
+  --alert-warning-bg: #2d2718;
+  --alert-warning-border: #854d0e;
+  --alert-warning-text: #fbbf24;
+  --alert-success-bg: #1e2d24;
+  --alert-success-border: #166534;
+  --alert-success-text: #86efac;
+  --alert-info-bg: #1e2838;
+  --alert-info-border: #075985;
+  --alert-info-text: #7dd3fc;
+  
+  /* Toggle colors */
+  --toggle-bg-inactive: #4b5563;
+  --toggle-bg-active: #3b82f6;
+  
   --link-color: #818cf8;
   --link-hover: #a5b4fc;
+  --logo-glow-primary: #818cf8aa;
+  --logo-glow-secondary: #06b6d4aa;
   --header-gradient: linear-gradient(135deg, #374151 0%, #1f2937 100%);
   --header-text-secondary: rgba(229, 231, 235, 0.9);
 }

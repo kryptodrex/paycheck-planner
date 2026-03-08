@@ -11,7 +11,7 @@
 }
 
 .form-group label .required {
-  color: #ef4444;
+  color: var(--error-color);
   margin-left: 0.25rem;
 }
 
@@ -37,7 +37,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent-primary);
 }
 
 .form-group small {
@@ -47,7 +47,7 @@
 }
 
 .form-group small.error {
-  color: #ef4444;
+  color: var(--error-color);
 }
 
 .form-group small.helper-text {

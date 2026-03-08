@@ -83,7 +83,7 @@
 }
 
 .summary-row .amount.negative {
-    color: #ef4444;
+    color: var(--error-color);
 }
 
 .settings-table {
@@ -114,7 +114,7 @@
 }
 
 .field-error {
-    border-color: #ef4444 !important;
+    border-color: var(--error-color) !important;
 }
 
 @media (max-width: 768px) {

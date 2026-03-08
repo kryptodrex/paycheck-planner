@@ -45,8 +45,8 @@
 }
 
 .theme-option.active {
-  border-color: #667eea;
-  background: #667eea;
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
   color: white;
 }
 

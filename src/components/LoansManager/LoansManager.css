@@ -126,7 +126,7 @@
 }
 
 .loans-manager .loan-item:hover {
-  border-color: var(--border-color-hover, #667eea);
+  border-color: var(--border-color-hover, var(--accent-primary));
 }
 
 .loans-manager .loan-item.loan-disabled {
@@ -285,7 +285,7 @@
 
 .loans-manager .field-error,
 .loans-manager .input-with-prefix input.field-error {
-  border-color: #ef4444 !important;
+  border-color: var(--error-color) !important;
 }
 
 .loan-schedule-modal {

@@ -16,12 +16,12 @@
 }
 
 .encryption-config-panel .encryption-option-card:hover {
-  border-color: #667eea;
+  border-color: var(--accent-primary);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
 .encryption-config-panel .encryption-option-card:focus-visible {
-  outline: 3px solid #667eea;
+  outline: 3px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
@@ -106,7 +106,7 @@
 
 .encryption-config-panel .encryption-key-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 

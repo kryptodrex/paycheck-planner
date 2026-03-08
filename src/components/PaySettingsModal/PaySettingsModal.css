@@ -49,7 +49,7 @@
 }
 
 .field-error {
-  border-color: #ef4444 !important;
+  border-color: var(--error-color) !important;
 }
 
 /* Responsive */

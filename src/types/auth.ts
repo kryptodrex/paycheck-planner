@@ -220,6 +220,8 @@ export interface AppSettings {
   encryptionEnabled?: boolean;  // Global preference for encryption (undefined = not set up yet)
   encryptionKey?: string;       // User's master encryption key
   lastOpenedFile?: string;      // Path to last opened budget file
+  themeMode?: 'light' | 'dark' | 'system'; // App theme preference mode
+  glossaryTermsEnabled?: boolean; // Whether glossary term links are active (hover + click)
 }
 
 /**

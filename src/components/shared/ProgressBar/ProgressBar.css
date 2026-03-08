@@ -39,7 +39,7 @@
 }
 
 .shared-progress-details span:first-child {
-  color: #2563eb;
+  color: var(--info-color-dark);
   font-weight: 700;
 }
 

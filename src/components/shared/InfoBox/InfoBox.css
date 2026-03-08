@@ -1,7 +1,7 @@
 .info-box {
   padding: 1rem;
   background: var(--bg-tertiary);
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--accent-primary);
   border-radius: 8px;
   margin-bottom: 1rem;
   font-size: 0.95rem;
@@ -14,7 +14,7 @@
 
 .info-box h3 {
   margin: 0 0 1rem 0;
-  color: #667eea;
+  color: var(--accent-primary);
   font-size: 1.1rem;
 }
 

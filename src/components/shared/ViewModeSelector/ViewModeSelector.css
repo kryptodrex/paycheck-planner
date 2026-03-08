@@ -19,7 +19,7 @@
 
 .view-mode-selector button.active {
   background: var(--bg-primary);
-  color: #667eea;
+  color: var(--accent-primary);
   box-shadow: var(--shadow-sm);
 }
 
