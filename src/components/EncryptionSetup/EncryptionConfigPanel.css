@@ -123,7 +123,7 @@
   color: var(--text-secondary);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 600px) {
   .encryption-config-panel .encryption-selection-grid {
     grid-template-columns: 1fr;
   }

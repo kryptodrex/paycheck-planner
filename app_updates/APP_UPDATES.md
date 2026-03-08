@@ -68,13 +68,6 @@
         - This could be for a home Mortgage, student loans, car loans, or any other type of debt the user wants to track easily
     - Custom category tabs that users can create and customize based on their needs (e.g., "Travel", "Education", etc.)
 
-- [ ] **More theme options** - Add more theme options beyond just light/dark/system, such as:
-  - Custom color themes (allow users to choose their own primary/secondary colors)
-    - It should choose automatic dark mode colors based on the primary color they choose, and also allow them to customize the dark mode colors if they want
-  - High contrast mode for better accessibility
-  - Font size adjustments for better readability
-    - Allow users to increase font size via zoom settings, which should be under the View menu in the menu bar, and also accessible via keyboard shortcuts (e.g., Cmd + Plus to zoom in, Cmd + Minus to zoom out, Cmd + 0 to reset zoom)
-
 - [ ] **Unit tests** - Add unit tests for critical components and functions to improve reliability and catch bugs early
   - Focus on testing the core logic of the application, such as the pay breakdown calculations, encryption/decryption functions, and file storage operations
   - Use a testing framework like Jest to write and run the tests
@@ -82,6 +75,13 @@
 
 
 #### Backlog items to be prioritized and scheduled for future development:
+
+- [ ] **More theme options** - Add more theme options beyond just light/dark/system, such as:
+  - Custom color themes (allow users to choose their own primary/secondary colors)
+    - It should choose automatic dark mode colors based on the primary color they choose, and also allow them to customize the dark mode colors if they want
+  - High contrast mode for better accessibility
+  - Font size adjustments for better readability
+    - Allow users to increase font size via zoom settings, which should be under the View menu in the menu bar, and also accessible via keyboard shortcuts (e.g., Cmd + Plus to zoom in, Cmd + Minus to zoom out, Cmd + 0 to reset zoom)
 
 - [ ] **Allocation Rounding Consistency Follow-up** - Revisit cross-mode rounding behavior for Pay Breakdown allocations to ensure entering values in paycheck/monthly/yearly modes remains stable and predictable after save/reopen.
   - Confirm a clear source-of-truth strategy for stored values and display conversions.

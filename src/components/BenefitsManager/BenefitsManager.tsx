@@ -669,7 +669,8 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     <div style={{ flex: 1 }}>
                         <FormGroup label="Amount" required error={benefitFieldErrors.amount}>
                             <InputWithPrefix
-                                prefix={benefitIsPercentage ? '%' : getCurrencySymbol(currency)}
+                                prefix={!benefitIsPercentage ? getCurrencySymbol(currency) : ''}
+                                suffix={benefitIsPercentage ? '%' : ''}
                                 type="number"
                                 value={benefitAmount}
                                 className={benefitFieldErrors.amount ? 'field-error' : ''}
@@ -783,7 +784,8 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         <div style={{ flex: 1 }}>
                             <FormGroup label="Amount" required error={retirementFieldErrors.employeeAmount}>
                                 <InputWithPrefix
-                                    prefix={employeeIsPercentage ? '%' : getCurrencySymbol(currency)}
+                                    prefix={!employeeIsPercentage ? getCurrencySymbol(currency) : ''}
+                                    suffix={employeeIsPercentage ? '%' : ''}
                                     type="number"
                                     value={employeeAmount}
                                     className={retirementFieldErrors.employeeAmount ? 'field-error' : ''}
@@ -902,7 +904,8 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                 <div style={{ flex: 1 }}>
                                     <FormGroup label="Match Cap" required error={retirementFieldErrors.employerMatchCap}>
                                         <InputWithPrefix
-                                            prefix={employerMatchCapIsPercentage ? '%' : getCurrencySymbol(currency)}
+                                            prefix={!employerMatchCapIsPercentage ? getCurrencySymbol(currency) : ''}
+                                            suffix={employerMatchCapIsPercentage ? '%' : ''}
                                             type="number"
                                             value={employerMatchCap}
                                             className={retirementFieldErrors.employerMatchCap ? 'field-error' : ''}

@@ -163,8 +163,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
         </div>
       )}
       <div className="welcome-card">
-        <h1>Welcome to Paycheck Planner</h1>
-        <p>Plan where every paycheck goes, from gross to net, with year-based planning</p>
+        <h1>Paycheck Planner</h1>
+        <p>Plan where every paycheck goes, from gross to net and beyond</p>
         <div className="action-buttons">
           <Button
             variant="primary"

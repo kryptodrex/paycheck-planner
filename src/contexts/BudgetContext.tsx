@@ -231,6 +231,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       if (!data.retirement) {
         data.retirement = [];
       }
+      if (!data.loans) {
+        data.loans = [];
+      }
 
       // Migrate lastSavedAt for older files:
       // If plan has a file path but no explicit lastSavedAt yet, use updatedAt as fallback.
@@ -601,10 +604,11 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const addLoan = useCallback((loan: Omit<Loan, 'id'>) => {
     setBudgetData((prev) => {
       if (!prev) return prev;
+      const loans = prev.loans ?? [];
       return {
         ...prev,
         loans: [
-          ...prev.loans,
+          ...loans,
           {
             ...loan,
             enabled: loan.enabled !== false,
@@ -622,9 +626,10 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const updateLoan = useCallback((id: string, loan: Partial<Loan>) => {
     setBudgetData((prev) => {
       if (!prev) return prev;
+      const loans = prev.loans ?? [];
       return {
         ...prev,
-        loans: prev.loans.map((l) =>
+        loans: loans.map((l) =>
           l.id === id ? { ...l, ...loan } : l
         ),
         updatedAt: new Date().toISOString(),
@@ -638,9 +643,10 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const deleteLoan = useCallback((id: string) => {
     setBudgetData((prev) => {
       if (!prev) return prev;
+      const loans = prev.loans ?? [];
       return {
         ...prev,
-        loans: prev.loans.filter((l) => l.id !== id),
+        loans: loans.filter((l) => l.id !== id),
         updatedAt: new Date().toISOString(),
       };
     });

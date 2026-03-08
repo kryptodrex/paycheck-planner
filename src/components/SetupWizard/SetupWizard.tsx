@@ -6,7 +6,7 @@ import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import type { PaySettings, TaxSettings, Account } from '../../types/auth';
-import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor } from '../shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, ProgressBar } from '../shared';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -60,7 +60,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const handlePrevious = () => {
     // If on encryption step and currently in key setup view (encryptionEnabled is not null),
     // go back to the selection view instead of going to previous step
-    if (step === 2 && encryptionEnabled !== null) {
+    if (step === 6 && encryptionEnabled !== null) {
       setEncryptionEnabled(null);
       return;
     }
@@ -160,20 +160,20 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
       case 1:
         return true; // Year and currency are always set
       case 2:
-        return encryptionEnabled !== null; // Must have chosen encryption or no encryption
-      case 3:
         if (payType === 'salary') {
           return annualSalary && parseFloat(annualSalary) > 0;
         } else {
           return hourlyRate && parseFloat(hourlyRate) > 0 && 
                  hoursPerPayPeriod && parseFloat(hoursPerPayPeriod) > 0;
         }
-      case 4:
+      case 3:
         return true; // payFrequency is always set to a value
-      case 5:
+      case 4:
         return true; // Tax settings are optional (can use defaults)
-      case 6:
+      case 5:
         return accounts.length > 0; // Need at least one account
+      case 6:
+        return encryptionEnabled !== null; // Must have chosen encryption or no encryption
       default:
         return false;
     }
@@ -184,22 +184,19 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
       <div className="wizard-container">
         <div className="wizard-header">
           <h1>Setup Your Paycheck Plan</h1>
-          <div className="progress-bar">
-            <div 
-              className="progress-fill" 
-              style={{ width: `${(step / totalSteps) * 100}%` }}
-            ></div>
-          </div>
-          <p className="step-indicator">Step {step} of {totalSteps}</p>
+          <ProgressBar
+            percentage={(step / totalSteps) * 100}
+            label={`Step ${step} of ${totalSteps}`}
+            className="wizard-progress"
+          />
         </div>
 
         <div className="wizard-content">
           {step === 1 && (
             <div className="wizard-step">
-              <h2>Welcome to Paycheck Planner! 🎉</h2>
+              <h2>Welcome to Paycheck Planner!</h2>
               <p className="step-description">
-                You're planning for <strong>{budgetData?.year}</strong>. 
-                Let's set up how you get paid so we can help you plan where every paycheck goes.
+                Let's set up how you get paid so you can get started planning for <strong>{budgetData?.year}</strong>.
               </p>
 
               <FormGroup label="Currency" helperText="Choose your local currency for this plan">
@@ -217,19 +214,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               </FormGroup>
 
               <InfoBox>
-                <h3>What you'll configure:</h3>
+                <h3>What you'll configure in this quickstart guide:</h3>
                 <ul>
                   <li>Your pay amount and frequency</li>
-                  <li>Pre-tax deductions (401k, benefits, etc.)</li>
                   <li>Tax withholding estimates</li>
-                  <li>Where your net pay goes (accounts)</li>
-                  <li>Your recurring bills and expenses</li>
+                  <li>Initial setup of your banking accounts</li>
+                  <li>Security and encryption settings</li>
                 </ul>
               </InfoBox>
             </div>
           )}
 
-          {step === 2 && (
+          {step === 6 && (
             <div className="wizard-step">
               <h2>🔐 Security Setup</h2>
               <p className="step-description">
@@ -249,7 +245,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 2 && (
             <div className="wizard-step">
               <h2>How do you get paid?</h2>
               <p className="step-description">
@@ -309,7 +305,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <div className="wizard-step">
               <h2>How often are you paid?</h2>
               <p className="step-description">
@@ -348,7 +344,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 4 && (
             <div className="wizard-step">
               <h2>Tax Withholding</h2>
               <p className="step-description">
@@ -402,7 +398,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             </div>
           )}
 
-          {step === 6 && (
+          {step === 5 && (
             <div className="wizard-step">
               <h2>Where does your money go? 💰</h2>
               <p className="step-description">
@@ -448,7 +444,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               variant="primary"
               onClick={() => {
                 // Special handling for encryption step
-                if (step === 2) {
+                if (step === 6) {
                   handleCompleteEncryptionSetup();
                 } else {
                   handleNext();

@@ -152,17 +152,20 @@ export interface Bill {
  */
 export interface Loan {
   id: string;
-  name: string;                  // Loan description (e.g., "Mortgage", "Car Loan")
+  name: string;                        // Loan description (e.g., "Mortgage", "Car Loan")
   type: 'mortgage' | 'auto' | 'student' | 'personal' | 'credit-card' | 'other';
-  principal: number;             // Original loan amount
-  currentBalance: number;        // Current remaining balance
-  interestRate: number;          // Annual interest rate (percentage)
-  monthlyPayment: number;        // Monthly payment amount
-  accountId: string;             // Which account payments come from
-  startDate: string;             // ISO date string when loan started
-  termMonths?: number;           // Total loan term in months (optional)
-  enabled?: boolean;             // Whether loan is active (undefined defaults to true)
-  notes?: string;                // Optional notes
+  principal: number;                   // Original loan amount
+  currentBalance: number;              // Current remaining balance
+  interestRate: number;                // Annual interest rate (percentage)
+  monthlyPayment: number;              // Monthly payment amount
+  accountId: string;                   // Which account payments come from
+  startDate: string;                   // ISO date string when loan started
+  termMonths?: number;                 // Total loan term in months (optional)
+  insurancePayment?: number;           // Monthly insurance amount (PMI/GAP/etc.) (optional)
+  insuranceEndBalance?: number;        // Insurance stops at fixed balance amount (optional)
+  insuranceEndBalancePercent?: number; // Insurance stops at % of original principal (optional)
+  enabled?: boolean;                   // Whether loan is active (undefined defaults to true)
+  notes?: string;                      // Optional notes
 }
 
 /**

@@ -4,7 +4,7 @@ import type { Loan } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
-import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
+import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader, RadioGroup, ProgressBar } from '../shared';
 import './LoansManager.css';
 
 interface LoansManagerProps {
@@ -19,8 +19,25 @@ type LoanFieldErrors = {
   currentBalance?: string;
   interestRate?: string;
   monthlyPayment?: string;
+  insurancePayment?: string;
+  insuranceEndBalance?: string;
+  insuranceEndBalancePercent?: string;
+  termMonths?: string;
   accountId?: string;
   startDate?: string;
+};
+
+type LoanTermUnit = 'months' | 'years';
+
+type AmortizationRow = {
+  paymentNumber: number;
+  paymentDate: string;
+  beginningBalance: number;
+  paymentAmount: number;
+  principal: number;
+  interest: number;
+  pmiPayment: number;
+  endingBalance: number;
 };
 
 const LOAN_TYPES = [
@@ -31,6 +48,12 @@ const LOAN_TYPES = [
   { value: 'credit-card', label: 'Credit Card' },
   { value: 'other', label: 'Other' },
 ] as const;
+
+const INSURANCE_ELIGIBLE_LOAN_TYPES: Loan['type'][] = ['mortgage', 'auto', 'student', 'other'];
+
+const roundToCent = (value: number): number => Math.round(value * 100) / 100;
+
+const isInsuranceEligibleLoanType = (type: Loan['type']): boolean => INSURANCE_ELIGIBLE_LOAN_TYPES.includes(type);
 
 const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeChange }) => {
   const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
@@ -44,11 +67,18 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
   const [loanCurrentBalance, setLoanCurrentBalance] = useState('');
   const [loanInterestRate, setLoanInterestRate] = useState('');
   const [loanMonthlyPayment, setLoanMonthlyPayment] = useState('');
+  const [loanInsuranceEnabled, setLoanInsuranceEnabled] = useState(false);
+  const [loanInsurancePayment, setLoanInsurancePayment] = useState('');
+  const [loanInsuranceEndBalanceMode, setLoanInsuranceEndBalanceMode] = useState<'amount' | 'percent'>('amount');
+  const [loanInsuranceEndBalance, setLoanInsuranceEndBalance] = useState('');
+  const [loanInsuranceEndBalancePercent, setLoanInsuranceEndBalancePercent] = useState('');
   const [loanAccountId, setLoanAccountId] = useState('');
   const [loanStartDate, setLoanStartDate] = useState('');
   const [loanTermMonths, setLoanTermMonths] = useState('');
+  const [loanTermUnit, setLoanTermUnit] = useState<LoanTermUnit>('months');
   const [loanNotes, setLoanNotes] = useState('');
   const [loanFieldErrors, setLoanFieldErrors] = useState<LoanFieldErrors>({});
+  const [scheduleLoan, setScheduleLoan] = useState<Loan | null>(null);
 
   if (!budgetData) return null;
 
@@ -63,9 +93,12 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
     setLoanCurrentBalance('');
     setLoanInterestRate('');
     setLoanMonthlyPayment('');
+    setLoanInsurancePayment('');
+    setLoanInsuranceEndBalance('');
     setLoanAccountId(budgetData.accounts[0]?.id || '');
     setLoanStartDate(new Date().toISOString().split('T')[0]);
     setLoanTermMonths('');
+    setLoanTermUnit('months');
     setLoanNotes('');
     setLoanFieldErrors({});
     setShowAddLoan(true);
@@ -79,9 +112,28 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
     setLoanCurrentBalance(loan.currentBalance.toString());
     setLoanInterestRate(loan.interestRate.toString());
     setLoanMonthlyPayment(loan.monthlyPayment.toString());
+    const hasInsurance = (loan.insurancePayment ?? 0) > 0;
+    setLoanInsuranceEnabled(hasInsurance);
+    setLoanInsurancePayment(loan.insurancePayment?.toString() || '');
+    if (typeof loan.insuranceEndBalancePercent === 'number') {
+      setLoanInsuranceEndBalanceMode('percent');
+      setLoanInsuranceEndBalancePercent(loan.insuranceEndBalancePercent.toString());
+      setLoanInsuranceEndBalance('');
+    } else {
+      setLoanInsuranceEndBalanceMode('amount');
+      setLoanInsuranceEndBalance(loan.insuranceEndBalance?.toString() || '');
+      setLoanInsuranceEndBalancePercent('');
+    }
     setLoanAccountId(loan.accountId);
     setLoanStartDate(loan.startDate.split('T')[0]);
-    setLoanTermMonths(loan.termMonths?.toString() || '');
+    if (loan.termMonths) {
+      const isFullYears = loan.termMonths >= 12 && loan.termMonths % 12 === 0;
+      setLoanTermUnit(isFullYears ? 'years' : 'months');
+      setLoanTermMonths(isFullYears ? (loan.termMonths / 12).toString() : loan.termMonths.toString());
+    } else {
+      setLoanTermUnit('months');
+      setLoanTermMonths('');
+    }
     setLoanNotes(loan.notes || '');
     setLoanFieldErrors({});
     setShowAddLoan(true);
@@ -93,7 +145,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
     const parsedCurrentBalance = parseFloat(loanCurrentBalance);
     const parsedInterestRate = parseFloat(loanInterestRate);
     const parsedMonthlyPayment = parseFloat(loanMonthlyPayment);
-    const parsedTermMonths = loanTermMonths ? parseInt(loanTermMonths) : undefined;
+    const parsedInsurancePayment = loanInsuranceEnabled && loanInsurancePayment ? parseFloat(loanInsurancePayment) : undefined;
+    const parsedInsuranceEndBalance = loanInsuranceEnabled && loanInsuranceEndBalanceMode === 'amount' && loanInsuranceEndBalance ? parseFloat(loanInsuranceEndBalance) : undefined;
+    const parsedInsuranceEndBalancePercent = loanInsuranceEnabled && loanInsuranceEndBalanceMode === 'percent' && loanInsuranceEndBalancePercent ? parseFloat(loanInsuranceEndBalancePercent) : undefined;
+    const parsedTermValue = loanTermMonths ? parseFloat(loanTermMonths) : undefined;
+    const parsedTermMonths = parsedTermValue
+      ? Math.round(loanTermUnit === 'years' ? parsedTermValue * 12 : parsedTermValue)
+      : undefined;
     const errors: LoanFieldErrors = {};
 
     if (!trimmedLoanName) {
@@ -116,6 +174,26 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
       errors.monthlyPayment = 'Please enter a valid monthly payment greater than zero.';
     }
 
+    if (loanInsuranceEnabled) {
+      if (!loanInsurancePayment || !Number.isFinite(parsedInsurancePayment) || (parsedInsurancePayment ?? 0) < 0) {
+        errors.insurancePayment = 'Please enter a valid monthly insurance amount.';
+      }
+
+      if (loanInsuranceEndBalanceMode === 'amount') {
+        if (loanInsuranceEndBalance && (!Number.isFinite(parsedInsuranceEndBalance) || (parsedInsuranceEndBalance ?? 0) < 0)) {
+          errors.insuranceEndBalance = 'Please enter a valid insurance cutoff balance.';
+        }
+      } else {
+        if (loanInsuranceEndBalancePercent && (!Number.isFinite(parsedInsuranceEndBalancePercent) || (parsedInsuranceEndBalancePercent ?? 0) < 0 || (parsedInsuranceEndBalancePercent ?? 0) > 100)) {
+          errors.insuranceEndBalancePercent = 'Please enter a valid percentage between 0 and 100.';
+        }
+      }
+    }
+
+    if (loanTermMonths && (!Number.isFinite(parsedTermValue) || (parsedTermValue ?? 0) <= 0)) {
+      errors.termMonths = `Please enter a valid loan term in ${loanTermUnit}.`;
+    }
+
     if (!loanAccountId) {
       errors.accountId = 'Please select an account.';
     }
@@ -136,6 +214,9 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
       currentBalance: parsedCurrentBalance,
       interestRate: parsedInterestRate,
       monthlyPayment: parsedMonthlyPayment,
+      insurancePayment: isInsuranceEligibleLoanType(loanType) ? parsedInsurancePayment : undefined,
+      insuranceEndBalance: isInsuranceEligibleLoanType(loanType) && loanInsuranceEndBalanceMode === 'amount' ? parsedInsuranceEndBalance : undefined,
+      insuranceEndBalancePercent: isInsuranceEligibleLoanType(loanType) && loanInsuranceEndBalanceMode === 'percent' ? parsedInsuranceEndBalancePercent : undefined,
       accountId: loanAccountId,
       startDate: new Date(loanStartDate).toISOString(),
       termMonths: parsedTermMonths,
@@ -162,6 +243,92 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
 
   const handleToggleLoanEnabled = (loan: Loan) => {
     updateLoan(loan.id, { enabled: !isLoanEnabled(loan) });
+  };
+
+  const getMonthlyInsurancePayment = (loan: Loan, balance: number = loan.currentBalance): number => {
+    if (!isInsuranceEligibleLoanType(loan.type)) return 0;
+
+    const insurancePayment = loan.insurancePayment ?? 0;
+    if (insurancePayment <= 0) return 0;
+
+    let endBalanceThreshold = 0;
+    if (typeof loan.insuranceEndBalance === 'number') {
+      endBalanceThreshold = loan.insuranceEndBalance;
+    } else if (typeof loan.insuranceEndBalancePercent === 'number') {
+      endBalanceThreshold = (loan.principal * loan.insuranceEndBalancePercent) / 100;
+    }
+
+    if (endBalanceThreshold > 0 && balance <= endBalanceThreshold) {
+      return 0;
+    }
+
+    return insurancePayment;
+  };
+
+  const getCurrentPaymentSplit = (loan: Loan): { principal: number; interest: number; insurance: number; total: number } => {
+    if (loan.currentBalance <= 0 || loan.monthlyPayment <= 0) {
+      return { principal: 0, interest: 0, insurance: 0, total: 0 };
+    }
+
+    const monthlyRate = loan.interestRate / 100 / 12;
+    const interest = roundToCent(loan.currentBalance * monthlyRate);
+    const principal = roundToCent(Math.max(0, Math.min(loan.monthlyPayment - interest, loan.currentBalance)));
+    const insurance = roundToCent(getMonthlyInsurancePayment(loan));
+
+    return {
+      principal,
+      interest,
+      insurance,
+      total: roundToCent(principal + interest + insurance),
+    };
+  };
+
+  const buildAmortizationSchedule = (loan: Loan): AmortizationRow[] => {
+    const schedule: AmortizationRow[] = [];
+
+    if (loan.currentBalance <= 0 || loan.monthlyPayment <= 0) return schedule;
+
+    const monthlyRate = loan.interestRate / 100 / 12;
+    // Allow up to 1200 months (100 years) to prevent infinite loops, but will exit early when balance reaches zero
+    const maxScheduleLength = 1200;
+    let balance = loan.currentBalance;
+    const startDate = new Date();
+
+    for (let i = 1; i <= maxScheduleLength && balance > 0; i += 1) {
+      const beginningBalance = balance;
+      const interest = roundToCent(balance * monthlyRate);
+      let principal = roundToCent(loan.monthlyPayment - interest);
+
+      if (principal <= 0) {
+        break;
+      }
+
+      if (principal > balance) {
+        principal = roundToCent(balance);
+      }
+
+      const pmiPayment = roundToCent(getMonthlyInsurancePayment(loan, balance));
+      const paymentAmount = roundToCent(principal + interest + pmiPayment);
+      const nextBalance = roundToCent(Math.max(0, balance - principal));
+
+      const paymentDate = new Date(startDate);
+      paymentDate.setMonth(paymentDate.getMonth() + i);
+
+      schedule.push({
+        paymentNumber: i,
+        paymentDate: paymentDate.toLocaleDateString(),
+        beginningBalance,
+        paymentAmount,
+        principal,
+        interest,
+        pmiPayment,
+        endingBalance: nextBalance,
+      });
+
+      balance = nextBalance;
+    }
+
+    return schedule;
   };
 
   // Group loans by account
@@ -220,8 +387,10 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
             <p>No accounts available. Please add an account first in the Accounts settings.</p>
           </div>
         ) : loansList.length === 0 ? (
-          <div className="empty-state">
-            <p>No loans yet. Click "Add Loan" to track your first debt or loan.</p>
+          <div className="empty-state loans-empty-state">
+            <div className="empty-icon">🏦</div>
+            <h3>No Loans Yet</h3>
+            <p>Add your loans or debts to start tracking your payoff progress</p>
           </div>
         ) : (
           <>
@@ -229,7 +398,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
               const accountLoans = loansByAccount[account.id] || [];
               const totalMonthly = accountLoans
                 .filter(loan => isLoanEnabled(loan))
-                .reduce((sum, loan) => sum + loan.monthlyPayment, 0);
+                .reduce((sum, loan) => sum + loan.monthlyPayment + getMonthlyInsurancePayment(loan), 0);
               return { account, accountLoans, totalMonthly };
             })
               .filter(({ accountLoans }) => accountLoans.length > 0)
@@ -261,7 +430,11 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                       .map(loan => {
                         const remainingMonths = getRemainingMonths(loan);
                         const remainingYears = remainingMonths ? (remainingMonths / 12).toFixed(1) : null;
-                        const percentPaid = ((loan.principal - loan.currentBalance) / loan.principal * 100).toFixed(1);
+                        const rawPercentPaid = loan.principal > 0 ? ((loan.principal - loan.currentBalance) / loan.principal) * 100 : 0;
+                        const percentPaidValue = Math.max(0, Math.min(100, Number.isFinite(rawPercentPaid) ? rawPercentPaid : 0));
+                        const percentPaid = percentPaidValue.toFixed(1);
+                        const paymentSplit = getCurrentPaymentSplit(loan);
+                        const displayMonthlyTotal = toDisplayAmount(loan.monthlyPayment + paymentSplit.insurance);
                         
                         return (
                           <SectionItemCard key={loan.id} className={`loan-item ${isLoanEnabled(loan) ? '' : 'loan-disabled'}`}>
@@ -273,21 +446,42 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                                 </h4>
                               </div>
                               <div className="loan-amount">
-                                {formatWithSymbol(toDisplayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatWithSymbol(displayMonthlyTotal, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 <span className="amount-label">/ {getDisplayModeLabel(displayMode)}</span>
                               </div>
                             </div>
 
                             <div className="loan-details">
-                              <div className="loan-progress">
-                                <div className="progress-bar-container">
-                                  <div className="progress-bar" style={{ width: `${percentPaid}%` }} />
+                              <ProgressBar
+                                percentage={percentPaidValue}
+                                details={
+                                  <>
+                                    <span>{percentPaid}% paid</span>
+                                    <span>
+                                      {formatWithSymbol(loan.currentBalance, currency)} of {formatWithSymbol(loan.principal, currency)}
+                                    </span>
+                                  </>
+                                }
+                              />
+                              <div className="loan-payment-split">
+                                <span className="payment-split-title">Payment Split (Monthly)</span>
+                                <div className="payment-split-row">
+                                  <span>Principal</span>
+                                  <span>{formatWithSymbol(paymentSplit.principal, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
-                                <div className="progress-info">
-                                  <span>{percentPaid}% paid</span>
-                                  <span>
-                                    {formatWithSymbol(loan.currentBalance, currency)} of {formatWithSymbol(loan.principal, currency)}
-                                  </span>
+                                <div className="payment-split-row">
+                                  <span>Interest</span>
+                                  <span>{formatWithSymbol(paymentSplit.interest, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                {paymentSplit.insurance > 0 && (
+                                  <div className="payment-split-row">
+                                    <span>Insurance (PMI/GAP)</span>
+                                    <span>{formatWithSymbol(paymentSplit.insurance, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                )}
+                                <div className="payment-split-row total">
+                                  <span>Total</span>
+                                  <span>{formatWithSymbol(paymentSplit.total, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                               </div>
                               <div className="loan-stats">
@@ -315,26 +509,32 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
 
                             <div className="loan-actions">
                               <Button
-                                variant="secondary"
-                                size="small"
+                                variant="icon"
+                                onClick={() => setScheduleLoan(loan)}
+                                title="View amortization schedule"
+                              >
+                                📊
+                              </Button>
+                              <Button
+                                variant="icon"
                                 onClick={() => handleToggleLoanEnabled(loan)}
                                 title={isLoanEnabled(loan) ? 'Disable loan' : 'Enable loan'}
                               >
-                                {isLoanEnabled(loan) ? '✓ Enabled' : '✗ Disabled'}
+                                {isLoanEnabled(loan) ? '⏸️' : '▶️'}
                               </Button>
                               <Button
-                                variant="secondary"
-                                size="small"
+                                variant="icon"
                                 onClick={() => handleEditLoan(loan)}
+                                title="Edit loan"
                               >
-                                Edit
+                                ✏️
                               </Button>
                               <Button
-                                variant="danger"
-                                size="small"
+                                variant="icon"
                                 onClick={() => handleDeleteLoan(loan.id)}
+                                title="Delete loan"
                               >
-                                Delete
+                                🗑️
                               </Button>
                             </div>
                           </SectionItemCard>
@@ -473,6 +673,115 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           />
         </FormGroup>
 
+        {isInsuranceEligibleLoanType(loanType) && (
+          <>
+            <FormGroup label="Mortgage Insurance (PMI/GAP/etc.)" helperText="Add optional insurance to this loan">
+              <RadioGroup
+                name="insurance-enabled"
+                value={loanInsuranceEnabled ? 'enabled' : 'disabled'}
+                options={[
+                  {
+                    value: 'disabled',
+                    label: 'No Insurance',
+                  },
+                  {
+                    value: 'enabled',
+                    label: 'Add Insurance',
+                  },
+                ]}
+                onChange={(value) => {
+                  const enabled = value === 'enabled';
+                  setLoanInsuranceEnabled(enabled);
+                  if (!enabled) {
+                    setLoanInsurancePayment('');
+                    setLoanInsuranceEndBalance('');
+                    setLoanInsuranceEndBalancePercent('');
+                  }
+                }}
+                layout="row"
+              />
+            </FormGroup>
+
+            {loanInsuranceEnabled && (
+              <>
+                <FormGroup label="Monthly Insurance Amount" helperText="Amount added to monthly payment while insurance is active" error={loanFieldErrors.insurancePayment}>
+                  <InputWithPrefix
+                    prefix={getCurrencySymbol(currency)}
+                    type="number"
+                    value={loanInsurancePayment}
+                    onChange={(e) => {
+                      setLoanInsurancePayment(e.target.value);
+                      if (loanFieldErrors.insurancePayment) {
+                        setLoanFieldErrors(prev => ({ ...prev, insurancePayment: undefined }));
+                      }
+                    }}
+                    placeholder="150"
+                    min="0"
+                    step="1"
+                    className={loanFieldErrors.insurancePayment ? 'field-error' : ''}
+                  />
+                </FormGroup>
+
+                <FormGroup label="Insurance Threshold" helperText="When insurance stops">
+                  <div className="insurance-end-balance-row">
+                    {loanInsuranceEndBalanceMode === 'amount' ? (
+                      <InputWithPrefix
+                        prefix={getCurrencySymbol(currency)}
+                        type="number"
+                        value={loanInsuranceEndBalance}
+                        onChange={(e) => {
+                          setLoanInsuranceEndBalance(e.target.value);
+                          if (loanFieldErrors.insuranceEndBalance) {
+                            setLoanFieldErrors(prev => ({ ...prev, insuranceEndBalance: undefined }));
+                          }
+                        }}
+                        placeholder="300000"
+                        min="0"
+                        step="100"
+                        className={loanFieldErrors.insuranceEndBalance ? 'field-error' : ''}
+                      />
+                    ) : (
+                      <InputWithPrefix
+                        prefix=""
+                        suffix="%"
+                        type="number"
+                        value={loanInsuranceEndBalancePercent}
+                        onChange={(e) => {
+                          setLoanInsuranceEndBalancePercent(e.target.value);
+                          if (loanFieldErrors.insuranceEndBalancePercent) {
+                            setLoanFieldErrors(prev => ({ ...prev, insuranceEndBalancePercent: undefined }));
+                          }
+                        }}
+                        placeholder="80"
+                        min="0"
+                        max="100"
+                        step="1"
+                        className={loanFieldErrors.insuranceEndBalancePercent ? 'field-error' : ''}
+                      />
+                    )}
+                    <select
+                      value={loanInsuranceEndBalanceMode}
+                      onChange={(e) => {
+                        const mode = e.target.value as 'amount' | 'percent';
+                        setLoanInsuranceEndBalanceMode(mode);
+                        if (mode === 'amount') {
+                          setLoanInsuranceEndBalancePercent('');
+                        } else {
+                          setLoanInsuranceEndBalance('');
+                        }
+                      }}
+                      aria-label="Insurance threshold mode"
+                    >
+                      <option value="amount">Amount</option>
+                      <option value="percent">% of Loan</option>
+                    </select>
+                  </div>
+                </FormGroup>
+              </>
+            )}
+          </>
+        )}
+
         <FormGroup label="Payment Account" required error={loanFieldErrors.accountId}>
           <select
             value={loanAccountId}
@@ -507,15 +816,35 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           />
         </FormGroup>
 
-        <FormGroup label="Loan Term (months)" helperText="Optional: Total duration of the loan in months">
-          <input
-            type="number"
-            value={loanTermMonths}
-            onChange={(e) => setLoanTermMonths(e.target.value)}
-            placeholder="360 (for 30-year mortgage)"
-            min="0"
-            step="1"
-          />
+        <FormGroup
+          label="Loan Term"
+          helperText="Optional: Enter duration in months or years"
+          error={loanFieldErrors.termMonths}
+        >
+          <div className="loan-term-input-row">
+            <input
+              type="number"
+              value={loanTermMonths}
+              onChange={(e) => {
+                setLoanTermMonths(e.target.value);
+                if (loanFieldErrors.termMonths) {
+                  setLoanFieldErrors(prev => ({ ...prev, termMonths: undefined }));
+                }
+              }}
+              placeholder={loanTermUnit === 'years' ? '30' : '360'}
+              min="0"
+              step={loanTermUnit === 'years' ? '0.5' : '1'}
+              className={loanFieldErrors.termMonths ? 'field-error' : ''}
+            />
+            <select
+              value={loanTermUnit}
+              onChange={(e) => setLoanTermUnit(e.target.value as LoanTermUnit)}
+              aria-label="Loan term unit"
+            >
+              <option value="months">Months</option>
+              <option value="years">Years</option>
+            </select>
+          </div>
         </FormGroup>
 
         <FormGroup label="Notes" helperText="Optional notes about this loan">
@@ -526,6 +855,65 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
             rows={3}
           />
         </FormGroup>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(scheduleLoan)}
+        onClose={() => setScheduleLoan(null)}
+        contentClassName="loan-schedule-modal"
+        header={scheduleLoan ? `${scheduleLoan.name} Amortization Schedule` : 'Amortization Schedule'}
+        footer={
+          <Button variant="secondary" onClick={() => setScheduleLoan(null)}>
+            Close
+          </Button>
+        }
+      >
+        {scheduleLoan && (() => {
+          const schedule = buildAmortizationSchedule(scheduleLoan);
+          return (
+            <div className="loan-schedule-content">
+              <p className="loan-schedule-description">
+                Estimated monthly payment breakdown from current balance forward. Insurance is included while active.
+              </p>
+              {schedule.length === 0 ? (
+                <div className="loan-schedule-empty">
+                  Unable to generate schedule. Monthly payment may be too low to reduce principal.
+                </div>
+              ) : (
+                <div className="loan-schedule-table-wrapper">
+                  <table className="loan-schedule-table">
+                    <thead>
+                      <tr>
+                        <th>Pmt. #</th>
+                        <th>Pmt. Date</th>
+                        <th>Beginning Balance</th>
+                        <th>Payment Amount</th>
+                        <th>Principal Portion</th>
+                        <th>Interest Portion</th>
+                        <th>Ending Balance</th>
+                        <th>PMI Pmt.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedule.map(row => (
+                        <tr key={`${scheduleLoan.id}-${row.paymentNumber}`}>
+                          <td>{row.paymentNumber}</td>
+                          <td>{row.paymentDate}</td>
+                          <td>{formatWithSymbol(row.beginningBalance, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td>{formatWithSymbol(row.paymentAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td>{formatWithSymbol(row.principal, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td>{formatWithSymbol(row.interest, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td>{formatWithSymbol(row.endingBalance, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td>{formatWithSymbol(row.pmiPayment, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );

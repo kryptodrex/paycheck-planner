@@ -1,7 +1,7 @@
 // Utility functions for managing dashboard tabs
 import type { TabConfig } from '../types/auth';
 
-export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'benefits' | 'taxes' | 'retirement';
+export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'benefits' | 'taxes';
 
 /**
  * Get the default tab configuration
@@ -55,14 +55,6 @@ export function getDefaultTabConfigs(): TabConfig[] {
       icon: '💰',
       visible: false, // Hidden by default
       order: 5,
-      pinned: false,
-    },
-    {
-      id: 'retirement',
-      label: 'Retirement',
-      icon: '🪙',
-      visible: false, // Hidden by default
-      order: 6,
       pinned: false,
     },
   ];
