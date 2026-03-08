@@ -65,7 +65,7 @@
     - By default we could show icons with labels for better discoverability, but allow users to switch to icons-only if they prefer a more minimalist interface. - This preference should be saved and persist across sessions.
   - When moving tabs manually to rearrange them, there should be a clear indicator to the user of where the tab will be placed when they drop it, and the tab order should update immediately to reflect the change for a smooth and intuitive user experience.
 
-- [ ] **Glossary of Terms** - Add a glossary or tooltip explanations for more complicated financial terms used in the app (e.g., Gross Pay, Net Pay, Deductions, Allocations, etc.) to help users understand the concepts and calculations better
+- [x] **Glossary of Terms** - Add a glossary or tooltip explanations for more complicated financial terms used in the app (e.g., Gross Pay, Net Pay, Deductions, Allocations, etc.) to help users understand the concepts and calculations better
   - This could be implemented as tooltips that appear when hovering over certain terms, or as a dedicated glossary section in the app where users can look up definitions and explanations of key financial terms used in the app
   - We should add a Help menu in the menu bar that links to the glossary and other helpful resources for users who want to learn more about financial planning concepts, with easy searching and navigation to find the information they need.
 
