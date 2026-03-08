@@ -54,19 +54,20 @@
 - [x] **Currency Conversions** - When a user changes the currency for a plan, offer to convert all existing amounts to the new currency using an exchange rate (with an option to skip conversion and just change the symbol)
     - For now, just allow user to give the exchange rate manually, but in the future we can look into integrating with a currency exchange API to get real-time rates for more accurate conversions.
 
-- [ ] **More options for saving plans** - In addition to saving plans as local `.budget` files, we want to add more options for saving and exporting plans:
-    - Ability to save as an Excel file instead of just a JSON-based `.budget` file, for users who want to manipulate their plans in spreadsheet software
-        - We can create a well-formatted Excel file with separate sheets for pay breakdown, bills, accounts, etc. using a library like SheetJS
-        - Depending on the Encryption method selected, if the user saves as an Excel file we can adjust the encryption approach (e.g., encrypting the Excel file with a password, or providing an unencrypted export option for users who want to use Excel's built-in password protection)
-        - This Excel file should still be able to be opened and edited in the Paycheck Planner app, allowing for a more flexible workflow for users who want to use both the app and spreadsheet software for managing their plans
-    - Ability to export the plan as a PDF for easy sharing and printing
-        - For PDF export, we can use a library like jsPDF to generate a nicely formatted PDF that includes all the relevant information from the plan (pay breakdown, bills, accounts, etc.) in a clean layout
-        - The PDF export should also respect the encryption settings of the plan, either by providing an unencrypted export option or by encrypting the PDF with a password of the user's choice if the plan is encrypted
-
-- [ ] **More Tab options** - Add more tabs for some new categories, including:
+- [x] **More Tab options** - Add more tabs for some new categories, including:
     - Loans tab for managing any debts or loans, with details like interest rates, payment or loan amortization schedules, etc.
         - This could be for a home Mortgage, student loans, car loans, or any other type of debt the user wants to track easily
-    - Custom category tabs that users can create and customize based on their needs (e.g., "Travel", "Education", etc.)
+
+- [ ] **Custom Tab Display Modes** - Allow users to show tabs on the left, right, top, or bottom of the screen based on their preference for better accessibility and workflow customization
+  - This would involve making the tab component more flexible to support different orientations and placements around the main content area
+  - Users could choose to have tabs on the left side for easier vertical navigation, or on the top for a more traditional layout, etc.
+  - For tabs on the left or right in a sidebar, we could also allow users to choose between icons only (for a more compact view) or icons with labels for easier identification, with a pleasant animation for expanding/collapsing the sidebar if they choose the icons-only view. 
+    - By default we could show icons with labels for better discoverability, but allow users to switch to icons-only if they prefer a more minimalist interface. - This preference should be saved and persist across sessions.
+  - When moving tabs manually to rearrange them, there should be a clear indicator to the user of where the tab will be placed when they drop it, and the tab order should update immediately to reflect the change for a smooth and intuitive user experience.
+
+- [ ] **Glossary of Terms** - Add a glossary or tooltip explanations for more complicated financial terms used in the app (e.g., Gross Pay, Net Pay, Deductions, Allocations, etc.) to help users understand the concepts and calculations better
+  - This could be implemented as tooltips that appear when hovering over certain terms, or as a dedicated glossary section in the app where users can look up definitions and explanations of key financial terms used in the app
+  - We should add a Help menu in the menu bar that links to the glossary and other helpful resources for users who want to learn more about financial planning concepts, with easy searching and navigation to find the information they need.
 
 - [ ] **Unit tests** - Add unit tests for critical components and functions to improve reliability and catch bugs early
   - Focus on testing the core logic of the application, such as the pay breakdown calculations, encryption/decryption functions, and file storage operations
@@ -105,3 +106,20 @@
     - Increase decimal precision for exchange rates (support more decimal places)
     - Warn users when exchange rate appears to be an imprecise inverse of a recent conversion
   - Consider integration with live exchange rate API for precise real-time rates (previously mentioned in Currency Conversions feature)
+
+- [ ] **More options for saving plans** - In addition to saving plans as local `.budget` files, we want to add more options for saving and exporting plans:
+    - Ability to save as an Excel file instead of just a JSON-based `.budget` file, for users who want to manipulate their plans in spreadsheet software
+        - We can create a well-formatted Excel file with separate sheets for pay breakdown, bills, accounts, etc. using a library like SheetJS
+        - Depending on the Encryption method selected, if the user saves as an Excel file we can adjust the encryption approach (e.g., encrypting the Excel file with a password, or providing an unencrypted export option for users who want to use Excel's built-in password protection)
+        - This Excel file should still be able to be opened and edited in the Paycheck Planner app, allowing for a more flexible workflow for users who want to use both the app and spreadsheet software for managing their plans
+    - Ability to export the plan as a PDF for easy sharing and printing
+        - For PDF export, we can use a library like jsPDF to generate a nicely formatted PDF that includes all the relevant information from the plan (pay breakdown, bills, accounts, etc.) in a clean layout
+        - The PDF export should also respect the encryption settings of the plan, either by providing an unencrypted export option or by encrypting the PDF with a password of the user's choice if the plan is encrypted
+
+- [ ] **Custom tabs** - Allow users to create custom tabs for organizing their bills and accounts based on their own categories (e.g., "Travel", "Education", "Health", etc.)
+  - Custom category tabs that users can create and customize based on their needs (e.g., "Travel", "Education", etc.)
+
+- [ ] **Mobile Companion App** - Develop a mobile version of the app for iOS and Android to allow users to view and manage their plans on the go.
+    - The mobile app would sync with the desktop app via cloud storage (e.g., Dropbox, Google Drive) or a custom backend to keep plans up-to-date across devices
+    - The mobile app would have a simplified interface focused on key metrics, pay breakdown, and bill tracking for quick access while away from the desktop
+    - This would allow users to check their financial plan, track bills, and make adjustments from their phone, providing more flexibility and convenience in managing their finances
