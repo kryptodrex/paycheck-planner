@@ -70,6 +70,14 @@
   - Use a testing framework like Jest to write and run the tests
   - Set up a test suite that can be run as part of the development process to ensure that new changes don't break existing functionality
 
+
+#### Backlog items to be prioritized and scheduled for future development:
+
 - [ ] **Allocation Rounding Consistency Follow-up** - Revisit cross-mode rounding behavior for Pay Breakdown allocations to ensure entering values in paycheck/monthly/yearly modes remains stable and predictable after save/reopen.
   - Confirm a clear source-of-truth strategy for stored values and display conversions.
   - Add targeted tests for mode conversion and save/blur flows to prevent regressions.
+
+- [ ] **Year-Aware Calendar Calculations** - Evaluate using the selected plan year in date-based math so projections can account for calendar differences when appropriate.
+  - Consider leap year support for custom day-based frequencies (365 vs 366).
+  - Decide whether month/day-aware calculations should affect paycheck, bill, and annual/monthly conversion views, or remain fixed-frequency averages.
+  - Add targeted tests for leap-year and non-leap-year scenarios to validate expected behavior.

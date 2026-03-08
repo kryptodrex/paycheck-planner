@@ -42,14 +42,42 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   };
 
   const handleOpenRecent = async (filePath: string) => {
+    if (window.electronAPI?.fileExists) {
+      try {
+        const exists = await window.electronAPI.fileExists(filePath);
+        if (!exists) {
+          const removeFromRecents = window.confirm(
+            'This file could not be found.\n\nWould you like to remove it from Recently Opened?'
+          );
+          if (removeFromRecents) {
+            FileStorageService.removeRecentFile(filePath);
+            setRecentFiles(FileStorageService.getRecentFiles());
+          }
+          return;
+        }
+      } catch {
+      }
+    }
+
     try {
       await loadBudget(filePath);
     } catch (error) {
       console.error('Error opening recent file:', error);
-      // Remove the file from recent files if it failed to load
-      FileStorageService.removeRecentFile(filePath);
-      setRecentFiles(FileStorageService.getRecentFiles());
-      alert('Failed to open file: ' + (error as Error).message);
+      const message = (error as Error).message || 'Unknown error';
+      const isFileNotFound = /not found|enoent|no such file/i.test(message);
+
+      if (isFileNotFound) {
+        const removeFromRecents = window.confirm(
+          'This file could not be found.\n\nWould you like to remove it from Recently Opened?'
+        );
+        if (removeFromRecents) {
+          FileStorageService.removeRecentFile(filePath);
+          setRecentFiles(FileStorageService.getRecentFiles());
+        }
+        return;
+      }
+
+      alert('Failed to open file: ' + message);
     }
   };
 

@@ -13,7 +13,7 @@ function App() {
   console.log('[APP] App component rendering...');
   
   // Get the current budget data and actions from our context
-  const { budgetData, saveBudget } = useBudget()
+  const { budgetData, saveBudget, saveWindowState } = useBudget()
   console.log('[APP] Budget data available:', !!budgetData);
   
   // Track whether user has completed initial setup
@@ -85,6 +85,19 @@ function App() {
       delete window.__requestSaveBeforeClose;
     };
   }, [saveBudget])
+
+  // Expose a window state save hook for Electron to call when closing
+  useEffect(() => {
+    window.__saveWindowState = async (width: number, height: number, x: number, y: number) => {
+      // Get current active tab if available (set by PlanDashboard)
+      const activeTab = (window as any).__currentActiveTab;
+      await saveWindowState(width, height, x, y, activeTab);
+    };
+
+    return () => {
+      delete window.__saveWindowState;
+    };
+  }, [saveWindowState])
 
   // Check if user has already configured encryption on app load
   useEffect(() => {

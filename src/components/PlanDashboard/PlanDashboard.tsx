@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
@@ -26,11 +26,21 @@ interface PlanDashboardProps {
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
-  const [activeTab, setActiveTab] = useState<TabView>(
-    viewMode && ['metrics', 'breakdown', 'bills', 'taxes', 'benefits'].includes(viewMode) 
-      ? viewMode as TabView 
-      : 'metrics'
-  );
+  const validTabs: TabView[] = ['metrics', 'breakdown', 'bills', 'taxes', 'benefits', 'retirement'];
+  const getInitialTab = () => {
+    if (viewMode && validTabs.includes(viewMode as TabView)) {
+      return viewMode as TabView;
+    }
+
+    const savedTab = budgetData?.settings?.activeTab;
+    if (savedTab && validTabs.includes(savedTab as TabView)) {
+      return savedTab as TabView;
+    }
+
+    return 'metrics' as TabView;
+  };
+
+  const [activeTab, setActiveTab] = useState<TabView>(getInitialTab);
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
@@ -42,6 +52,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [isEditingPlanName, setIsEditingPlanName] = useState(false);
   const [draftPlanName, setDraftPlanName] = useState('');
+  const [draftYear, setDraftYear] = useState('');
   const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
   const [customKey, setCustomKey] = useState('');
   const [generatedKey, setGeneratedKey] = useState('');
@@ -51,8 +62,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showTabManagementModal, setShowTabManagementModal] = useState(false);
   const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
   const [temporarilyVisibleTab, setTemporarilyVisibleTab] = useState<TabView | null>(null);
+  const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
   const tabContentRef = useRef<HTMLDivElement | null>(null);
   const tabPanelRefs = useRef<Partial<Record<TabView, HTMLDivElement | null>>>({});
+  const planLoadingStartRef = useRef<number | null>(null);
+  const planLoadingTimeoutRef = useRef<number | null>(null);
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
@@ -83,13 +97,36 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   }, [activeTab, temporarilyVisibleTab]);
 
+  // Restore active tab before paint to avoid flashing default tab
+  useLayoutEffect(() => {
+    if (viewMode && validTabs.includes(viewMode as TabView)) {
+      if (activeTab !== (viewMode as TabView)) {
+        setActiveTab(viewMode as TabView);
+      }
+      return;
+    }
+
+    const savedTab = budgetData?.settings?.activeTab;
+    if (savedTab && validTabs.includes(savedTab as TabView) && activeTab !== (savedTab as TabView)) {
+      setActiveTab(savedTab as TabView);
+    }
+  }, [budgetData?.id, viewMode]);
+
+  // Keep window.__currentActiveTab in sync for save on close
+  useEffect(() => {
+    (window as any).__currentActiveTab = activeTab;
+    return () => {
+      delete (window as any).__currentActiveTab;
+    };
+  }, [activeTab]);
+
   // Handle save with success toast
   const handleSave = useCallback(async () => {
-    const success = await saveBudget();
+    const success = await saveBudget(activeTab);
     if (success) {
       setStatusToast('✅ Plan saved successfully');
     }
-  }, [saveBudget]);
+  }, [saveBudget, activeTab]);
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -167,6 +204,44 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }, 2500);
     return () => window.clearTimeout(timer);
   }, [statusToast]);
+
+  // Show a dedicated loading screen when reopening/loading a plan.
+  // Keep it visible for at least 1 second so users don't see tab/content flashing.
+  useEffect(() => {
+    const isPlanLoadInProgress = loading && !budgetData;
+
+    if (isPlanLoadInProgress) {
+      if (planLoadingTimeoutRef.current) {
+        window.clearTimeout(planLoadingTimeoutRef.current);
+        planLoadingTimeoutRef.current = null;
+      }
+
+      if (planLoadingStartRef.current === null) {
+        planLoadingStartRef.current = Date.now();
+      }
+
+      setShowPlanLoadingScreen(true);
+      return;
+    }
+
+    if (showPlanLoadingScreen && planLoadingStartRef.current !== null) {
+      const elapsed = Date.now() - planLoadingStartRef.current;
+      const remaining = Math.max(0, 1000 - elapsed);
+
+      planLoadingTimeoutRef.current = window.setTimeout(() => {
+        setShowPlanLoadingScreen(false);
+        planLoadingStartRef.current = null;
+        planLoadingTimeoutRef.current = null;
+      }, remaining);
+    }
+
+    return () => {
+      if (planLoadingTimeoutRef.current) {
+        window.clearTimeout(planLoadingTimeoutRef.current);
+        planLoadingTimeoutRef.current = null;
+      }
+    };
+  }, [loading, budgetData, showPlanLoadingScreen]);
 
   const handleScrollToRetirementComplete = useCallback(() => {
     setShouldScrollToRetirement(false);
@@ -256,6 +331,18 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setActiveTab(tab);
   }, [tabConfigs]);
 
+  if (showPlanLoadingScreen) {
+    return (
+      <div className="plan-loading-screen" role="status" aria-live="polite" aria-label="Loading plan">
+        <div className="plan-loading-card">
+          <div className="plan-loading-spinner" aria-hidden="true" />
+          <h2>Loading your plan…</h2>
+          <p>Decrypting and preparing your dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!budgetData) return null;
 
   // Check if initial setup is complete (synchronously, no state needed)
@@ -304,25 +391,51 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setShowEncryptionSetup(true);
   };
 
-  const handleStartPlanNameEdit = () => {
+  const handleStartPlanEdit = () => {
     setDraftPlanName(budgetData?.name || '');
+    setDraftYear(String(budgetData?.year || new Date().getFullYear()));
     setIsEditingPlanName(true);
   };
 
-  const handleCancelPlanNameEdit = () => {
+  const handleCancelPlanEdit = () => {
     setIsEditingPlanName(false);
     setDraftPlanName('');
+    setDraftYear('');
   };
 
-  const handleSavePlanName = () => {
-    const nextName = draftPlanName.trim();
-    if (!nextName || !budgetData || nextName === budgetData.name) {
-      handleCancelPlanNameEdit();
+  const handleSavePlanEdit = () => {
+    if (!budgetData) {
+      handleCancelPlanEdit();
       return;
     }
 
-    updateBudgetData({ name: nextName });
-    setStatusToast('✏️ Plan name updated');
+    const nextName = draftPlanName.trim();
+    const nextYear = parseInt(draftYear.trim(), 10);
+
+    // Validate name
+    if (!nextName) {
+      setStatusToast('⚠️ Plan name cannot be empty');
+      return;
+    }
+
+    // Validate year
+    if (isNaN(nextYear) || nextYear < 2000 || nextYear > 2100) {
+      setStatusToast('⚠️ Please enter a valid year (2000-2100)');
+      return;
+    }
+
+    // Check if anything changed
+    const nameChanged = nextName !== budgetData.name;
+    const yearChanged = nextYear !== budgetData.year;
+
+    if (!nameChanged && !yearChanged) {
+      handleCancelPlanEdit();
+      return;
+    }
+
+    // Update both fields
+    updateBudgetData({ name: nextName, year: nextYear });
+    setStatusToast('✏️ Plan updated');
     setIsEditingPlanName(false);
   };
 
@@ -432,38 +545,64 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         <div className="header-left">
           <div className="plan-title-block">
             {isEditingPlanName ? (
-              <div className="plan-title-edit-row">
-                <input
-                  value={draftPlanName}
-                  onChange={(event) => setDraftPlanName(event.target.value)}
-                  className="plan-title-input"
-                  placeholder="Plan name"
-                  autoFocus
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      handleSavePlanName();
-                    }
-                    if (event.key === 'Escape') {
-                      handleCancelPlanNameEdit();
-                    }
-                  }}
-                />
-                <Button
-                  variant="secondary"
-                  size="xsmall"
-                  className="header-btn-secondary plan-title-btn"
-                  onClick={handleSavePlanName}
-                >
-                  Save
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="xsmall"
-                  className="header-btn-secondary plan-title-btn"
-                  onClick={handleCancelPlanNameEdit}
-                >
-                  Cancel
-                </Button>
+              <div className="plan-edit-container">
+                <div className="plan-edit-fields">
+                  <div className="plan-edit-field">
+                    <label>Name:</label>
+                    <input
+                      type="text"
+                      value={draftPlanName}
+                      onChange={(event) => setDraftPlanName(event.target.value)}
+                      className="plan-title-input"
+                      placeholder="Plan name"
+                      autoFocus
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          handleSavePlanEdit();
+                        }
+                        if (event.key === 'Escape') {
+                          handleCancelPlanEdit();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="plan-edit-field">
+                    <label>Year:</label>
+                    <input
+                      type="number"
+                      value={draftYear}
+                      onChange={(event) => setDraftYear(event.target.value)}
+                      className="plan-year-input"
+                      placeholder="Year"
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          handleSavePlanEdit();
+                        }
+                        if (event.key === 'Escape') {
+                          handleCancelPlanEdit();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="plan-edit-buttons">
+                  <Button
+                    variant="secondary"
+                    size="xsmall"
+                    className="header-btn-secondary plan-title-btn"
+                    onClick={handleSavePlanEdit}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="xsmall"
+                    className="header-btn-secondary plan-title-btn"
+                    onClick={handleCancelPlanEdit}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="plan-title-view-row">
@@ -472,14 +611,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
                   variant="secondary"
                   size="xsmall"
                   className="header-btn-secondary plan-title-btn"
-                  onClick={handleStartPlanNameEdit}
-                  title="Rename this plan"
+                  onClick={handleStartPlanEdit}
+                  title="Edit plan name and year"
                 >
-                  Rename
+                  Edit
                 </Button>
               </div>
             )}
-            {showYearSubtitle && <p className="plan-year-subtitle">Year: {budgetData.year}</p>}
+            {showYearSubtitle && !isEditingPlanName && (
+              <p className="plan-year-subtitle">Year: {budgetData.year}</p>
+            )}
           </div>
           <button 
             className="encryption-status-btn"

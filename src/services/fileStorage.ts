@@ -155,6 +155,31 @@ export class FileStorageService {
   }
 
   /**
+   * Add/update a recent file while de-duplicating other entries that belong to the same plan.
+   * This keeps recents correct when a plan file is renamed/moved externally.
+   */
+  private static addRecentFileForPlan(filePath: string, planId?: string): void {
+    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    const recentFiles = this.getRecentFiles();
+    const mapping = this.getPlanFileMappings();
+
+    const filtered = recentFiles.filter((entry) => {
+      if (entry.filePath === filePath) return false;
+      if (!planId) return true;
+      return mapping[entry.filePath] !== planId;
+    });
+
+    filtered.unshift({
+      filePath,
+      fileName,
+      lastOpened: new Date().toISOString(),
+    });
+
+    const trimmed = filtered.slice(0, MAX_RECENT_FILES);
+    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(trimmed));
+  }
+
+  /**
    * Remove a file from the recent files list
    * @param filePath - The file path to remove
    */
@@ -180,6 +205,12 @@ export class FileStorageService {
   private static savePlanFileMapping(filePath: string, planId: string): void {
     try {
       const mapping = this.getPlanFileMappings();
+      // Remove stale paths for this plan ID (e.g., file renamed/moved)
+      for (const existingPath of Object.keys(mapping)) {
+        if (mapping[existingPath] === planId && existingPath !== filePath) {
+          delete mapping[existingPath];
+        }
+      }
       mapping[filePath] = planId;
       localStorage.setItem(FILE_TO_PLAN_MAPPING_KEY, JSON.stringify(mapping));
     } catch {
@@ -325,8 +356,9 @@ export class FileStorageService {
       throw new Error(result.error || 'Failed to save budget');
     }
 
-    // Add to recent files
-    this.addRecentFile(targetPath);
+    // Keep mapping and recents in sync with the canonical saved path
+    this.savePlanFileMapping(targetPath, budgetData.id);
+    this.addRecentFileForPlan(targetPath, budgetData.id);
 
     return targetPath;
   }
@@ -387,17 +419,19 @@ export class FileStorageService {
         }
 
         const budgetData = migrateBudgetData(decryptedParsed as BudgetData);
+        budgetData.settings = { ...budgetData.settings, filePath: targetPath };
         this.savePlanFileMapping(targetPath, budgetData.id);
         await KeychainService.saveKey(budgetData.id, encryptionKey);
-        this.addRecentFile(targetPath);
+        this.addRecentFileForPlan(targetPath, budgetData.id);
         return budgetData;
       }
 
       // Regular unencrypted budget file
       if (isBudgetData(parsedData)) {
         const budgetData = migrateBudgetData(parsedData as BudgetData);
+        budgetData.settings = { ...budgetData.settings, filePath: targetPath };
         this.savePlanFileMapping(targetPath, budgetData.id);
-        this.addRecentFile(targetPath);
+        this.addRecentFileForPlan(targetPath, budgetData.id);
         return budgetData;
       }
 
@@ -438,6 +472,7 @@ export class FileStorageService {
           throw new Error('Decrypted file data is not a valid budget format.');
         }
         const budgetData = migrateBudgetData(parsed as BudgetData);
+        budgetData.settings = { ...budgetData.settings, filePath: targetPath };
         
         // Save the file-to-plan mapping for future reference
         this.savePlanFileMapping(targetPath, budgetData.id);
@@ -446,7 +481,7 @@ export class FileStorageService {
         await KeychainService.saveKey(budgetData.id, encryptionKey);
         
         // Add to recent files on successful load
-        this.addRecentFile(targetPath);
+        this.addRecentFileForPlan(targetPath, budgetData.id);
         
         return budgetData;
       } catch (error) {

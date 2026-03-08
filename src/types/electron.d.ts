@@ -30,6 +30,12 @@ export interface ElectronAPI {
   // Reveal a file in the system file browser (Finder/Explorer)
   revealInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
   
+  // Get the current window bounds (width, height, x, y)
+  getWindowBounds: () => Promise<{ width: number; height: number; x: number; y: number }>;
+  
+  // Set the window size (will be validated against screen bounds)
+  setWindowSize: (width: number, height: number) => Promise<{ success: boolean }>;
+  
   // Listen for menu events from the application menu bar
   // Takes an event name and a callback function
   // Returns an unsubscribe function to remove the listener
@@ -57,7 +63,7 @@ export interface ElectronAPI {
   clearSessionState: () => Promise<{ success: boolean }>;
   
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
-  budgetLoaded: () => Promise<void>;
+  budgetLoaded: (windowSize?: { width: number; height: number; x: number; y: number }) => Promise<void>;
   
   // Save an encryption key to the system keychain
   // Returns whether it succeeded and any error message
@@ -82,5 +88,6 @@ declare global {
     electronAPI: ElectronAPI;
     __hasUnsavedChanges?: boolean;
     __requestSaveBeforeClose?: () => Promise<boolean>;
+    __saveWindowState?: (width: number, height: number, x: number, y: number) => Promise<void>;
   }
 }

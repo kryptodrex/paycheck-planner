@@ -45,6 +45,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Reveal a file in the system file browser (Finder/Explorer)
   revealInFolder: (filePath: string) => ipcRenderer.invoke('reveal-in-folder', filePath),
   
+  // Get the current window bounds (width, height, x, y)
+  getWindowBounds: () => ipcRenderer.invoke('get-window-bounds'),
+  
+  // Set the window size (will be validated against screen bounds)
+  setWindowSize: (width: number, height: number) => ipcRenderer.invoke('set-window-size', width, height),
+  
   // Listen for menu events from the application menu bar
   // Takes: event name ('new-budget', 'open-budget', 'change-encryption', 'save-plan', 'open-settings', 'open-pay-options')
   // Returns: () => unsubscribe function to remove listener
@@ -96,8 +102,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('clear-session-state'),
   
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
-  budgetLoaded: () =>
-    ipcRenderer.invoke('budget-loaded'),
+  budgetLoaded: (windowSize?: { width: number; height: number }) =>
+    ipcRenderer.invoke('budget-loaded', windowSize),
 
   // Save an encryption key to the system keychain
   saveKeychainKey: (service: string, account: string, password: string) =>

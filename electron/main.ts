@@ -50,6 +50,7 @@ if (process.platform === 'darwin') {
 
 // Debug mode for development
 const DEBUG = !app.isPackaged;
+const OPEN_DEVTOOLS = process.env.OPEN_DEVTOOLS === 'true';
 function debug(...args: any[]) {
   if (DEBUG) console.log('[MAIN]', ...args);
 }
@@ -66,6 +67,8 @@ const viewWindows = new Map<BrowserWindow, { parent: BrowserWindow; viewType: st
 let welcomeWindow: BrowserWindow | null = null;
 // Variable to hold reference to the main/first application window (for backwards compatibility)
 let mainWindow: BrowserWindow | null = null;
+// Track if the app is quitting to avoid reopening welcome window
+let isQuitting = false;
 
 function hasLiveWelcomeWindow(): boolean {
   return !!welcomeWindow && !welcomeWindow.isDestroyed();
@@ -191,8 +194,8 @@ function createPlanWindow(windowState?: any) {
     window.loadFile(indexPath);
   }
   
-  // Open DevTools in development
-  if (DEBUG) {
+  // Open DevTools in development (if enabled)
+  if (DEBUG && OPEN_DEVTOOLS) {
     window.webContents.openDevTools();
   }
 
@@ -260,8 +263,8 @@ function createPlanWindow(windowState?: any) {
     openWindows.delete(window);
     if (mainWindow === window) mainWindow = null;
 
-    // If no more plan windows, show welcome window
-    if (openWindows.size === 0 && !hasLiveWelcomeWindow()) {
+    // If no more plan windows, show welcome window (unless app is quitting)
+    if (!isQuitting && openWindows.size === 0 && !hasLiveWelcomeWindow()) {
       createWelcomeWindow();
     }
   });
@@ -330,8 +333,8 @@ function createWelcomeWindow(skipSessionRestore = false, windowState?: { width?:
     welcomeWindow.loadFile(indexPath);
   }
   
-  // Open DevTools in development
-  if (DEBUG) {
+  // Open DevTools in development (if enabled)
+  if (DEBUG && OPEN_DEVTOOLS) {
     welcomeWindow.webContents.openDevTools();
   }
 
@@ -400,20 +403,9 @@ async function createWindow() {
     }
   }
 
-  // Always open Welcome on app relaunch, but preserve last window bounds
-  if (savedWindows.length > 0) {
-    const [lastWindow] = savedWindows;
-    debug('Opening welcome window with saved bounds from last window');
-    createWelcomeWindow(false, {
-      width: lastWindow.windowWidth,
-      height: lastWindow.windowHeight,
-      x: lastWindow.windowX,
-      y: lastWindow.windowY,
-    });
-  } else {
-    debug('No saved window bounds, creating welcome window with defaults');
-    createWelcomeWindow();
-  }
+  // Always open Welcome on app relaunch with default size
+  debug('Creating welcome window with default size');
+  createWelcomeWindow();
 
   // Create application menu with File and Edit options
   createApplicationMenu();
@@ -687,6 +679,24 @@ async function handleCloseWindow(window: BrowserWindow) {
       }
     }
 
+    // Always save window state (size and active tab) even if content wasn't saved
+    try {
+      const bounds = window.getBounds();
+      await window.webContents.executeJavaScript(
+        `(async () => {
+          if (typeof window.__saveWindowState === 'function') {
+            try {
+              await window.__saveWindowState(${bounds.width}, ${bounds.height}, ${bounds.x}, ${bounds.y});
+            } catch (error) {
+              console.error('Error saving window state:', error);
+            }
+          }
+        })()`
+      );
+    } catch (error) {
+      console.error('Error saving window state on close:', error);
+    }
+
     // Close the window
     approvedToClose.add(window);
     window.close();
@@ -699,6 +709,7 @@ async function handleCloseWindow(window: BrowserWindow) {
 // Save all window states before quitting
 app.on('before-quit', () => {
   debug('App quitting, saving window states...');
+  isQuitting = true;
   
   try {
     const windowsToSave = Array.from(openWindows);
@@ -750,12 +761,17 @@ app.whenReady().then(createWindow);
 // On Windows/Linux, show welcome window when all windows are closed
 app.on('window-all-closed', () => {
   if (process.platform === 'darwin') {
-    // On macOS, keep the app open but show nothing
+    // On macOS, if we're quitting, actually quit; otherwise keep app open
+    if (isQuitting) {
+      app.quit();
+    }
     return;
   } else {
-    // On Windows/Linux, show welcome window if no windows are open
-    if (openWindows.size === 0 && !hasLiveWelcomeWindow()) {
+    // On Windows/Linux, show welcome window if no windows are open (unless app is quitting)
+    if (!isQuitting && openWindows.size === 0 && !hasLiveWelcomeWindow()) {
       createWelcomeWindow();
+    } else if (isQuitting) {
+      app.quit();
     }
   }
 });
@@ -953,10 +969,45 @@ ipcMain.handle('reveal-in-folder', async (_event, filePath: string) => {
 });
 
 /**
+ * Get the current window's bounds (width, height, x, y)
+ */
+ipcMain.handle('get-window-bounds', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) {
+    return { width: 1400, height: 900, x: 0, y: 0 }; // Default fallback
+  }
+  const bounds = window.getBounds();
+  return bounds;
+});
+
+/**
+ * Set the window size (validates against screen bounds)
+ */
+ipcMain.handle('set-window-size', async (event, width: number, height: number) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) {
+    return { success: false };
+  }
+  
+  try {
+    const currentBounds = window.getBounds();
+    const normalizedBounds = normalizeWindowBounds(
+      { width, height, x: currentBounds.x, y: currentBounds.y },
+      { width, height, minWidth: 1000, minHeight: 600 }
+    );
+    window.setBounds(normalizedBounds);
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting window size:', error);
+    return { success: false };
+  }
+});
+
+/**
  * Notify main process that a budget has been loaded
  * This transitions a welcome window to a plan window
  */
-ipcMain.handle('budget-loaded', async (event) => {
+ipcMain.handle('budget-loaded', async (event, windowSize?: { width: number; height: number; x: number; y: number }) => {
   const window = BrowserWindow.fromWebContents(event.sender);
   if (!window) return;
 
@@ -966,6 +1017,15 @@ ipcMain.handle('budget-loaded', async (event) => {
     openWindows.add(window);
     if (!mainWindow) mainWindow = window;
     welcomeWindow = null;
+
+    // Restore window size and position if provided
+    if (windowSize) {
+      const normalizedBounds = normalizeWindowBounds(
+        { width: windowSize.width, height: windowSize.height, x: windowSize.x, y: windowSize.y },
+        { width: windowSize.width, height: windowSize.height, minWidth: 1000, minHeight: 600 }
+      );
+      window.setBounds(normalizedBounds);
+    }
 
     // Attach the same close behavior as normal plan windows so unsaved-change
     // prompts work when closing via titlebar/window controls.
@@ -1016,7 +1076,7 @@ ipcMain.handle('budget-loaded', async (event) => {
       openWindows.delete(window);
       if (mainWindow === window) mainWindow = null;
 
-      if (openWindows.size === 0 && !hasLiveWelcomeWindow()) {
+      if (!isQuitting && openWindows.size === 0 && !hasLiveWelcomeWindow()) {
         createWelcomeWindow();
       }
     });

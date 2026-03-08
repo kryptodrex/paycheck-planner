@@ -9,6 +9,7 @@
     "generate-icons": "node scripts/generate-icons.js",
     "start": "open ./release/mac-arm64/Paycheck\\ Planner.app",
     "dev": "npm run sync-version && vite",
+    "dev:inspector": "npm run sync-version && OPEN_DEVTOOLS=true vite",
     "build": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder",
     "build:dir": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --dir",
     "build:mac": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac",

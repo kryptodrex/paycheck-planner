@@ -98,12 +98,22 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
    * useCallback prevents recreating this function on every render (performance optimization)
    * @returns true if save was successful, false if cancelled or failed
    */
-  const saveBudget = useCallback(async (): Promise<boolean> => {
+  const saveBudget = useCallback(async (activeTab?: string): Promise<boolean> => {
     if (!budgetData) return false;
 
     setLoading(true);
     try {
       const saveTimestamp = new Date().toISOString();
+
+      // Get current window bounds to save with the plan
+      let windowSize: { width: number; height: number; x: number; y: number } | undefined;
+      try {
+        const bounds = await window.electronAPI.getWindowBounds();
+        windowSize = { width: bounds.width, height: bounds.height, x: bounds.x, y: bounds.y };
+      } catch (error) {
+        console.warn('Could not get window bounds:', error);
+        // Continue without window size if this fails
+      }
 
       // Update the "last modified" timestamp
       const updatedBudget = {
@@ -125,13 +135,15 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         return false;
       }
 
-      // Update state with the new file path and settings
+      // Update state with the new file path, window size, active tab, and save timestamp
       const savedBudget = {
         ...updatedBudget,
         settings: {
           ...updatedBudget.settings,
           filePath,
           lastSavedAt: saveTimestamp,
+          windowSize,
+          activeTab,
         },
       };
       setBudgetData(savedBudget);
@@ -150,6 +162,53 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       setLoading(false);
     }
   }, [budgetData]); // Dependency: recreate this function if budgetData changes
+
+  /**
+   * Save only window state (size and active tab) to the budget file
+   * This is used when closing a window to preserve window size without saving content
+   */
+  const saveWindowState = useCallback(async (width: number, height: number, x: number, y: number, activeTab?: string): Promise<void> => {
+    if (!budgetData?.settings?.filePath) return;
+
+    try {
+      // Update settings with new window size and active tab
+      const updatedBudget = {
+        ...budgetData,
+        settings: {
+          ...budgetData.settings,
+          windowSize: { width, height, x, y },
+          activeTab: activeTab || budgetData.settings.activeTab,
+        },
+      };
+
+      // Save to file (using existing file path, no dialog)
+      await FileStorageService.saveBudget(updatedBudget, budgetData.settings.filePath);
+      
+      // Update local state
+      setBudgetData(updatedBudget);
+      
+      // Update saved ref if this matches the last saved content
+      // (so window resize doesn't make the plan appear unsaved)
+      const currentDataWithoutWindowState = { ...budgetData, settings: { ...budgetData.settings } };
+      delete currentDataWithoutWindowState.settings.windowSize;
+      delete currentDataWithoutWindowState.settings.activeTab;
+      
+      const lastSavedDataParsed = lastSavedDataRef.current ? JSON.parse(lastSavedDataRef.current) : null;
+      if (lastSavedDataParsed) {
+        const lastSavedWithoutWindowState = { ...lastSavedDataParsed, settings: { ...lastSavedDataParsed.settings } };
+        delete lastSavedWithoutWindowState.settings.windowSize;
+        delete lastSavedWithoutWindowState.settings.activeTab;
+        
+        // If content is the same (only window state changed), update the saved ref
+        if (JSON.stringify(currentDataWithoutWindowState) === JSON.stringify(lastSavedWithoutWindowState)) {
+          lastSavedDataRef.current = JSON.stringify(updatedBudget);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving window state:', error);
+      // Silently fail - window state is not critical
+    }
+  }, [budgetData]);
 
   /**
    * Load a budget from disk
@@ -239,8 +298,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       setHasUnsavedChanges(false);
       
       // Notify main process that a budget is loaded (transitions welcome to plan window)
+      // Pass window size if available so main process can restore it
       if (window.electronAPI) {
-        window.electronAPI.budgetLoaded();
+        await window.electronAPI.budgetLoaded(data.settings?.windowSize);
       }
     } catch (error) {
       console.error('Error loading budget:', error);
@@ -834,6 +894,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     budgetData,
     loading,
     saveBudget,
+    saveWindowState,
     loadBudget,
     createNewBudget,
     createDemoBudget,

@@ -169,6 +169,13 @@ export interface BudgetSettings {
   encryptionEnabled?: boolean;       // Whether to encrypt budget files (undefined = not set)
   encryptionKey?: string;            // User's encryption key (only if encryption enabled)
   tabConfigs?: TabConfig[];          // Tab visibility and order configuration
+  windowSize?: {                     // Window dimensions and position when last closed
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+  };
+  activeTab?: string;                // Last active tab ID when plan was closed
 }
 
 /**
@@ -205,7 +212,8 @@ export interface BudgetContextType {
   loading: boolean;               // Whether an operation is in progress
   
   // File operations
-  saveBudget: () => Promise<boolean>;                      // Save to disk, returns true on success
+  saveBudget: (activeTab?: string) => Promise<boolean>;    // Save to disk with optional active tab, returns true on success
+  saveWindowState: (width: number, height: number, x: number, y: number, activeTab?: string) => Promise<void>; // Save only window state
   loadBudget: (filePath?: string) => Promise<void>;     // Load from disk
   createNewBudget: (year: number) => void;              // Create empty plan for a year
   createDemoBudget: () => void;                         // Create demo plan with random realistic data

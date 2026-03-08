@@ -15,7 +15,7 @@ interface SetupWizardProps {
 }
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
-  const { updatePaySettings, updateTaxSettings, updateBudgetSettings, budgetData } = useBudget();
+  const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData } = useBudget();
   
   const [step, setStep] = useState(1);
   const totalSteps = 6; // Increased from 5 to include encryption step
@@ -128,6 +128,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
       additionalWithholding: parseFloat(additionalWithholding) || 0,
     };
     updateTaxSettings(taxSettings);
+
+    // Save accounts configured during setup
+    updateBudgetData({ accounts });
 
     onComplete();
   };
