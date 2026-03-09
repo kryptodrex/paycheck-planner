@@ -1,54 +1,172 @@
 # Paycheck Planner — Feature Overview
 
-This page is a high-level overview of what Paycheck Planner currently lets you do.
+**Paycheck Planner** is a local-first desktop application for comprehensive paycheck-based financial planning. Built with security and privacy in mind, all your data stays on your own computer.
 
 ## What You Can Do
 
-### 1) Start Quickly
-- Create a new plan for a specific year
-- Open an existing plan from your computer
-- Reopen recent plans from a quick-access list
-- Try a demo plan to explore the app before entering your own data
+### 1) Start Quickly & Securely
+- **Create a new yearly plan**: Set up planning for a specific year
+- **Open an existing plan**: Load any `.budget` file from your computer  
+- **Recent files access**: Quick-reopen from automatically tracked recent plans
+- **Demo mode**: Try a fully-populated demo plan to explore features before entering your own data
+- **Optional encryption**: Choose per-plan encryption during setup; keys are stored securely in your system keychain
 
-### 2) Set Up Your Plan with a Guided Wizard
-- Choose your currency
-- Decide whether your plan file should be encrypted
-- Enter how you’re paid (salary or hourly)
-- Set your pay frequency (weekly, bi-weekly, semi-monthly, monthly)
-- Enter tax assumptions used for estimates
-- Create your starting accounts (for example: checking, savings, investments)
+### 2) Guided Setup Wizard
+Walk through initial configuration with an intuitive step-by-step wizard:
+- **Currency selection**: Choose from multiple currency options (USD, CAD, EUR, GBP, etc.)
+- **Encryption preference**: Enable/disable AES encryption for your plan file
+- **Pay structure**: Enter whether you're paid salary or hourly
+- **Pay frequency**: Select weekly, bi-weekly, semi-monthly, or monthly pay periods
+- **Tax assumptions**: Configure federal, state, Social Security, Medicare rates, and additional withholdings
+- **Starting accounts**: Create initial accounts (checking, savings, investments, etc.)
 
-### 3) Understand Your Paycheck
-- See your pay from gross to net in one place
-- View estimated taxes and deductions
-- Review key totals at a glance
-- Switch between paycheck, monthly, and yearly views (where available)
-- **Customize dashboard tabs**: Click the [+] button to show/hide tabs and reorder them
-- Hide tabs you don't use (Benefits, Taxes, etc.) or show them when needed
-- Core tabs (Key Metrics and Pay Breakdown) are always visible and pinned
-- Your tab preferences are saved with your plan
+### 3) Comprehensive Paycheck Analysis
+- **Full pay breakdown**: See your complete journey from gross to net pay
+- **Estimated taxes**: View federal, state, Social Security, Medicare, and additional withholdings
+- **Deductions tracking**: Monitor pre-tax and post-tax deductions
+- **Multiple views**: Switch between per-paycheck, monthly, and yearly perspectives
+- **Key metrics dashboard**: High-level summary of income, deductions, bills, and remaining funds
+- **Customizable tabs**: Show/hide dashboard tabs, reorder non-pinned tabs, manage your view
+  - [+] button for tab management
+  - Core tabs (Key Metrics, Pay Breakdown) always visible and pinned
+  - Optional tabs: Bills, Benefits, Taxes, Accounts, Loans
+  - Tab preferences saved per plan
 
-### 4) Plan Where Your Money Goes
-- Manage accounts used in your plan
-- Assign and organize recurring bills
-- Configure benefits and retirement deductions
-- See how your plan affects remaining money after allocations
+### 4) Financial Planning & Allocation
 
-### 5) Manage Plans Across Years
-- Keep plans separated by year
-- Copy a plan forward into a new year to save setup time
+#### Accounts Management
+- Create and manage multiple accounts (checking, savings, investments, etc.)
+- Set default destinations for paychecks
+- Track account types and purposes
 
-### 6) Save and Reopen Securely
-- Save plans as local `.budget` files
-- Keep data on your own computer (local-first)
-- Optionally protect each plan with encryption
+#### Bills & Recurring Expenses
+- Add unlimited bills with flexible frequency options:
+  - Weekly, bi-weekly, semi-monthly, monthly
+  - Bi-monthly, quarterly, semi-annually, annually
+- Assign bills to specific accounts
+- Automatic calculation of per-paycheck and annual impact
+- View total bill allocation vs. remaining funds
 
-### 7) Desktop-Friendly Experience
-- Use keyboard shortcuts for common actions
-- Access settings and app info from the desktop menu
-- Keep working with session/window state support
+#### Benefits & Deductions
+- **Health Insurance**: Medical, dental, vision with pre-tax or post-tax election
+- **FSA/HSA accounts**: Track flexible spending and health savings accounts
+- **Life Insurance**: Configure coverage and premiums
+- **Disability Insurance**: Short-term and long-term disability
+- **Commuter Benefits**: Transit and parking pre-tax benefits
+- **Custom benefits**: Add any other employer-provided benefits
+
+#### Retirement Planning
+- **401(k) / 403(b) / 457**: Track traditional, Roth, or after-tax contributions
+- **Employee contributions**: Dollar amount or percentage of gross pay
+- **Employer match**: Configure match percentage, cap, and vesting
+- **IRA tracking**: Traditional and Roth IRA outside of payroll
+- **Automatic calculations**: See per-paycheck and annual retirement savings
+
+#### Loans & Debt Management
+- Track student loans, car loans, personal loans, mortgages
+- Monitor payment amounts and frequency
+- View total debt service per paycheck
+
+#### Tax Configuration
+- Granular control over tax withholdings:
+  - Federal income tax rate
+  - State income tax rate
+  - Social Security (6.2% default)
+  - Medicare (1.45% default)
+  - Additional withholding amounts
+- Instant recalculation of net pay as you adjust rates
+
+### 5) Plan Management
+
+#### Year-Based Organization
+- Keep separate plans for each year
+- **Copy Forward**: Duplicate a plan into a new year to preserve setup and structure
+- Clean separation of historical vs. current planning
+
+#### Save & Security
+- **Local storage**: All data stored as `.budget` files on your computer
+- **Optional encryption**: Per-plan AES encryption
+- **Keychain integration**: Encryption keys stored in OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- **Auto-save prompts**: Never lose work with save reminders
+- **Recent files**: Automatic tracking of recently opened plans
+- **Session persistence**: Window size, position, and active tab saved and restored
+
+#### Export & Sharing
+- **PDF export**: Generate comprehensive PDF reports
+  - Optional password protection for PDFs
+  - Granular section selection (metrics, pay, accounts, bills, benefits, taxes)
+  - Professional formatting with all your plan details
+
+### 6) Desktop-First Experience
+
+#### Keyboard Shortcuts
+- **Cmd+, / Ctrl+,**: Open Settings
+- **Cmd+N / Ctrl+N**: New budget plan
+- **Cmd+O / Ctrl+O**: Open existing plan
+- **Cmd+S / Ctrl+S**: Save current plan
+
+#### Native Menus
+- **File menu**: New, Open, Save, Close
+- **Edit menu**: Standard editing commands
+- **View menu**: Toggle developer tools (dev builds only)
+- **Window menu**: Minimize, zoom, bring all to front (macOS)
+- **Help menu**: Glossary, support email
+
+#### Application Features
+- **Settings panel**: Configure theme (light/dark/system), enable/disable glossary tooltips
+- **Glossary**: Built-in financial terms reference accessible from Help menu or inline tooltips
+- **About dialog**: Version info, credits, license
+- **Window state**: Automatically saves and restores window size, position, and active tab
+- **Confirmation dialogs**: Save prompts before closing unsaved work
+
+### 7) User Interface & Experience
+
+#### Theme Support
+- **Light mode**: Clean, professional light theme
+- **Dark mode**: Eye-friendly dark theme
+- **System theme**: Automatically match your OS preference
+- **Persistent preference**: Theme choice saved across sessions
+
+#### Glossary & Help
+- **Interactive tooltips**: Hover over or click glossary terms for definitions
+- **Toggle on/off**: Disable glossary tooltips in Settings if preferred
+- **Searchable glossary**: Access full glossary from Help menu
+- **Deep linking**: Open glossary to specific term from inline references
+
+#### Data Validation
+- Real-time validation of numeric inputs
+- Currency formatting with proper symbol placement
+- Percentage inputs with automatic bounds checking
+- Required field enforcement
+
+## Technical Stack
+
+- **Framework**: Electron + React + TypeScript
+- **Build System**: Vite
+- **Encryption**: AES (crypto-js)
+- **Keychain**: Native OS integration (keytar)
+- **PDF Generation**: jsPDF with autoTable
+- **Styling**: CSS with CSS variables for theming
 
 ## Who This Is For
-- People who want a clear paycheck-to-bills plan
-- Users who prefer local files over cloud-only budgeting tools
-- Anyone who wants yearly planning with optional encryption
+
+- **Privacy-conscious users**: Keep your financial data on your own computer, not in the cloud
+- **Detailed planners**: Need granular control over paycheck allocation and deductions
+- **Multi-account managers**: Track how income flows to different accounts and bills
+- **Yearly budgeters**: Prefer planning by year with clean separation between periods
+- **Security-focused individuals**: Want optional encryption with OS keychain integration
+- **Benefits navigators**: Need to model complex employer benefits and retirement contributions
+
+## Getting Started
+
+1. **Download** the latest release for your platform (macOS, Windows, Linux)
+2. **Install** the application
+3. **Launch** and choose to create a new plan or try the demo
+4. **Follow** the setup wizard to configure your paycheck details
+5. **Start planning** by adding accounts, bills, benefits, and other allocations
+
+---
+
+**Note**: This is a beta release. All core features are functional, but you may encounter minor issues. Please report any bugs or feature requests via GitHub issues or the built-in support email feature.
+
+For technical documentation, build instructions, and architecture details, see [src/README.md](src/README.md).
