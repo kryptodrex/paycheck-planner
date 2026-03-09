@@ -11,6 +11,13 @@ dist/
 dist-electron/
 release/
 build/
+!build/
+build/*
+!build/ICON_FILES_REQUIRED.txt
+!build/icon-source.png
+!build/icon.png
+!build/icon.ico
+!build/icon.icns
 
 # Environment variables
 .env
@@ -42,3 +49,4 @@ Thumbs.db
 
 # Electron
 out/
+build/ICON_FILES_REQUIRED.txt
