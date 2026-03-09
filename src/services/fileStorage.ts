@@ -452,7 +452,7 @@ export class FileStorageService {
           // Valid key! Save it to keychain for next time
           try {
             await KeychainService.saveKey(planId, key);
-            console.log('[FileStorage] Successfully saved recovered encryption key to keychain');
+            if (import.meta.env.DEV) console.debug('[FileStorage] Successfully saved recovered encryption key to keychain');
           } catch (error) {
             console.warn('[FileStorage] Could not save recovered key to keychain:', error);
             // Don't fail - the key works, keychain save is just a convenience
@@ -554,7 +554,7 @@ export class FileStorageService {
         const existingKey = await KeychainService.getKey(budgetData.id);
         if (!existingKey || existingKey !== encryptionKey) {
           await KeychainService.saveKey(budgetData.id, encryptionKey);
-          console.log('[FileStorage] Saved encryption key to keychain');
+          if (import.meta.env.DEV) console.debug('[FileStorage] Saved encryption key to keychain');
         }
       } catch (error) {
         // Don't fail the save operation if keychain save fails - the file can still be saved
@@ -738,7 +738,7 @@ export class FileStorageService {
               // Save the recovered key to keychain
               try {
                 await KeychainService.saveKey(budgetData.id, key);
-                console.log('[FileStorage] Successfully saved recovered encryption key to keychain');
+                if (import.meta.env.DEV) console.debug('[FileStorage] Successfully saved recovered encryption key to keychain');
               } catch (error) {
                 console.warn('[FileStorage] Could not save recovered key to keychain:', error);
               }

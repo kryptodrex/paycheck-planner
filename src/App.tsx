@@ -12,11 +12,11 @@ import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
 function App() {
-  console.log('[APP] App component rendering...');
+  if (import.meta.env.DEV) console.debug('[APP] App component rendering...');
   
   // Get the current budget data and actions from our context
   const { budgetData, saveBudget, saveWindowState } = useBudget()
-  console.log('[APP] Budget data available:', !!budgetData);
+  if (import.meta.env.DEV) console.debug('[APP] Budget data available:', !!budgetData);
   
   // Track whether user has completed initial setup
   const [setupComplete, setSetupComplete] = useState(false)
@@ -142,33 +142,33 @@ function App() {
 
   // Handle going back to setup (for resetting encryption)
   const handleResetSetup = () => {
-    console.log('Resetting encryption setup...')
+    if (import.meta.env.DEV) console.debug('Resetting encryption setup...')
     setForceSetupAgain(true)
   }
 
   // Handle canceling encryption setup when editing
   const handleCancelEncryptionSetup = () => {
-    console.log('Canceling encryption setup...')
+    if (import.meta.env.DEV) console.debug('Canceling encryption setup...')
     setForceSetupAgain(false)
     setSetupComplete(true)
   }
 
   // Called when encryption setup is complete
   const handleSetupComplete = () => {
-    console.log('Encryption setup completed')
+    if (import.meta.env.DEV) console.debug('Encryption setup completed')
     setSetupComplete(true)
     setForceSetupAgain(false)
   }
 
   // Show loading state while checking
   if (checkingSetup) {
-    console.log('[APP] Showing loading state (checkingSetup=true)');
+    if (import.meta.env.DEV) console.debug('[APP] Showing loading state (checkingSetup=true)');
     return <div className="loading">Loading...</div>
   }
 
   // If setup hasn't been completed, show encryption setup screen
   if (!setupComplete) {
-    console.log('[APP] Showing encryption setup (setupComplete=false)');
+    if (import.meta.env.DEV) console.debug('[APP] Showing encryption setup (setupComplete=false)');
     // If we're forcing setup again (editing settings), provide a cancel option
     const isEditing = forceSetupAgain;
     return (
@@ -184,7 +184,7 @@ function App() {
 
   // If no budget is loaded, show the welcome screen
   // Otherwise, show the main dashboard with a way to go back
-  console.log('[APP] Rendering final view - budgetData:', !!budgetData);
+  if (import.meta.env.DEV) console.debug('[APP] Rendering final view - budgetData:', !!budgetData);
   return (
     <>
       <div className="drag-bar" />

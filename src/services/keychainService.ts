@@ -18,7 +18,7 @@ export class KeychainService {
     }
 
     const account = `${ACCOUNT_NAME}:${planId}`;
-    console.log(`[KeychainService] Saving key for account: ${account}`);
+    if (import.meta.env.DEV) console.debug(`[KeychainService] Saving key for account: ${account}`);
     
     const result = await window.electronAPI.saveKeychainKey(
       SERVICE_NAME,
@@ -32,7 +32,7 @@ export class KeychainService {
       throw new Error(errorMsg);
     }
     
-    console.log(`[KeychainService] Successfully saved key for account: ${account}`);
+    if (import.meta.env.DEV) console.debug(`[KeychainService] Successfully saved key for account: ${account}`);
   }
 
   /**

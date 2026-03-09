@@ -248,9 +248,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
         return bTotal - aTotal;
     });
 
-    // Debug: Log retirement data
-    console.log('[BenefitsManager] Rendering with retirement count:', budgetData.retirement?.length || 0);
-
     const retirementTotalPerPaycheck = sortedRetirement.reduce((sum, election) => {
         const { employeeAmount, employerAmount } = calculateRetirementContributions(election);
         return sum + employeeAmount + employerAmount;

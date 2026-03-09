@@ -737,7 +737,7 @@ function createApplicationMenu() {
         },
       },
       { type: 'separator' },
-      {
+      ...(DEBUG ? [{
         label: 'Toggle Developer Tools',
         accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
         click: () => {
@@ -745,7 +745,7 @@ function createApplicationMenu() {
             mainWindow.webContents.toggleDevTools();
           }
         },
-      },
+      }] : []),
       ...(!isMac ? [{
         label: 'Settings',
         accelerator: 'Ctrl+,',

@@ -6,19 +6,19 @@ import App from './App.tsx'
 import { BudgetProvider } from './contexts/BudgetContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 
-console.log('[REACT] main.tsx starting...');
-console.log('[REACT] window.electronAPI available:', !!window.electronAPI);
+if (import.meta.env.DEV) console.debug('[REACT] main.tsx starting...');
+if (import.meta.env.DEV) console.debug('[REACT] window.electronAPI available:', !!window.electronAPI);
 
 // Create the root React element and render our app
 // BudgetProvider wraps the entire app to give all components access to budget state
 const rootElement = document.getElementById('root');
-console.log('[REACT] Root element found:', !!rootElement);
+if (import.meta.env.DEV) console.debug('[REACT] Root element found:', !!rootElement);
 
 if (!rootElement) {
   console.error('[REACT] ERROR: Root element not found!');
   document.body.innerHTML = '<div style="padding: 20px; color: red;">ERROR: Root element not found. Check index.html</div>';
 } else {
-  console.log('[REACT] Rendering App...');
+  if (import.meta.env.DEV) console.debug('[REACT] Rendering App...');
   createRoot(rootElement).render(
     <StrictMode>
       <ThemeProvider>
@@ -28,5 +28,5 @@ if (!rootElement) {
       </ThemeProvider>
     </StrictMode>,
   );
-  console.log('[REACT] App render called');
+  if (import.meta.env.DEV) console.debug('[REACT] App render called');
 }

@@ -140,7 +140,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         : budgetData;
 
       // Debug: Log retirement array length during save
-      console.log('[SAVE] Retirement count:', baseBudget.retirement?.length || 0);
+      if (import.meta.env.DEV) console.debug('[SAVE] Retirement count:', baseBudget.retirement?.length || 0);
 
       // Update the "last modified" timestamp
       const updatedBudget = {
@@ -174,7 +174,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         },
       };
       setBudgetData(savedBudget);
-      console.log('[SAVE] Setting saved budget with retirement count:', savedBudget.retirement?.length || 0);
+      if (import.meta.env.DEV) console.debug('[SAVE] Setting saved budget with retirement count:', savedBudget.retirement?.length || 0);
       
       // Mark as saved
       lastSavedDataRef.current = JSON.stringify(savedBudget);

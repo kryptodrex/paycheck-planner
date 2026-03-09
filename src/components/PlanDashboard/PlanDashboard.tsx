@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/rules-of-hooks */
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization */
 type StatusToastType = 'success' | 'warning' | 'error';
 
 interface StatusToastState {
@@ -94,6 +94,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const handleTabPositionChangeRef = useRef<((position: TabPosition) => void) | null>(null);
   const handleTabDisplayModeChangeRef = useRef<((mode: TabDisplayMode) => void) | null>(null);
   const tabDisplayModeRef = useRef<TabDisplayMode>('icons-with-labels');
+  const initializedTabContextRef = useRef<string | null>(null);
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
@@ -130,18 +131,26 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   // Restore active tab before paint to avoid flashing default tab
   useLayoutEffect(() => {
+    const tabRestoreContext = `${budgetData?.id ?? 'none'}:${viewMode ?? 'default'}`;
+    if (initializedTabContextRef.current === tabRestoreContext) {
+      return;
+    }
+
     if (viewMode && VALID_TABS.includes(viewMode as TabId)) {
-      if (activeTab !== (viewMode as TabId)) {
-        setActiveTab(viewMode as TabId);
-      }
+      setActiveTab(viewMode as TabId);
+      initializedTabContextRef.current = tabRestoreContext;
       return;
     }
 
     const savedTab = budgetData?.settings?.activeTab;
-    if (savedTab && VALID_TABS.includes(savedTab as TabId) && activeTab !== (savedTab as TabId)) {
+    if (savedTab && VALID_TABS.includes(savedTab as TabId)) {
       setActiveTab(savedTab as TabId);
+      initializedTabContextRef.current = tabRestoreContext;
+      return;
     }
-  }, [activeTab, budgetData?.settings?.activeTab, viewMode]);
+
+    initializedTabContextRef.current = tabRestoreContext;
+  }, [budgetData?.id, budgetData?.settings?.activeTab, viewMode]);
 
   // Keep window.__currentActive Tab in sync for save on close
   useEffect(() => {
@@ -447,6 +456,66 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setActiveTab(tab);
   }, [tabConfigs]);
 
+  const scrollTabToTop = useCallback((tab: TabId) => {
+    tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const panel = tabPanelRefs.current[tab];
+    if (!panel) return;
+
+    panel.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const scrollableDescendants = panel.querySelectorAll<HTMLElement>('*');
+    scrollableDescendants.forEach((element) => {
+      if (element.scrollHeight > element.clientHeight) {
+        const computedStyle = window.getComputedStyle(element);
+        const isScrollable =
+          computedStyle.overflowY === 'auto' ||
+          computedStyle.overflowY === 'scroll' ||
+          computedStyle.overflow === 'auto' ||
+          computedStyle.overflow === 'scroll';
+
+        if (isScrollable) {
+          element.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    });
+  }, []);
+
+  const handleTabClick = useCallback((tab: TabId, options?: { resetBillsAnchor?: boolean }) => {
+    if (activeTab === tab) {
+      scrollTabToTop(tab);
+      return;
+    }
+
+    if (options?.resetBillsAnchor) {
+      setScrollToAccountId(undefined);
+      setShouldScrollToRetirement(false);
+    }
+
+    setActiveTab(tab);
+  }, [activeTab, scrollTabToTop]);
+
+  // Handle keyboard shortcuts for tab switching (Cmd+1, Cmd+2, etc.)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const modifierKey = e.metaKey || e.ctrlKey;
+      if (!modifierKey || e.shiftKey || e.altKey) return;
+
+      const num = parseInt(e.key);
+      if (isNaN(num) || num < 1 || num > 6) return;
+
+      const targetTab = visibleTabs[num - 1];
+      if (!targetTab) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      handleTabClick(targetTab.id as TabId);
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [visibleTabs, handleTabClick]);
+
   if (showPlanLoadingScreen) {
     return (
       <div className="plan-loading-screen" role="status" aria-live="polite" aria-label="Loading plan">
@@ -606,72 +675,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       setEncryptionSaving(false);
     }
   };
-
-  const scrollTabToTop = (tab: TabId) => {
-    tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-
-    const panel = tabPanelRefs.current[tab];
-    if (!panel) return;
-
-    panel.scrollTo({ top: 0, behavior: 'smooth' });
-
-    const scrollableDescendants = panel.querySelectorAll<HTMLElement>('*');
-    scrollableDescendants.forEach((element) => {
-      if (element.scrollHeight > element.clientHeight) {
-        const computedStyle = window.getComputedStyle(element);
-        const isScrollable =
-          computedStyle.overflowY === 'auto' ||
-          computedStyle.overflowY === 'scroll' ||
-          computedStyle.overflow === 'auto' ||
-          computedStyle.overflow === 'scroll';
-
-        if (isScrollable) {
-          element.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }
-    });
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleTabClick = (tab: TabId, options?: { resetBillsAnchor?: boolean }) => {
-    if (activeTab === tab) {
-      scrollTabToTop(tab);
-      return;
-    }
-
-    if (options?.resetBillsAnchor) {
-      setScrollToAccountId(undefined);
-      setShouldScrollToRetirement(false);
-    }
-
-    setActiveTab(tab);
-  };
-
-  // Handle keyboard shortcuts for tab switching (Cmd+1, Cmd+2, etc.)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check if Cmd (Mac) or Ctrl (Windows/Linux) is pressed
-      const modifierKey = e.metaKey || e.ctrlKey;
-      
-      if (!modifierKey || e.shiftKey || e.altKey) return;
-
-      // Check for number keys 1-6
-      const num = parseInt(e.key);
-      if (isNaN(num) || num < 1 || num > 6) return;
-
-      // Get the tab at the index (num - 1)
-      const targetTab = visibleTabs[num - 1];
-      if (!targetTab) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      handleTabClick(targetTab.id as TabId);
-    };
-
-    // Use capture phase so this handler runs even if child components stop propagation
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [visibleTabs, handleTabClick]);
 
   const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
 
