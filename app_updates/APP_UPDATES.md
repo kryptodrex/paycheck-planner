@@ -69,7 +69,7 @@
   - This could be implemented as tooltips that appear when hovering over certain terms, or as a dedicated glossary section in the app where users can look up definitions and explanations of key financial terms used in the app
   - We should add a Help menu in the menu bar that links to the glossary and other helpful resources for users who want to learn more about financial planning concepts, with easy searching and navigation to find the information they need.
 
-- [ ] **Feedback System** - Implement a way for users to easily provide feedback, report bugs, or request features directly from the app to facilitate communication and continuous improvement
+- [x] **Feedback System** - Implement a way for users to easily provide feedback, report bugs, or request features directly from the app to facilitate communication and continuous improvement
   - This could be a simple form in the app that allows users to submit their feedback, which would then be sent to our support email or stored in a database for review
     - Button in the bottom left of the footer (before Last Saved) that opens a feedback form modal where users can enter their feedback, report bugs, or request features
     - The form should have fields for the user's email (optional), a subject line, and a message box for them to describe their feedback in detail
