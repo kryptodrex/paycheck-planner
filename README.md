@@ -26,10 +26,11 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Deductions tracking**: Monitor pre-tax and post-tax deductions
 - **Multiple views**: Switch between per-paycheck, monthly, and yearly perspectives
 - **Key metrics dashboard**: High-level summary of income, deductions, bills, and remaining funds
-- **Customizable tabs**: Show/hide dashboard tabs, reorder non-pinned tabs, manage your view
-  - [+] button for tab management
-  - Core tabs (Key Metrics, Pay Breakdown) always visible and pinned
-  - Optional tabs: Bills, Benefits, Taxes, Accounts, Loans
+- **Customizable tabs**: Show/hide dashboard tabs, reorder tabs, manage your view
+  - Manage Tabs button for tab customization
+  - All tabs can be shown/hidden (at least one must remain visible)
+  - Available tabs: Key Metrics, Pay Breakdown, Bills, Loans, Benefits, Taxes
+  - Drag and drop to reorder tabs
   - Tab preferences saved per plan
 
 ### 4) Financial Planning & Allocation
@@ -41,25 +42,27 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 
 #### Bills & Recurring Expenses
 - Add unlimited bills with flexible frequency options:
-  - Weekly, bi-weekly, semi-monthly, monthly
-  - Bi-monthly, quarterly, semi-annually, annually
+  - Weekly, bi-weekly, monthly
+  - Quarterly, semi-annually, annually, or custom
 - Assign bills to specific accounts
 - Automatic calculation of per-paycheck and annual impact
 - View total bill allocation vs. remaining funds
 
 #### Benefits & Deductions
-- **Health Insurance**: Medical, dental, vision with pre-tax or post-tax election
-- **FSA/HSA accounts**: Track flexible spending and health savings accounts
-- **Life Insurance**: Configure coverage and premiums
-- **Disability Insurance**: Short-term and long-term disability
-- **Commuter Benefits**: Transit and parking pre-tax benefits
-- **Custom benefits**: Add any other employer-provided benefits
+- Add any employer-provided benefits (health insurance, FSA, HSA, etc.)
+- Configure benefit amount per paycheck or as percentage of gross pay
+- Choose pre-tax or post-tax deduction
+- Deduct from paycheck or specific account
+- Track total benefit costs per paycheck, monthly, and annually
 
 #### Retirement Planning
-- **401(k) / 403(b) / 457**: Track traditional, Roth, or after-tax contributions
+- **401(k) / 403(b)**: Track traditional, Roth, or after-tax contributions
+- **IRA accounts**: Traditional and Roth IRA contributions
+- **Pension and other plans**: Support for pension plans and custom retirement accounts
 - **Employee contributions**: Dollar amount or percentage of gross pay
-- **Employer match**: Configure match percentage, cap, and vesting
-- **IRA tracking**: Traditional and Roth IRA outside of payroll
+- **Employer match**: Configure match percentage or dollar cap
+- **Yearly limits**: Optional contribution limit tracking with auto-calculate feature
+- **Deduction from paycheck or account**: Choose where contributions come from
 - **Automatic calculations**: See per-paycheck and annual retirement savings
 
 #### Loans & Debt Management
@@ -80,7 +83,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 
 #### Year-Based Organization
 - Keep separate plans for each year
-- **Copy Forward**: Duplicate a plan into a new year to preserve setup and structure
+- **Copy Plan**: Duplicate a plan into a new year to preserve setup and structure
 - Clean separation of historical vs. current planning
 
 #### Save & Security
@@ -164,6 +167,37 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 3. **Launch** and choose to create a new plan or try the demo
 4. **Follow** the setup wizard to configure your paycheck details
 5. **Start planning** by adding accounts, bills, benefits, and other allocations
+
+## Troubleshooting
+
+### macOS: "App is damaged and can't be opened"
+
+If you see this error on macOS, it's because the app is not code-signed with an Apple Developer certificate. This is normal for open-source apps. To open the app:
+
+**Option 1: Right-click to Open**
+1. Right-click (or Control-click) on the app
+2. Select **Open** from the menu
+3. Click **Open** in the security dialog that appears
+
+**Option 2: System Settings**
+1. Try to open the app normally (it will be blocked)
+2. Go to **System Settings > Privacy & Security**
+3. Scroll down to the Security section
+4. Click **Open Anyway** next to the message about Paycheck Planner
+5. Confirm by clicking **Open**
+
+You only need to do this once. After the first launch, macOS will remember your choice and the app will open normally.
+
+### Windows: SmartScreen Warning
+
+Windows may show a SmartScreen warning for unsigned apps. Click **More info** and then **Run anyway** to proceed.
+
+### Linux: Permission Issues
+
+If the AppImage won't run, make it executable:
+```bash
+chmod +x Paycheck-Planner-*.AppImage
+```
 
 ---
 
