@@ -1,4 +1,4 @@
-name: Production Release Build & Deploy
+name: Production Release
 
 on:
   pull_request:
