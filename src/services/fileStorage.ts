@@ -86,10 +86,11 @@ export class FileStorageService {
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
       try {
-        const settings = JSON.parse(stored);
+        const parsedSettings = JSON.parse(stored) as AppSettings & { encryptionKey?: string };
         // Remove encryptionKey from settings - it's now stored in keychain
-        delete (settings as any).encryptionKey;
-        return settings;
+        const settingsWithoutKey = { ...parsedSettings };
+        Reflect.deleteProperty(settingsWithoutKey, 'encryptionKey');
+        return settingsWithoutKey;
       } catch {
         // If parsing fails, return undefined to force setup
       }
@@ -107,8 +108,8 @@ export class FileStorageService {
    */
   static saveAppSettings(settings: AppSettings): void {
     // Remove encryptionKey if it exists - we don't store keys in localStorage
-    const settingsToStore = { ...settings };
-    delete (settingsToStore as any).encryptionKey;
+    const settingsToStore = { ...(settings as AppSettings & { encryptionKey?: string }) };
+    Reflect.deleteProperty(settingsToStore, 'encryptionKey');
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsToStore));
   }
 
@@ -621,7 +622,7 @@ export class FileStorageService {
       throw new Error(result.error || 'Failed to load budget');
     }
 
-    let fileData = result.data;
+    const fileData = result.data;
 
     // Try to parse as JSON first (unencrypted file or encrypted envelope)
     try {
@@ -682,7 +683,7 @@ export class FileStorageService {
       // Try legacy decryption flow using path->plan mapping.
       
       // First, try to get the plan ID from our file mapping
-      let planId = this.getPlanIdForFile(targetPath);
+      const planId = this.getPlanIdForFile(targetPath);
       let encryptionKey: string | null = null;
       
       if (planId) {

@@ -65,7 +65,7 @@ export interface ElectronAPI {
   // Returns an unsubscribe function to remove the listener
   onMenuEvent: (
     event: 'new-budget' | 'open-budget' | 'change-encryption' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'save-plan' | 'set-tab-position' | 'toggle-tab-display-mode',
-    callback: (arg?: any) => void
+    callback: (arg?: unknown) => void
   ) => () => void;
 
   // Listen for view window open requests from the menu
