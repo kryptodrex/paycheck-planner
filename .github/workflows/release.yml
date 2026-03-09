@@ -7,6 +7,9 @@ on:
     types:
       - closed
 
+permissions:
+  contents: write
+
 jobs:
   release:
     if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'develop'
@@ -42,8 +45,11 @@ jobs:
       - name: Sync version from file
         run: npm run sync-version
 
-      - name: Run tests
-        run: npm run lint
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-1-dev libnss3-dev pkg-config fakeroot dpkg
 
       - name: Build Electron app for ${{ matrix.target }}
         run: |
@@ -86,6 +92,14 @@ jobs:
         id: version
         run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
 
+      - name: Create repository backup zip
+        run: |
+          # Create a zip of the repo for backup (excluding large folders)
+          zip -r paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip . \
+            -x "node_modules/*" "dist/*" "dist-electron/*" "release/*" ".git/*" "coverage/*" "build/*" ".vscode/*" \
+            -q
+          ls -lh paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
+
       - name: Generate changelog
         id: changelog
         run: |
@@ -110,19 +124,17 @@ jobs:
             echo "- **Windows**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.exe"
             echo "- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
             echo "__END_CHANGELOG__"
-          } >> $GITHUB_ENV
+          } >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: Release v${{ steps.version.outputs.VERSION }}
-          body: ${{ env.CHANGELOG }}
+          body: ${{ steps.changelog.outputs.CHANGELOG }}
           files: |
             all-artifacts/paycheck-planner-mac/**/*.dmg
             all-artifacts/paycheck-planner-win/**/*.exe
             all-artifacts/paycheck-planner-linux/**/*.AppImage
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

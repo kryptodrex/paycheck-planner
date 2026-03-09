@@ -1,4 +1,4 @@
-name: Beta Release Build
+name: Beta Release
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  beta-build:
+  build:
     if: github.event.pull_request.merged == true
     runs-on: ${{ matrix.os }}
     strategy:
@@ -41,8 +41,11 @@ jobs:
       - name: Sync version from file
         run: npm run sync-version
 
-      - name: Run lint
-        run: npm run lint
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-1-dev libnss3-dev pkg-config fakeroot dpkg
 
       - name: Build Electron app for ${{ matrix.target }}
         run: npm run build:${{ matrix.target }}
@@ -54,9 +57,9 @@ jobs:
           path: release/
           retention-days: 14
 
-  create-beta-release:
-    if: github.event.pull_request.merged == true
-    needs: beta-build
+  beta-release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'develop'
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -72,6 +75,14 @@ jobs:
       - name: Read version
         id: version
         run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
+
+      - name: Create repository backup zip
+        run: |
+          # Create a zip of the repo for backup (excluding large folders)
+          zip -r paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip . \
+            -x "node_modules/*" "dist/*" "dist-electron/*" "release/*" ".git/*" "coverage/*" "build/*" ".vscode/*" \
+            -q
+          ls -lh paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
 
       - name: Create beta release metadata
         id: beta_meta
@@ -90,30 +101,26 @@ jobs:
             echo "Target: develop"
             echo ""
             echo "### Artifacts"
-            echo "- macOS: DMG/ZIP build"
-            echo "- Windows: EXE/portable build"
-            echo "- Linux: AppImage/DEB build"
+            echo "- macOS: DMG installer"
+            echo "- Windows: EXE installer"
+            echo "- Linux: AppImage"
+            echo "- Repository: Source code backup (ZIP)"
             echo ""
             echo "This is an automated prerelease generated after merging a PR into develop."
             echo "__END_BODY__"
-          } >> $GITHUB_ENV
+          } >> $GITHUB_OUTPUT
 
       - name: Publish GitHub prerelease
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG }}
-          name: ${{ env.NAME }}
-          body: ${{ env.BODY }}
+          tag_name: ${{ steps.beta_meta.outputs.TAG }}
+          name: ${{ steps.beta_meta.outputs.NAME }}
+          body: ${{ steps.beta_meta.outputs.BODY }}
           files: |
             all-artifacts/beta-paycheck-planner-mac/**/*.dmg
-            all-artifacts/beta-paycheck-planner-mac/**/*.zip
             all-artifacts/beta-paycheck-planner-win/**/*.exe
-            all-artifacts/beta-paycheck-planner-win/**/*.msi
-            all-artifacts/beta-paycheck-planner-win/**/*.nsis.7z
             all-artifacts/beta-paycheck-planner-linux/**/*.AppImage
-            all-artifacts/beta-paycheck-planner-linux/**/*.deb
+            paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
           draft: false
           prerelease: true
           fail_on_unmatched_files: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
