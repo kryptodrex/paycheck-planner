@@ -6,6 +6,9 @@ on:
       - develop
     types:
       - closed
+    paths-ignore:
+      - '.github/workflows/**'
+      - '**/*.md'
 
 permissions:
   contents: write
@@ -49,13 +52,15 @@ jobs:
 
       - name: Build Electron app for ${{ matrix.target }}
         run: npm run build:${{ matrix.target }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload beta artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: beta-paycheck-planner-${{ matrix.target }}
+          name: paycheck-planner-${{ matrix.target }}
           path: release/
-          retention-days: 14
+          retention-days: 90
 
   beta-release:
     if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'develop'
@@ -87,26 +92,24 @@ jobs:
       - name: Create beta release metadata
         id: beta_meta
         run: |
-          TAG="beta-v${{ steps.version.outputs.VERSION }}-${{ github.run_number }}"
-          NAME="Beta v${{ steps.version.outputs.VERSION }} (build ${{ github.run_number }})"
+          TAG="v${{ steps.version.outputs.VERSION }}"
+          NAME="v${{ steps.version.outputs.VERSION }} (Beta)"
 
           {
             echo "TAG=$TAG"
             echo "NAME=$NAME"
             echo "BODY<<__END_BODY__"
-            echo "## Beta Release"
+            echo "## 🚧 Beta Prerelease"
             echo ""
-            echo "Merged PR: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}"
-            echo "Source: ${{ github.event.pull_request.head.ref }}"
-            echo "Target: develop"
+            echo "This is a beta prerelease pending final approval and testing."
             echo ""
-            echo "### Artifacts"
-            echo "- macOS: DMG installer"
-            echo "- Windows: EXE installer"
-            echo "- Linux: AppImage"
-            echo "- Repository: Source code backup (ZIP)"
+            echo "### 📦 Platform Builds"
+            echo "- **macOS**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.dmg"
+            echo "- **Windows**: Paycheck Planner Setup ${{ steps.version.outputs.VERSION }}.exe"
+            echo "- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
             echo ""
-            echo "This is an automated prerelease generated after merging a PR into develop."
+            echo "---"
+            echo "⚠️ This release will be promoted to a full release when merged to main."
             echo "__END_BODY__"
           } >> $GITHUB_OUTPUT
 
@@ -117,9 +120,9 @@ jobs:
           name: ${{ steps.beta_meta.outputs.NAME }}
           body: ${{ steps.beta_meta.outputs.BODY }}
           files: |
-            all-artifacts/beta-paycheck-planner-mac/**/*.dmg
-            all-artifacts/beta-paycheck-planner-win/**/*.exe
-            all-artifacts/beta-paycheck-planner-linux/**/*.AppImage
+            all-artifacts/paycheck-planner-mac/**/*.dmg
+            all-artifacts/paycheck-planner-win/**/*.exe
+            all-artifacts/paycheck-planner-linux/**/*.AppImage
             paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
           draft: false
           prerelease: true
