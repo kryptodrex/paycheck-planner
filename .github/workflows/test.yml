@@ -31,6 +31,9 @@ jobs:
       - name: TypeScript type check
         run: npx tsc -b
 
+      - name: Run unit tests
+        run: npm run test:run
+
       - name: Check for TypeScript errors
         run: |
           if [ $? -eq 0 ]; then

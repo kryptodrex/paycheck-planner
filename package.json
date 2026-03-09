@@ -18,6 +18,8 @@
     "build:linux": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --linux",
     "build:all": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac --win --linux",
     "rebuild-native": "electron-rebuild",
+    "test": "vitest",
+    "test:run": "vitest run",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -86,6 +88,7 @@
     "vite": "^7.3.1",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6",
+    "vitest": "^2.1.9",
     "wait-on": "^9.0.4"
   }
 }
