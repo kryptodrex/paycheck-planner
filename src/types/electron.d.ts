@@ -35,6 +35,22 @@ export interface ElectronAPI {
   // Returns whether it succeeded and any error message
   exportPdf: (filePath: string, pdfData: Uint8Array) => Promise<{ success: boolean; error?: string }>;
 
+  // Submit feedback from tester sessions
+  submitFeedback: (payload: {
+    email?: string;
+    category: 'bug' | 'feature' | 'ui' | 'performance' | 'other';
+    subject: string;
+    messageHtml: string;
+    messageText: string;
+    includeDiagnostics: boolean;
+    diagnostics?: Record<string, unknown>;
+    screenshot?: {
+      fileName: string;
+      mimeType: string;
+      dataUrl: string;
+    };
+  }) => Promise<{ success: boolean; error?: string }>;
+
   // Reveal a file in the system file browser (Finder/Explorer)
   revealInFolder: (filePath: string) => Promise<{ success: boolean; error?: string }>;
   

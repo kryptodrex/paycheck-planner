@@ -20,6 +20,7 @@ import TaxBreakdown from '../TaxBreakdown';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
 import ExportModal from '../ExportModal';
+import FeedbackModal from '../FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, FormGroup } from '../shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs } from '../../utils/tabManagement';
@@ -62,6 +63,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isEditingPlanName, setIsEditingPlanName] = useState(false);
   const [draftPlanName, setDraftPlanName] = useState('');
   const [draftYear, setDraftYear] = useState('');
@@ -973,6 +975,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* End plan-dashboard-content-wrapper */}
 
       <footer className="dashboard-footer">
+        <button
+          type="button"
+          className="footer-feedback-btn"
+          onClick={() => setShowFeedbackModal(true)}
+          title="Share feedback"
+        >
+          Share feedback
+        </button>
         <div className="footer-info">
           <span>Last saved: {budgetData.settings.lastSavedAt ? new Date(budgetData.settings.lastSavedAt).toLocaleString() : 'Never'}</span>
           {budgetData.settings.filePath && (
@@ -990,6 +1000,24 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           )}
         </div>
       </footer>
+
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        context={{
+          appVersion: '1.0.0',
+          activeTab,
+          planYear: budgetData.year,
+          planName: budgetData.name,
+          currentFilePath: budgetData.settings.filePath,
+        }}
+        onSubmitted={({ success, message }: { success: boolean; message: string }) => {
+          setStatusToast({
+            type: success ? 'success' : 'error',
+            message,
+          });
+        }}
+      />
 
       {/* Copy Plan Modal */}
       <Modal

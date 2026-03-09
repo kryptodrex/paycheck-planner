@@ -6,9 +6,101 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { SUPPORT_EMAIL } from './constants';
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
+const execFileAsync = promisify(execFile);
+
+const MAX_LOG_BUFFER_ENTRIES = 2000;
+const appLogBuffer: string[] = [];
+
+const SENSITIVE_KEY_PATTERN = /(password|secret|token|key|filepath|filePath|encryption|budgetData|accounts|bills|loans|retirement|benefits|taxSettings|paySettings|deductions|ssn|socialSecurity)/i;
+
+const redactSensitiveText = (input: string): string => {
+  let output = input;
+
+  // Redact absolute filesystem paths (macOS/Linux + Windows).
+  output = output
+    .replace(/\/(Users|home)\/[^\s"']+/g, '<REDACTED_PATH>')
+    .replace(/[A-Za-z]:\\[^\s"']+/g, '<REDACTED_PATH>');
+
+  // Redact common key/value style secrets in text logs.
+  output = output.replace(
+    /(password|secret|token|apikey|api[_-]?key|encryptionKey|access[_-]?token|refresh[_-]?token)\s*[:=]\s*[^,\s]+/gi,
+    '$1=<REDACTED>'
+  );
+
+  return output;
+};
+
+const sanitizeLogValue = (value: unknown, seen = new WeakSet<object>()): unknown => {
+  if (typeof value === 'string') {
+    return redactSensitiveText(value);
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+
+  if (seen.has(value as object)) {
+    return '[Circular]';
+  }
+  seen.add(value as object);
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => sanitizeLogValue(entry, seen));
+  }
+
+  const original = value as Record<string, unknown>;
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, raw] of Object.entries(original)) {
+    if (SENSITIVE_KEY_PATTERN.test(key)) {
+      sanitized[key] = '<REDACTED>';
+      continue;
+    }
+    sanitized[key] = sanitizeLogValue(raw, seen);
+  }
+
+  return sanitized;
+};
+
+const formatLogValue = (value: unknown): string => {
+  if (value instanceof Error) {
+    return redactSensitiveText(value.stack || value.message);
+  }
+  if (typeof value === 'string') {
+    return redactSensitiveText(value);
+  }
+  try {
+    return redactSensitiveText(JSON.stringify(sanitizeLogValue(value)));
+  } catch {
+    return redactSensitiveText(String(value));
+  }
+};
+
+const pushAppLog = (level: 'INFO' | 'DEBUG', args: unknown[]) => {
+  const line = `${new Date().toISOString()} [${level}] ${args.map(formatLogValue).join(' ')}`;
+  appLogBuffer.push(line);
+  if (appLogBuffer.length > MAX_LOG_BUFFER_ENTRIES) {
+    appLogBuffer.splice(0, appLogBuffer.length - MAX_LOG_BUFFER_ENTRIES);
+  }
+};
+
+const originalConsoleLog = console.log.bind(console);
+const originalConsoleInfo = console.info.bind(console);
+
+console.log = (...args: unknown[]) => {
+  pushAppLog('INFO', args);
+  originalConsoleLog(...args);
+};
+
+console.info = (...args: unknown[]) => {
+  pushAppLog('INFO', args);
+  originalConsoleInfo(...args);
+};
 
 // Load keytar dynamically to avoid bundling issues with native modules
 let keytar: any = null;
@@ -1027,6 +1119,126 @@ ipcMain.handle('export-pdf', async (event, filePath: string, pdfData: Uint8Array
   } catch (error: any) {
     console.error('Error saving PDF:', error);
     return { success: false, error: error.message };
+  }
+});
+
+/**
+ * Submit feedback
+ * Opens a prefilled support email in the user's default email client
+ */
+ipcMain.handle('submit-feedback', async (_event, payload: {
+  email?: string;
+  category: 'bug' | 'feature' | 'ui' | 'performance' | 'other';
+  subject: string;
+  messageHtml: string;
+  messageText: string;
+  includeDiagnostics: boolean;
+  diagnostics?: Record<string, unknown>;
+  screenshot?: {
+    fileName: string;
+    mimeType: string;
+    dataUrl: string;
+  };
+}) => {
+  try {
+    const timestamp = new Date();
+    const id = `${timestamp.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
+    const feedbackTempDir = path.join(app.getPath('temp'), 'paycheck-planner-feedback', id);
+    await fs.mkdir(feedbackTempDir, { recursive: true });
+
+    const attachmentPaths: string[] = [];
+
+    if (payload.screenshot?.dataUrl) {
+      const match = payload.screenshot.dataUrl.match(/^data:(.+);base64,(.*)$/);
+      if (match) {
+        const mimeType = match[1] || payload.screenshot.mimeType || 'image/png';
+        const ext = mimeType.split('/')[1] || 'png';
+        const screenshotPath = path.join(feedbackTempDir, `screenshot.${ext}`);
+        await fs.writeFile(screenshotPath, Buffer.from(match[2], 'base64'));
+        attachmentPaths.push(screenshotPath);
+      }
+    }
+
+    const formattedDetailsPath = path.join(feedbackTempDir, 'feedback-details.html');
+    const detailsHtmlDoc = `<!doctype html><html><head><meta charset="utf-8"><title>Feedback Details</title></head><body>${payload.messageHtml}</body></html>`;
+    await fs.writeFile(formattedDetailsPath, detailsHtmlDoc, 'utf-8');
+    attachmentPaths.push(formattedDetailsPath);
+
+    if (payload.includeDiagnostics && payload.diagnostics) {
+      const diagnosticsPath = path.join(feedbackTempDir, 'diagnostics.json');
+      await fs.writeFile(diagnosticsPath, JSON.stringify(payload.diagnostics, null, 2), 'utf-8');
+      attachmentPaths.push(diagnosticsPath);
+    }
+
+    const logPath = path.join(feedbackTempDir, 'feedback-log.txt');
+    const consoleLogHeader = [
+      `Feedback Timestamp: ${timestamp.toISOString()}`,
+      `Category: ${payload.category}`,
+      `From: ${payload.email || 'Not provided'}`,
+      `Subject: ${payload.subject}`,
+      '',
+      '--- App Debug/Info Console Output ---',
+    ];
+    const consoleLogContent = appLogBuffer.length > 0 ? appLogBuffer.join('\n') : 'No captured debug/info logs available.';
+    await fs.writeFile(logPath, `${consoleLogHeader.join('\n')}\n${consoleLogContent}\n`, 'utf-8');
+    attachmentPaths.push(logPath);
+
+    const lines: string[] = [
+      `Category: ${payload.category}`,
+      `From: ${payload.email || 'Not provided'}`,
+      '',
+      'Message:',
+      payload.messageText,
+    ];
+
+    lines.push('', 'Attachment files have been prepared by the app.');
+
+    if (process.platform === 'darwin' && attachmentPaths.length > 0) {
+      const escapeAppleScript = (value: string): string =>
+        value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+      const bodyText = `${lines.join('\n')}\n`;
+      const scriptLines = [
+        'tell application "Mail"',
+        `set newMessage to make new outgoing message with properties {subject:"${escapeAppleScript(`[Paycheck Planner Feedback] ${payload.subject}`)}", content:"${escapeAppleScript(bodyText)}", visible:true}`,
+        'tell newMessage',
+        `make new to recipient at end of to recipients with properties {address:"${escapeAppleScript(SUPPORT_EMAIL)}"}`,
+        'end tell',
+      ];
+
+      attachmentPaths.forEach((attachmentPath) => {
+        scriptLines.push(
+          `tell content of newMessage to make new attachment with properties {file name:POSIX file "${escapeAppleScript(attachmentPath)}"} at after the last paragraph`
+        );
+      });
+
+      scriptLines.push('activate');
+      scriptLines.push('end tell');
+
+      const scriptPath = path.join(feedbackTempDir, 'create-mail-draft.applescript');
+      await fs.writeFile(scriptPath, scriptLines.join('\n'), 'utf-8');
+
+      try {
+        await execFileAsync('osascript', [scriptPath]);
+        return { success: true };
+      } catch (error) {
+        console.error('Error creating Apple Mail draft with attachments:', error);
+      }
+    }
+
+    // Fallback path for non-macOS or if Apple Mail automation fails.
+    await shell.openPath(feedbackTempDir);
+
+    const encodedSubject = encodeURIComponent(`[Paycheck Planner Feedback] ${payload.subject}`);
+    const encodedBody = encodeURIComponent(lines.join('\n'));
+    const mailtoUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodedSubject}&body=${encodedBody}`;
+
+    await shell.openExternal(mailtoUrl);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening feedback email:', error);
+    return { success: false, error: (error as Error).message };
   }
 });
 

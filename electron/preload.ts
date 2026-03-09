@@ -51,6 +51,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: { success: boolean, error?: string }
   exportPdf: (filePath: string, pdfData: Uint8Array) => ipcRenderer.invoke('export-pdf', filePath, pdfData),
 
+  // Submit tester feedback via email flow (with prepared attachments when available)
+  submitFeedback: (payload: {
+    email?: string;
+    category: 'bug' | 'feature' | 'ui' | 'performance' | 'other';
+    subject: string;
+    messageHtml: string;
+    messageText: string;
+    includeDiagnostics: boolean;
+    diagnostics?: Record<string, unknown>;
+    screenshot?: {
+      fileName: string;
+      mimeType: string;
+      dataUrl: string;
+    };
+  }) => ipcRenderer.invoke('submit-feedback', payload),
+
   // Reveal a file in the system file browser (Finder/Explorer)
   revealInFolder: (filePath: string) => ipcRenderer.invoke('reveal-in-folder', filePath),
   

@@ -1,0 +1,85 @@
+.feedback-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.feedback-intro {
+  margin: 0 0 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.feedback-row {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.feedback-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.feedback-checkbox input {
+  margin-top: 0.2rem;
+}
+
+.feedback-error {
+  margin: 0.4rem 0 0;
+  color: var(--error-color);
+  font-size: 0.85rem;
+}
+
+.feedback-editor-shell {
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.feedback-editor-shell.field-error {
+  border-color: var(--error-color);
+}
+
+.feedback-editor-toolbar {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-wrap: wrap;
+}
+
+.editor-tool {
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.editor-tool:hover {
+  border-color: var(--accent-primary);
+}
+
+.feedback-editor {
+  min-height: 140px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0.7rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.feedback-editor:focus {
+  outline: none;
+}
+
+.feedback-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-tertiary);
+}

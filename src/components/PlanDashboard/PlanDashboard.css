@@ -121,6 +121,25 @@
   color: var(--text-secondary);
   font-size: 0.8rem;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.footer-feedback-btn {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.footer-feedback-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-color-hover, var(--accent-primary));
 }
 
 .header-left {
@@ -451,6 +470,10 @@
     min-width: 45%;
     padding: 0.65rem 1rem;
     font-size: 0.85rem;
+  }
+
+  .dashboard-footer {
+    flex-wrap: wrap;
   }
 
   .footer-info {
