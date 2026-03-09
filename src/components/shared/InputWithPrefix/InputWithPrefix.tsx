@@ -14,8 +14,10 @@ const InputWithPrefix: React.FC<InputWithPrefixProps> = ({
   className,
   ...props
 }) => {
+  const hasError = className?.includes('field-error');
+  
   return (
-    <div className="input-with-prefix">
+    <div className={`input-with-prefix ${hasError ? 'field-error' : ''}`}>
       {prefix && <span className="prefix">{prefix}</span>}
       <input
         className={className}

@@ -69,6 +69,14 @@
   - This could be implemented as tooltips that appear when hovering over certain terms, or as a dedicated glossary section in the app where users can look up definitions and explanations of key financial terms used in the app
   - We should add a Help menu in the menu bar that links to the glossary and other helpful resources for users who want to learn more about financial planning concepts, with easy searching and navigation to find the information they need.
 
+- [ ] **Feedback System** - Implement a way for users to easily provide feedback, report bugs, or request features directly from the app to facilitate communication and continuous improvement
+  - This could be a simple form in the app that allows users to submit their feedback, which would then be sent to our support email or stored in a database for review
+    - Button in the bottom left of the footer (before Last Saved) that opens a feedback form modal where users can enter their feedback, report bugs, or request features
+    - The form should have fields for the user's email (optional), a subject line, and a message box for them to describe their feedback in detail
+  - If it was a bug they encountered, allow user to select an option to automatically include relevant logs to help us diagnose the issue more effectively
+  - If they have a new feature suggestion, allow them to categorize it (e.g., UI improvement, new feature, performance issue, etc.) to help us prioritize and organize the feedback we receive
+    - Also allow them to include a screenshot if they want to illustrate their feedback visually, which can be especially helpful for UI-related suggestions or bug reports
+
 - [ ] **Unit tests** - Add unit tests for critical components and functions to improve reliability and catch bugs early
   - Focus on testing the core logic of the application, such as the pay breakdown calculations, encryption/decryption functions, and file storage operations
   - Use a testing framework like Jest to write and run the tests
@@ -123,3 +131,8 @@
     - The mobile app would sync with the desktop app via cloud storage (e.g., Dropbox, Google Drive) or a custom backend to keep plans up-to-date across devices
     - The mobile app would have a simplified interface focused on key metrics, pay breakdown, and bill tracking for quick access while away from the desktop
     - This would allow users to check their financial plan, track bills, and make adjustments from their phone, providing more flexibility and convenience in managing their finances
+
+- [ ] **Loan Amortization Schedule Reliability (Temporary Disable + Redesign)** - Keep Payment Plan entry disabled for now because schedule assumptions are too fragile when users frequently edit loan values (especially current balance and payment amount).
+  - Redesign schedule generation to support dynamic edits safely and predictably.
+  - Decide on clear projection modes (for example: original-principal projection vs current-balance-forward projection).
+  - Re-enable the Payment Plan button only after behavior is validated with targeted tests and edge cases.

@@ -4,6 +4,7 @@
 
 .form-group label {
   display: block;
+  width: fit-content;
   margin-bottom: 0.5rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -48,6 +49,10 @@
 
 .form-group small.error {
   color: var(--error-color);
+}
+
+.form-group small.warning {
+  color: var(--alert-warning-text);
 }
 
 .form-group small.helper-text {

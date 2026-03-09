@@ -58,6 +58,10 @@
   border-color: var(--accent-primary);
 }
 
+.input-with-prefix.field-error {
+  border-color: var(--error-color) !important;
+}
+
 @media (max-width: 600px) {
   .input-with-prefix .prefix {
     padding: 0.65rem;

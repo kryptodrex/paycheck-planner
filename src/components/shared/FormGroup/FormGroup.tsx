@@ -8,6 +8,8 @@ interface FormGroupProps {
   helperText?: string;
   /** Error message */
   error?: string;
+  /** Non-blocking warning message */
+  warning?: string;
   /** Whether field is required */
   required?: boolean;
   /** The form field(s) */
@@ -18,6 +20,7 @@ const FormGroup: React.FC<FormGroupProps> = ({
   label,
   helperText,
   error,
+  warning,
   required,
   children,
 }) => {
@@ -31,6 +34,7 @@ const FormGroup: React.FC<FormGroupProps> = ({
       )}
       {children}
       {error && <small className="error">{error}</small>}
+      {warning && !error && <small className="warning">{warning}</small>}
       {helperText && !error && <small className="helper-text">{helperText}</small>}
     </div>
   );

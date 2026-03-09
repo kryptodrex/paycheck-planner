@@ -78,14 +78,14 @@
   --text-inverse: #ffffff;
   --border-color: #374151;
   --border-color-light: #2d2d2d;
-  --progress-fill: #667eea;
+  --progress-fill: #a855f7;
   --progress-bg: #4e4e4e;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --accent-primary: #7c3aed;
-  --accent-hover: #6d28d9;
-  --accent-secondary: #9333ea;
+  --accent-primary: #a855f7;
+  --accent-hover: #9333ea;
+  --accent-secondary: #c084fc;
   --tab-drag-indicator: #a5b4fc;
   --tab-drag-indicator-ring: rgba(165, 180, 252, 0.3);
   --tab-drag-outline: rgba(165, 180, 252, 0.8);
@@ -120,7 +120,7 @@
   --link-hover: #a5b4fc;
   --logo-glow-primary: #818cf8aa;
   --logo-glow-secondary: #06b6d4aa;
-  --header-gradient: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  --header-gradient: linear-gradient(135deg, #3d3250 0%, #252038 100%);
   --header-text-secondary: rgba(229, 231, 235, 0.9);
 }
 

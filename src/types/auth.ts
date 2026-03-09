@@ -130,6 +130,8 @@ export interface AccountAllocationCategory {
   benefitCount?: number;         // Number of benefits in this category (if isBenefit is true)
   isRetirement?: boolean;        // If true, this is an auto-calculated sum of retirement for this account
   retirementCount?: number;      // Number of retirement contributions in this category (if isRetirement is true)
+  isLoan?: boolean;              // If true, this is an auto-calculated sum of loan payments for this account
+  loanCount?: number;            // Number of loan payments in this category (if isLoan is true)
 }
 
 /**
@@ -159,6 +161,7 @@ export interface Loan {
   currentBalance: number;              // Current remaining balance
   interestRate: number;                // Annual interest rate (percentage)
   monthlyPayment: number;              // Monthly payment amount
+  paymentFrequency?: Exclude<BillFrequency, 'custom'>; // Original entered payment frequency
   accountId: string;                   // Which account payments come from
   startDate: string;                   // ISO date string when loan started
   termMonths?: number;                 // Total loan term in months (optional)

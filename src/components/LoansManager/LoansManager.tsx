@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Loan } from '../../types/auth';
+import type { Loan, BillFrequency } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
+import { convertBillToMonthly } from '../../utils/billFrequency';
 import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader, RadioGroup, ProgressBar } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './LoansManager.css';
 
 interface LoansManagerProps {
+  scrollToAccountId?: string;
   displayMode: 'paycheck' | 'monthly' | 'yearly';
   onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
 }
@@ -29,6 +31,7 @@ type LoanFieldErrors = {
 };
 
 type LoanTermUnit = 'months' | 'years';
+type LoanPaymentFrequency = Exclude<BillFrequency, 'custom'>;
 
 type AmortizationRow = {
   paymentNumber: number;
@@ -51,13 +54,49 @@ const LOAN_TYPES = [
 ] as const;
 
 const INSURANCE_ELIGIBLE_LOAN_TYPES: Loan['type'][] = ['mortgage', 'auto', 'student', 'other'];
+const LONG_TERM_LOAN_TYPES: Loan['type'][] = ['mortgage', 'student'];
+const LOAN_PAYMENT_FREQUENCIES: Array<{ value: LoanPaymentFrequency; label: string }> = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'bi-weekly', label: 'Bi-weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'semi-annual', label: 'Semi-annual' },
+  { value: 'yearly', label: 'Yearly' },
+];
 
 const roundToCent = (value: number): number => Math.round(value * 100) / 100;
 
 const isInsuranceEligibleLoanType = (type: Loan['type']): boolean => INSURANCE_ELIGIBLE_LOAN_TYPES.includes(type);
+const getDefaultTermUnitForLoanType = (type: Loan['type']): LoanTermUnit => (LONG_TERM_LOAN_TYPES.includes(type) ? 'years' : 'months');
 
-const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeChange }) => {
+const convertMonthlyPaymentToFrequency = (monthlyAmount: number, frequency: LoanPaymentFrequency): number => {
+  switch (frequency) {
+    case 'weekly':
+      return roundToCent((monthlyAmount * 12) / 52);
+    case 'bi-weekly':
+      return roundToCent((monthlyAmount * 12) / 26);
+    case 'quarterly':
+      return roundToCent((monthlyAmount * 12) / 4);
+    case 'semi-annual':
+      return roundToCent((monthlyAmount * 12) / 2);
+    case 'yearly':
+      return roundToCent(monthlyAmount * 12);
+    case 'monthly':
+    default:
+      return roundToCent(monthlyAmount);
+  }
+};
+
+const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
   const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
+
+  // Scroll to account when scrollToAccountId changes
+  useEffect(() => {
+    if (scrollToAccountId) {
+      const element = document.getElementById(`account-${scrollToAccountId}`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [scrollToAccountId]);
   const [showAddLoan, setShowAddLoan] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
 
@@ -68,6 +107,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
   const [loanCurrentBalance, setLoanCurrentBalance] = useState('');
   const [loanInterestRate, setLoanInterestRate] = useState('');
   const [loanMonthlyPayment, setLoanMonthlyPayment] = useState('');
+  const [loanPaymentFrequency, setLoanPaymentFrequency] = useState<LoanPaymentFrequency>('monthly');
   const [loanInsuranceEnabled, setLoanInsuranceEnabled] = useState(false);
   const [loanInsurancePayment, setLoanInsurancePayment] = useState('');
   const [loanInsuranceEndBalanceMode, setLoanInsuranceEndBalanceMode] = useState<'amount' | 'percent'>('amount');
@@ -86,6 +126,24 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
   const currency = budgetData.settings?.currency || 'USD';
   const isLoanEnabled = (loan: Loan) => loan.enabled !== false;
 
+  const parsedBalanceForWarning = parseFloat(loanCurrentBalance);
+  const parsedRateForWarning = parseFloat(loanInterestRate);
+  const parsedPaymentForWarning = parseFloat(loanMonthlyPayment);
+  const paymentAsMonthlyForWarning = Number.isFinite(parsedPaymentForWarning)
+    ? convertBillToMonthly(parsedPaymentForWarning, loanPaymentFrequency)
+    : 0;
+  const monthlyInterestForWarning =
+    Number.isFinite(parsedBalanceForWarning) && Number.isFinite(parsedRateForWarning)
+      ? (parsedBalanceForWarning * (parsedRateForWarning / 100)) / 12
+      : 0;
+  const loanPaymentWarning =
+    parsedBalanceForWarning > 0 &&
+    parsedRateForWarning > 0 &&
+    parsedPaymentForWarning > 0 &&
+    paymentAsMonthlyForWarning <= monthlyInterestForWarning
+      ? `Warning: This payment may be too low to reduce principal. Estimated monthly interest is ${formatWithSymbol(monthlyInterestForWarning, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`
+      : undefined;
+
   const handleAddLoan = () => {
     setEditingLoan(null);
     setLoanName('');
@@ -94,12 +152,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
     setLoanCurrentBalance('');
     setLoanInterestRate('');
     setLoanMonthlyPayment('');
+    setLoanPaymentFrequency('monthly');
     setLoanInsurancePayment('');
     setLoanInsuranceEndBalance('');
     setLoanAccountId(budgetData.accounts[0]?.id || '');
     setLoanStartDate(new Date().toISOString().split('T')[0]);
     setLoanTermMonths('');
-    setLoanTermUnit('months');
+    setLoanTermUnit(getDefaultTermUnitForLoanType('personal'));
     setLoanNotes('');
     setLoanFieldErrors({});
     setShowAddLoan(true);
@@ -112,7 +171,9 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
     setLoanPrincipal(loan.principal.toString());
     setLoanCurrentBalance(loan.currentBalance.toString());
     setLoanInterestRate(loan.interestRate.toString());
-    setLoanMonthlyPayment(loan.monthlyPayment.toString());
+    const paymentFrequency = (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency;
+    setLoanPaymentFrequency(paymentFrequency);
+    setLoanMonthlyPayment(convertMonthlyPaymentToFrequency(loan.monthlyPayment, paymentFrequency).toString());
     const hasInsurance = (loan.insurancePayment ?? 0) > 0;
     setLoanInsuranceEnabled(hasInsurance);
     setLoanInsurancePayment(loan.insurancePayment?.toString() || '');
@@ -145,7 +206,10 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
     const parsedPrincipal = parseFloat(loanPrincipal);
     const parsedCurrentBalance = parseFloat(loanCurrentBalance);
     const parsedInterestRate = parseFloat(loanInterestRate);
-    const parsedMonthlyPayment = parseFloat(loanMonthlyPayment);
+    const parsedPaymentAmount = parseFloat(loanMonthlyPayment);
+    const parsedMonthlyPayment = Number.isFinite(parsedPaymentAmount)
+      ? convertBillToMonthly(parsedPaymentAmount, loanPaymentFrequency)
+      : NaN;
     const parsedInsurancePayment = loanInsuranceEnabled && loanInsurancePayment ? parseFloat(loanInsurancePayment) : undefined;
     const parsedInsuranceEndBalance = loanInsuranceEnabled && loanInsuranceEndBalanceMode === 'amount' && loanInsuranceEndBalance ? parseFloat(loanInsuranceEndBalance) : undefined;
     const parsedInsuranceEndBalancePercent = loanInsuranceEnabled && loanInsuranceEndBalanceMode === 'percent' && loanInsuranceEndBalancePercent ? parseFloat(loanInsuranceEndBalancePercent) : undefined;
@@ -171,8 +235,8 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
       errors.interestRate = 'Please enter a valid interest rate.';
     }
 
-    if (!Number.isFinite(parsedMonthlyPayment) || parsedMonthlyPayment <= 0) {
-      errors.monthlyPayment = 'Please enter a valid monthly payment greater than zero.';
+    if (!Number.isFinite(parsedPaymentAmount) || parsedPaymentAmount <= 0) {
+      errors.monthlyPayment = 'Please enter a valid payment amount greater than zero.';
     }
 
     if (loanInsuranceEnabled) {
@@ -215,6 +279,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
       currentBalance: parsedCurrentBalance,
       interestRate: parsedInterestRate,
       monthlyPayment: parsedMonthlyPayment,
+      paymentFrequency: loanPaymentFrequency,
       insurancePayment: isInsuranceEligibleLoanType(loanType) ? parsedInsurancePayment : undefined,
       insuranceEndBalance: isInsuranceEligibleLoanType(loanType) && loanInsuranceEndBalanceMode === 'amount' ? parsedInsuranceEndBalance : undefined,
       insuranceEndBalancePercent: isInsuranceEligibleLoanType(loanType) && loanInsuranceEndBalanceMode === 'percent' ? parsedInsuranceEndBalancePercent : undefined,
@@ -287,13 +352,14 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
   const buildAmortizationSchedule = (loan: Loan): AmortizationRow[] => {
     const schedule: AmortizationRow[] = [];
 
-    if (loan.currentBalance <= 0 || loan.monthlyPayment <= 0) return schedule;
+    if (loan.monthlyPayment <= 0 || loan.principal <= 0) return schedule;
 
     const monthlyRate = loan.interestRate / 100 / 12;
     // Allow up to 1200 months (100 years) to prevent infinite loops, but will exit early when balance reaches zero
     const maxScheduleLength = 1200;
-    let balance = loan.currentBalance;
-    const startDate = new Date();
+    let balance = loan.principal;
+
+    const startDate = new Date(loan.startDate);
 
     for (let i = 1; i <= maxScheduleLength && balance > 0; i += 1) {
       const beginningBalance = balance;
@@ -313,7 +379,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
       const nextBalance = roundToCent(Math.max(0, balance - principal));
 
       const paymentDate = new Date(startDate);
-      paymentDate.setMonth(paymentDate.getMonth() + i);
+      paymentDate.setMonth(paymentDate.getMonth() + (i - 1));
 
       schedule.push({
         paymentNumber: i,
@@ -465,24 +531,24 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                                 }
                               />
                               <div className="loan-payment-split">
-                                <span className="payment-split-title"><GlossaryTerm termId="loan-payment-split">Payment Split</GlossaryTerm> (Monthly)</span>
+                                <span className="payment-split-title"><GlossaryTerm termId="loan-payment-split">Payment Split</GlossaryTerm> ({getDisplayModeLabel(displayMode)})</span>
                                 <div className="payment-split-row">
                                   <span><GlossaryTerm termId="loan-principal">Principal</GlossaryTerm></span>
-                                  <span>{formatWithSymbol(paymentSplit.principal, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  <span>{formatWithSymbol(toDisplayAmount(paymentSplit.principal), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 <div className="payment-split-row">
                                   <span><GlossaryTerm termId="interest-rate-apr">Interest</GlossaryTerm></span>
-                                  <span>{formatWithSymbol(paymentSplit.interest, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  <span>{formatWithSymbol(toDisplayAmount(paymentSplit.interest), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 {paymentSplit.insurance > 0 && (
                                   <div className="payment-split-row">
                                     <span><GlossaryTerm termId="mortgage-insurance">Insurance (PMI/GAP)</GlossaryTerm></span>
-                                    <span>{formatWithSymbol(paymentSplit.insurance, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <span>{formatWithSymbol(toDisplayAmount(paymentSplit.insurance), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                   </div>
                                 )}
                                 <div className="payment-split-row total">
                                   <span>Total</span>
-                                  <span>{formatWithSymbol(paymentSplit.total, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  <span>{formatWithSymbol(toDisplayAmount(paymentSplit.total), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                               </div>
                               <div className="loan-stats">
@@ -509,6 +575,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                             </div>
 
                             <div className="loan-actions">
+                              {/*
                               <Button
                                 variant="secondary"
                                 onClick={() => setScheduleLoan(loan)}
@@ -517,6 +584,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
                               >
                                 📊 Payment Plan
                               </Button>
+                              */}
                               <Button
                                 variant="icon"
                                 onClick={() => handleToggleLoanEnabled(loan)}
@@ -594,7 +662,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
         <FormGroup label="Loan Type" required>
           <select
             value={loanType}
-            onChange={(e) => setLoanType(e.target.value as Loan['type'])}
+            onChange={(e) => {
+              const selectedType = e.target.value as Loan['type'];
+              setLoanType(selectedType);
+              if (!loanTermMonths.trim()) {
+                setLoanTermUnit(getDefaultTermUnitForLoanType(selectedType));
+              }
+            }}
           >
             {LOAN_TYPES.map(type => (
               <option key={type.value} value={type.value}>
@@ -657,7 +731,12 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
           />
         </FormGroup>
 
-        <FormGroup label={<><GlossaryTerm termId="loan-payment-split">Monthly Payment</GlossaryTerm></>} required error={loanFieldErrors.monthlyPayment}>
+        <FormGroup
+          label="Payment Amount"
+          required
+          error={loanFieldErrors.monthlyPayment}
+          warning={loanPaymentWarning}
+        >
           <InputWithPrefix
             prefix={getCurrencySymbol(currency)}
             type="number"
@@ -673,6 +752,19 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
             step="10"
             className={loanFieldErrors.monthlyPayment ? 'field-error' : ''}
           />
+        </FormGroup>
+
+        <FormGroup label="Payment Frequency" required>
+          <select
+            value={loanPaymentFrequency}
+            onChange={(e) => setLoanPaymentFrequency(e.target.value as LoanPaymentFrequency)}
+          >
+            {LOAN_PAYMENT_FREQUENCIES.map((frequency) => (
+              <option key={frequency.value} value={frequency.value}>
+                {frequency.label}
+              </option>
+            ))}
+          </select>
         </FormGroup>
 
         {isInsuranceEligibleLoanType(loanType) && (
@@ -876,9 +968,10 @@ const LoansManager: React.FC<LoansManagerProps> = ({ displayMode, onDisplayModeC
             <div className="loan-schedule-content">
               <p className="loan-schedule-description">
                 This <GlossaryTerm termId="amortization-schedule">amortization schedule</GlossaryTerm> shows how each monthly payment reduces your loan balance over time. 
-                Early payments go mostly toward <GlossaryTerm termId="interest-rate-apr">interest</GlossaryTerm>, while later payments pay down more <GlossaryTerm termId="loan-principal">principal</GlossaryTerm>. 
-                The <strong>Beginning Balance</strong> is what you owe at the start of each month, and the <strong>Ending Balance</strong> is what remains after your payment. 
-                <GlossaryTerm termId="mortgage-insurance">Insurance (PMI/GAP)</GlossaryTerm> is included while active and will drop off automatically when your balance reaches the specified threshold.
+                Early payments go mostly toward <GlossaryTerm termId="interest-rate-apr">interest</GlossaryTerm>, while later payments pay down more <GlossaryTerm termId="loan-principal">principal</GlossaryTerm>.
+              </p>
+              <p className="loan-schedule-description">
+                The <strong>Beginning Balance</strong> is what you owe at the start of each month, and the <strong>Ending Balance</strong> is what remains after your payment. <GlossaryTerm termId="mortgage-insurance"> Insurance (PMI/GAP)</GlossaryTerm> is included while active and will drop off automatically when your balance reaches the specified threshold.
               </p>
               {schedule.length === 0 ? (
                 <div className="loan-schedule-empty">

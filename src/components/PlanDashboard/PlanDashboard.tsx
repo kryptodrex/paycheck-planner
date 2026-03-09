@@ -870,6 +870,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             }}
             onNavigateToRetirement={() => {
               openTabFromLink('benefits', { scrollToRetirement: true });
+            }}
+            onNavigateToLoans={(accountId) => {
+              openTabFromLink('loans', { scrollToAccountId: accountId, scrollToRetirement: false });
             }} 
           />
         </div>
@@ -892,6 +895,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           }}
         >
           <LoansManager 
+            scrollToAccountId={scrollToAccountId}
             displayMode={displayMode}
             onDisplayModeChange={setDisplayMode}
           />
