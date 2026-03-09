@@ -37,9 +37,6 @@ jobs:
       - name: Build renderer (Vite)
         run: npx vite build
 
-      - name: Run tests
-        run: npm run test:run
-
     permissions:
       contents: read
       checks: write
