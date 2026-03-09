@@ -66,6 +66,23 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     const [retirementFieldErrors, setRetirementFieldErrors] = useState<RetirementFieldErrors>({});
     const [retirementFormMessage, setRetirementFormMessage] = useState<{ type: 'warning' | 'error'; message: string } | null>(null);
 
+    // Scroll to retirement section when shouldScrollToRetirement is true
+    useEffect(() => {
+        if (shouldScrollToRetirement && !scrollCompletedRef.current) {
+            const element = document.getElementById('retirement-section');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                scrollCompletedRef.current = true;
+                onScrollToRetirementComplete?.();
+            }
+        }
+
+        // Reset the ref when shouldScrollToRetirement becomes false
+        if (!shouldScrollToRetirement) {
+            scrollCompletedRef.current = false;
+        }
+    }, [shouldScrollToRetirement, onScrollToRetirementComplete]);
+
     if (!budgetData) return null;
 
     const currency = budgetData.settings?.currency || 'USD';
@@ -238,23 +255,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
         const { employeeAmount, employerAmount } = calculateRetirementContributions(election);
         return sum + employeeAmount + employerAmount;
     }, 0);
-
-    // Scroll to retirement section when shouldScrollToRetirement is true
-    useEffect(() => {
-        if (shouldScrollToRetirement && !scrollCompletedRef.current) {
-            const element = document.getElementById('retirement-section');
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                scrollCompletedRef.current = true;
-                onScrollToRetirementComplete?.();
-            }
-        }
-
-        // Reset the ref when shouldScrollToRetirement becomes false
-        if (!shouldScrollToRetirement) {
-            scrollCompletedRef.current = false;
-        }
-    }, [shouldScrollToRetirement, onScrollToRetirementComplete]);
 
     // Benefit handlers
     const handleAddBenefit = () => {
@@ -757,7 +757,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                 }
             >
                 <FormGroup label={<><GlossaryTerm termId="retirement-contribution">Plan Type</GlossaryTerm></>} required>
-                    <select value={retirementType} onChange={e => setRetirementType(e.target.value as any)} required>
+                    <select value={retirementType} onChange={e => setRetirementType(e.target.value as RetirementElection['type'])} required>
                         <option value="401k">401(k)</option>
                         <option value="403b">403(b)</option>
                         <option value="roth-ira">Roth IRA</option>

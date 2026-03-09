@@ -113,5 +113,6 @@ declare global {
     __hasUnsavedChanges?: boolean;
     __requestSaveBeforeClose?: () => Promise<boolean>;
     __saveWindowState?: (width: number, height: number, x: number, y: number) => Promise<void>;
+    __currentActiveTab?: string;
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { FileStorageService } from '../../services/fileStorage';
 import type { RecentFile } from '../../services/fileStorage';
@@ -14,12 +14,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const [planYear, setPlanYear] = useState(new Date().getFullYear().toString());
   const [showNewPlanForm, setShowNewPlanForm] = useState(false);
   const [dismissedError, setDismissedError] = useState(false);
-  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-
-  // Load recent files on mount
-  useEffect(() => {
-    setRecentFiles(FileStorageService.getRecentFiles());
-  }, []);
+  const [recentFiles, setRecentFiles] = useState<RecentFile[]>(() => FileStorageService.getRecentFiles());
 
   const handleCreateNew = () => {
     setShowNewPlanForm(true);
@@ -55,7 +50,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
           }
           return;
         }
-      } catch {
+      } catch (error) {
+        console.warn('Unable to verify whether recent file exists:', error);
       }
     }
 

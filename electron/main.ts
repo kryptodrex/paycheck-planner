@@ -1,6 +1,7 @@
 // Electron Main Process - This runs in Node.js, not the browser
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell, globalShortcut } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';

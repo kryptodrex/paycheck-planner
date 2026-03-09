@@ -2,7 +2,7 @@
 // This runs before your React app loads and exposes specific functions to the browser
 // It's like a controlled doorway - only certain things can pass through
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 console.log('[PRELOAD] Preload script starting...');
 
@@ -81,10 +81,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: () => unsubscribe function to remove listener
   onMenuEvent: (
     event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode',
-    callback: (arg?: any) => void
+    callback: (arg?: unknown) => void
   ) => {
     const channel = `menu:${event}`;
-    const listener = (_event: any, arg?: any) => callback(arg);
+    const listener = (_event: IpcRendererEvent, arg?: unknown) => callback(arg);
     ipcRenderer.on(channel, listener);
     return () => ipcRenderer.removeListener(channel, listener);
   },

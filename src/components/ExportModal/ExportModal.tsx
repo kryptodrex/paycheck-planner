@@ -70,9 +70,10 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
       } else {
         setError(result.error || 'Failed to save PDF');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error exporting PDF:', err);
-      setError(err.message || 'An error occurred while exporting PDF');
+      const message = err instanceof Error ? err.message : 'An error occurred while exporting PDF';
+      setError(message);
     } finally {
       setIsExporting(false);
     }

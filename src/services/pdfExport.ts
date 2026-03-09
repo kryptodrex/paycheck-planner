@@ -5,6 +5,17 @@ import type { BudgetData } from '../types/auth';
 import { formatWithSymbol } from '../utils/currency';
 import { calculateGrossPayPerPaycheck } from '../utils/payPeriod';
 
+type JsPdfWithAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY: number;
+  };
+};
+
+function getNextYPosition(doc: jsPDF, fallback: number): number {
+  const finalY = (doc as JsPdfWithAutoTable).lastAutoTable?.finalY;
+  return typeof finalY === 'number' ? finalY + 15 : fallback;
+}
+
 export interface PDFExportOptions {
   password?: string;
   includeMetrics?: boolean;
@@ -138,7 +149,7 @@ export async function exportToPDF(
       margin: { left: 20, right: 20 },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
   // Pay Breakdown Section
@@ -179,7 +190,7 @@ export async function exportToPDF(
       margin: { left: 20, right: 20 },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
   // Taxes Section
@@ -207,7 +218,7 @@ export async function exportToPDF(
       margin: { left: 20, right: 20 },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
   // Benefits Section
@@ -236,7 +247,7 @@ export async function exportToPDF(
       margin: { left: 20, right: 20 },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
   // Retirement Section
@@ -269,7 +280,7 @@ export async function exportToPDF(
       margin: { left: 20, right: 20 },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
   // Accounts Section
@@ -295,7 +306,7 @@ export async function exportToPDF(
       margin: { left: 20, right: 20 },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
   // Bills Section
@@ -323,7 +334,7 @@ export async function exportToPDF(
       margin: { left: 20, right: 20 },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 15;
+    yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
   // Add footer to all pages

@@ -36,6 +36,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   useEffect(() => {
     if (isOpen && budgetData) {
       const currentCurrency = budgetData.settings.currency || 'USD';
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditPayType(budgetData.paySettings.payType);
       setEditPayFrequency(budgetData.paySettings.payFrequency);
       setEditMinLeftover(budgetData.paySettings.minLeftover?.toString() || '0');

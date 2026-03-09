@@ -26,11 +26,18 @@ import { generateDemoBudgetData } from '../utils/demoDataGenerator';
 // Initially undefined, we'll provide the actual value in the Provider
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
 
+type LegacyRetirementElection = Partial<RetirementElection> & {
+  employeeContributionAmount?: number;
+  employerMatchAmount?: number;
+  employerMatchIsPercentage?: boolean;
+};
+
 /**
  * Custom hook to access budget data from any component
  * Usage: const { budgetData, saveBudget } = useBudget()
  * This is much cleaner than passing props down through many components
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export const useBudget = () => {
   const context = useContext(BudgetContext);
   if (!context) {
@@ -238,7 +245,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const loadBudget = useCallback(async (filePath?: string) => {
     setLoading(true);
     try {
-      let data = await FileStorageService.loadBudget(filePath);
+      const data = await FileStorageService.loadBudget(filePath);
       // If user canceled the dialog, data will be null
       if (!data) {
         return;
@@ -262,57 +269,41 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
 
       // Migrate benefits to include deduction source fields
-      data.benefits = data.benefits.map((benefit: any) => ({
+      data.benefits = data.benefits.map((benefit) => ({
         ...benefit,
         deductionSource: benefit.deductionSource || (benefit.sourceAccountId ? 'account' : 'paycheck'),
         sourceAccountId: benefit.sourceAccountId,
       }));
       
       // Migrate old retirement election format to new format
-      data.retirement = data.retirement.map((election: any) => {
-        const migrated: any = { ...election };
-        
-        // Migrate field names
-        if ('employeeContributionAmount' in election) {
-          migrated.employeeContribution = election.employeeContributionAmount;
-          delete migrated.employeeContributionAmount;
-        }
-        
-        // Add hasEmployerMatch if missing
-        if (!('hasEmployerMatch' in migrated)) {
-          // If there was an employerMatchAmount, assume employer match is enabled
-          migrated.hasEmployerMatch = (election.employerMatchAmount && election.employerMatchAmount > 0) || false;
-        }
-        
-        // Initialize employerMatchCap if missing
-        if (!('employerMatchCap' in migrated)) {
-          migrated.employerMatchCap = election.employerMatchCap || 0;
-        }
-        
-        // Initialize employerMatchCapIsPercentage if missing
-        if (!('employerMatchCapIsPercentage' in migrated)) {
-          migrated.employerMatchCapIsPercentage = election.employerMatchCapIsPercentage || false;
-        }
-        
-        // Add isPreTax if missing (default to true for backward compatibility)
-        if (!('isPreTax' in migrated)) {
-          migrated.isPreTax = true;
-        }
-        
-        // Add deductionSource if missing (infer from sourceAccountId when possible)
-        if (!('deductionSource' in migrated)) {
-          migrated.deductionSource = migrated.sourceAccountId ? 'account' : 'paycheck';
-        }
-        
-        // Add sourceAccountId if missing
-        if (!('sourceAccountId' in migrated)) {
-          migrated.sourceAccountId = undefined;
-        }
-        
-        // Remove old fields that are no longer used
-        delete migrated.employerMatchAmount;
-        delete migrated.employerMatchIsPercentage;
-        
+      data.retirement = data.retirement.map((election) => {
+        const legacyElection = election as LegacyRetirementElection;
+
+        const employeeContribution =
+          typeof legacyElection.employeeContributionAmount === 'number'
+            ? legacyElection.employeeContributionAmount
+            : legacyElection.employeeContribution ?? 0;
+
+        const hasEmployerMatch =
+          legacyElection.hasEmployerMatch ??
+          ((legacyElection.employerMatchAmount ?? 0) > 0);
+
+        const migrated: RetirementElection = {
+          id: legacyElection.id || crypto.randomUUID(),
+          type: legacyElection.type || '401k',
+          customLabel: legacyElection.customLabel,
+          employeeContribution,
+          employeeContributionIsPercentage: legacyElection.employeeContributionIsPercentage ?? true,
+          isPreTax: legacyElection.isPreTax ?? true,
+          deductionSource: legacyElection.deductionSource ?? (legacyElection.sourceAccountId ? 'account' : 'paycheck'),
+          sourceAccountId: legacyElection.sourceAccountId,
+          hasEmployerMatch,
+          employerMatchCap: legacyElection.employerMatchCap ?? legacyElection.employerMatchAmount ?? 0,
+          employerMatchCapIsPercentage:
+            legacyElection.employerMatchCapIsPercentage ?? legacyElection.employerMatchIsPercentage ?? false,
+          yearlyLimit: legacyElection.yearlyLimit,
+        };
+
         return migrated;
       });
       

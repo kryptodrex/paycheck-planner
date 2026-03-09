@@ -14,6 +14,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'paycheck-planner-theme';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
@@ -42,7 +43,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         if (settings.themeMode === 'light' || settings.themeMode === 'dark') {
           return settings.themeMode;
         }
-      } catch (e) {
+      } catch {
         // If parsing fails, fall through to default behavior
       }
     }
@@ -70,7 +71,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         try {
           const settings = JSON.parse(settingsStr);
           return settings.themeMode || 'light';
-        } catch (e) {
+        } catch {
           return 'light';
         }
       }

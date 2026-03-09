@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import './Toggle.css';
 
 interface ToggleProps {
@@ -10,7 +10,8 @@ interface ToggleProps {
 }
 
 const Toggle: React.FC<ToggleProps> = ({ id, checked, onChange, label, disabled = false }) => {
-  const toggleId = id || `toggle-${Math.random().toString(36).substr(2, 9)}`;
+  const generatedId = useId();
+  const toggleId = id || `toggle-${generatedId.replace(/:/g, '')}`;
 
   return (
     <div className="toggle-wrapper">

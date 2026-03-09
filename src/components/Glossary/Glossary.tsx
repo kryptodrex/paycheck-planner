@@ -33,6 +33,7 @@ const Glossary: React.FC<GlossaryProps> = ({ isOpen, onClose, initialTermId }) =
     const initialTerm = glossaryTerms.find((term) => term.id === initialTermId);
     if (!initialTerm) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCategory('all');
     setQuery(initialTerm.term);
 

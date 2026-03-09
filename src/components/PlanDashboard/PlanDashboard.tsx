@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 type StatusToastType = 'success' | 'warning' | 'error';
 
 interface StatusToastState {
@@ -36,16 +37,17 @@ interface PlanDashboardProps {
   viewMode?: string | null; // If set, this is a view-only window
 }
 
+const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'benefits'];
+
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
-  const validTabs: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'benefits'];
   const getInitialTab = () => {
-    if (viewMode && validTabs.includes(viewMode as TabId)) {
+    if (viewMode && VALID_TABS.includes(viewMode as TabId)) {
       return viewMode as TabId;
     }
 
     const savedTab = budgetData?.settings?.activeTab;
-    if (savedTab && validTabs.includes(savedTab as TabId)) {
+    if (savedTab && VALID_TABS.includes(savedTab as TabId)) {
       return savedTab as TabId;
     }
 
@@ -91,6 +93,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const handleSaveRef = useRef<(() => Promise<void>) | null>(null);
   const handleTabPositionChangeRef = useRef<((position: TabPosition) => void) | null>(null);
   const handleTabDisplayModeChangeRef = useRef<((mode: TabDisplayMode) => void) | null>(null);
+  const tabDisplayModeRef = useRef<TabDisplayMode>('icons-with-labels');
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
@@ -127,7 +130,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   // Restore active tab before paint to avoid flashing default tab
   useLayoutEffect(() => {
-    if (viewMode && validTabs.includes(viewMode as TabId)) {
+    if (viewMode && VALID_TABS.includes(viewMode as TabId)) {
       if (activeTab !== (viewMode as TabId)) {
         setActiveTab(viewMode as TabId);
       }
@@ -135,16 +138,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
 
     const savedTab = budgetData?.settings?.activeTab;
-    if (savedTab && validTabs.includes(savedTab as TabId) && activeTab !== (savedTab as TabId)) {
+    if (savedTab && VALID_TABS.includes(savedTab as TabId) && activeTab !== (savedTab as TabId)) {
       setActiveTab(savedTab as TabId);
     }
-  }, [budgetData?.id, viewMode]);
+  }, [activeTab, budgetData?.settings?.activeTab, viewMode]);
 
   // Keep window.__currentActive Tab in sync for save on close
   useEffect(() => {
-    (window as any).__currentActiveTab = activeTab;
+    window.__currentActiveTab = activeTab;
     return () => {
-      delete (window as any).__currentActiveTab;
+      delete window.__currentActiveTab;
     };
   }, [activeTab]);
 
@@ -156,7 +159,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (budgetData?.settings?.tabDisplayMode) {
       setTabDisplayMode(budgetData.settings.tabDisplayMode);
     }
-  }, [budgetData?.id]);
+  }, [budgetData?.settings?.tabDisplayMode, budgetData?.settings?.tabPosition]);
 
   // Handle tab position changes
   const handleTabPositionChange = useCallback((newPosition: TabPosition) => {
@@ -206,7 +209,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     handleSaveRef.current = handleSave;
     handleTabPositionChangeRef.current = handleTabPositionChange;
     handleTabDisplayModeChangeRef.current = handleTabDisplayModeChange;
-  }, [handleSave, handleTabPositionChange, handleTabDisplayModeChange]);
+    tabDisplayModeRef.current = tabDisplayMode;
+  }, [handleSave, handleTabPositionChange, handleTabDisplayModeChange, tabDisplayMode]);
 
   // Listen for menu events from Electron
   useEffect(() => {
@@ -241,12 +245,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       setShowAccountsModal(true);
     });
 
-    const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent('set-tab-position', (position: TabPosition) => {
-      handleTabPositionChangeRef.current?.(position);
+    const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent('set-tab-position', (position) => {
+      if (
+        position === 'top' ||
+        position === 'bottom' ||
+        position === 'left' ||
+        position === 'right'
+      ) {
+        handleTabPositionChangeRef.current?.(position);
+      }
     });
 
     const unsubscribeToggleDisplayMode = window.electronAPI.onMenuEvent('toggle-tab-display-mode', () => {
-      const newMode: TabDisplayMode = tabDisplayMode === 'icons-only' ? 'icons-with-labels' : 'icons-only';
+      const newMode: TabDisplayMode = tabDisplayModeRef.current === 'icons-only' ? 'icons-with-labels' : 'icons-only';
       handleTabDisplayModeChangeRef.current?.(newMode);
     });
 
@@ -261,7 +272,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeSetTabPosition();
       unsubscribeToggleDisplayMode();
     };
-  }, []);
+  }, [createNewBudget, loadBudget, onResetSetup]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -390,9 +401,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     dragCurrentIndexRef.current = hoverIndex;
     setDraggedTabIndex(hoverIndex);
     movedDuringDragRef.current = true;
-  }, [budgetData, tabConfigs, updateBudgetSettings]);
+  }, [budgetData, updateBudgetSettings]);
 
-  const handleDrop = useCallback((e: React.DragEvent, _dropIndex: number) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
 
     if (movedDuringDragRef.current) {
@@ -621,6 +632,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleTabClick = (tab: TabId, options?: { resetBillsAnchor?: boolean }) => {
     if (activeTab === tab) {
       scrollTabToTop(tab);

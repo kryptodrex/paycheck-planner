@@ -24,7 +24,12 @@ function App() {
   // Track if user wants to force encryption setup again (for testing/changing)
   const [forceSetupAgain, setForceSetupAgain] = useState(false)
   // Track view mode (if this is a view window)
-  const [viewMode, setViewMode] = useState<string | null>(null)
+  const [viewMode] = useState<string | null>(() => {
+    if (window.electronAPI && window.electronAPI.getWindowParams) {
+      return window.electronAPI.getWindowParams().viewType
+    }
+    return null
+  })
   // Track if settings modal is open
   const [showSettings, setShowSettings] = useState(false)
   // Track if about modal is open
@@ -33,14 +38,6 @@ function App() {
   const [showGlossary, setShowGlossary] = useState(false)
   // Track requested glossary term when opened from inline tooltips
   const [initialGlossaryTermId, setInitialGlossaryTermId] = useState<string | null>(null)
-
-  // Check view mode and session restore flag on mount
-  useEffect(() => {
-    if (window.electronAPI && window.electronAPI.getWindowParams) {
-      const params = window.electronAPI.getWindowParams()
-      setViewMode(params.viewType)
-    }
-  }, [])
 
   // Register global keyboard shortcuts
   useGlobalKeyboardShortcuts([
@@ -116,7 +113,7 @@ function App() {
   useEffect(() => {
     window.__saveWindowState = async (width: number, height: number, x: number, y: number) => {
       // Get current active tab if available (set by PlanDashboard)
-      const activeTab = (window as any).__currentActiveTab;
+      const activeTab = window.__currentActiveTab;
       await saveWindowState(width, height, x, y, activeTab);
     };
 
@@ -129,6 +126,7 @@ function App() {
   useEffect(() => {
     // If user is forcing setup again, show setup screen regardless of saved settings
     if (forceSetupAgain) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSetupComplete(false)
       setCheckingSetup(false)
       return
