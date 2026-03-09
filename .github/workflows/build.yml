@@ -8,6 +8,9 @@ on:
       - opened
       - synchronize
       - reopened
+    paths-ignore:
+      - '.github/workflows/**'
+      - '**/*.md'
 
 jobs:
   build:

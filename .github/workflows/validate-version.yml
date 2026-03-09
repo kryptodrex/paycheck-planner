@@ -6,6 +6,9 @@ on:
       - develop
       - main
     types: [opened, synchronize, reopened]
+    paths-ignore:
+      - '.github/workflows/**'
+      - '**/*.md'
 
 jobs:
   check-version:
