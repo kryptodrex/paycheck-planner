@@ -1,5 +1,129 @@
 # Implementation Notes
 
+## Feedback System via GitHub Issues (Private Repo)
+
+### **Goal**
+Submit in-app feedback directly to the private GitHub repository as Issues (without exposing auth tokens in the desktop app).
+
+### **Why this approach**
+- The repo is private, so unauthenticated URL-based issue creation is not viable.
+- A secure server-side/API intermediary is required to hold credentials and call GitHub.
+- Tokens must never be embedded in renderer code, preload code, or shipped desktop binaries.
+
+### **Recommended Architecture**
+
+```
+Electron app (Feedback modal)
+  -> POST /feedback (serverless endpoint)
+      -> GitHub Issues API (authenticated)
+          -> Create issue in private repo
+```
+
+### **What you need (and where to get it)**
+
+1. **GitHub repository coordinates**
+- `owner` and `repo` name
+- Source: existing GitHub project settings
+
+2. **Authentication credential (choose one)**
+- **Option A (fastest): Fine-grained Personal Access Token**
+  - Scope/permission needed: `Issues: Read and write` on the target private repo
+  - Create at: GitHub Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens
+- **Option B (recommended long-term): GitHub App**
+  - Permission: Repository Issues (Read/Write)
+  - Create at: GitHub Settings -> Developer settings -> GitHub Apps
+  - Better rotation/governance than PAT
+
+3. **Serverless/API host**
+- Vercel Functions, Netlify Functions, or Cloudflare Workers
+- Needed to securely store token as environment secret and proxy requests
+
+4. **Environment secrets**
+- `GITHUB_TOKEN` (if PAT flow) or GitHub App credentials
+- `GITHUB_OWNER`
+- `GITHUB_REPO`
+- Optional: `FEEDBACK_SHARED_SECRET` (to reject unauthorized posts)
+
+5. **Optional attachments storage**
+- If screenshot upload should be fully automatic, use object storage (S3/R2/Supabase Storage)
+- Include uploaded image URL in issue body
+
+### **API Contract (App -> Backend)**
+
+Suggested request payload:
+
+```json
+{
+  "category": "bug|feature|ui|performance|other",
+  "subject": "string",
+  "message": "string",
+  "email": "optional string",
+  "includeDiagnostics": true,
+  "diagnostics": {
+    "appVersion": "1.0.0",
+    "activeTab": "breakdown",
+    "platform": "..."
+  },
+  "screenshot": {
+    "fileName": "optional",
+    "dataUrl": "optional base64"
+  }
+}
+```
+
+Suggested response:
+
+```json
+{
+  "success": true,
+  "issueNumber": 123,
+  "issueUrl": "https://github.com/<owner>/<repo>/issues/123"
+}
+```
+
+### **Issue Formatting Strategy**
+
+- **Issue title**: `[Feedback][<category>] <subject>`
+- **Labels** (auto):
+  - `feedback`
+  - `category:bug` / `category:feature` / etc.
+- **Issue body sections**:
+  - Summary/message
+  - Reporter email (if provided)
+  - Diagnostics JSON block
+  - Screenshot link (if uploaded)
+
+### **Security & Abuse Controls**
+
+- Never expose GitHub token in the app.
+- Restrict API CORS origin to your desktop app origin as applicable.
+- Add a shared secret header from app -> backend.
+- Validate payload size and schema server-side.
+- Rate limit by IP and/or generated device/session id.
+
+### **Implementation Steps (Suggested order)**
+
+1. Keep current modal fields and payload model in renderer.
+2. Replace current feedback submit transport with HTTPS `POST` to backend endpoint.
+3. Build serverless `POST /feedback` function to call GitHub Issues API.
+4. Return issue URL and show success toast with issue number.
+5. Add optional screenshot upload path (phase 2) if desired.
+
+### **Testing Checklist**
+
+- Valid submission creates issue in private repo.
+- Missing/invalid fields return friendly errors.
+- Invalid secret/token returns safe generic error to user.
+- Category maps to correct labels.
+- Diagnostics included only when selected.
+- Large screenshot payload rejected with actionable message.
+
+### **Operational Notes**
+
+- Token rotation: quarterly or on team-member changes.
+- Keep endpoint logs minimal and avoid storing sensitive payloads long-term.
+- Consider moving from PAT to GitHub App once usage grows.
+
 ## Excel and PDF Export Features
 
 ### **1. Excel Export Implementation**
