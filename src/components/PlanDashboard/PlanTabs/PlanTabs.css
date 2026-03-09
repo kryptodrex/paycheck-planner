@@ -1,0 +1,527 @@
+/* Tab Navigation Styles */
+.tab-navigation {
+  display: flex;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  outline: none !important;
+}
+
+.tab-button:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.tab-button:focus {
+  outline: none !important;
+}
+
+.tab-button:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(102, 126, 234, 0.5);
+  outline: none !important;
+}
+
+.tab-button.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.tab-icon {
+  font-size: 1.2rem;
+}
+
+/* Display Mode Toggle Button */
+.display-mode-toggle {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.display-mode-toggle:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.display-mode-toggle .toggle-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Tab button group with open-in-window button */
+.tab-button-group {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.tab-button-group .tab-button {
+  flex: 1;
+}
+
+/* Tab Management Styles */
+.tab-button-group {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  transition: opacity 0.2s;
+}
+
+.tab-button-group[draggable="true"] {
+  cursor: pointer;
+}
+
+.tab-button-group[draggable="true"] .tab-button,
+.tab-button-group[draggable="true"] .tab-icon,
+.tab-button-group[draggable="true"] .tab-label {
+  cursor: pointer;
+}
+
+/* .tab-button-group[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.tab-button-group[draggable="true"]:active .tab-button,
+.tab-button-group[draggable="true"]:active .tab-icon,
+.tab-button-group[draggable="true"]:active .tab-label {
+  cursor: grabbing;
+} */
+
+.tab-button-group.is-dragging {
+  cursor: grabbing;
+}
+
+.tab-button-group.is-dragging .tab-button,
+.tab-button-group.is-dragging .tab-icon,
+.tab-button-group.is-dragging .tab-label {
+  cursor: grabbing;
+}
+
+.tab-close-button {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0 0 3px 0;
+  flex-shrink: 0;
+  opacity: 0;
+  z-index: 10;
+  outline: none !important;
+}
+
+/* Show close button on hover for desktop */
+.tab-button-group:hover .tab-close-button {
+  opacity: 1;
+}
+
+/* Show close button when it receives keyboard focus */
+.tab-close-button:focus,
+.tab-close-button:focus-visible {
+  opacity: 1;
+}
+
+/* Always show close button on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .tab-close-button {
+    opacity: 1;
+  }
+}
+
+.tab-close-button:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error-color);
+  transform: scale(1.15);
+}
+
+.tab-close-button:focus {
+  outline: none !important;
+}
+
+.tab-close-button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error-color);
+  outline: none !important;
+}
+
+.manage-tabs-button {
+  flex: 0 0 auto !important;
+  min-width: 45px;
+  max-width: 45px;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border-bottom: 3px solid transparent !important;
+  transition: all 0.2s;
+  font-size: 1.2rem;
+  outline: none !important;
+}
+
+.manage-tabs-button:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-primary) !important;
+}
+
+.manage-tabs-button:focus {
+  outline: none !important;
+}
+
+.manage-tabs-button:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(102, 126, 234, 0.5);
+  outline: none !important;
+}
+
+/* Container for manage tabs button should not grow */
+.manage-tabs-container {
+  flex: 0 0 auto !important;
+}
+
+/* Drag and Drop Styles */
+.tab-button-group.drag-over-target::before {
+  content: '';
+  position: absolute;
+  z-index: 12;
+  background: var(--tab-drag-indicator);
+  box-shadow: 0 0 0 2px var(--tab-drag-indicator-ring);
+  border-radius: 2px;
+}
+
+.tab-button-group.drag-over-target::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 2px dashed var(--tab-drag-outline);
+  border-radius: 8px;
+  background: var(--tab-drag-fill);
+  pointer-events: none;
+  z-index: 11;
+}
+
+.tab-position-top .tab-button-group.drag-over-target::before,
+.tab-position-bottom .tab-button-group.drag-over-target::before {
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3px;
+}
+
+.tab-position-left .tab-button-group.drag-over-target::before,
+.tab-position-right .tab-button-group.drag-over-target::before {
+  left: 10%;
+  right: 10%;
+  top: 0;
+  height: 3px;
+}
+
+/* ============================
+   TAB POSITION VARIATIONS
+   ============================ */
+
+/* Default (Top) Position */
+.tab-navigation.tab-position-top {
+  flex-direction: row;
+  border-bottom: 1px solid var(--border-color);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tab-navigation .spacer {
+  flex: 1;
+}
+
+.tab-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  /* border-top: 1px solid var(--border-color); */
+  background: var(--bg-secondary)
+}
+
+.tab-controls button {
+  flex-grow: 1;
+}
+
+.tab-position-top .tab-button {
+  border-bottom: 3px solid transparent;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+
+.tab-position-top .tab-button.active {
+  border-bottom-color: var(--accent-primary);
+}
+
+/* Bottom Position */
+.tab-navigation.tab-position-bottom {
+  flex-direction: row;
+  border-top: 1px solid var(--border-color);
+  border-bottom: none;
+  border-left: none;
+  border-right: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tab-position-bottom .tab-button {
+  border-top: 3px solid transparent;
+  border-bottom: none;
+  border-left: none;
+  border-right: none;
+}
+
+.tab-position-bottom .tab-button.active {
+  border-top-color: var(--accent-primary);
+}
+
+/* Left Position (Sidebar) */
+.tab-navigation.tab-position-left {
+  flex-direction: column;
+  border-right: 1px solid var(--border-color);
+  border-left: none;
+  border-top: none;
+  border-bottom: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: auto;
+  transition: width 0.3s ease;
+}
+
+.tab-position-left .tab-button-group {
+  flex: 0 0 auto;
+}
+
+.tab-position-left .tab-button {
+  border-right: 3px solid transparent;
+  border-left: none;
+  border-top: none;
+  border-bottom: none;
+  justify-content: flex-start;
+  padding: 1rem 1.25rem;
+  min-height: 52px;
+}
+
+.tab-position-left .tab-button.active {
+  border-right-color: var(--accent-primary);
+}
+
+.tab-position-left .manage-tabs-button {
+  justify-content: flex-start;
+  max-width: none;
+  min-width: auto;
+  width: 100%;
+}
+
+/* Right Position (Sidebar) */
+.tab-navigation.tab-position-right {
+  flex-direction: column;
+  border-right: none;
+  border-left: 1px solid var(--border-color);
+  border-top: none;
+  border-bottom: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: auto;
+  transition: width 0.3s ease;
+}
+
+.tab-position-right .tab-button-group {
+  flex: 0 0 auto;
+}
+
+.tab-position-right .tab-button {
+  border-left: 3px solid transparent;
+  border-right: none;
+  border-top: none;
+  border-bottom: none;
+  justify-content: flex-start;
+  padding: 1rem 1.25rem;
+  min-height: 52px;
+}
+
+.tab-position-right .tab-button.active {
+  border-left-color: var(--accent-primary);
+}
+
+.tab-position-right .manage-tabs-button {
+  justify-content: flex-start;
+  max-width: none;
+  min-width: auto;
+  width: 100%;
+}
+
+/* ============================
+   TAB DISPLAY MODE VARIATIONS
+   ============================ */
+
+/* Icons with Labels (Default for all, required for top/bottom) */
+.tab-navigation .tab-label {
+  display: inline;
+  font-size: 0.95rem;
+}
+
+/* Icons Only Mode (only for left/right sidebars) */
+.tab-navigation.tab-position-left.tab-display-icons-only,
+.tab-navigation.tab-position-right.tab-display-icons-only {
+  width: 60px;
+}
+
+.tab-navigation.tab-display-icons-only .tab-label {
+  display: none;
+}
+
+.tab-navigation.tab-display-icons-only .tab-button {
+  justify-content: center;
+  padding: 1rem 0.5rem;
+}
+
+.tab-navigation.tab-display-icons-only .manage-tabs-button {
+  justify-content: center;
+  padding: 0.75rem 0.5rem;
+  width: 100%;
+  min-width: auto;
+}
+
+/* Icons with Labels Mode for sidebars */
+.tab-navigation.tab-position-left.tab-display-icons-with-labels,
+.tab-navigation.tab-position-right.tab-display-icons-with-labels {
+  width: 200px;
+}
+
+/* ============================
+   ANIMATIONS
+   ============================ */
+
+@keyframes tab-slide-from-top {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes tab-slide-from-bottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes tab-slide-from-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes tab-slide-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Apply position change animations */
+.tab-navigation.tab-position-animating {
+  animation-duration: 0.4s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.tab-navigation.tab-position-animating.tab-position-top {
+  animation-name: tab-slide-from-top;
+}
+
+.tab-navigation.tab-position-animating.tab-position-bottom {
+  animation-name: tab-slide-from-bottom;
+}
+
+.tab-navigation.tab-position-animating.tab-position-left {
+  animation-name: tab-slide-from-left;
+}
+
+.tab-navigation.tab-position-animating.tab-position-right {
+  animation-name: tab-slide-from-right;
+}
+
+/* ============================
+   RESPONSIVE ADJUSTMENTS
+   ============================ */
+
+@media (max-width: 768px) {
+  /* On mobile, force icons-with-labels for better usability */
+  .tab-navigation.tab-position-left.tab-display-icons-only,
+  .tab-navigation.tab-position-right.tab-display-icons-only {
+    width: 180px;
+  }
+  
+  .tab-navigation.tab-display-icons-only .tab-label {
+    display: inline;
+  }
+  
+  .tab-navigation.tab-display-icons-only .tab-button {
+    justify-content: flex-start;
+    padding: 1rem 1rem;
+  }
+}
+

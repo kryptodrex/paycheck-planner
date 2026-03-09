@@ -1,0 +1,40 @@
+.view-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg-tertiary);
+  padding: 0.25rem;
+  border-radius: 8px;
+}
+
+.view-mode-selector button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+
+.view-mode-selector button.active {
+  background: var(--bg-primary);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.view-mode-selector button:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .view-mode-selector {
+    width: 100%;
+  }
+
+  .view-mode-selector button {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+  }
+}

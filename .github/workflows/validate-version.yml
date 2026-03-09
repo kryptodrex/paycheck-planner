@@ -1,0 +1,188 @@
+name: Validate Version File
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    types: [opened, synchronize, reopened]
+    paths-ignore:
+      - '.github/workflows/**'
+      - '**/*.md'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+
+      - name: Check if version file was modified
+        id: check_version
+        run: |
+          # Get the list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Check if version file is in the changed files
+          if echo "$CHANGED_FILES" | grep -q "^version$"; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Version file has been modified"
+          else
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "❌ Version file has NOT been modified"
+          fi
+
+      - name: Read current version
+        if: steps.check_version.outputs.version_changed == 'true'
+        id: current_version
+        run: |
+          VERSION=$(cat version | tr -d ' \n')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Check if version file exists in base branch
+        if: steps.check_version.outputs.version_changed == 'true'
+        id: check_base_version
+        run: |
+          if git cat-file -e origin/${{ github.base_ref }}:version 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Version file exists in base branch"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Version file does not exist in base branch - skipping version comparison"
+          fi
+
+      - name: Read base branch version
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_base_version.outputs.exists == 'true'
+        id: base_version
+        run: |
+          git checkout origin/${{ github.base_ref }} -- version
+          BASE_VERSION=$(cat version | tr -d ' \n')
+          echo "version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "Base branch version: $BASE_VERSION"
+          # Restore the PR version
+          git checkout HEAD -- version
+
+      - name: Compare versions
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_base_version.outputs.exists == 'true'
+        id: compare
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          BASE="${{ steps.base_version.outputs.version }}"
+          
+          # Function to compare semantic versions
+          compare_versions() {
+            local current=$1
+            local base=$2
+            
+            # Split versions into arrays
+            IFS='.' read -ra CURRENT_PARTS <<< "$current"
+            IFS='.' read -ra BASE_PARTS <<< "$base"
+            
+            local current_len=${#CURRENT_PARTS[@]}
+            local base_len=${#BASE_PARTS[@]}
+
+            # Determine the maximum length of the version arrays
+            local max_len=$(( current_len > base_len ? current_len : base_len ))
+            for ((i=0; i<max_len; i++)); do
+              current_part=${CURRENT_PARTS[$i]:-0}
+              base_part=${BASE_PARTS[$i]:-0}
+              
+              if [ "$current_part" -gt "$base_part" ]; then
+                return 0  # Current is higher
+              elif [ "$current_part" -lt "$base_part" ]; then
+                return 1  # Current is lower
+              fi
+            done
+            
+            return 2  # Versions are equal
+          }
+          
+          compare_versions "$CURRENT" "$BASE"
+          cmp_result=$?
+          if [ "$cmp_result" -eq 0 ]; then
+            echo "result=increased" >> $GITHUB_OUTPUT
+            echo "should_fail=false" >> $GITHUB_OUTPUT
+            echo "✅ Version correctly bumped from $BASE to $CURRENT"
+          elif [ "$cmp_result" -eq 2 ]; then
+            echo "result=unchanged" >> $GITHUB_OUTPUT
+            echo "should_fail=true" >> $GITHUB_OUTPUT
+            echo "❌ Version file was modified but version number is the same: $CURRENT"
+          else
+            echo "result=decreased" >> $GITHUB_OUTPUT
+            echo "should_fail=true" >> $GITHUB_OUTPUT
+            echo "❌ Version has decreased from $BASE to $CURRENT - this is not allowed"
+          fi
+
+      - name: Warn if base version doesn't exist
+        if: steps.check_version.outputs.version_changed == 'true' && steps.check_base_version.outputs.exists == 'false'
+        run: |
+          echo "::warning::Version file does not exist in base branch. Skipping version comparison."
+          echo "✅ New version file will be created with version: ${{ steps.current_version.outputs.version }}"
+
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const versionChanged = '${{ steps.check_version.outputs.version_changed }}';
+            const compareResult = '${{ steps.compare.outputs.result }}';
+            const currentVersion = '${{ steps.current_version.outputs.version }}';
+            const baseVersion = '${{ steps.base_version.outputs.version }}';
+            const baseExists = '${{ steps.check_base_version.outputs.exists }}';
+            
+            let message = '';
+            
+            // Handle case where version file was not modified
+            if (versionChanged === 'false') {
+              message = `❌ **Version File Not Updated**\n\nThe version file was not modified in this PR. Please update the \`version\` file in the root directory with the new version number.`;
+            }
+            // Handle case where version file doesn't exist in base branch (new file)
+            else if (baseExists === 'false') {
+              message = `⚠️ **New Version File Added**\n\nVersion file does not exist in base branch. Creating new version file with version \`${currentVersion}\``;
+            }
+            // Handle case where version was properly increased
+            else if (compareResult === 'increased') {
+              message = `✅ **Version Update Detected**\n\nVersion has been correctly bumped from \`${baseVersion}\` to \`${currentVersion}\``;
+            }
+            // Handle case where version file changed but version number stayed the same
+            else if (compareResult === 'unchanged') {
+              message = `❌ **Version File Modified but Unchanged**\n\nThe version file was modified but the version number remains \`${currentVersion}\`. Please update the version number.`;
+            }
+            // Handle case where version decreased
+            else if (compareResult === 'decreased') {
+              message = `❌ **Version Decreased**\n\nThe version has decreased from \`${baseVersion}\` to \`${currentVersion}\`. Version numbers should always increase.`;
+            }
+            
+            if (message) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
+
+      - name: Fail if version comparison failed
+        if: steps.compare.outputs.should_fail == 'true'
+        run: |
+          echo "::error::Version validation failed. See PR comment for details."
+          exit 1
+
+      - name: Fail if version not updated
+        if: steps.check_version.outputs.version_changed == 'false'
+        run: |
+          echo "::error::Version file must be updated in this PR"
+          echo "Please update the 'version' file in the root directory with the new version number."
+          exit 1

@@ -8,13 +8,18 @@ html, body {
   margin: 0;
   padding: 0;
   font-size: 16px;
+  overflow: hidden;
 }
 
 #root {
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   margin: 0;
   padding: 0;
+  padding-top: 35px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
 }
 
 .loading {
@@ -22,7 +27,7 @@ html, body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--header-gradient);
   color: white;
   font-size: clamp(1.1rem, 3vw, 1.5rem);
   padding: 1rem;
@@ -35,10 +40,10 @@ html, body {
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em var(--logo-glow-primary));
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em var(--logo-glow-secondary));
 }
 
 @keyframes logo-spin {
@@ -61,5 +66,29 @@ html, body {
 }
 
 .read-the-docs {
-  color: #888;
+  color: var(--text-tertiary);
+}
+
+/* Draggable region for macOS titlebar area */
+.drag-bar {
+  height: 28px;
+  -webkit-app-region: drag;
+  /* background: var(--bg-secondary); */
+  background: none;
+  opacity: 0.01; /* Make it invisible but still draggable */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  pointer-events: auto;
+  /* border-bottom: 1px solid var(--border-color); */
+}
+
+/* Make sure buttons and interactive elements stay clickable */
+.drag-bar button,
+.drag-bar a,
+.drag-bar input,
+.drag-bar select {
+  -webkit-app-region: no-drag;
 }

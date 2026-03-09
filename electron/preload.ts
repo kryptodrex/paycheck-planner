@@ -2,7 +2,9 @@
 // This runs before your React app loads and exposes specific functions to the browser
 // It's like a controlled doorway - only certain things can pass through
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+
+console.log('[PRELOAD] Preload script starting...');
 
 // Expose protected methods to the renderer process (React app)
 // contextBridge is the secure way to expose functions to the browser
@@ -37,17 +39,113 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
   
   // Open file picker (for saving)
-  saveFileDialog: () => ipcRenderer.invoke('save-file-dialog'),
+  // Takes: optional budgetName to use as default filename
+  saveFileDialog: (budgetName?: string) => ipcRenderer.invoke('save-file-dialog', budgetName),
+
+  // Open PDF save file picker
+  // Takes: optional budgetName to use as default filename
+  savePdfDialog: (budgetName?: string) => ipcRenderer.invoke('save-pdf-dialog', budgetName),
+
+  // Export PDF data to a file
+  // Takes: filePath and PDF data as Uint8Array
+  // Returns: { success: boolean, error?: string }
+  exportPdf: (filePath: string, pdfData: Uint8Array) => ipcRenderer.invoke('export-pdf', filePath, pdfData),
+
+  // Submit tester feedback via email flow (with prepared attachments when available)
+  submitFeedback: (payload: {
+    email?: string;
+    category: 'bug' | 'feature' | 'ui' | 'performance' | 'other';
+    subject: string;
+    messageHtml: string;
+    messageText: string;
+    includeDiagnostics: boolean;
+    diagnostics?: Record<string, unknown>;
+    screenshot?: {
+      fileName: string;
+      mimeType: string;
+      dataUrl: string;
+    };
+  }) => ipcRenderer.invoke('submit-feedback', payload),
+
+  // Reveal a file in the system file browser (Finder/Explorer)
+  revealInFolder: (filePath: string) => ipcRenderer.invoke('reveal-in-folder', filePath),
+  
+  // Get the current window bounds (width, height, x, y)
+  getWindowBounds: () => ipcRenderer.invoke('get-window-bounds'),
+  
+  // Set the window size (will be validated against screen bounds)
+  setWindowSize: (width: number, height: number) => ipcRenderer.invoke('set-window-size', width, height),
   
   // Listen for menu events from the application menu bar
-  // Takes: event name ('new-budget', 'open-budget', 'change-encryption')
+  // Takes: event name and callback function
   // Returns: () => unsubscribe function to remove listener
-  onMenuEvent: (event: 'new-budget' | 'open-budget' | 'change-encryption', callback: () => void) => {
+  onMenuEvent: (
+    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode',
+    callback: (arg?: unknown) => void
+  ) => {
     const channel = `menu:${event}`;
-    ipcRenderer.on(channel, callback);
-    return () => ipcRenderer.removeListener(channel, callback);
+    const listener = (_event: IpcRendererEvent, arg?: unknown) => callback(arg);
+    ipcRenderer.on(channel, listener);
+    return () => ipcRenderer.removeListener(channel, listener);
   },
+
+  // Listen for view window open requests
+  onOpenViewWindow: (callback: (viewType: string) => void) => {
+    ipcRenderer.on('menu:open-view-window', (_event, viewType) => callback(viewType));
+    return () => ipcRenderer.removeAllListeners('menu:open-view-window');
+  },
+
+  // Open a view in a new window
+  // Takes: viewType and filePath
+  // Returns: { success: boolean, error?: string }
+  openViewWindow: (viewType: string, filePath: string) =>
+    ipcRenderer.invoke('open-view-window', viewType, filePath),
+
+  // Get window initialization parameters (for view windows)
+  getWindowParams: () => {
+    const params = new URLSearchParams(window.location.search);
+    const additionalArgs = process.argv.filter(arg => arg.startsWith('--'));
+    const viewTypeArg = additionalArgs.find(arg => arg.startsWith('--view-type='));
+    const viewType = viewTypeArg ? viewTypeArg.split('=')[1] : params.get('view') || null;
+    const skipSessionRestore = additionalArgs.includes('--skip-session-restore') || params.get('skipSession') === 'true';
+    return { viewType, skipSessionRestore };
+  },
+  
+  // Save session state (last opened file and active tab)
+  // Takes: filePath and activeTab
+  // Returns: { success: boolean, error?: string }
+  saveSessionState: (filePath: string, activeTab: string) =>
+    ipcRenderer.invoke('save-session-state', filePath, activeTab),
+  
+  // Load session state (last opened file and active tab)
+  // Returns: { filePath?: string, activeTab?: string }
+  loadSessionState: () =>
+    ipcRenderer.invoke('load-session-state'),
+  
+  // Clear session state (used when opening a new file)
+  // Returns: { success: boolean }
+  clearSessionState: () =>
+    ipcRenderer.invoke('clear-session-state'),
+  
+  // Notify main process that a budget has been loaded (transitions welcome window to plan window)
+  budgetLoaded: (windowSize?: { width: number; height: number }) =>
+    ipcRenderer.invoke('budget-loaded', windowSize),
+
+  // Save an encryption key to the system keychain
+  saveKeychainKey: (service: string, account: string, password: string) =>
+    ipcRenderer.invoke('save-keychain-key', service, account, password),
+
+  // Retrieve an encryption key from the system keychain
+  getKeychainKey: (service: string, account: string) =>
+    ipcRenderer.invoke('get-keychain-key', service, account),
+
+  // Delete an encryption key from the system keychain
+  deleteKeychainKey: (service: string, account: string) =>
+    ipcRenderer.invoke('delete-keychain-key', service, account),
 });
+
+console.log('[PRELOAD] ElectronAPI exposed to renderer');
+console.log('[PRELOAD] Preload script completed successfully');
 
 // This export is needed to make TypeScript happy
 // It tells TypeScript this file is a module

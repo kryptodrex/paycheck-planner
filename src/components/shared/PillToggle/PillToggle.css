@@ -1,0 +1,93 @@
+/* Pill Toggle - Segmented control with sliding active state */
+.pill-toggle {
+  display: inline-flex;
+  width: 100%;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 4px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.pill-toggle.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sliding background indicator */
+.pill-toggle-slider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 6px);
+  background: var(--accent-primary);
+  border-radius: 1rem;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  z-index: 0;
+}
+
+[data-theme='dark'] .pill-toggle-slider {
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+}
+
+.pill-toggle-slider.active {
+  left: calc(50% + 2px);
+}
+
+/* Darken slider only when hovering the side it currently covers */
+.pill-toggle:not(.disabled):has(.pill-toggle-option:first-of-type:hover) .pill-toggle-slider:not(.active),
+.pill-toggle:not(.disabled):has(.pill-toggle-option:last-of-type:hover) .pill-toggle-slider.active {
+  filter: brightness(0.85);
+}
+
+.pill-toggle-option {
+  flex: 1;
+  min-width: 80px;
+  padding: 0.625rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 1rem;
+  transition: color 0.2s, font-weight 0.2s, background 0.2s ease;
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pill-toggle-option.active {
+  color: white;
+  font-weight: 600;
+}
+
+.pill-toggle-option:hover {
+  background: transparent;
+}
+
+/* Ghost hint on the inactive side — shows where the slider will move */
+.pill-toggle-option:not(.active):hover {
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+.pill-toggle-option:disabled {
+  cursor: not-allowed;
+}
+
+/* Keep interactions clean: clicking should only move the slider. */
+.pill-toggle-option:focus,
+.pill-toggle-option:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] .pill-toggle {
+  background: var(--bg-tertiary);
+}

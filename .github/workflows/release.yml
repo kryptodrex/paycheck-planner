@@ -1,0 +1,140 @@
+name: Production Release
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'develop'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+            artifact_name: Paycheck Planner-*.dmg
+          - os: windows-latest
+            target: win
+            artifact_name: Paycheck Planner-*.exe
+          - os: ubuntu-latest
+            target: linux
+            artifact_name: Paycheck Planner-*.AppImage
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync version from file
+        run: npm run sync-version
+
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-1-dev libnss3-dev pkg-config fakeroot dpkg
+
+      - name: Build Electron app for ${{ matrix.target }}
+        run: |
+          npm run build:${{ matrix.target }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paycheck-planner-${{ matrix.target }}
+          path: release/
+
+  create-release:
+    needs: release
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'develop' && always() && !contains(needs.release.result, 'failure')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync version from file
+        run: npm run sync-version
+
+      - name: Read version
+        id: version
+        run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
+
+      - name: Create repository backup zip
+        run: |
+          # Create a zip of the repo for backup (excluding large folders)
+          zip -r paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip . \
+            -x "node_modules/*" "dist/*" "dist-electron/*" "release/*" ".git/*" "coverage/*" "build/*" ".vscode/*" \
+            -q
+          ls -lh paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %h: %s" --reverse)
+          else
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %h: %s" --reverse)
+          fi
+          
+          # Use a unique delimiter to avoid YAML conflicts
+          {
+            echo "CHANGELOG<<__END_CHANGELOG__"
+            echo "## Changes in v${{ steps.version.outputs.VERSION }}"
+            echo ""
+            echo "### Commits"
+            echo "$COMMITS"
+            echo ""
+            echo "### Platform Builds"
+            echo "- **macOS**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.dmg"
+            echo "- **Windows**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.exe"
+            echo "- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
+            echo "__END_CHANGELOG__"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: Release v${{ steps.version.outputs.VERSION }}
+          body: ${{ steps.changelog.outputs.CHANGELOG }}
+          files: |
+            all-artifacts/paycheck-planner-mac/**/*.dmg
+            all-artifacts/paycheck-planner-win/**/*.exe
+            all-artifacts/paycheck-planner-linux/**/*.AppImage
+          draft: false
+          prerelease: false

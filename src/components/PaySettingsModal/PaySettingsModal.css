@@ -1,0 +1,60 @@
+/* Pay Settings Modal Styles */
+
+.pay-settings-modal-content {
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.pay-settings-overview {
+  padding: 1rem 0;
+}
+
+.pay-settings-overview p {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.overview-item span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.overview-item strong {
+  font-size: 1.125rem;
+  color: var(--text-primary);
+}
+
+.pay-settings-editor-body {
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field-error {
+  border-color: var(--error-color) !important;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}

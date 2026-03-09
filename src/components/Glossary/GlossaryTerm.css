@@ -1,0 +1,52 @@
+.glossary-term {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.glossary-term-button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  cursor: help;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.glossary-term-button:focus-visible {
+  outline: 2px solid var(--success-color);
+  outline-offset: 2px;
+  border-radius: 0.2rem;
+}
+
+.glossary-term-tooltip {
+  position: fixed;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.glossary-term-tooltip-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+@media (max-width: 768px) {
+  .glossary-term-tooltip {
+    max-width: min(280px, 78vw);
+  }
+}
