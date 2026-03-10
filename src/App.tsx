@@ -8,6 +8,7 @@ import PlanDashboard from './components/PlanDashboard'
 import Settings from './components/Settings'
 import About from './components/About'
 import Glossary from './components/Glossary'
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
 import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
@@ -36,6 +37,7 @@ function App() {
   const [showAbout, setShowAbout] = useState(false)
   // Track if glossary modal is open
   const [showGlossary, setShowGlossary] = useState(false)
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   // Track requested glossary term when opened from inline tooltips
   const [initialGlossaryTermId, setInitialGlossaryTermId] = useState<string | null>(null)
 
@@ -78,6 +80,16 @@ function App() {
     const unsubscribe = window.electronAPI.onMenuEvent('open-glossary', () => {
       setInitialGlossaryTermId(null)
       setShowGlossary(true)
+    })
+
+    return unsubscribe
+  }, [])
+
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent('open-keyboard-shortcuts', () => {
+      setShowKeyboardShortcuts(true)
     })
 
     return unsubscribe
@@ -217,6 +229,10 @@ function App() {
           setShowGlossary(false)
           setInitialGlossaryTermId(null)
         }}
+      />
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
       />
     </>
   )

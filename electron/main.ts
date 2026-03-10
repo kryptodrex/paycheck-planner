@@ -842,6 +842,36 @@ function createApplicationMenu() {
   template.push({
     label: 'Window',
     submenu: [
+      {
+        label: 'Back',
+        accelerator: isMac ? 'Cmd+[' : 'Alt+Left',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:history-back');
+          }
+        },
+      },
+      {
+        label: 'Forward',
+        accelerator: isMac ? 'Cmd+]' : 'Alt+Right',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:history-forward');
+          }
+        },
+      },
+      {
+        label: 'Home',
+        accelerator: isMac ? 'Cmd+Shift+H' : 'Ctrl+Shift+H',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send('menu:history-home');
+          }
+        },
+      },
       { type: 'separator' },
       {
         label: 'Minimize',
@@ -868,18 +898,11 @@ function createApplicationMenu() {
       { type: 'separator' },
       {
         label: 'Keyboard Shortcuts',
-        click: async () => {
-          await dialog.showMessageBox({
-            type: 'info',
-            title: 'Keyboard Shortcuts',
-            message: 'Common shortcuts',
-            detail:
-              `${isMac ? 'Cmd' : 'Ctrl'}+, : Open Settings\n` +
-              `${isMac ? 'Cmd' : 'Ctrl'}+S : Save Plan\n` +
-              `${isMac ? 'Cmd' : 'Ctrl'}+O : Open Plan\n` +
-              `${isMac ? 'Cmd' : 'Ctrl'}+Shift+/ : Open Glossary\n` +
-              'Esc : Close open modal/dialog',
-          });
+        click: () => {
+          const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+          if (targetWindow) {
+            targetWindow.webContents.send('menu:open-keyboard-shortcuts');
+          }
         },
       },
     ],
@@ -905,6 +928,33 @@ function registerGlobalShortcuts() {
       }
     });
 
+    const backShortcut = process.platform === 'darwin' ? 'Cmd+[' : 'Alt+Left';
+    globalShortcut.register(backShortcut, () => {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (focusedWindow) {
+        focusedWindow.webContents.send('menu:history-back');
+        debug(`Back shortcut triggered via globalShortcut (${backShortcut})`);
+      }
+    });
+
+    const forwardShortcut = process.platform === 'darwin' ? 'Cmd+]' : 'Alt+Right';
+    globalShortcut.register(forwardShortcut, () => {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (focusedWindow) {
+        focusedWindow.webContents.send('menu:history-forward');
+        debug(`Forward shortcut triggered via globalShortcut (${forwardShortcut})`);
+      }
+    });
+
+    const homeShortcut = process.platform === 'darwin' ? 'Cmd+Shift+H' : 'Ctrl+Shift+H';
+    globalShortcut.register(homeShortcut, () => {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (focusedWindow) {
+        focusedWindow.webContents.send('menu:history-home');
+        debug(`Home shortcut triggered via globalShortcut (${homeShortcut})`);
+      }
+    });
+
     debug('Global shortcuts registered successfully');
   } catch (error) {
     console.error('Failed to register global shortcuts:', error);
@@ -916,7 +966,6 @@ function registerGlobalShortcuts() {
  */
 async function handleCloseWindow(window: BrowserWindow) {
   try {
-    // Ask renderer if there are unsaved changes via global variable
     const hasUnsaved = await window.webContents.executeJavaScript(
       'window.__hasUnsavedChanges || false'
     );

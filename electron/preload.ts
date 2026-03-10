@@ -80,7 +80,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Takes: event name and callback function
   // Returns: () => unsubscribe function to remove listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode',
+    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-keyboard-shortcuts' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode' | 'history-back' | 'history-forward' | 'history-home',
     callback: (arg?: unknown) => void
   ) => {
     const channel = `menu:${event}`;

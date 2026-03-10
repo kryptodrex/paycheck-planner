@@ -64,7 +64,7 @@ export interface ElectronAPI {
   // Takes an event name and a callback function
   // Returns an unsubscribe function to remove the listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'save-plan' | 'set-tab-position' | 'toggle-tab-display-mode',
+    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-keyboard-shortcuts' | 'open-pay-options' | 'open-accounts' | 'save-plan' | 'set-tab-position' | 'toggle-tab-display-mode' | 'history-back' | 'history-forward' | 'history-home',
     callback: (arg?: unknown) => void
   ) => () => void;
 

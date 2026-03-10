@@ -32,6 +32,12 @@ import type { TabId } from '../../utils/tabManagement';
 
 type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
 
+interface PlanHistoryState {
+  kind: 'plan-tab';
+  budgetHistoryId: string;
+  tab: TabId;
+}
+
 interface PlanDashboardProps {
   onResetSetup?: () => void;
   viewMode?: string | null; // If set, this is a view-only window
@@ -95,6 +101,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const handleTabDisplayModeChangeRef = useRef<((mode: TabDisplayMode) => void) | null>(null);
   const tabDisplayModeRef = useRef<TabDisplayMode>('icons-with-labels');
   const initializedTabContextRef = useRef<string | null>(null);
+  const historyStateKeyRef = useRef<string | null>(null);
+  const suppressHistoryPushRef = useRef(false);
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
@@ -160,6 +168,92 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     };
   }, [activeTab]);
 
+  const selectTab = useCallback((tab: TabId, options?: {
+    resetBillsAnchor?: boolean;
+    scrollToAccountId?: string;
+    scrollToRetirement?: boolean;
+    revealIfHidden?: boolean;
+  }) => {
+    if (options?.resetBillsAnchor) {
+      setScrollToAccountId(undefined);
+      setShouldScrollToRetirement(false);
+    }
+
+    if (options?.scrollToAccountId !== undefined) {
+      setScrollToAccountId(options.scrollToAccountId);
+    }
+
+    if (options?.scrollToRetirement !== undefined) {
+      setShouldScrollToRetirement(options.scrollToRetirement);
+    }
+
+    if (options?.revealIfHidden) {
+      const targetTabConfig = tabConfigs.find((config) => config.id === tab);
+      const isHidden = targetTabConfig ? !targetTabConfig.visible : false;
+      if (isHidden) {
+        setTemporarilyVisibleTab(tab);
+      }
+    }
+
+    setActiveTab(tab);
+  }, [tabConfigs]);
+
+  useEffect(() => {
+    if (viewMode || typeof window === 'undefined') {
+      historyStateKeyRef.current = null;
+      suppressHistoryPushRef.current = false;
+      return;
+    }
+
+    const budgetHistoryId = budgetData?.settings?.filePath ?? budgetData?.id ?? 'default-plan';
+    const nextHistoryState: PlanHistoryState = {
+      kind: 'plan-tab',
+      budgetHistoryId,
+      tab: activeTab,
+    };
+    const nextHistoryKey = `${budgetHistoryId}:${activeTab}`;
+    const currentBudgetHistoryId = historyStateKeyRef.current?.split(':')[0] ?? null;
+
+    if (historyStateKeyRef.current === null || currentBudgetHistoryId !== budgetHistoryId) {
+      window.history.replaceState(nextHistoryState, '', window.location.href);
+      historyStateKeyRef.current = nextHistoryKey;
+      suppressHistoryPushRef.current = false;
+      return;
+    }
+
+    if (suppressHistoryPushRef.current) {
+      historyStateKeyRef.current = nextHistoryKey;
+      suppressHistoryPushRef.current = false;
+      return;
+    }
+
+    if (historyStateKeyRef.current === nextHistoryKey) {
+      return;
+    }
+
+    window.history.pushState(nextHistoryState, '', window.location.href);
+    historyStateKeyRef.current = nextHistoryKey;
+  }, [activeTab, budgetData?.id, budgetData?.settings?.filePath, viewMode]);
+
+  useEffect(() => {
+    if (viewMode || typeof window === 'undefined') return;
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state as PlanHistoryState | null;
+      const budgetHistoryId = budgetData?.settings?.filePath ?? budgetData?.id ?? 'default-plan';
+
+      if (!state || state.kind !== 'plan-tab' || state.budgetHistoryId !== budgetHistoryId || !VALID_TABS.includes(state.tab)) {
+        return;
+      }
+
+      suppressHistoryPushRef.current = true;
+      selectTab(state.tab, { resetBillsAnchor: true, revealIfHidden: true });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [budgetData?.id, budgetData?.settings?.filePath, selectTab, viewMode]);
+
   // Initialize tab position and display mode from budget settings
   useEffect(() => {
     if (budgetData?.settings?.tabPosition) {
@@ -213,6 +307,31 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode]);
 
+  const scrollTabToTop = useCallback((tab: TabId) => {
+    tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const panel = tabPanelRefs.current[tab];
+    if (!panel) return;
+
+    panel.scrollTo({ top: 0, behavior: 'smooth' });
+
+    const scrollableDescendants = panel.querySelectorAll<HTMLElement>('*');
+    scrollableDescendants.forEach((element) => {
+      if (element.scrollHeight > element.clientHeight) {
+        const computedStyle = window.getComputedStyle(element);
+        const isScrollable =
+          computedStyle.overflowY === 'auto' ||
+          computedStyle.overflowY === 'scroll' ||
+          computedStyle.overflow === 'auto' ||
+          computedStyle.overflow === 'scroll';
+
+        if (isScrollable) {
+          element.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    });
+  }, []);
+
   // Keep refs updated with latest handlers to prevent event listener duplication
   useEffect(() => {
     handleSaveRef.current = handleSave;
@@ -247,11 +366,37 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     const unsubscribePayOptions = window.electronAPI.onMenuEvent('open-pay-options', () => {
-      setActiveTab('breakdown');
+      selectTab('breakdown', { resetBillsAnchor: true });
     });
 
     const unsubscribeAccounts = window.electronAPI.onMenuEvent('open-accounts', () => {
       setShowAccountsModal(true);
+    });
+
+    const unsubscribeHistoryBack = window.electronAPI.onMenuEvent('history-back', () => {
+      if (!viewMode) {
+        window.history.back();
+      }
+    });
+
+    const unsubscribeHistoryForward = window.electronAPI.onMenuEvent('history-forward', () => {
+      if (!viewMode) {
+        window.history.forward();
+      }
+    });
+
+    const unsubscribeHistoryHome = window.electronAPI.onMenuEvent('history-home', () => {
+      if (viewMode) return;
+
+      const homeTab = visibleTabs[0]?.id as TabId | undefined;
+      if (!homeTab) return;
+
+      if (activeTab === homeTab) {
+        scrollTabToTop(homeTab);
+        return;
+      }
+
+      selectTab(homeTab, { resetBillsAnchor: true });
     });
 
     const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent('set-tab-position', (position) => {
@@ -278,10 +423,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeSettings();
       unsubscribePayOptions();
       unsubscribeAccounts();
+      unsubscribeHistoryBack();
+      unsubscribeHistoryForward();
+      unsubscribeHistoryHome();
       unsubscribeSetTabPosition();
       unsubscribeToggleDisplayMode();
     };
-  }, [createNewBudget, loadBudget, onResetSetup]);
+  }, [activeTab, createNewBudget, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -449,47 +597,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   }, []);
 
   const openTabFromLink = useCallback((tab: TabId, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean }) => {
-    const targetTabConfig = tabConfigs.find((config) => config.id === tab);
-    const isHidden = targetTabConfig ? !targetTabConfig.visible : false;
-
-    if (options?.scrollToAccountId !== undefined) {
-      setScrollToAccountId(options.scrollToAccountId);
-    }
-    if (options?.scrollToRetirement !== undefined) {
-      setShouldScrollToRetirement(options.scrollToRetirement);
-    }
-
-    if (isHidden) {
-      setTemporarilyVisibleTab(tab);
-    }
-
-    setActiveTab(tab);
-  }, [tabConfigs]);
-
-  const scrollTabToTop = useCallback((tab: TabId) => {
-    tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-
-    const panel = tabPanelRefs.current[tab];
-    if (!panel) return;
-
-    panel.scrollTo({ top: 0, behavior: 'smooth' });
-
-    const scrollableDescendants = panel.querySelectorAll<HTMLElement>('*');
-    scrollableDescendants.forEach((element) => {
-      if (element.scrollHeight > element.clientHeight) {
-        const computedStyle = window.getComputedStyle(element);
-        const isScrollable =
-          computedStyle.overflowY === 'auto' ||
-          computedStyle.overflowY === 'scroll' ||
-          computedStyle.overflow === 'auto' ||
-          computedStyle.overflow === 'scroll';
-
-        if (isScrollable) {
-          element.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }
+    selectTab(tab, {
+      scrollToAccountId: options?.scrollToAccountId,
+      scrollToRetirement: options?.scrollToRetirement,
+      revealIfHidden: true,
     });
-  }, []);
+  }, [selectTab]);
 
   const handleTabClick = useCallback((tab: TabId, options?: { resetBillsAnchor?: boolean }) => {
     if (activeTab === tab) {
@@ -497,13 +610,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       return;
     }
 
-    if (options?.resetBillsAnchor) {
-      setScrollToAccountId(undefined);
-      setShouldScrollToRetirement(false);
-    }
-
-    setActiveTab(tab);
-  }, [activeTab, scrollTabToTop]);
+    selectTab(tab, { resetBillsAnchor: options?.resetBillsAnchor });
+  }, [activeTab, scrollTabToTop, selectTab]);
 
   // Handle keyboard shortcuts for tab switching (Cmd+1, Cmd+2, etc.)
   useEffect(() => {
