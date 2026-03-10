@@ -29,10 +29,8 @@
   --accent-primary: #667eea;
   --accent-hover: #5568d3;
   --accent-secondary: #764ba2;
-  --tab-drag-indicator: #667eea;
-  --tab-drag-indicator-ring: rgba(102, 126, 234, 0.2);
-  --tab-drag-outline: rgba(102, 126, 234, 0.65);
-  --tab-drag-fill: rgba(102, 126, 234, 0.08);
+  --tab-drag-indicator: var(--accent-primary);
+  --tab-drag-indicator-ring: color-mix(in srgb, var(--accent-primary) 20%, transparent);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
@@ -86,10 +84,8 @@
   --accent-primary: #a855f7;
   --accent-hover: #9333ea;
   --accent-secondary: #c084fc;
-  --tab-drag-indicator: #a5b4fc;
-  --tab-drag-indicator-ring: rgba(165, 180, 252, 0.3);
-  --tab-drag-outline: rgba(165, 180, 252, 0.8);
-  --tab-drag-fill: rgba(165, 180, 252, 0.16);
+  --tab-drag-indicator: var(--accent-primary);
+  --tab-drag-indicator-ring: color-mix(in srgb, var(--accent-primary) 30%, transparent);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;

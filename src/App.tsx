@@ -15,7 +15,7 @@ function App() {
   if (import.meta.env.DEV) console.debug('[APP] App component rendering...');
   
   // Get the current budget data and actions from our context
-  const { budgetData, saveBudget, saveWindowState } = useBudget()
+  const { budgetData, saveBudget, saveWindowState, loadBudget } = useBudget()
   if (import.meta.env.DEV) console.debug('[APP] Budget data available:', !!budgetData);
   
   // Track whether user has completed initial setup
@@ -82,6 +82,19 @@ function App() {
 
     return unsubscribe
   }, [])
+
+  // Listen for file-open requests from OS integration (double click / Open With)
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent('open-budget-file', (arg) => {
+      if (typeof arg === 'string' && arg.trim()) {
+        loadBudget(arg)
+      }
+    })
+
+    return unsubscribe
+  }, [loadBudget])
 
   // Open glossary from in-app term tooltips
   useEffect(() => {

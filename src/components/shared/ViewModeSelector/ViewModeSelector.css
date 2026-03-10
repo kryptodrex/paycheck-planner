@@ -25,6 +25,17 @@
 
 .view-mode-selector button:hover:not(.active) {
   color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+.view-mode-selector button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.view-mode-selector button:focus:not(:focus-visible) {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 @media (max-width: 768px) {

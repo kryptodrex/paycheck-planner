@@ -7,13 +7,10 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import { SUPPORT_EMAIL } from './constants';
+import { FEEDBACK_FORM_ENTRY_IDS, FEEDBACK_FORM_URL } from './constants';
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
-const execFileAsync = promisify(execFile);
 
 const MAX_LOG_BUFFER_ENTRIES = 2000;
 const appLogBuffer: string[] = [];
@@ -130,6 +127,11 @@ const __dirname = path.dirname(__filename);
 // Set the app name - this is displayed in menus and dialogs
 app.name = 'Paycheck Planner';
 
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
+
 // Configure the About panel (macOS only)
 if (process.platform === 'darwin') {
   app.setAboutPanelOptions({
@@ -168,6 +170,72 @@ let welcomeWindow: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
 // Track if the app is quitting to avoid reopening welcome window
 let isQuitting = false;
+// Track file requested via OS open-file/Open With integration.
+let pendingExternalBudgetFilePath: string | null = null;
+
+function isBudgetFilePath(filePath: string): boolean {
+  const extension = path.extname(filePath).toLowerCase();
+  return extension === '.budget';
+}
+
+function extractBudgetFilePathFromArgv(argv: string[]): string | null {
+  for (const arg of argv) {
+    if (!arg || arg.startsWith('-')) continue;
+    if (isBudgetFilePath(arg)) return arg;
+  }
+  return null;
+}
+
+function getPrimaryWindow(): BrowserWindow | null {
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed()) return focused;
+  if (hasLiveWelcomeWindow()) return welcomeWindow;
+
+  const firstPlanWindow = Array.from(openWindows)[0];
+  if (firstPlanWindow && !firstPlanWindow.isDestroyed()) return firstPlanWindow;
+
+  const allWindows = BrowserWindow.getAllWindows();
+  if (allWindows.length > 0 && !allWindows[0].isDestroyed()) return allWindows[0];
+
+  return null;
+}
+
+function dispatchExternalBudgetOpen(filePath: string) {
+  const targetWindow = getPrimaryWindow();
+  if (!targetWindow) {
+    pendingExternalBudgetFilePath = filePath;
+    return;
+  }
+
+  const sendOpenFileEvent = () => {
+    targetWindow.webContents.send('menu:open-budget-file', filePath);
+    pendingExternalBudgetFilePath = null;
+    targetWindow.show();
+    targetWindow.focus();
+  };
+
+  if (targetWindow.webContents.isLoading()) {
+    targetWindow.webContents.once('did-finish-load', sendOpenFileEvent);
+  } else {
+    sendOpenFileEvent();
+  }
+}
+
+function handleExternalOpenFile(filePath: string) {
+  if (!filePath || !isBudgetFilePath(filePath)) {
+    debug('Ignoring non-budget external file open request:', filePath);
+    return;
+  }
+
+  debug('Handling external file open request:', filePath);
+  dispatchExternalBudgetOpen(filePath);
+}
+
+// On macOS this fires when users double-click associated files in Finder.
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  handleExternalOpenFile(filePath);
+});
 
 function hasLiveWelcomeWindow(): boolean {
   return !!welcomeWindow && !welcomeWindow.isDestroyed();
@@ -470,7 +538,12 @@ function createWelcomeWindow(skipSessionRestore = false, windowState?: { width?:
 
   welcomeWindow.on('closed', () => {
     welcomeWindow = null;
-    // Don't auto-create another welcome window
+    // If no plan windows are open, quit the app instead of staying open with no windows
+    if (openWindows.size === 0 && !isQuitting) {
+      isQuitting = true;
+      app.quit();
+    }
+    // Otherwise, don't auto-create another welcome window
     // Only plan windows trigger welcome window creation
   });
 }
@@ -505,6 +578,12 @@ async function createWindow() {
   // Always open Welcome on app relaunch with default size
   debug('Creating welcome window with default size');
   createWelcomeWindow();
+
+  const startupFilePath = pendingExternalBudgetFilePath || extractBudgetFilePathFromArgv(process.argv);
+  if (startupFilePath) {
+    pendingExternalBudgetFilePath = startupFilePath;
+    dispatchExternalBudgetOpen(startupFilePath);
+  }
 
   // Create application menu with File and Edit options
   createApplicationMenu();
@@ -958,6 +1037,21 @@ app.on('before-quit', () => {
 // Wait for Electron to be ready, then create the window
 app.whenReady().then(createWindow);
 
+app.on('second-instance', (_event, argv) => {
+  const openedFile = extractBudgetFilePathFromArgv(argv);
+  if (openedFile) {
+    handleExternalOpenFile(openedFile);
+    return;
+  }
+
+  const targetWindow = getPrimaryWindow();
+  if (targetWindow) {
+    if (targetWindow.isMinimized()) targetWindow.restore();
+    targetWindow.show();
+    targetWindow.focus();
+  }
+});
+
 // On macOS, apps typically stay open even when all windows are closed
 // On Windows/Linux, show welcome window when all windows are closed
 app.on('window-all-closed', () => {
@@ -1125,7 +1219,7 @@ ipcMain.handle('export-pdf', async (event, filePath: string, pdfData: Uint8Array
 
 /**
  * Submit feedback
- * Opens a prefilled support email in the user's default email client
+ * Opens a Google Form for feedback collection.
  */
 ipcMain.handle('submit-feedback', async (_event, payload: {
   email?: string;
@@ -1142,103 +1236,45 @@ ipcMain.handle('submit-feedback', async (_event, payload: {
   };
 }) => {
   try {
-    const timestamp = new Date();
-    const id = `${timestamp.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
-    const feedbackTempDir = path.join(app.getPath('temp'), 'paycheck-planner-feedback', id);
-    await fs.mkdir(feedbackTempDir, { recursive: true });
-
-    const attachmentPaths: string[] = [];
-
-    if (payload.screenshot?.dataUrl) {
-      const match = payload.screenshot.dataUrl.match(/^data:(.+);base64,(.*)$/);
-      if (match) {
-        const mimeType = match[1] || payload.screenshot.mimeType || 'image/png';
-        const ext = mimeType.split('/')[1] || 'png';
-        const screenshotPath = path.join(feedbackTempDir, `screenshot.${ext}`);
-        await fs.writeFile(screenshotPath, Buffer.from(match[2], 'base64'));
-        attachmentPaths.push(screenshotPath);
-      }
+    if (!FEEDBACK_FORM_URL.trim()) {
+      return {
+        success: false,
+        error: 'Feedback form URL is not configured. Set FEEDBACK_FORM_URL in the Electron environment.',
+      };
     }
 
-    const formattedDetailsPath = path.join(feedbackTempDir, 'feedback-details.html');
-    const detailsHtmlDoc = `<!doctype html><html><head><meta charset="utf-8"><title>Feedback Details</title></head><body>${payload.messageHtml}</body></html>`;
-    await fs.writeFile(formattedDetailsPath, detailsHtmlDoc, 'utf-8');
-    attachmentPaths.push(formattedDetailsPath);
+    const formUrl = new URL(FEEDBACK_FORM_URL);
+    const prefillParams = new URLSearchParams(formUrl.search);
+    prefillParams.set('usp', 'pp_url');
 
-    if (payload.includeDiagnostics && payload.diagnostics) {
-      const diagnosticsPath = path.join(feedbackTempDir, 'diagnostics.json');
-      await fs.writeFile(diagnosticsPath, JSON.stringify(payload.diagnostics, null, 2), 'utf-8');
-      attachmentPaths.push(diagnosticsPath);
-    }
+    const appendPrefill = (entryId: string, value?: string) => {
+      if (!entryId || !value || !value.trim()) return;
+      prefillParams.set(entryId, value.trim());
+    };
 
-    const logPath = path.join(feedbackTempDir, 'feedback-log.txt');
-    const consoleLogHeader = [
-      `Feedback Timestamp: ${timestamp.toISOString()}`,
-      `Category: ${payload.category}`,
-      `From: ${payload.email || 'Not provided'}`,
-      `Subject: ${payload.subject}`,
-      '',
-      '--- App Debug/Info Console Output ---',
-    ];
-    const consoleLogContent = appLogBuffer.length > 0 ? appLogBuffer.join('\n') : 'No captured debug/info logs available.';
-    await fs.writeFile(logPath, `${consoleLogHeader.join('\n')}\n${consoleLogContent}\n`, 'utf-8');
-    attachmentPaths.push(logPath);
+    const categoryLabelMap: Record<typeof payload.category, string> = {
+      bug: 'Bug',
+      feature: 'Feature request',
+      ui: 'UI improvement',
+      performance: 'Performance issue',
+      other: 'Other',
+    };
 
-    const lines: string[] = [
-      `Category: ${payload.category}`,
-      `From: ${payload.email || 'Not provided'}`,
-      '',
-      'Message:',
-      payload.messageText,
-    ];
+    // Prefill the Google Form "Details" question with exactly what the user typed.
+    const details = payload.messageText.trim().slice(0, 5000);
 
-    lines.push('', 'Attachment files have been prepared by the app.');
+    appendPrefill(FEEDBACK_FORM_ENTRY_IDS.email, payload.email);
+    appendPrefill(FEEDBACK_FORM_ENTRY_IDS.category, categoryLabelMap[payload.category]);
+    appendPrefill(FEEDBACK_FORM_ENTRY_IDS.subject, payload.subject);
+    appendPrefill(FEEDBACK_FORM_ENTRY_IDS.details, details);
 
-    if (process.platform === 'darwin' && attachmentPaths.length > 0) {
-      const escapeAppleScript = (value: string): string =>
-        value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    formUrl.search = prefillParams.toString();
 
-      const bodyText = `${lines.join('\n')}\n`;
-      const scriptLines = [
-        'tell application "Mail"',
-        `set newMessage to make new outgoing message with properties {subject:"${escapeAppleScript(`[Paycheck Planner Feedback] ${payload.subject}`)}", content:"${escapeAppleScript(bodyText)}", visible:true}`,
-        'tell newMessage',
-        `make new to recipient at end of to recipients with properties {address:"${escapeAppleScript(SUPPORT_EMAIL)}"}`,
-        'end tell',
-      ];
-
-      attachmentPaths.forEach((attachmentPath) => {
-        scriptLines.push(
-          `tell content of newMessage to make new attachment with properties {file name:POSIX file "${escapeAppleScript(attachmentPath)}"} at after the last paragraph`
-        );
-      });
-
-      scriptLines.push('activate');
-      scriptLines.push('end tell');
-
-      const scriptPath = path.join(feedbackTempDir, 'create-mail-draft.applescript');
-      await fs.writeFile(scriptPath, scriptLines.join('\n'), 'utf-8');
-
-      try {
-        await execFileAsync('osascript', [scriptPath]);
-        return { success: true };
-      } catch (error) {
-        console.error('Error creating Apple Mail draft with attachments:', error);
-      }
-    }
-
-    // Fallback path for non-macOS or if Apple Mail automation fails.
-    await shell.openPath(feedbackTempDir);
-
-    const encodedSubject = encodeURIComponent(`[Paycheck Planner Feedback] ${payload.subject}`);
-    const encodedBody = encodeURIComponent(lines.join('\n'));
-    const mailtoUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodedSubject}&body=${encodedBody}`;
-
-    await shell.openExternal(mailtoUrl);
+    await shell.openExternal(formUrl.toString());
 
     return { success: true };
   } catch (error) {
-    console.error('Error opening feedback email:', error);
+    console.error('Error opening feedback form:', error);
     return { success: false, error: (error as Error).message };
   }
 });

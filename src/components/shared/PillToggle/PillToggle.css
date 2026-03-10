@@ -24,7 +24,7 @@
   left: 4px;
   width: calc(50% - 6px);
   background: var(--accent-primary);
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
   z-index: 0;
@@ -54,7 +54,7 @@
   font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   transition: color 0.2s, font-weight 0.2s, background 0.2s ease;
   position: relative;
   z-index: 1;

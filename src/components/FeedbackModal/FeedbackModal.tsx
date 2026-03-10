@@ -148,7 +148,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
     }
 
     if (!window.electronAPI?.submitFeedback) {
-      onSubmitted({ success: false, message: 'Feedback email is unavailable in this environment.' });
+      onSubmitted({ success: false, message: 'Feedback form is unavailable in this environment.' });
       return;
     }
 
@@ -169,7 +169,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
     try {
       const result = await window.electronAPI.submitFeedback(payload);
       if (result.success) {
-        onSubmitted({ success: true, message: 'Email draft opened. Please review and send it from your mail app.' });
+        onSubmitted({ success: true, message: 'Feedback form opened. Please review and submit in your browser.' });
         handleClose();
       } else {
         onSubmitted({ success: false, message: result.error || 'Could not submit feedback.' });

@@ -392,28 +392,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   const handleDragOver = useCallback((e: React.DragEvent, hoverIndex: number) => {
     e.preventDefault();
+
+    // Only handle drag over if we're dragging a tab (not the position handle or other elements)
+    const types = Array.from(e.dataTransfer.types);
+    if (!types.includes('text/tab-index')) {
+      return;
+    }
+
     e.dataTransfer.dropEffect = 'move';
     setDropTargetIndex(hoverIndex);
 
-    if (!budgetData) return;
+    const startIndex = dragStartIndexRef.current;
+    if (startIndex !== null && startIndex !== hoverIndex) {
+      movedDuringDragRef.current = true;
+    }
+  }, []);
 
-    const currentIndex = dragCurrentIndexRef.current;
-    if (currentIndex === null || currentIndex === hoverIndex) return;
-
-    const updatedConfigs = reorderTabs(latestTabConfigsRef.current, currentIndex, hoverIndex);
-    latestTabConfigsRef.current = updatedConfigs;
-    updateBudgetSettings({
-      ...budgetData.settings,
-      tabConfigs: updatedConfigs,
-    });
-
-    dragCurrentIndexRef.current = hoverIndex;
-    setDraggedTabIndex(hoverIndex);
-    movedDuringDragRef.current = true;
-  }, [budgetData, updateBudgetSettings]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
+
+    const startIndex = dragStartIndexRef.current;
+    if (
+      budgetData &&
+      startIndex !== null &&
+      dropIndex !== startIndex
+    ) {
+      const updatedConfigs = reorderTabs(latestTabConfigsRef.current, startIndex, dropIndex);
+      latestTabConfigsRef.current = updatedConfigs;
+      updateBudgetSettings({
+        ...budgetData.settings,
+        tabConfigs: updatedConfigs,
+      });
+    }
 
     if (movedDuringDragRef.current) {
       setStatusToast({ message: '📋 Tab order updated', type: 'success' });
@@ -426,7 +436,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     dragCurrentIndexRef.current = null;
     dragStartIndexRef.current = null;
     movedDuringDragRef.current = false;
-  }, []);
+  }, [budgetData, updateBudgetSettings]);
 
   const handleDragEnd = useCallback(() => {
     flushSync(() => {

@@ -51,7 +51,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: { success: boolean, error?: string }
   exportPdf: (filePath: string, pdfData: Uint8Array) => ipcRenderer.invoke('export-pdf', filePath, pdfData),
 
-  // Submit tester feedback via email flow (with prepared attachments when available)
+  // Submit tester feedback via Google Form flow
   submitFeedback: (payload: {
     email?: string;
     category: 'bug' | 'feature' | 'ui' | 'performance' | 'other';
@@ -80,7 +80,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Takes: event name and callback function
   // Returns: () => unsubscribe function to remove listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode',
+    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode',
     callback: (arg?: unknown) => void
   ) => {
     const channel = `menu:${event}`;
