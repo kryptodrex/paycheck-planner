@@ -42,7 +42,7 @@ const shortcuts: ShortcutSection[] = [
     ],
   },
   {
-    title: 'Views And Tabs',
+    title: 'Views Options',
     items: [
       { keys: [modifier, 'Shift', 'A'], description: 'Open Accounts' },
       { keys: [modifier, 'Shift', 'P'], description: 'Open Pay Options' },
@@ -50,7 +50,7 @@ const shortcuts: ShortcutSection[] = [
       { keys: [modifier, 'Shift', 'B'], description: 'Move tab bar to the bottom' },
       { keys: [modifier, 'Shift', 'L'], description: 'Move tab bar to the left' },
       { keys: [modifier, 'Shift', 'R'], description: 'Move tab bar to the right' },
-      { keys: [modifier, 'Shift', 'D'], description: 'Toggle tab display mode' },
+      { keys: [modifier, 'Shift', 'D'], description: 'Toggle tab display mode between compact and expanded (left/right tab bar only)' },
     ],
   },
   {
