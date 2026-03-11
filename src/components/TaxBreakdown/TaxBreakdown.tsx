@@ -4,6 +4,7 @@ import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
 import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../shared';
 import { GlossaryTerm } from '../Glossary';
+import type { TaxLine } from '../../types/auth';
 import './TaxBreakdown.css';
 
 interface TaxBreakdownProps {
@@ -11,84 +12,100 @@ interface TaxBreakdownProps {
   onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
 }
 
+interface EditableTaxLine {
+    id: string;
+    label: string;
+    rate: string; // string for controlled input
+    error?: string;
+}
+
 const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeChange }) => {
     const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editForm, setEditForm] = useState({
-        federalTaxRate: 0,
-        stateTaxRate: 0,
-        additionalWithholding: 0,
-    });
-    const [fieldErrors, setFieldErrors] = useState<{
-        federalTaxRate?: string;
-        stateTaxRate?: string;
-        additionalWithholding?: string;
-    }>({});
+    const [editLines, setEditLines] = useState<EditableTaxLine[]>([]);
+    const [additionalWithholding, setAdditionalWithholding] = useState('0');
+    const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
 
     if (!budgetData) return null;
 
     const currency = budgetData.settings?.currency || 'USD';
     const breakdown = calculatePaycheckBreakdown();
     const taxSettings = budgetData.taxSettings;
-
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
 
     const handleEditStart = () => {
-        setEditForm({
-            federalTaxRate: taxSettings.federalTaxRate,
-            stateTaxRate: taxSettings.stateTaxRate,
-            additionalWithholding: taxSettings.additionalWithholding,
-        });
-        setFieldErrors({});
+        setEditLines(
+            (taxSettings.taxLines || []).map(line => ({
+                id: line.id,
+                label: line.label,
+                rate: String(line.rate),
+            }))
+        );
+        setAdditionalWithholding(String(taxSettings.additionalWithholding ?? 0));
+        setAdditionalWithholdingError(undefined);
         setShowEditModal(true);
     };
 
     const handleEditCancel = () => {
         setShowEditModal(false);
-        setFieldErrors({});
+    };
+
+    const handleLineChange = (id: string, field: 'label' | 'rate', value: string) => {
+        setEditLines(prev => prev.map(line =>
+            line.id === id ? { ...line, [field]: value, error: undefined } : line
+        ));
+    };
+
+    const handleAddLine = () => {
+        setEditLines(prev => [
+            ...prev,
+            { id: crypto.randomUUID(), label: '', rate: '0' },
+        ]);
+    };
+
+    const handleRemoveLine = (id: string) => {
+        setEditLines(prev => prev.filter(line => line.id !== id));
     };
 
     const handleEditSave = () => {
-        const errors: {
-            federalTaxRate?: string;
-            stateTaxRate?: string;
-            additionalWithholding?: string;
-        } = {};
+        let hasErrors = false;
+        const validated = editLines.map(line => {
+            const parsedRate = parseFloat(line.rate);
+            if (line.label.trim() === '') {
+                hasErrors = true;
+                return { ...line, error: 'Label is required.' };
+            }
+            if (!Number.isFinite(parsedRate) || parsedRate < 0 || parsedRate > 100) {
+                hasErrors = true;
+                return { ...line, error: 'Rate must be between 0 and 100.' };
+            }
+            return { ...line, error: undefined };
+        });
 
-        if (!Number.isFinite(editForm.federalTaxRate) || editForm.federalTaxRate < 0 || editForm.federalTaxRate > 100) {
-            errors.federalTaxRate = 'Federal tax rate must be between 0 and 100.';
+        const parsedWithholding = parseFloat(additionalWithholding);
+        if (!Number.isFinite(parsedWithholding) || parsedWithholding < 0) {
+            setAdditionalWithholdingError('Additional withholding must be zero or greater.');
+            hasErrors = true;
+        } else {
+            setAdditionalWithholdingError(undefined);
         }
 
-        if (!Number.isFinite(editForm.stateTaxRate) || editForm.stateTaxRate < 0 || editForm.stateTaxRate > 100) {
-            errors.stateTaxRate = 'State tax rate must be between 0 and 100.';
-        }
+        setEditLines(validated);
+        if (hasErrors) return;
 
-        if (!Number.isFinite(editForm.additionalWithholding) || editForm.additionalWithholding < 0) {
-            errors.additionalWithholding = 'Additional withholding must be zero or greater.';
-        }
-
-        if (Object.keys(errors).length > 0) {
-            setFieldErrors(errors);
-            return;
-        }
+        const newTaxLines: TaxLine[] = validated.map(line => ({
+            id: line.id,
+            label: line.label.trim(),
+            rate: parseFloat(line.rate),
+        }));
 
         updateBudgetData({
             taxSettings: {
-                ...taxSettings,
-                federalTaxRate: editForm.federalTaxRate,
-                stateTaxRate: editForm.stateTaxRate,
-                additionalWithholding: editForm.additionalWithholding,
+                taxLines: newTaxLines,
+                additionalWithholding: parsedWithholding,
             },
         });
         setShowEditModal(false);
-        setFieldErrors({});
-    };
-
-    const handleFieldChange = (field: string, value: number) => {
-        setEditForm(prev => ({
-            ...prev,
-            [field]: value,
-        }));
     };
 
     return (
@@ -99,50 +116,19 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                 actions={
                     <>
                         <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
-                        <Button variant="secondary" onClick={handleEditStart}>
-                            ⚙️ Edit Tax Settings
-                        </Button>
                     </>
                 }
             />
             <div className="tax-summary">
                 <div className="summary-section">
-                    <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm> vs. <GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> ({getDisplayModeLabel(displayMode)})</h3>
-                    <div className="summary-table">
-                        <div className="summary-row">
-                            <span className="label"><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></span>
-                            <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.grossPay, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="summary-row">
-                            <span className="label"><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></span>
-                            <span className="amount negative">-{formatWithSymbol(convertToDisplayMode(breakdown.totalTaxes, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="summary-row total">
-                            <span className="label"><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm></span>
-                            <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.netPay, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="summary-section">
                     <h3><GlossaryTerm termId="withholding">Tax Breakdown</GlossaryTerm> ({getDisplayModeLabel(displayMode)})</h3>
                     <div className="summary-table">
-                        <div className="summary-row">
-                            <span className="label"><GlossaryTerm termId="federal-tax">Federal Tax</GlossaryTerm> ({taxSettings.federalTaxRate}%)</span>
-                            <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.federalTax, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="summary-row">
-                            <span className="label"><GlossaryTerm termId="state-tax">State Tax</GlossaryTerm> ({taxSettings.stateTaxRate}%)</span>
-                            <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.stateTax, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="summary-row">
-                            <span className="label">Social Security (6.2%)</span>
-                            <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.socialSecurity, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                        <div className="summary-row">
-                            <span className="label">Medicare (1.45%)</span>
-                            <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.medicare, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
+                        {breakdown.taxLineAmounts.map(line => (
+                            <div key={line.id} className="summary-row">
+                                <span className="label">{line.label} ({taxSettings.taxLines.find(l => l.id === line.id)?.rate ?? 0}%)</span>
+                                <span className="amount">{formatWithSymbol(convertToDisplayMode(line.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                        ))}
                         {breakdown.additionalWithholding > 0 && (
                             <div className="summary-row">
                                 <span className="label"><GlossaryTerm termId="withholding">Additional Withholding</GlossaryTerm></span>
@@ -157,24 +143,19 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                 </div>
 
                 <div className="summary-section">
-                    <h3>Tax Rates & Settings</h3>
+                    <div className="settings-header">
+                        <h3>Tax Rates & Settings</h3>
+                        <Button variant="primary" onClick={handleEditStart}>
+                            Edit
+                        </Button>
+                    </div>
                     <div className="settings-table">
-                        <div className="settings-row">
-                            <span className="label">Federal Tax Rate</span>
-                            <span className="value">{taxSettings.federalTaxRate}%</span>
-                        </div>
-                        <div className="settings-row">
-                            <span className="label">State Tax Rate</span>
-                            <span className="value">{taxSettings.stateTaxRate}%</span>
-                        </div>
-                        <div className="settings-row">
-                            <span className="label">Social Security Rate</span>
-                            <span className="value">{taxSettings.socialSecurityRate}%</span>
-                        </div>
-                        <div className="settings-row">
-                            <span className="label">Medicare Rate</span>
-                            <span className="value">{taxSettings.medicareRate}%</span>
-                        </div>
+                        {taxSettings.taxLines.map(line => (
+                            <div key={line.id} className="settings-row">
+                                <span className="label">{line.label}</span>
+                                <span className="value">{line.rate}%</span>
+                            </div>
+                        ))}
                         <div className="settings-row">
                             <span className="label">Additional Withholding per Paycheck</span>
                             <span className="value">{formatWithSymbol(taxSettings.additionalWithholding, currency, { minimumFractionDigits: 2 })}</span>
@@ -187,6 +168,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
             <Modal
                 isOpen={showEditModal}
                 onClose={handleEditCancel}
+                contentClassName="tax-settings-modal"
                 header="Edit Tax Settings"
                 footer={
                     <>
@@ -199,53 +181,62 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                     </>
                 }
             >
-                <FormGroup label={<><GlossaryTerm termId="federal-tax">Federal Tax Rate (%)</GlossaryTerm></>} required error={fieldErrors.federalTaxRate}>
-                    <input
-                        className={fieldErrors.federalTaxRate ? 'field-error' : ''}
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={Number.isFinite(editForm.federalTaxRate) ? editForm.federalTaxRate : ''}
-                        onChange={(e) => {
-                            handleFieldChange('federalTaxRate', parseFloat(e.target.value));
-                            if (fieldErrors.federalTaxRate) {
-                                setFieldErrors((prev) => ({ ...prev, federalTaxRate: undefined }));
-                            }
-                        }}
-                    />
-                </FormGroup>
+                <div className="tax-lines-editor">
+                    <div className="tax-lines-header">
+                        <span className="col-label">Name</span>
+                        <span className="col-rate">Rate (%)</span>
+                        <span className="col-actions" />
+                    </div>
+                    {editLines.map(line => (
+                        <div key={line.id} className="tax-line-row">
+                            <div className="tax-line-fields">
+                                <input
+                                    className={`tax-line-label-input${line.error === 'Label is required.' ? ' field-error' : ''}`}
+                                    type="text"
+                                    placeholder="e.g. Federal Tax"
+                                    value={line.label}
+                                    onChange={e => handleLineChange(line.id, 'label', e.target.value)}
+                                />
+                                <InputWithPrefix
+                                    suffix="%"
+                                    className={line.error && line.error !== 'Label is required.' ? 'field-error' : ''}
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    value={line.rate}
+                                    onChange={e => handleLineChange(line.id, 'rate', e.target.value)}
+                                />
+                                <Button
+                                    variant="remove"
+                                    type="button"
+                                    title="Remove tax line"
+                                    onClick={() => handleRemoveLine(line.id)}
+                                >
+                                    ✕
+                                </Button>
+                            </div>
+                            {line.error && <div className="tax-line-error">{line.error}</div>}
+                        </div>
+                    ))}
+                    <Button variant="secondary" onClick={handleAddLine}>
+                        + Add Tax Line
+                    </Button>
+                </div>
 
-                <FormGroup label={<><GlossaryTerm termId="state-tax">State Tax Rate (%)</GlossaryTerm></>} required error={fieldErrors.stateTaxRate}>
-                    <input
-                        className={fieldErrors.stateTaxRate ? 'field-error' : ''}
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={Number.isFinite(editForm.stateTaxRate) ? editForm.stateTaxRate : ''}
-                        onChange={(e) => {
-                            handleFieldChange('stateTaxRate', parseFloat(e.target.value));
-                            if (fieldErrors.stateTaxRate) {
-                                setFieldErrors((prev) => ({ ...prev, stateTaxRate: undefined }));
-                            }
-                        }}
-                    />
-                </FormGroup>
+                <div className="tax-lines-divider" />
 
-                <FormGroup label={<><GlossaryTerm termId="withholding">Additional Withholding per Paycheck</GlossaryTerm></>} error={fieldErrors.additionalWithholding}>
+                <FormGroup label={<><GlossaryTerm termId="withholding">Additional Withholding per Paycheck</GlossaryTerm></>} error={additionalWithholdingError}>
                     <InputWithPrefix
-                        className={fieldErrors.additionalWithholding ? 'field-error' : ''}
+                        className={additionalWithholdingError ? 'field-error' : ''}
                         prefix={getCurrencySymbol(currency)}
                         type="number"
                         min="0"
                         step="0.01"
-                        value={Number.isFinite(editForm.additionalWithholding) ? editForm.additionalWithholding : ''}
-                        onChange={(e) => {
-                            handleFieldChange('additionalWithholding', parseFloat(e.target.value));
-                            if (fieldErrors.additionalWithholding) {
-                                setFieldErrors((prev) => ({ ...prev, additionalWithholding: undefined }));
-                            }
+                        value={additionalWithholding}
+                        onChange={e => {
+                            setAdditionalWithholding(e.target.value);
+                            if (additionalWithholdingError) setAdditionalWithholdingError(undefined);
                         }}
                     />
                 </FormGroup>
