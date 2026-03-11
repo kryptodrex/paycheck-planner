@@ -17,7 +17,7 @@
 
 .date-input input {
   width: 100%;
-  border: none;
+  border: none !important;
   background: transparent;
   color: var(--text-primary);
   padding: 0.75rem;
@@ -28,10 +28,26 @@
   font-weight: 500;
   min-height: 48px;
   box-sizing: border-box;
+  box-shadow: none !important;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .date-input input:focus {
   outline: none;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.date-input input::-webkit-datetime-edit,
+.date-input input::-webkit-datetime-edit-fields-wrapper,
+.date-input input::-webkit-datetime-edit-month-field,
+.date-input input::-webkit-datetime-edit-day-field,
+.date-input input::-webkit-datetime-edit-year-field {
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .date-input:focus-within {
