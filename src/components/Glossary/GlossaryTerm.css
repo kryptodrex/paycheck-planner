@@ -7,33 +7,44 @@
 .glossary-term-button {
   border: none;
   background: transparent;
-  color: inherit;
+  color: color-mix(in srgb, var(--text-primary) 78%, var(--accent-primary) 22%);
   font: inherit;
   padding: 0;
   margin: 0;
   cursor: help;
   text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent-primary) 65%, transparent);
   text-decoration-style: dotted;
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.glossary-term-button:hover {
+  color: var(--accent-primary);
+  text-decoration-color: var(--accent-primary);
 }
 
 .glossary-term-button:focus-visible {
-  outline: 2px solid var(--success-color);
+  outline: 2px solid color-mix(in srgb, var(--accent-primary) 50%, transparent);
   outline-offset: 2px;
   border-radius: 0.2rem;
 }
 
 .glossary-term-tooltip {
   position: fixed;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 38%, var(--border-color));
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--accent-primary) 14%, var(--bg-primary)),
+    var(--bg-primary)
+  );
   color: var(--text-primary);
   border-radius: 0.55rem;
   padding: 0.55rem 0.65rem;
   font-size: 0.8rem;
   line-height: 1.35;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
   z-index: 10000;
   pointer-events: none;
 }

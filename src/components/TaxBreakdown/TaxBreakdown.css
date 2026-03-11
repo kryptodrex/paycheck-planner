@@ -117,6 +117,98 @@
     border-color: var(--error-color) !important;
 }
 
+.tax-lines-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.tax-lines-header {
+    display: grid;
+    grid-template-columns: 1fr 100px 32px;
+    gap: 0.5rem;
+    padding: 0 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.col-label { }
+.col-rate { text-align: center; }
+.col-actions { }
+
+.tax-line-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.tax-line-fields {
+    display: grid;
+    grid-template-columns: 1fr 100px 32px;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.tax-line-label-input {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+.tax-line-rate-input {
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: right;
+    box-sizing: border-box;
+}
+
+.tax-line-remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.tax-line-remove-btn:hover {
+    background: var(--error-bg, rgba(239,68,68,0.1));
+    color: var(--error-color);
+}
+
+.tax-line-error {
+    font-size: 0.8rem;
+    color: var(--error-color);
+    padding-left: 0.25rem;
+}
+
+.tax-lines-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1rem 0 0.75rem;
+}
+
 @media (max-width: 768px) {
     .tax-breakdown {
         padding: 1rem;

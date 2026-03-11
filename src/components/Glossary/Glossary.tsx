@@ -124,13 +124,6 @@ const Glossary: React.FC<GlossaryProps> = ({ isOpen, onClose, initialTermId }) =
         </div>
       </div>
 
-      <div className="glossary-helpful-resources">
-        <h3>Helpful Resources</h3>
-        <p>
-          Tip: Open this glossary anytime from the menu bar via <strong>Help -&gt; Glossary of Terms</strong>.
-        </p>
-      </div>
-
       <div className="glossary-results-meta">
         <span>{filteredTerms.length} term{filteredTerms.length === 1 ? '' : 's'} found</span>
         {(query || category !== 'all') && (

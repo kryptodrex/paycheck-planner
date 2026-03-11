@@ -77,7 +77,7 @@ export const glossaryTerms: GlossaryTerm[] = [
     category: 'taxes',
     shortDefinition: 'Income used to calculate tax withholding.',
     fullDefinition:
-      'Taxable income is the portion of your pay subject to tax after eligible pre-tax deductions are removed.',
+      'Taxable income is the portion of income subject to tax after applicable pre-tax deductions and adjustments are applied.',
     relatedTermIds: ['gross-pay', 'pre-tax-deduction', 'withholding'],
   },
   {
@@ -225,9 +225,9 @@ export const glossaryTerms: GlossaryTerm[] = [
     id: 'interest-rate-apr',
     term: 'Interest Rate (APR)',
     category: 'loans',
-    shortDefinition: 'The yearly rate used to calculate interest charges.',
+    shortDefinition: 'APR is the yearly borrowing cost, including interest and certain loan fees.',
     fullDefinition:
-      'Interest rate (often called APR) is the annual percentage used to calculate loan interest. Higher rates increase the interest portion of each payment.',
+      'APR (annual percentage rate) includes the interest rate plus certain lender fees, so it is often higher than the interest rate alone and is used to compare loan costs.',
     aliases: ['APR'],
     tags: ['annual percentage rate'],
     relatedTermIds: ['loan-principal', 'amortization-schedule', 'loan-payment-split'],
@@ -264,9 +264,9 @@ export const glossaryTerms: GlossaryTerm[] = [
     id: 'mortgage-insurance',
     term: 'Mortgage/Loan Insurance (PMI/GAP)',
     category: 'loans',
-    shortDefinition: 'Extra insurance cost added to loan payments in some cases.',
+    shortDefinition: 'Insurance that can cover lender risk or loan shortfalls in specific situations.',
     fullDefinition:
-      'Some loans include insurance charges such as PMI or GAP. These are added to scheduled payments and may stop once balance thresholds are reached.',
+      'PMI (private mortgage insurance) typically applies to some mortgages with low down payments and may end once loan-to-value thresholds are met. GAP insurance applies mainly to auto loans and can cover the difference between insurance payout and loan balance after a total loss.',
     aliases: ['PMI', 'GAP'],
     relatedTermIds: ['loan-payment-split', 'loan-balance'],
   },
