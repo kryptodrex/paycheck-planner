@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { formatNumberDisplay, parseFormattedNumber } from '../../../utils/money';
 import './FormattedNumberInput.css';
 
@@ -80,14 +80,13 @@ const FormattedNumberInput: React.FC<FormattedNumberInputProps> = ({
   inputMode,
   ...props
 }) => {
-  const [displayValue, setDisplayValue] = useState(() => formatForDisplay(value, decimals));
+  const [isFocused, setIsFocused] = useState(false);
   const hasError = className?.includes('field-error');
 
   const rawValue = useMemo(() => sanitizeNumericInput(String(value ?? ''), decimals, allowNegative), [value, decimals, allowNegative]);
-
-  useEffect(() => {
-    setDisplayValue(formatTypedValue(rawValue, decimals));
-  }, [value, decimals, rawValue]);
+  const displayValue = isFocused
+    ? formatTypedValue(rawValue, decimals)
+    : formatForDisplay(value, decimals);
 
   const emitChange = (nextValue: string) => {
     const syntheticEvent = {
@@ -98,17 +97,17 @@ const FormattedNumberInput: React.FC<FormattedNumberInputProps> = ({
   };
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(true);
     onFocus?.(event);
   };
 
   const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-    setDisplayValue(formatForDisplay(rawValue, decimals));
+    setIsFocused(false);
     onBlur?.(event);
   };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const sanitized = sanitizeNumericInput(event.target.value, decimals, allowNegative);
-    setDisplayValue(formatTypedValue(sanitized, decimals));
     emitChange(sanitized);
   };
 
