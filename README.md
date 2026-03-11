@@ -174,12 +174,22 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 
 If you see this error on macOS, it's because the app is not code-signed with an Apple Developer certificate. This is normal for open-source apps. To open the app:
 
-**Option 1: Right-click to Open**
+**Option 1: Terminal command (remove quarantine flag)**
+1. Open Terminal
+2. Run:
+  ```bash
+  xattr -cr "/Applications/Paycheck Planner.app"
+  ```
+3. Try opening the app again
+
+If your app is in a different location, replace the path with your app's actual location.
+
+**Option 2: Right-click to Open**
 1. Right-click (or Control-click) on the app
 2. Select **Open** from the menu
 3. Click **Open** in the security dialog that appears
 
-**Option 2: System Settings**
+**Option 3: System Settings**
 1. Try to open the app normally (it will be blocked)
 2. Go to **System Settings > Privacy & Security**
 3. Scroll down to the Security section
