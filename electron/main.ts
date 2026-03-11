@@ -334,6 +334,7 @@ function createPlanWindow(windowState?: any) {
     y: normalizedBounds.y,
     minWidth,
     minHeight,
+    backgroundColor: '#1a1a1a',
     title: isViewWindow ? `Paycheck Planner - ${state.viewType}` : 'Paycheck Planner',
     titleBarStyle: (process.platform === 'darwin' ? 'hiddenInset' : 'default') as 'hiddenInset' | 'default',
     webPreferences: {
@@ -473,6 +474,7 @@ function createWelcomeWindow(skipSessionRestore = false, windowState?: { width?:
     y: normalizedBounds.y,
     minWidth: 800,
     minHeight: 600,
+    backgroundColor: '#1a1a1a',
     title: 'Paycheck Planner - Welcome',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
