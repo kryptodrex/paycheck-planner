@@ -88,12 +88,13 @@ export async function exportToPDF(
 
   // Calculate taxes
   const taxableIncome = paycheckAmount - preTaxDeductions;
-  const federalTax = (taxableIncome * budgetData.taxSettings.federalTaxRate) / 100;
-  const stateTax = (taxableIncome * budgetData.taxSettings.stateTaxRate) / 100;
-  const socialSecurity = (taxableIncome * budgetData.taxSettings.socialSecurityRate) / 100;
-  const medicare = (taxableIncome * budgetData.taxSettings.medicareRate) / 100;
+  const taxLineAmounts = (budgetData.taxSettings.taxLines || []).map(line => ({
+    label: line.label,
+    rate: line.rate,
+    amount: (taxableIncome * line.rate) / 100,
+  }));
   const additionalWithholding = budgetData.taxSettings.additionalWithholding || 0;
-  const totalTaxes = federalTax + stateTax + socialSecurity + medicare + additionalWithholding;
+  const totalTaxes = taxLineAmounts.reduce((sum, l) => sum + l.amount, 0) + additionalWithholding;
 
   // Calculate post-tax deductions (benefits and retirement from paycheck)
   const postTaxBenefits = budgetData.benefits
@@ -202,10 +203,7 @@ export async function exportToPDF(
     yPosition += 10;
 
     const taxData = [
-      ['Federal Tax Rate', `${budgetData.taxSettings.federalTaxRate}%`, formatWithSymbol(federalTax, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
-      ['State Tax Rate', `${budgetData.taxSettings.stateTaxRate}%`, formatWithSymbol(stateTax, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
-      ['Social Security', `${budgetData.taxSettings.socialSecurityRate}%`, formatWithSymbol(socialSecurity, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
-      ['Medicare', `${budgetData.taxSettings.medicareRate}%`, formatWithSymbol(medicare, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+      ...taxLineAmounts.map(l => [l.label, `${l.rate}%`, formatWithSymbol(l.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
       ['Additional Withholding', '-', formatWithSymbol(additionalWithholding, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
     ];
 

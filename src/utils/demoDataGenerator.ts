@@ -305,10 +305,12 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     },
     preTaxDeductions: [],
     taxSettings: {
-      federalTaxRate: Math.round(federalTaxRate * 100) / 100,
-      stateTaxRate: Math.round(stateTaxRate * 100) / 100,
-      socialSecurityRate: 6.2,
-      medicareRate: 1.45,
+      taxLines: [
+        { id: 'federal', label: 'Federal Tax', rate: Math.round(federalTaxRate * 100) / 100 },
+        { id: 'state', label: 'State Tax', rate: Math.round(stateTaxRate * 100) / 100 },
+        { id: 'social-security', label: 'Social Security', rate: 6.2 },
+        { id: 'medicare', label: 'Medicare', rate: 1.45 },
+      ],
       additionalWithholding: 0,
     },
     accounts,

@@ -52,8 +52,21 @@
   border-color: var(--error-color) !important;
 }
 
+.pay-settings-modal-content .form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.pay-settings-modal-content .form-row input {
+  flex: 1;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
+  .pay-settings-modal-content .form-row {
+    flex-direction: column;
+  }
+
   .overview-grid {
     grid-template-columns: 1fr;
   }
