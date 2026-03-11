@@ -14,6 +14,13 @@ interface SetupWizardProps {
   onCancel?: () => void;
 }
 
+interface EditableTaxLine {
+  id: string;
+  label: string;
+  rate: string;
+  error?: string;
+}
+
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData } = useBudget();
   
@@ -35,10 +42,15 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [hoursPerPayPeriod, setHoursPerPayPeriod] = useState('80');
   const [payFrequency, setPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
   const [minLeftover, setMinLeftover] = useState('0');
-  
-  const [federalTaxRate, setFederalTaxRate] = useState('12');
-  const [stateTaxRate, setStateTaxRate] = useState('5');
+
+  const [taxLines, setTaxLines] = useState<EditableTaxLine[]>([
+    { id: crypto.randomUUID(), label: 'Federal Tax', rate: '12' },
+    { id: crypto.randomUUID(), label: 'State Tax', rate: '5' },
+    { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2' },
+    { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45' },
+  ]);
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
+  const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
 
   // Account configuration - start with default "My Checking" account
   const [accounts, setAccounts] = useState<Account[]>([
@@ -95,6 +107,34 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   const handleComplete = async () => {
+    let hasTaxErrors = false;
+    const validatedTaxLines = taxLines.map((line) => {
+      const parsedRate = parseFloat(line.rate);
+      if (line.label.trim() === '') {
+        hasTaxErrors = true;
+        return { ...line, error: 'Label is required.' };
+      }
+      if (!Number.isFinite(parsedRate) || parsedRate < 0 || parsedRate > 100) {
+        hasTaxErrors = true;
+        return { ...line, error: 'Rate must be between 0 and 100.' };
+      }
+      return { ...line, error: undefined };
+    });
+
+    const parsedWithholding = parseFloat(additionalWithholding);
+    if (!Number.isFinite(parsedWithholding) || parsedWithholding < 0) {
+      setAdditionalWithholdingError('Additional withholding must be zero or greater.');
+      hasTaxErrors = true;
+    } else {
+      setAdditionalWithholdingError(undefined);
+    }
+
+    setTaxLines(validatedTaxLines);
+    if (hasTaxErrors) {
+      setStep(4);
+      return;
+    }
+
     // Save currency setting
     if (budgetData) {
       updateBudgetSettings({
@@ -121,11 +161,12 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
     // Save tax settings
     const taxSettings: TaxSettings = {
-      federalTaxRate: parseFloat(federalTaxRate) || 0,
-      stateTaxRate: parseFloat(stateTaxRate) || 0,
-      socialSecurityRate: 6.2,
-      medicareRate: 1.45,
-      additionalWithholding: parseFloat(additionalWithholding) || 0,
+      taxLines: validatedTaxLines.map((line) => ({
+        id: line.id,
+        label: line.label.trim(),
+        rate: parseFloat(line.rate),
+      })),
+      additionalWithholding: parsedWithholding,
     };
     updateTaxSettings(taxSettings);
 
@@ -155,6 +196,23 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     setAccounts((prev) => prev.filter((acc) => acc.id !== id));
   };
 
+  const handleTaxLineChange = (id: string, field: 'label' | 'rate', value: string) => {
+    setTaxLines((prev) => prev.map((line) => (
+      line.id === id ? { ...line, [field]: value, error: undefined } : line
+    )));
+  };
+
+  const handleAddTaxLine = () => {
+    setTaxLines((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), label: '', rate: '0' },
+    ]);
+  };
+
+  const handleRemoveTaxLine = (id: string) => {
+    setTaxLines((prev) => prev.filter((line) => line.id !== id));
+  };
+
   const canProceed = () => {
     switch (step) {
       case 1:
@@ -167,7 +225,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                  hoursPerPayPeriod && parseFloat(hoursPerPayPeriod) > 0;
         }
       case 3:
-        return true; // payFrequency is always set to a value
+        return true;
       case 4:
         return true; // Tax settings are optional (can use defaults)
       case 5:
@@ -327,6 +385,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 />
               </FormGroup>
 
+              {/* Paycheck scheduling inputs intentionally disabled for now.
+                  Keep this area reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
+
               <FormGroup 
                 label="Target Leftover Per Paycheck" 
                 helperText="The target amount you want to keep unallocated for spending. If you go below this amount, the app will alert you that you may be over-budget."
@@ -348,53 +409,73 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             <div className="wizard-step">
               <h2>Tax Withholding</h2>
               <p className="step-description">
-                Enter your estimated tax rates. You can update these later or leave them as defaults.
+                Edit your tax labels and rates. You can keep these defaults or customize them now.
               </p>
 
-              <FormGroup label="Federal Tax Rate (%)" helperText="Your estimated federal income tax rate">
-                <input
-                  type="number"
-                  value={federalTaxRate}
-                  onChange={(e) => setFederalTaxRate(e.target.value)}
-                  placeholder="12"
-                  min="0"
-                  max="50"
-                  step="0.5"
-                />
-              </FormGroup>
+              <div className="setup-tax-lines-editor">
+                <div className="setup-tax-lines-header">
+                  <span className="setup-col-label">Name</span>
+                  <span className="setup-col-rate">Rate (%)</span>
+                  <span className="setup-col-actions" />
+                </div>
 
-              <FormGroup label="State Tax Rate (%)" helperText="Your state income tax rate (0 if no state tax)">
-                <input
-                  type="number"
-                  value={stateTaxRate}
-                  onChange={(e) => setStateTaxRate(e.target.value)}
-                  placeholder="5"
-                  min="0"
-                  max="20"
-                  step="0.5"
-                />
-              </FormGroup>
+                {taxLines.map((line) => (
+                  <div key={line.id} className="setup-tax-line-row">
+                    <div className="setup-tax-line-fields">
+                      <input
+                        className={`setup-tax-line-label-input${line.error === 'Label is required.' ? ' field-error' : ''}`}
+                        type="text"
+                        placeholder="e.g. Federal Tax"
+                        value={line.label}
+                        onChange={(e) => handleTaxLineChange(line.id, 'label', e.target.value)}
+                      />
+                      <InputWithPrefix
+                        suffix="%"
+                        className={line.error && line.error !== 'Label is required.' ? 'field-error' : ''}
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={line.rate}
+                        onChange={(e) => handleTaxLineChange(line.id, 'rate', e.target.value)}
+                      />
+                      <Button
+                        variant="remove"
+                        type="button"
+                        title="Remove tax line"
+                        onClick={() => handleRemoveTaxLine(line.id)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                    {line.error && <div className="setup-tax-line-error">{line.error}</div>}
+                  </div>
+                ))}
+
+                <Button variant="secondary" onClick={handleAddTaxLine}>
+                  + Add Tax Line
+                </Button>
+              </div>
 
               <FormGroup 
                 label="Additional Withholding (per paycheck)" 
                 helperText="Extra tax amount withheld per paycheck and sent to the IRS. Use this if you owe taxes at year-end or want to increase your refund. This is already subtracted from your net pay."
+                error={additionalWithholdingError}
               >
                 <InputWithPrefix
+                  className={additionalWithholdingError ? 'field-error' : ''}
                   prefix={getCurrencySymbol(currency)}
                   type="number"
                   value={additionalWithholding}
-                  onChange={(e) => setAdditionalWithholding(e.target.value)}
+                  onChange={(e) => {
+                    setAdditionalWithholding(e.target.value);
+                    if (additionalWithholdingError) setAdditionalWithholdingError(undefined);
+                  }}
                   placeholder="0"
                   min="0"
                   step="10"
                 />
               </FormGroup>
-
-              <InfoBox>
-                <p>
-                  <strong>Note:</strong> Social Security (6.2%) and Medicare (1.45%) are automatically included.
-                </p>
-              </InfoBox>
             </div>
           )}
 

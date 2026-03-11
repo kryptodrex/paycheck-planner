@@ -82,13 +82,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     const yearlyPreTax = roundUpToCent(paycheckBreakdown.preTaxDeductions * paychecksPerYear);
     const yearlyTaxableIncome = roundUpToCent(yearlyGrossPayCalc - yearlyPreTax);
     
-    // Use the per-paycheck breakdown to get the tax calculation rates and apply them to yearly
-    const yearlyFederalTax = roundUpToCent(paycheckBreakdown.federalTax * paychecksPerYear);
-    const yearlyStateTax = roundUpToCent(paycheckBreakdown.stateTax * paychecksPerYear);
-    const yearlySocialSecurity = roundUpToCent(paycheckBreakdown.socialSecurity * paychecksPerYear);
-    const yearlyMedicare = roundUpToCent(paycheckBreakdown.medicare * paychecksPerYear);
+    // Scale per-paycheck tax line amounts to yearly
+    const yearlyTaxLineAmounts = paycheckBreakdown.taxLineAmounts.map(line => ({
+      ...line,
+      amount: roundUpToCent(line.amount * paychecksPerYear),
+    }));
     const yearlyAdditionalWithholding = roundUpToCent(paycheckBreakdown.additionalWithholding * paychecksPerYear);
-    const yearlyTotalTaxes = roundUpToCent(yearlyFederalTax + yearlyStateTax + yearlySocialSecurity + yearlyMedicare + yearlyAdditionalWithholding);
+    const yearlyTotalTaxes = roundUpToCent(
+      yearlyTaxLineAmounts.reduce((sum, l) => sum + l.amount, 0) + yearlyAdditionalWithholding
+    );
     
     // Calculate post-tax paycheck deductions only (account-sourced benefits are handled in account allocations)
     let yearlyPostTaxDeductions = 0;
@@ -109,10 +111,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       grossPay: yearlyGrossPayCalc,
       preTaxDeductions: yearlyPreTax,
       taxableIncome: yearlyTaxableIncome,
-      federalTax: yearlyFederalTax,
-      stateTax: yearlyStateTax,
-      socialSecurity: yearlySocialSecurity,
-      medicare: yearlyMedicare,
+      taxLineAmounts: yearlyTaxLineAmounts,
       additionalWithholding: yearlyAdditionalWithholding,
       totalTaxes: yearlyTotalTaxes,
       postTaxDeductions: yearlyPostTaxDeductions,
@@ -136,10 +135,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     grossPay: roundUpToCent(yearlyBreakdown.grossPay / displayDivisor),
     preTaxDeductions: roundUpToCent(yearlyBreakdown.preTaxDeductions / displayDivisor),
     taxableIncome: roundUpToCent(yearlyBreakdown.taxableIncome / displayDivisor),
-    federalTax: roundUpToCent(yearlyBreakdown.federalTax / displayDivisor),
-    stateTax: roundUpToCent(yearlyBreakdown.stateTax / displayDivisor),
-    socialSecurity: roundUpToCent(yearlyBreakdown.socialSecurity / displayDivisor),
-    medicare: roundUpToCent(yearlyBreakdown.medicare / displayDivisor),
+    taxLineAmounts: yearlyBreakdown.taxLineAmounts.map(line => ({
+      ...line,
+      amount: roundUpToCent(line.amount / displayDivisor),
+    })),
     additionalWithholding: roundUpToCent(yearlyBreakdown.additionalWithholding / displayDivisor),
     totalTaxes: roundUpToCent(yearlyBreakdown.totalTaxes / displayDivisor),
     postTaxDeductions: roundUpToCent(yearlyBreakdown.postTaxDeductions / displayDivisor),
@@ -382,22 +381,12 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             <h3><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></h3>
             <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.totalTaxes, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-breakdown">
-              <div className="breakdown-item">
-                <span><GlossaryTerm termId="federal-tax">Federal Tax</GlossaryTerm> ({budgetData.taxSettings.federalTaxRate}%)</span>
-                <span>{formatWithSymbol(displayBreakdown.federalTax, currency, { maximumFractionDigits: 2 })}</span>
-              </div>
-              <div className="breakdown-item">
-                <span><GlossaryTerm termId="state-tax">State Tax</GlossaryTerm> ({budgetData.taxSettings.stateTaxRate}%)</span>
-                <span>{formatWithSymbol(displayBreakdown.stateTax, currency, { maximumFractionDigits: 2 })}</span>
-              </div>
-              <div className="breakdown-item">
-                <span>Social Security (6.2%)</span>
-                <span>{formatWithSymbol(displayBreakdown.socialSecurity, currency, { maximumFractionDigits: 2 })}</span>
-              </div>
-              <div className="breakdown-item">
-                <span>Medicare (1.45%)</span>
-                <span>{formatWithSymbol(displayBreakdown.medicare, currency, { maximumFractionDigits: 2 })}</span>
-              </div>
+              {displayBreakdown.taxLineAmounts.map(line => (
+                <div key={line.id} className="breakdown-item">
+                  <span>{line.label} ({budgetData.taxSettings.taxLines.find(l => l.id === line.id)?.rate ?? 0}%)</span>
+                  <span>{formatWithSymbol(line.amount, currency, { maximumFractionDigits: 2 })}</span>
+                </div>
+              ))}
               {displayBreakdown.additionalWithholding > 0 && (
                 <div className="breakdown-item">
                   <span>Additional Withholding</span>

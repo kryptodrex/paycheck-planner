@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { BudgetData, PaySettings } from '../../types/auth';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
-import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup } from '../shared';
+import { Modal, Button, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../shared';
 import './PaySettingsModal.css';
 
 interface PaySettingsModalProps {
@@ -148,6 +148,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
     }
 
     const paySettings: PaySettings = {
+      ...budgetData.paySettings,
       payType: editPayType,
       payFrequency: editPayFrequency,
       minLeftover: parsedMinLeftover,
@@ -245,11 +246,11 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
 
         {editPayType === 'salary' ? (
           <FormGroup label="Annual Salary" required error={fieldErrors.annualSalary}>
-            <InputWithPrefix
+            <FormattedNumberInput
               className={fieldErrors.annualSalary ? 'field-error' : ''}
               prefix={getCurrencySymbol(editCurrency)}
-              type="number"
               value={editAnnualSalary}
+              decimals={0}
               onChange={(e) => {
                 setEditAnnualSalary(e.target.value);
                 if (fieldErrors.annualSalary) {
@@ -257,8 +258,6 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
                 }
               }}
               placeholder="65000"
-              min="0"
-              step="100"
             />
           </FormGroup>
         ) : (
@@ -313,6 +312,9 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
             ]}
           />
         </FormGroup>
+
+        {/* Paycheck scheduling inputs intentionally disabled for now.
+            Keep this location reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
 
         <FormGroup
           label="Target Leftover Per Paycheck"
