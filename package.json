@@ -1,19 +1,47 @@
 {
-  "name": "budget-manager",
+  "name": "paycheck-planner",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
+  "description": "Desktop paycheck planning and budget management application.",
+  "author": {
+    "name": "Paycheck Planner",
+    "email": "paycheckplannersupport@gmail.com"
+  },
+  "license": "MIT",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build && electron-builder",
-    "build:dir": "tsc -b && vite build && electron-builder --dir",
+    "postinstall": "electron-rebuild || true",
+    "sync-version": "node scripts/sync-version.js",
+    "generate-icons": "node scripts/generate-icons.js",
+    "start": "open ./release/mac-arm64/Paycheck\\ Planner.app",
+    "dev": "npm run sync-version && vite",
+    "dev:inspector": "npm run sync-version && OPEN_DEVTOOLS=true vite",
+    "build": "npx vite build",
+    "build:dir": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --dir",
+    "build:mac": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac",
+    "build:win": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --win",
+    "build:linux": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --linux",
+    "build:all": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac --win --linux",
+    "rebuild-native": "electron-rebuild",
+    "test": "vitest",
+    "test:run": "vitest run",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "build": {
-    "appId": "com.budgetmanager.app",
-    "productName": "Budget Manager",
+    "appId": "com.paycheckplanner.app",
+    "productName": "Paycheck Planner",
+    "icon": "build/icon.png",
+    "fileAssociations": [
+      {
+        "ext": "budget",
+        "name": "Paycheck Planner Budget",
+        "description": "Paycheck Planner budget file",
+        "role": "Editor",
+        "icon": "build/icon"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -22,18 +50,45 @@
       "dist-electron/**/*"
     ],
     "mac": {
-      "target": ["dmg", "zip"],
-      "category": "public.app-category.finance"
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.finance",
+      "identity": null,
+      "darkModeSupport": true
     },
     "win": {
-      "target": ["nsis", "portable"]
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     },
     "linux": {
-      "target": ["AppImage", "deb"]
+      "icon": "build/icon.png",
+      "maintainer": "Paycheck Planner <paycheckplannersupport@gmail.com>",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
     }
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
+    "keytar": "^7.9.0",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1"
@@ -48,15 +103,18 @@
     "concurrently": "^9.2.1",
     "electron": "^40.6.1",
     "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "png2icons": "^2.0.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6",
+    "vitest": "^2.1.9",
     "wait-on": "^9.0.4"
   }
 }

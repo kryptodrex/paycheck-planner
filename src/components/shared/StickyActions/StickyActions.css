@@ -1,0 +1,17 @@
+.sticky-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  z-index: 2;
+}
+
+@media (max-width: 600px) {
+  .sticky-actions {
+    flex-direction: column-reverse;
+  }
+}

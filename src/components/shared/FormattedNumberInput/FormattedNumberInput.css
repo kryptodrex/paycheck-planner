@@ -1,0 +1,60 @@
+.formatted-number-input {
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  transition: border-color 0.2s;
+  overflow: hidden;
+}
+
+.formatted-number-affix {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  background: var(--border-color);
+}
+
+.formatted-number-input input {
+  border: none !important;
+  background: transparent !important;
+  color: var(--text-primary);
+  padding: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-family: inherit;
+  flex: 1;
+  min-width: 0;
+  width: auto !important;
+  border-radius: 0 !important;
+}
+
+.formatted-number-input input:focus {
+  outline: none;
+  border: none !important;
+}
+
+.formatted-number-input:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.formatted-number-input.field-error {
+  border-color: var(--error-color) !important;
+}
+
+@media (max-width: 600px) {
+  .formatted-number-affix {
+    padding: 0.65rem;
+    font-size: 0.95rem;
+  }
+
+  .formatted-number-input input {
+    padding: 0.65rem;
+    font-size: 0.95rem;
+  }
+}

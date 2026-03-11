@@ -4,7 +4,34 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>budget-manager</title>
+    <title>Paycheck Planner</title>
+    <script>
+      (function () {
+        try {
+          var theme = 'light';
+          var settingsStr = localStorage.getItem('paycheck-planner-settings');
+          if (settingsStr) {
+            var settings = JSON.parse(settingsStr);
+            if (settings && settings.themeMode === 'system') {
+              theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            } else if (settings && (settings.themeMode === 'light' || settings.themeMode === 'dark')) {
+              theme = settings.themeMode;
+            }
+          } else {
+            var storedTheme = localStorage.getItem('paycheck-planner-theme');
+            if (storedTheme === 'light' || storedTheme === 'dark') {
+              theme = storedTheme;
+            }
+          }
+
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.style.backgroundColor = theme === 'dark' ? '#1a1a1a' : '#ffffff';
+        } catch {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.style.backgroundColor = '#ffffff';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

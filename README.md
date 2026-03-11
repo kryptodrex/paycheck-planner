@@ -1,239 +1,206 @@
-# Budget Manager
+# Paycheck Planner — Feature Overview
 
-A local desktop application for managing personal budgets with encrypted file storage. Built with Electron, React, TypeScript, and Vite.
+**Paycheck Planner** is a local-first desktop application for comprehensive paycheck-based financial planning. Built with security and privacy in mind, all your data stays on your own computer.
 
-## Features
+## What You Can Do
 
-✨ **Local-First** - All data stays on your computer, no cloud or accounts required  
-🔒 **Encrypted Storage** - Budget files are encrypted using AES encryption  
-💾 **Flexible Storage** - Save your budget files anywhere (iCloud, Google Drive, local folders)  
-📊 **Budget Tracking** - Create categories, set budgets, and track spending  
-💰 **Transaction Management** - Record income and expenses with detailed descriptions  
-🎨 **Modern UI** - Clean, intuitive interface built with React  
+### 1) Start Quickly & Securely
+- **Create a new yearly plan**: Set up planning for a specific year
+- **Open an existing plan**: Load any `.budget` file from your computer  
+- **Recent files access**: Quick-reopen from automatically tracked recent plans
+- **Demo mode**: Try a fully-populated demo plan to explore features before entering your own data
+- **Optional encryption**: Choose per-plan encryption during setup; keys are stored securely in your system keychain
 
-## Prerequisites
+### 2) Guided Setup Wizard
+Walk through initial configuration with an intuitive step-by-step wizard:
+- **Currency selection**: Choose from multiple currency options (USD, CAD, EUR, GBP, etc.)
+- **Encryption preference**: Enable/disable AES encryption for your plan file
+- **Pay structure**: Enter whether you're paid salary or hourly
+- **Pay frequency**: Select weekly, bi-weekly, semi-monthly, or monthly pay periods
+- **Tax assumptions**: Configure federal, state, Social Security, Medicare rates, and additional withholdings
+- **Starting accounts**: Create initial accounts (checking, savings, investments, etc.)
 
-- Node.js (v20.19+ or v22.12+)
-- npm (comes with Node.js)
+### 3) Comprehensive Paycheck Analysis
+- **Full pay breakdown**: See your complete journey from gross to net pay
+- **Estimated taxes**: View federal, state, Social Security, Medicare, and additional withholdings
+- **Deductions tracking**: Monitor pre-tax and post-tax deductions
+- **Multiple views**: Switch between per-paycheck, monthly, and yearly perspectives
+- **Key metrics dashboard**: High-level summary of income, deductions, bills, and remaining funds
+- **Customizable tabs**: Show/hide dashboard tabs, reorder tabs, manage your view
+  - Manage Tabs button for tab customization
+  - All tabs can be shown/hidden (at least one must remain visible)
+  - Available tabs: Key Metrics, Pay Breakdown, Bills, Loans, Benefits, Taxes
+  - Drag and drop to reorder tabs
+  - Tab preferences saved per plan
+
+### 4) Financial Planning & Allocation
+
+#### Accounts Management
+- Create and manage multiple accounts (checking, savings, investments, etc.)
+- Set default destinations for paychecks
+- Track account types and purposes
+
+#### Bills & Recurring Expenses
+- Add unlimited bills with flexible frequency options:
+  - Weekly, bi-weekly, monthly
+  - Quarterly, semi-annually, annually, or custom
+- Assign bills to specific accounts
+- Automatic calculation of per-paycheck and annual impact
+- View total bill allocation vs. remaining funds
+
+#### Benefits & Deductions
+- Add any employer-provided benefits (health insurance, FSA, HSA, etc.)
+- Configure benefit amount per paycheck or as percentage of gross pay
+- Choose pre-tax or post-tax deduction
+- Deduct from paycheck or specific account
+- Track total benefit costs per paycheck, monthly, and annually
+
+#### Retirement Planning
+- **401(k) / 403(b)**: Track traditional, Roth, or after-tax contributions
+- **IRA accounts**: Traditional and Roth IRA contributions
+- **Pension and other plans**: Support for pension plans and custom retirement accounts
+- **Employee contributions**: Dollar amount or percentage of gross pay
+- **Employer match**: Configure match percentage or dollar cap
+- **Yearly limits**: Optional contribution limit tracking with auto-calculate feature
+- **Deduction from paycheck or account**: Choose where contributions come from
+- **Automatic calculations**: See per-paycheck and annual retirement savings
+
+#### Loans & Debt Management
+- Track student loans, car loans, personal loans, mortgages
+- Monitor payment amounts and frequency
+- View total debt service per paycheck
+
+#### Tax Configuration
+- Granular control over tax withholdings:
+  - Federal income tax rate
+  - State income tax rate
+  - Social Security (6.2% default)
+  - Medicare (1.45% default)
+  - Additional withholding amounts
+- Instant recalculation of net pay as you adjust rates
+
+### 5) Plan Management
+
+#### Year-Based Organization
+- Keep separate plans for each year
+- **Copy Plan**: Duplicate a plan into a new year to preserve setup and structure
+- Clean separation of historical vs. current planning
+
+#### Save & Security
+- **Local storage**: All data stored as `.budget` files on your computer
+- **Optional encryption**: Per-plan AES encryption
+- **Keychain integration**: Encryption keys stored in OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- **Auto-save prompts**: Never lose work with save reminders
+- **Recent files**: Automatic tracking of recently opened plans
+- **Session persistence**: Window size, position, and active tab saved and restored
+
+#### Export & Sharing
+- **PDF export**: Generate comprehensive PDF reports
+  - Optional password protection for PDFs
+  - Granular section selection (metrics, pay, accounts, bills, benefits, taxes)
+  - Professional formatting with all your plan details
+
+### 6) Desktop-First Experience
+
+#### Keyboard Shortcuts
+- **Cmd+, / Ctrl+,**: Open Settings
+- **Cmd+N / Ctrl+N**: New budget plan
+- **Cmd+O / Ctrl+O**: Open existing plan
+- **Cmd+S / Ctrl+S**: Save current plan
+
+#### Native Menus
+- **File menu**: New, Open, Save, Close
+- **Edit menu**: Standard editing commands
+- **View menu**: Toggle developer tools (dev builds only)
+- **Window menu**: Minimize, zoom, bring all to front (macOS)
+- **Help menu**: Glossary, support email
+
+#### Application Features
+- **Settings panel**: Configure theme (light/dark/system), enable/disable glossary tooltips
+- **Glossary**: Built-in financial terms reference accessible from Help menu or inline tooltips
+- **About dialog**: Version info, credits, license
+- **Window state**: Automatically saves and restores window size, position, and active tab
+- **Confirmation dialogs**: Save prompts before closing unsaved work
+
+### 7) User Interface & Experience
+
+#### Theme Support
+- **Light mode**: Clean, professional light theme
+- **Dark mode**: Eye-friendly dark theme
+- **System theme**: Automatically match your OS preference
+- **Persistent preference**: Theme choice saved across sessions
+
+#### Glossary & Help
+- **Interactive tooltips**: Hover over or click glossary terms for definitions
+- **Toggle on/off**: Disable glossary tooltips in Settings if preferred
+- **Searchable glossary**: Access full glossary from Help menu
+- **Deep linking**: Open glossary to specific term from inline references
+
+#### Data Validation
+- Real-time validation of numeric inputs
+- Currency formatting with proper symbol placement
+- Percentage inputs with automatic bounds checking
+- Required field enforcement
+
+## Technical Stack
+
+- **Framework**: Electron + React + TypeScript
+- **Build System**: Vite
+- **Encryption**: AES (crypto-js)
+- **Keychain**: Native OS integration (keytar)
+- **PDF Generation**: jsPDF with autoTable
+- **Styling**: CSS with CSS variables for theming
+
+## Who This Is For
+
+- **Privacy-conscious users**: Keep your financial data on your own computer, not in the cloud
+- **Detailed planners**: Need granular control over paycheck allocation and deductions
+- **Multi-account managers**: Track how income flows to different accounts and bills
+- **Yearly budgeters**: Prefer planning by year with clean separation between periods
+- **Security-focused individuals**: Want optional encryption with OS keychain integration
+- **Benefits navigators**: Need to model complex employer benefits and retirement contributions
 
 ## Getting Started
 
-### 1. Install Dependencies
-
-```bash
-npm install
-```
-
-### 2. Run in Development Mode
-
-```bash
-npm run dev
-```
-
-On first launch, you'll be guided through security setup where you can choose to enable encryption or skip it.
-
-### 3. Build for Production
-
-To create a distributable application:
-
-```bash
-# Build for your current platform
-npm run build
-
-# Or build without packaging (faster for testing)
-npm run build:dir
-```
-
-The built application will be in the `release/` directory.
-
-## How to Use
-
-### First Launch - Security Setup
-
-On your first launch, you'll see a security setup screen with two options:
-
-**Option 1: Enable Encryption (Recommended)**
-- Your budget files will be encrypted with AES-256
-- You can choose to:
-  - Use a generated secure key (recommended)
-  - Enter your own custom key
-- **Important:** Save your encryption key! You'll need it to access your files
-- The key is stored securely on your computer
-
-**Option 2: Skip Encryption**
-- Budget files will be saved as readable JSON
-- Easier to backup and inspect, but not secure
-- Good for non-sensitive budgets or testing
-
-You can change this setting later by clearing your browser storage and restarting the app.
-
-### Creating Your First Budget
-
-1. Launch the app
-2. Click "Create New Budget"
-3. Enter a name for your budget (e.g., "2026 Personal Budget")
-4. Start adding categories and transactions!
-
-### Adding Categories
-
-Categories help organize your spending (e.g., Groceries, Rent, Entertainment).
-
-1. Click "+ Add Category"
-2. Enter the category name if you enabled encryption
-- You can save to iCloud, Google Drive, Dropbox, or any local folder
-- Files are saved with the `.budget` extension
-4. The app will automatically assign a color
-
-### Adding Transactions
-
-Record your income and expenses:
-
-1. Click "+ Add Transaction"
-2. Enter a description
-3. Enter the amount
-4. Choose whether it's income or an expense
-5. The transaction is added instantly
-
-### Saving Your Budget
-
-Click the "💾 Save Budget" button in the header. You'll be prompted to choose:
-
-- Where to save the file (any folder on your computer)
-- The file will be encrypted automatically
-- You can save to iCloud, Google Drive, Dropbox, or any local folder
-
-### Opening an Existing Budget
-
-From the welcome screen, click "Open Existing Budget" and select your `.budget` file.
-
-## File Format
-
-Budget files use the `.budget` extension and contain:
-JSON data (encrypted or plain text, based on your choice)
-- All categories, transactions, and settings
-- Can be backed up like any other file
-- Encrypted files can only be opened with the correct encryption keyttings
-- Can be backed up like any other file
-
-## Project Structure
-
-```
-budget-manager/
-├── electron/              # Electron main process files
-│   ├── main.ts           # Main process (handles file I/O)
-│   └── preload.ts        # Preload script (secure bridge)
-├── src/
-│   ├── components/       # React UI components
-│   │   ├── WelcomeScreen.tsx
-│   │   ├── BudgetDashboard.tsx
-│   │   └── *.css
-│   ├── contexts/         # React Context (state management)
-│   │   └── BudgetContext.tsx
-│   ├── services/         # Business logic
-│   │   └── fileStorage.ts
-│   ├── types/           # TypeScript type definitions
-│   │   ├── auth.ts
-│   │   └── electron.d.ts
-│   ├── App.tsx          # Main app component
-│   └── main.tsx         # App entry point
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-├── TYPESCRIPT_GUIDE.md   # TypeScript reference for JS developers
-└── README.md            # This file
-```
-
-## Technology Stack
-
-- **Electron** - Desktop app framework
-- **React 19** - UI framework
-- **TypeScript** - Type-safe JavaScript
-- **Vite** - Fast build tool and dev server
-- **crypto-js** - Encryption library
-- **React Context** - State management
-
-## Understanding TypeScript
-
-If you're more familiar with JavaScript, check out [TYPESCRIPT_GUIDE.md](./TYPESCRIPT_GUIDE.md) for a comprehensive explanation of TypeScript concepts used in this project.
-
-All code files include detailed comments explaining what each piece does!
-
-## Security Notcan be encrypted with AES-256 (optional, your choice)
-- If encryption is enabled:
-  - The encryption key is stored locally on your computer
-  - Keep your key safe - you'll need it to decrypt files
-  - Files encrypted with one key cannot be decrypted with a different key
-- If encryption is disabled:
-  - Files are saved as plain JSON and readable by anyone
-  - Good for non-sensitive budgets or when you need easy file inspection
-- You choose the encryption setting on first launch
-- For maximum security, generate a unique encryption key
-- Files can only be decrypted with the correct key
+1. **Download** the latest release for your platform (macOS, Windows, Linux)
+2. **Install** the application
+3. **Launch** and choose to create a new plan or try the demo
+4. **Follow** the setup wizard to configure your paycheck details
+5. **Start planning** by adding accounts, bills, benefits, and other allocations
 
 ## Troubleshooting
 
-### "Electron API not available" Error
+### macOS: "App is damaged and can't be opened"
 
-MakeCan't Open Encrypted File
+If you see this error on macOS, it's because the app is not code-signed with an Apple Developer certificate. This is normal for open-source apps. To open the app:
 
-If you get an error about encryption when opening a file:
-- The file was created with encryption enabled
-- Make sure your encryption key matches the one used to create the file
-- Check that you completed the encryption setup
+**Option 1: Right-click to Open**
+1. Right-click (or Control-click) on the app
+2. Select **Open** from the menu
+3. Click **Open** in the security dialog that appears
 
-### Changing Encryption Settings
+**Option 2: System Settings**
+1. Try to open the app normally (it will be blocked)
+2. Go to **System Settings > Privacy & Security**
+3. Scroll down to the Security section
+4. Click **Open Anyway** next to the message about Paycheck Planner
+5. Confirm by clicking **Open**
 
-To change encryption settings:
-1. Open the browser developer tools (View → Toggle Developer Tools)
-2. Go to Console tab
-3. Type: `localStorage.clear()`
-4. Restart the app
-5. You'll go through the setup again with new choices
+You only need to do this once. After the first launch, macOS will remember your choice and the app will open normally.
 
-### Lost Encryption Key
+### Windows: SmartScreen Warning
 
-If you lose your encryption key and files are encrypted:
-- Unfortunately, encrypted files cannot be recovered without the key
-- This is by design for security
-- Always keep a secure backup of your encryption key
+Windows may show a SmartScreen warning for unsigned apps. Click **More info** and then **Run anyway** to proceed.
 
-Check that the app has permission to write to the selected directory.
+### Linux: Permission Issues
 
-### Encryption Key Issues
-
-Make sure your `.env` file exists and contains `VITE_ENCRYPTION_KEY`.
-
-### Node.js Version Warning
-
-If you see a warning about Node.js version, it's safe to ignore if your version is 22.4+. The app will still run correctly.
-
-## Future Enhancements
-
-Potential features to add:
-
-- 📈 Charts and visualizations
-- 📤 Export to CSV/PDF
-- 🔍 Search and filter transactions
-- 🏷️ Tags for transactions
-- 📅 Recurring transactions
-- 💱 Multi-currency support
-- 🌙 Dark mode
-- 📱 Mobile companion app
-- 🔄 Automatic backups
-- 📊 Budget reports and analytics
-
-## Contributing
-
-Feel free to submit issues or pull requests!
-
-## License
-
-MIT License - feel free to use this for personal or commercial projects.
-
-## Support
-
-If you encounter issues or have questions, please open an issue on GitHub.
+If the AppImage won't run, make it executable:
+```bash
+chmod +x Paycheck-Planner-*.AppImage
+```
 
 ---
 
-**Made with ❤️ using Electron, React, and TypeScript**
+**Note**: This is a beta release. All core features are functional, but you may encounter minor issues. Please report any bugs or feature requests via GitHub issues or the built-in support email feature.
+
+For technical documentation, build instructions, and architecture details, see [src/README.md](src/README.md).

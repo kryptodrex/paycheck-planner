@@ -1,0 +1,48 @@
+.shared-progress-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.shared-progress-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.shared-progress-container {
+  display: flex;
+  width: 100%;
+}
+
+.shared-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--progress-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.shared-progress-fill {
+  width: 0;
+  height: 100%;
+  background: var(--progress-fill);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+.shared-progress-details {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.shared-progress-details span:first-child {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.shared-progress-details span:last-child {
+  color: var(--text-secondary);
+}
