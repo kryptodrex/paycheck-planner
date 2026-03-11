@@ -178,7 +178,7 @@ If you see this error on macOS, it's because the app is not code-signed with an 
 1. Open Terminal
 2. Run:
   ```bash
-  xattr -cr "/Applications/Paycheck Planner.app"
+  xattr -c "/Applications/Paycheck Planner.app"
   ```
 3. Try opening the app again
 
