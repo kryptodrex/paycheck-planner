@@ -5,7 +5,7 @@ import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { convertBillToMonthly } from '../../utils/billFrequency';
-import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader, RadioGroup, ProgressBar } from '../shared';
+import { Modal, Button, FormGroup, InputWithPrefix, DateInput, SectionItemCard, ViewModeSelector, PageHeader, RadioGroup, ProgressBar } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './LoansManager.css';
 
@@ -715,7 +715,8 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
         </FormGroup>
 
         <FormGroup label={<><GlossaryTerm termId="interest-rate-apr">Annual Interest Rate (%)</GlossaryTerm></>} required error={loanFieldErrors.interestRate}>
-          <input
+          <InputWithPrefix
+            suffix="%"
             type="number"
             value={loanInterestRate}
             onChange={(e) => {
@@ -897,8 +898,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
         </FormGroup>
 
         <FormGroup label="Loan Start Date" required error={loanFieldErrors.startDate}>
-          <input
-            type="date"
+          <DateInput
             value={loanStartDate}
             onChange={(e) => {
               setLoanStartDate(e.target.value);
