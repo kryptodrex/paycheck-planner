@@ -34,6 +34,12 @@
   transition: border-color 0.2s;
 }
 
+.form-group select {
+  appearance: auto;
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+}
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
