@@ -883,11 +883,12 @@ function createApplicationMenu() {
 
   // Help menu (all platforms)
   template.push({
+    role: 'help',
     label: 'Help',
     submenu: [
       {
         label: 'Glossary of Terms',
-        accelerator: isMac ? 'Cmd+Shift+/' : 'Ctrl+Shift+/',
+        accelerator: isMac ? 'Cmd+Shift+G' : 'Ctrl+Shift+G',
         click: () => {
           const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
           if (targetWindow) {
@@ -898,6 +899,7 @@ function createApplicationMenu() {
       { type: 'separator' },
       {
         label: 'Keyboard Shortcuts',
+        accelerator: isMac ? 'Cmd+Shift+K' : 'Ctrl+Shift+K',
         click: () => {
           const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
           if (targetWindow) {
