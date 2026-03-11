@@ -8,6 +8,7 @@ import PlanDashboard from './components/PlanDashboard'
 import Settings from './components/Settings'
 import About from './components/About'
 import Glossary from './components/Glossary'
+import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
 import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
@@ -15,7 +16,7 @@ function App() {
   if (import.meta.env.DEV) console.debug('[APP] App component rendering...');
   
   // Get the current budget data and actions from our context
-  const { budgetData, saveBudget, saveWindowState } = useBudget()
+  const { budgetData, saveBudget, saveWindowState, loadBudget } = useBudget()
   if (import.meta.env.DEV) console.debug('[APP] Budget data available:', !!budgetData);
   
   // Track whether user has completed initial setup
@@ -36,6 +37,7 @@ function App() {
   const [showAbout, setShowAbout] = useState(false)
   // Track if glossary modal is open
   const [showGlossary, setShowGlossary] = useState(false)
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   // Track requested glossary term when opened from inline tooltips
   const [initialGlossaryTermId, setInitialGlossaryTermId] = useState<string | null>(null)
 
@@ -82,6 +84,29 @@ function App() {
 
     return unsubscribe
   }, [])
+
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent('open-keyboard-shortcuts', () => {
+      setShowKeyboardShortcuts(true)
+    })
+
+    return unsubscribe
+  }, [])
+
+  // Listen for file-open requests from OS integration (double click / Open With)
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent('open-budget-file', (arg) => {
+      if (typeof arg === 'string' && arg.trim()) {
+        loadBudget(arg)
+      }
+    })
+
+    return unsubscribe
+  }, [loadBudget])
 
   // Open glossary from in-app term tooltips
   useEffect(() => {
@@ -204,6 +229,10 @@ function App() {
           setShowGlossary(false)
           setInitialGlossaryTermId(null)
         }}
+      />
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
       />
     </>
   )

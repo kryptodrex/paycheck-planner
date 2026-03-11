@@ -114,6 +114,13 @@
   flex-shrink: 0;
 }
 
+/* Add subtle header separation when tabs are not on top. */
+.plan-dashboard.layout-with-tabs-left .dashboard-header,
+.plan-dashboard.layout-with-tabs-right .dashboard-header,
+.plan-dashboard.layout-with-tabs-bottom .dashboard-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, rgba(255, 255, 255, 0.35) 30%);
+}
+
 .dashboard-footer {
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);

@@ -70,7 +70,7 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
   const handleTabDragStart = (e: React.DragEvent, index: number) => {
     // Force drag operation to be treated as a move so macOS doesn't show copy (+) cursor.
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', String(index));
+    e.dataTransfer.setData('text/tab-index', String(index));
     onDragStart(index);
   };
 

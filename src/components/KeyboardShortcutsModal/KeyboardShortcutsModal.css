@@ -1,0 +1,88 @@
+.keyboard-shortcuts-modal {
+  width: min(760px, 100%);
+}
+
+.keyboard-shortcuts-intro {
+  margin-bottom: 1.5rem;
+}
+
+.keyboard-shortcuts-intro p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.keyboard-shortcuts-sections {
+  display: grid;
+  gap: 1rem;
+}
+
+.keyboard-shortcuts-section {
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  padding: 1rem;
+}
+
+.keyboard-shortcuts-section h3 {
+  margin: 0 0 0.9rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.keyboard-shortcuts-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.keyboard-shortcuts-item {
+  display: grid;
+  grid-template-columns: minmax(210px, 280px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.keyboard-shortcuts-item p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.keyboard-shortcuts-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.keyboard-shortcuts-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 20%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-primary));
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-weight: 600;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent-primary) 20%, transparent);
+}
+
+.keyboard-shortcuts-footer {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .keyboard-shortcuts-item {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .keyboard-shortcuts-modal {
+    width: 100%;
+  }
+}

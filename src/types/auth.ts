@@ -78,6 +78,9 @@ export interface PaySettings {
   hourlyRate?: number;           // Hourly rate (if payType is 'hourly')
   hoursPerPayPeriod?: number;    // Hours per pay period (if hourly)
   payFrequency: PayFrequency;    // How often paid
+  firstPaycheckDate?: string;    // First paycheck date in YYYY-MM-DD (weekly, bi-weekly, monthly)
+  semiMonthlyFirstDay?: number;  // First paycheck day of month for semi-monthly schedules
+  semiMonthlySecondDay?: number; // Second paycheck day of month for semi-monthly schedules
   minLeftover?: number;          // Minimum amount to keep leftover per paycheck (default: 0)
 }
 
@@ -92,13 +95,19 @@ export interface Deduction {
 }
 
 /**
- * TaxSettings - Tax configuration (user-entered for MVP)
+ * TaxLine - A single named tax rate line
+ */
+export interface TaxLine {
+  id: string;
+  label: string;   // User-editable label (e.g. "Federal Tax", "VAT", "National Insurance")
+  rate: number;    // Percentage (0-100)
+}
+
+/**
+ * TaxSettings - Tax configuration (user-entered)
  */
 export interface TaxSettings {
-  federalTaxRate: number;        // Federal tax percentage (0-100)
-  stateTaxRate: number;          // State tax percentage (0-100)
-  socialSecurityRate: number;    // Social Security tax percentage (typically 6.2)
-  medicareRate: number;          // Medicare tax percentage (typically 1.45)
+  taxLines: TaxLine[];           // Dynamic list of named tax rates
   additionalWithholding: number; // Additional dollar amount to withhold per paycheck
 }
 
@@ -230,16 +239,19 @@ export interface AppSettings {
 /**
  * PaycheckBreakdown - Calculated breakdown of a paycheck
  */
+export interface TaxLineAmount {
+  id: string;
+  label: string;
+  amount: number;
+}
+
 export interface PaycheckBreakdown {
   grossPay: number;              // Total before any deductions
   preTaxDeductions: number;      // Total pre-tax deductions
   taxableIncome: number;         // Gross minus pre-tax deductions
-  federalTax: number;            // Federal income tax
-  stateTax: number;              // State income tax
-  socialSecurity: number;        // Social Security tax
-  medicare: number;              // Medicare tax
+  taxLineAmounts: TaxLineAmount[]; // Per-line tax amounts calculated from taxLines
   additionalWithholding: number; // Additional withholding
-  totalTaxes: number;            // Sum of all taxes
+  totalTaxes: number;            // Sum of all taxes + additionalWithholding
   netPay: number;                // Take-home pay after all deductions
 }
 

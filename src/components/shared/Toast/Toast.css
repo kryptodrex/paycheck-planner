@@ -16,18 +16,18 @@
 }
 
 .toast-success {
-  background: var(--success-color);
-  box-shadow: 0 12px 40px color-mix(in srgb, var(--success-color) 45%, transparent);
+  background: var(--toast-success-bg);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--toast-success-bg) 45%, transparent);
 }
 
 .toast-warning {
-  background: var(--warning-color);
-  box-shadow: 0 12px 40px color-mix(in srgb, var(--warning-color) 45%, transparent);
+  background: var(--toast-warning-bg);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--toast-warning-bg) 45%, transparent);
 }
 
 .toast-error {
-  background: var(--error-color);
-  box-shadow: 0 12px 40px color-mix(in srgb, var(--error-color) 45%, transparent);
+  background: var(--toast-error-bg);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--toast-error-bg) 45%, transparent);
 }
 
 @keyframes slideDown {

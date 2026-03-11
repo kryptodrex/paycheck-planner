@@ -1,12 +1,38 @@
 .glossary-modal {
   width: min(920px, 96vw);
   max-height: 92vh;
+  --glossary-accent-soft: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary));
+  --glossary-accent-strong: color-mix(in srgb, var(--accent-primary) 24%, var(--bg-secondary));
+  --glossary-border-soft: color-mix(in srgb, var(--border-color) 72%, var(--accent-primary) 28%);
+  --glossary-ring: color-mix(in srgb, var(--accent-primary) 38%, transparent);
+}
+
+[data-theme="light"] .glossary-modal {
+  --glossary-accent-soft: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-secondary));
+  --glossary-border-soft: color-mix(in srgb, var(--border-color) 86%, var(--accent-primary) 14%);
 }
 
 .glossary-intro p {
   margin: 0 0 1rem;
+  border: 1px solid var(--glossary-border-soft);
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--accent-primary) 12%, transparent),
+    color-mix(in srgb, var(--bg-primary) 92%, transparent)
+  );
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.85rem;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+[data-theme="light"] .glossary-intro p {
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--accent-primary) 6%, var(--bg-primary)),
+    var(--bg-primary)
+  );
+  color: var(--text-primary);
 }
 
 .glossary-controls {
@@ -18,8 +44,12 @@
 
 .glossary-search {
   width: 100%;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  border: 1px solid var(--glossary-border-soft);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bg-primary) 94%, var(--accent-primary) 6%),
+    var(--bg-primary)
+  );
   color: var(--text-primary);
   border-radius: 0.6rem;
   padding: 0.65rem 0.85rem;
@@ -27,8 +57,9 @@
 }
 
 .glossary-search:focus {
-  outline: 2px solid color-mix(in srgb, var(--success-color) 45%, transparent);
+  outline: 2px solid var(--glossary-ring);
   outline-offset: 2px;
+  border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border-color));
 }
 
 .glossary-categories {
@@ -38,26 +69,34 @@
 }
 
 .glossary-category-btn {
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  border: 1px solid var(--glossary-border-soft);
+  background: color-mix(in srgb, var(--bg-secondary) 88%, var(--accent-primary) 12%);
   color: var(--text-secondary);
   border-radius: 999px;
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.glossary-category-btn:hover {
+  background: var(--glossary-accent-soft);
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  color: var(--text-primary);
 }
 
 .glossary-category-btn.active {
-  background: var(--success-color);
+  background: var(--accent-primary);
   color: var(--text-inverse);
   border-color: transparent;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 24%, transparent);
 }
 
 .glossary-helpful-resources {
   margin: 0.25rem 0 1rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--glossary-border-soft);
   border-radius: 0.75rem;
-  background: var(--bg-secondary);
+  background: linear-gradient(160deg, var(--glossary-accent-soft), var(--bg-secondary));
   padding: 0.75rem 0.85rem;
 }
 
@@ -85,9 +124,13 @@
 .glossary-clear-filters {
   border: none;
   background: transparent;
-  color: var(--success-color);
+  color: var(--accent-primary);
   font-weight: 600;
   cursor: pointer;
+}
+
+.glossary-clear-filters:hover {
+  color: var(--accent-hover);
 }
 
 .glossary-list {
@@ -96,14 +139,33 @@
   gap: 0.75rem;
   max-height: 48vh;
   overflow-y: auto;
-  padding-right: 0.25rem;
+  /* padding-right: 0.25rem; */
 }
 
 .glossary-card {
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--glossary-border-soft);
   border-radius: 0.75rem;
-  background: var(--bg-secondary);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--bg-secondary) 85%, var(--accent-primary) 15%),
+    var(--bg-secondary)
+  );
   padding: 0.85rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+[data-theme="light"] .glossary-card {
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--accent-primary) 5%, var(--bg-primary)),
+    color-mix(in srgb, var(--bg-secondary) 94%, var(--bg-primary) 6%)
+  );
+}
+
+.glossary-card:hover {
+  transform: translateY(0);
+  border-color: color-mix(in srgb, var(--accent-primary) 46%, var(--border-color));
+  box-shadow: var(--shadow-sm);
 }
 
 .glossary-card-header {
@@ -120,12 +182,12 @@
 }
 
 .glossary-badge {
-  border: 1px solid var(--border-color);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 35%, var(--border-color));
   border-radius: 999px;
   padding: 0.2rem 0.55rem;
   font-size: 0.75rem;
-  color: var(--text-secondary);
-  background: var(--bg-primary);
+  color: color-mix(in srgb, var(--text-primary) 76%, var(--accent-primary) 24%);
+  background: color-mix(in srgb, var(--accent-primary) 15%, var(--bg-primary));
   white-space: nowrap;
 }
 
@@ -159,18 +221,26 @@
 }
 
 .glossary-related-link {
-  border: none;
-  background: color-mix(in srgb, var(--success-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
   color: var(--text-primary);
   border-radius: 0.45rem;
   padding: 0.25rem 0.55rem;
   cursor: pointer;
   font-size: 0.8rem;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.glossary-related-link:hover {
+  background: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  transform: translateY(-1px);
 }
 
 .glossary-empty-state {
-  border: 1px dashed var(--border-color);
+  border: 1px dashed color-mix(in srgb, var(--accent-primary) 40%, var(--border-color));
   border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
   padding: 1rem;
   text-align: center;
 }

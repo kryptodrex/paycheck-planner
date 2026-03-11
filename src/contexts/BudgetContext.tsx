@@ -772,10 +772,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         grossPay: 0,
         preTaxDeductions: 0,
         taxableIncome: 0,
-        federalTax: 0,
-        stateTax: 0,
-        socialSecurity: 0,
-        medicare: 0,
+        taxLineAmounts: [],
         additionalWithholding: 0,
         totalTaxes: 0,
         netPay: 0,
@@ -831,13 +828,16 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     const taxableIncome = roundUpToCent(grossPay - totalPreTaxDeductions);
 
     // Calculate taxes
-    const federalTax = roundUpToCent((taxableIncome * taxSettings.federalTaxRate) / 100);
-    const stateTax = roundUpToCent((taxableIncome * taxSettings.stateTaxRate) / 100);
-    const socialSecurity = roundUpToCent((taxableIncome * taxSettings.socialSecurityRate) / 100);
-    const medicare = roundUpToCent((taxableIncome * taxSettings.medicareRate) / 100);
+    const taxLineAmounts = (taxSettings.taxLines || []).map(line => ({
+      id: line.id,
+      label: line.label,
+      amount: roundUpToCent((taxableIncome * line.rate) / 100),
+    }));
     const additionalWithholding = roundUpToCent(taxSettings.additionalWithholding);
 
-    const totalTaxes = roundUpToCent(federalTax + stateTax + socialSecurity + medicare + additionalWithholding);
+    const totalTaxes = roundUpToCent(
+      taxLineAmounts.reduce((sum, l) => sum + l.amount, 0) + additionalWithholding
+    );
 
     // Calculate net pay before post-tax deductions
     let netPayBeforePostTax = roundUpToCent(taxableIncome - totalTaxes);
@@ -872,10 +872,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       grossPay,
       preTaxDeductions: totalPreTaxDeductions,
       taxableIncome,
-      federalTax,
-      stateTax,
-      socialSecurity,
-      medicare,
+      taxLineAmounts,
       additionalWithholding,
       totalTaxes,
       netPay,

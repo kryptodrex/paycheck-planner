@@ -56,11 +56,31 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
   // Ensure taxSettings exists with default values
   if (!migrated.taxSettings) {
     migrated.taxSettings = {
-      federalTaxRate: 0,
-      stateTaxRate: 0,
-      socialSecurityRate: 6.2,
-      medicareRate: 1.45,
+      taxLines: [
+        { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0 },
+        { id: crypto.randomUUID(), label: 'State Tax', rate: 0 },
+        { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2 },
+        { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45 },
+      ],
       additionalWithholding: 0,
+    };
+  } else if ('federalTaxRate' in migrated.taxSettings) {
+    // Migrate old fixed-field format to dynamic taxLines
+    const old = migrated.taxSettings as unknown as {
+      federalTaxRate?: number;
+      stateTaxRate?: number;
+      socialSecurityRate?: number;
+      medicareRate?: number;
+      additionalWithholding?: number;
+    };
+    migrated.taxSettings = {
+      taxLines: [
+        { id: crypto.randomUUID(), label: 'Federal Tax', rate: old.federalTaxRate ?? 0 },
+        { id: crypto.randomUUID(), label: 'State Tax', rate: old.stateTaxRate ?? 0 },
+        { id: crypto.randomUUID(), label: 'Social Security', rate: old.socialSecurityRate ?? 6.2 },
+        { id: crypto.randomUUID(), label: 'Medicare', rate: old.medicareRate ?? 1.45 },
+      ],
+      additionalWithholding: old.additionalWithholding ?? 0,
     };
   }
 
@@ -814,10 +834,12 @@ export class FileStorageService {
       },
       preTaxDeductions: [],
       taxSettings: {
-        federalTaxRate: 0,
-        stateTaxRate: 0,
-        socialSecurityRate: 6.2,
-        medicareRate: 1.45,
+        taxLines: [
+          { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0 },
+          { id: crypto.randomUUID(), label: 'State Tax', rate: 0 },
+          { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2 },
+          { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45 },
+        ],
         additionalWithholding: 0,
       },
       accounts: [

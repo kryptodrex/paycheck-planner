@@ -1,10 +1,16 @@
 .shared-radio-group {
   display: flex;
   gap: 0.75rem;
+  width: 100%;
 }
 
 .shared-radio-group.column {
   flex-direction: column;
+}
+
+.shared-radio-group.column .shared-radio-option {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .shared-radio-option {
@@ -60,9 +66,14 @@
   font-weight: 600;
 }
 
+.shared-radio-option:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+}
+
 .shared-radio-option:has(input[type="radio"]:checked) {
-  border-color: var(--text-secondary);
-  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-primary));
 }
 
 .shared-radio-option.disabled {

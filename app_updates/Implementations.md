@@ -433,3 +433,120 @@ Allow users to add one or more "Custom Tabs" to the dashboard, each with a user-
 
 ### **Recommendation:**
 Start with MVP: custom tabs as named notes with icon/color, editable markdown or rich text. Expand to tables/checklists if user demand is high.
+
+---
+
+## Effective-Dated Settings History (Post-Beta) - Discovery Notes
+
+### **Status**
+- Deferred for beta due to size and risk.
+- Keep as a planned post-beta feature.
+
+### **User-Confirmed Requirements**
+1. Apply to all editable financial configuration areas (not just pay settings).
+2. Changes use an exact calendar effective date.
+3. Elapsed periods remain locked; only future periods recalculate.
+4. Provide a visible history UI.
+5. Allow removing history entries.
+
+### **Why This Is Large**
+- Current data model uses a single current-state object for key settings (for example `budgetData.paySettings`) and no effective-date timeline.
+- Core calculations currently assume one global settings state, not "state as of date".
+- UI save flows overwrite the current object immediately, without versioning.
+- Implementing this correctly requires a date-aware calculation engine plus migration-safe persistence changes.
+
+### **Current Code Areas Impacted (Initial Map)**
+- `src/types/auth.ts`
+  - `BudgetData` and settings types currently model present-state only.
+- `src/services/fileStorage.ts`
+  - Load/save validation and migration logic will need timeline support.
+- `src/contexts/BudgetContext.tsx`
+  - `calculatePaycheckBreakdown` and related helpers currently use one settings object.
+- `src/utils/payPeriod.ts`
+  - Gross pay utilities are settings-only and not date-aware.
+- `src/components/PaySettingsModal/PaySettingsModal.tsx`
+  - Save flow currently replaces `paySettings` directly.
+- Additional managers that edit financial settings will need effective-date save paths and history views.
+
+### **Recommended Architecture**
+
+#### 1) Effective-Dated Timeline Layer
+- Introduce timeline/version records by domain, each with:
+  - `id`
+  - `effectiveDate` (ISO date)
+  - `createdAt`
+  - `snapshot` (full normalized settings payload)
+- Keep existing top-level fields short-term for backward compatibility during migration.
+
+#### 2) "State As Of Date" Resolver
+- Add centralized resolver utilities:
+  - `getEffectiveSnapshot(domain, date)`
+  - `getMergedStateAsOf(date)`
+- All calculators consume resolved state for a given period/date instead of direct top-level objects.
+
+#### 3) Period-Aware Calculation Engine
+- Generate year pay periods from frequency.
+- For each period date:
+  - Resolve applicable snapshots.
+  - Compute gross, deductions, taxes, allocations using that resolved state.
+- Aggregate period outputs for paycheck/monthly/yearly views.
+
+#### 4) History Management UI
+- On save in settings modals: "Apply starting" date input.
+- History table per domain:
+  - effective date
+  - short summary of changes
+  - delete action
+- Deletion rules:
+  - allow deleting non-baseline entries
+  - recalculate future periods only
+  - keep baseline entry for plan integrity
+
+### **Data and Behavior Rules**
+- Effective date precision: calendar date (no time-of-day needed initially).
+- Conflict handling:
+  - If multiple entries share a date for same domain, keep latest `createdAt`.
+- Locking elapsed periods:
+  - Period results with dates before "today" treated as historical/immutable in UI recomputation flows.
+  - Future periods recompute after edits/deletes.
+- Frequency changes mid-year:
+  - Keep elapsed schedule fixed.
+  - Regenerate schedule from effective date onward.
+
+### **Migration Plan (Backward Compatible)**
+1. Add new timeline fields and parser support.
+2. On load of legacy files, create baseline entries (for example Jan 1 of plan year) from existing current settings.
+3. Continue writing both legacy + timeline fields for one release (safety window).
+4. Switch calculators to timeline resolvers.
+5. Remove legacy write-path after validation period.
+
+### **Testing Requirements**
+- Unit:
+  - resolver correctness across dates
+  - overlap/same-date tie-break behavior
+  - deletion recomputation boundaries
+- Integration:
+  - mid-year salary change
+  - mid-year frequency change
+  - tax/deduction/benefit/retirement changes mid-year
+  - import existing legacy plans and preserve numbers
+- UI:
+  - effective-date inputs, history list rendering, delete confirmations, and error states.
+
+### **Estimated Effort**
+- MVP (effective-date engine + pay domain + minimal history UI): ~3-5 days.
+- Expanded "all domains" support + robust history management + full tests: ~2-4 weeks.
+- Recommendation for beta: defer full feature, optionally keep schema groundwork behind a feature flag.
+
+### **Suggested Phased Rollout**
+1. **Phase A (Foundation)**
+   - Timeline schema + migration + resolver utilities.
+2. **Phase B (Pay + Tax Domains)**
+   - Date-aware calculators and modal effective-date save path.
+3. **Phase C (Benefits/Retirement/Deductions)**
+   - Extend timeline saves and resolution.
+4. **Phase D (History UX + Delete + Hardening)**
+   - History lists, delete workflows, regression coverage.
+
+### **Open Product Decision (Still Needed)**
+- Clarify whether "all" includes full effective-dated behavior for accounts/bills/loans as well, or only payroll-related financial settings (pay/tax/deductions/benefits/retirement).
