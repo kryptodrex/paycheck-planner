@@ -38,7 +38,12 @@
   --info-color-dark: #2563eb;
   --violet-color: #8b5cf6;
   --cyan-color: #06b6d4;
-  
+
+  /* Toast backgrounds */
+  --toast-success-bg: #10b981;
+  --toast-warning-bg: #f59e0b;
+  --toast-error-bg: #ef4444;
+
   /* Alert backgrounds */
   --alert-error-bg: #fef2f2;
   --alert-error-border: #fca5a5;
@@ -93,7 +98,12 @@
   --info-color-dark: #3b82f6;
   --violet-color: #a78bfa;
   --cyan-color: #06b6d4;
-  
+
+  /* Toast backgrounds - muted for dark mode */
+  --toast-success-bg: #047857;
+  --toast-warning-bg: #b45309;
+  --toast-error-bg: #b91c1c;
+
   /* Alert backgrounds - dark theme variants */
   --alert-error-bg: #2d1f1f;
   --alert-error-border: #7f1d1d;
