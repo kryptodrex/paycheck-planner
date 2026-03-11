@@ -15,6 +15,16 @@
   cursor: not-allowed;
 }
 
+.btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.btn:focus:not(:focus-visible) {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
 /* Primary button */
 .btn-primary {
   background: var(--bg-primary);
@@ -88,6 +98,22 @@
 .btn-icon:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-icon:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.btn-icon:focus:not(:focus-visible) {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Remove button — icon variant with red hover */
+.btn-icon.btn-remove:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
 }
 
 .btn-icon.btn-danger {

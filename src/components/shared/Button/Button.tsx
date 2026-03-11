@@ -3,7 +3,7 @@ import './Button.css';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** Button variant */
-  variant?: 'primary' | 'secondary' | 'danger' | 'icon';
+  variant?: 'primary' | 'secondary' | 'danger' | 'icon' | 'remove';
   /** Button size */
   size?: 'xsmall' | 'small' | 'medium' | 'large';
   /** Whether button is in a loading state */
@@ -26,7 +26,7 @@ const Button: React.FC<ButtonProps> = ({
 }) => {
   const variantClass = `btn-${variant}`;
   const sizeClass = size !== 'medium' ? `btn-${size}` : '';
-  const baseClass = variant === 'icon' ? 'btn-icon' : 'btn';
+  const baseClass = variant === 'icon' || variant === 'remove' ? 'btn-icon' : 'btn';
   const allClasses = `${baseClass} ${variantClass} ${sizeClass} ${className || ''}`.trim();
 
   return (
