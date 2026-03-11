@@ -5,6 +5,7 @@ export { default as Button } from './Button';
 export { default as FormGroup } from './FormGroup';
 export { default as InputWithPrefix } from './InputWithPrefix';
 export { default as DateInput } from './DateInput';
+export { default as FormattedNumberInput } from './FormattedNumberInput';
 export { default as StickyActions } from './StickyActions';
 export { default as RadioGroup } from './RadioGroup';
 export { default as Toggle } from './Toggle';
