@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { BillFrequency, Loan, LoanPaymentLine } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
+import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
@@ -345,6 +345,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     }, {} as Record<string, Loan[]>);
 
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+    const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
 
     const toDisplayAmount = (monthlyAmount: number): number => {
         const perPaycheckAmount = (monthlyAmount * 12) / paychecksPerYear;
@@ -358,7 +359,12 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                 subtitle="Track recurring mortgage, auto, student, and other loan payments"
                 actions={
                     <>
-                        <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
+                                                <ViewModeSelector
+                                                    mode={displayMode}
+                                                    onChange={onDisplayModeChange}
+                                                    hintText={`Current setting: ${payFrequencyLabel}`}
+                                                    reserveHintSpace
+                                                />
                         <Button variant="primary" onClick={handleAddLoan}>
                             + Add Payment
                         </Button>
