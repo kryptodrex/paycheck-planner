@@ -3,14 +3,24 @@
 // They help catch bugs by ensuring we use data correctly throughout the app
 
 /**
+ * CoreFrequency - Shared recurring cadence values used across features
+ */
+export type CoreFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly' | 'yearly';
+
+/**
  * PayFrequency - How often the user gets paid
  */
-export type PayFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly';
+export type PayFrequency = Exclude<CoreFrequency, 'yearly'>;
 
 /**
  * BillFrequency - How often a bill is due
  */
-export type BillFrequency = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'semi-annual' | 'yearly' | 'custom';
+export type BillFrequency = CoreFrequency | 'quarterly' | 'semi-annual' | 'custom';
+
+/**
+ * SavingsFrequency - How often a savings/investment contribution occurs
+ */
+export type SavingsFrequency = CoreFrequency | 'quarterly' | 'semi-annual';
 
 /**
  * PayType - Whether user is paid by salary or hourly

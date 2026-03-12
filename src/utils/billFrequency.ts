@@ -1,25 +1,11 @@
 import type { BillFrequency } from '../types/auth';
 import { roundUpToCent } from './money';
+import { getBillFrequencyOccurrencesPerYear } from './frequency';
 
 export function convertBillToYearly(amount: number, frequency: BillFrequency): number {
-  switch (frequency) {
-    case 'weekly':
-      return amount * 52;
-    case 'bi-weekly':
-      return amount * 26;
-    case 'monthly':
-      return amount * 12;
-    case 'quarterly':
-      return amount * 4;
-    case 'semi-annual':
-      return amount * 2;
-    case 'yearly':
-      return amount;
-    case 'custom':
-      return amount * 12;
-    default:
-      return amount * 12;
-  }
+  // 'custom' bills represent a monthly amount entered by the user
+  if (frequency === 'custom') return amount * 12;
+  return amount * getBillFrequencyOccurrencesPerYear(frequency);
 }
 
 export function convertBillToMonthly(amount: number, frequency: BillFrequency): number {

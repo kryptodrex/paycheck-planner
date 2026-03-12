@@ -16,8 +16,8 @@ describe('tabManagement utilities', () => {
       'metrics',
       'breakdown',
       'bills',
+      'savings',
       'loans',
-      'benefits',
       'taxes',
     ]);
     expect(defaults.every((tab) => tab.visible)).toBe(true);
@@ -77,7 +77,7 @@ describe('tabManagement utilities', () => {
     const visibleIds = getVisibleTabs(reordered).map((tab) => tab.id);
     const hiddenIds = getHiddenTabs(reordered).map((tab) => tab.id);
 
-    expect(visibleIds).toEqual(['breakdown', 'bills', 'metrics', 'loans', 'benefits']);
+    expect(visibleIds).toEqual(['breakdown', 'bills', 'metrics', 'savings', 'loans']);
     expect(hiddenIds).toEqual(['taxes']);
   });
 });

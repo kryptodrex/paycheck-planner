@@ -4,6 +4,7 @@
  */
 
 import type { PayFrequency, PaySettings } from '../types/auth';
+import { getPayFrequencyOccurrencesPerYear } from './frequency';
 
 /**
  * Get the number of paychecks per year based on pay frequency
@@ -11,18 +12,7 @@ import type { PayFrequency, PaySettings } from '../types/auth';
  * @returns Number of paychecks per year
  */
 export function getPaychecksPerYear(frequency: PayFrequency | string): number {
-  switch (frequency) {
-    case 'weekly':
-      return 52;
-    case 'bi-weekly':
-      return 26;
-    case 'semi-monthly':
-      return 24;
-    case 'monthly':
-      return 12;
-    default:
-      return 26; // Default to bi-weekly if unknown
-  }
+  return getPayFrequencyOccurrencesPerYear(String(frequency));
 }
 
 /**
