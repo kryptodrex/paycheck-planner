@@ -84,6 +84,24 @@ export function getDisplayModeLabel(displayMode: 'paycheck' | 'monthly' | 'yearl
 }
 
 /**
+ * Get a user-friendly pay frequency label
+ */
+export function formatPayFrequencyLabel(frequency: PayFrequency | string): string {
+  switch (String(frequency)) {
+    case 'weekly':
+      return 'Weekly';
+    case 'bi-weekly':
+      return 'Bi-weekly';
+    case 'semi-monthly':
+      return 'Semi-monthly';
+    case 'monthly':
+      return 'Monthly';
+    default:
+      return 'Bi-weekly';
+  }
+}
+
+/**
  * Calculate gross pay per paycheck from pay settings
  * @param paySettings - Pay settings from the budget data
  * @returns Gross pay per paycheck

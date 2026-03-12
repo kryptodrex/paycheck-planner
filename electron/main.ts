@@ -1170,6 +1170,40 @@ ipcMain.handle('save-budget', async (event, filePath: string, data: string) => {
 });
 
 /**
+ * Rename budget file
+ * @param oldPath - Existing file path
+ * @param newPath - Desired file path
+ */
+ipcMain.handle('rename-budget-file', async (_event, oldPath: string, newPath: string) => {
+  try {
+    if (!oldPath || !newPath) {
+      return { success: false, error: 'Both old and new file paths are required.' };
+    }
+
+    if (oldPath === newPath) {
+      return { success: true, filePath: oldPath };
+    }
+
+    // Ensure source file exists before attempting rename.
+    await fs.access(oldPath);
+
+    // Avoid clobbering an existing file at the target path.
+    try {
+      await fs.access(newPath);
+      return { success: false, error: 'A file with that name already exists.' };
+    } catch {
+      // Target does not exist - safe to continue.
+    }
+
+    await fs.rename(oldPath, newPath);
+    return { success: true, filePath: newPath };
+  } catch (error) {
+    console.error('Error renaming budget file:', error);
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+/**
  * Load budget data from file
  * @param filePath - Where to load the file from
  */

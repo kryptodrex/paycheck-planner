@@ -221,26 +221,8 @@
 }
 
 .recent-file-remove {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0.25rem;
   margin-left: 0.5rem;
-  opacity: 0.6;
-  transition: all 0.2s ease;
   flex-shrink: 0;
-}
-
-.recent-file-remove:hover:not(:disabled) {
-  opacity: 1;
-  color: var(--error-color);
-  transform: scale(1.1);
-}
-
-.recent-file-remove:disabled {
-  cursor: not-allowed;
 }
 
 .new-budget-form {
