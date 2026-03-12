@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
+import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import type { TaxLine } from '../../types/auth';
@@ -32,6 +32,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
     const breakdown = calculatePaycheckBreakdown();
     const taxSettings = budgetData.taxSettings;
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+    const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
 
     const handleEditStart = () => {
         setEditLines(
@@ -115,7 +116,12 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                 subtitle="View and manage your tax withholding information"
                 actions={
                     <>
-                        <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
+                                                <ViewModeSelector
+                                                    mode={displayMode}
+                                                    onChange={onDisplayModeChange}
+                                                    hintText={`Current setting: ${payFrequencyLabel}`}
+                                                    reserveHintSpace
+                                                />
                     </>
                 }
             />
