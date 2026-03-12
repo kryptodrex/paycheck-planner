@@ -1,7 +1,16 @@
 // Utility functions for managing dashboard tabs
 import type { TabConfig } from '../types/auth';
 
-export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'benefits' | 'taxes';
+export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
+
+export function normalizeLegacyTabId(tabId?: string | null): TabId | null {
+  if (!tabId) return null;
+  if (tabId === 'benefits') return 'savings';
+  if (tabId === 'metrics' || tabId === 'breakdown' || tabId === 'bills' || tabId === 'loans' || tabId === 'savings' || tabId === 'taxes') {
+    return tabId;
+  }
+  return null;
+}
 
 /**
  * Get the default tab configuration
@@ -34,17 +43,17 @@ export function getDefaultTabConfigs(): TabConfig[] {
       pinned: false,
     },
     {
-      id: 'loans',
-      label: 'Loans',
-      icon: '🏦',
+      id: 'savings',
+      label: 'Savings',
+      icon: '💰',
       visible: true,
       order: 3,
       pinned: false,
     },
     {
-      id: 'benefits',
-      label: 'Benefits',
-      icon: '🏥',
+      id: 'loans',
+      label: 'Loans',
+      icon: '🏦',
       visible: true,
       order: 4,
       pinned: false,
@@ -52,7 +61,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'taxes',
       label: 'Taxes',
-      icon: '💰',
+      icon: '🏛️',
       visible: true,
       order: 5,
       pinned: false,
@@ -64,19 +73,33 @@ export function getDefaultTabConfigs(): TabConfig[] {
  * Migrate old tab configurations or initialize defaults
  */
 export function initializeTabConfigs(existingConfigs?: TabConfig[]): TabConfig[] {
-  if (!existingConfigs || existingConfigs.length === 0) {
-    return getDefaultTabConfigs();
-  }
-  
-  // Ensure all default tabs exist
   const defaults = getDefaultTabConfigs();
-  const existingIds = new Set(existingConfigs.map(t => t.id));
-  
-  // Add any missing tabs with defaults
-  const missingTabs = defaults.filter(t => !existingIds.has(t.id));
-  
-  return [...existingConfigs, ...missingTabs]
-    .sort((a, b) => a.order - b.order);
+
+  if (!existingConfigs || existingConfigs.length === 0) {
+    return defaults;
+  }
+
+  // Keep user state (visibility/order) but always sync canonical ids, labels, and icons from defaults.
+  const defaultsById = new Map<string, TabConfig>(defaults.map((tab) => [tab.id, tab]));
+  const mergedById = new Map<string, TabConfig>();
+
+  existingConfigs.forEach((config) => {
+    const normalizedId = normalizeLegacyTabId(config.id) || config.id;
+    const canonical = defaultsById.get(normalizedId);
+    if (!canonical) return;
+
+    mergedById.set(normalizedId, {
+      ...canonical,
+      ...config,
+      id: canonical.id,
+      label: canonical.label,
+      icon: canonical.icon,
+      pinned: canonical.pinned,
+    });
+  });
+
+  const normalized = defaults.map((defaultTab) => mergedById.get(defaultTab.id) || defaultTab);
+  return normalized.sort((a, b) => a.order - b.order);
 }
 
 /**
