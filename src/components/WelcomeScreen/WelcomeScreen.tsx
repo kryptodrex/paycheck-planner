@@ -208,15 +208,17 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
                     <div className="recent-file-name">{file.fileName}</div>
                     <div className="recent-file-date">{formatDate(file.lastOpened)}</div>
                   </div>
-                  <button
+                  <Button
+                    variant="remove"
                     className="recent-file-remove"
                     onClick={(e) => handleRemoveRecent(file.filePath, e)}
                     title="Remove from recent"
+                    aria-label={`Remove ${file.fileName} from recent plans`}
                     disabled={loading}
                     type="button"
                   >
                     ✕
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>

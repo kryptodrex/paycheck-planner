@@ -3,7 +3,7 @@ import type { TabConfig, TabPosition, TabDisplayMode } from '../../../types/auth
 import TabPositionHandle from './TabPositionHandle';
 import './PlanTabs.css';
 
-type TabView = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'benefits' | 'taxes';
+type TabView = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
 
 interface PlanTabsProps {
   visibleTabs: TabConfig[];

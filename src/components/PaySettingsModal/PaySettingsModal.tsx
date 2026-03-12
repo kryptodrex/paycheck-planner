@@ -116,6 +116,10 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         ...bill,
         amount: convert(bill.amount) || 0,
       })),
+      savingsContributions: (data.savingsContributions || []).map((contribution) => ({
+        ...contribution,
+        amount: convert(contribution.amount) || 0,
+      })),
     };
   };
 

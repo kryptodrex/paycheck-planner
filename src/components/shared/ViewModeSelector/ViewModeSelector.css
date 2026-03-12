@@ -1,9 +1,29 @@
+.view-mode-selector-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .view-mode-selector {
   display: flex;
   gap: 0.5rem;
   background: var(--bg-tertiary);
   padding: 0.25rem;
   border-radius: 8px;
+}
+
+.view-mode-selector-hint {
+  width: 100%;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-align: left;
+  line-height: 1.2;
+  min-height: calc(0.75rem * 1.2);
+}
+
+.view-mode-selector-hint.is-placeholder {
+  visibility: hidden;
 }
 
 .view-mode-selector button {
@@ -40,6 +60,10 @@
 
 @media (max-width: 768px) {
   .view-mode-selector {
+    width: 100%;
+  }
+
+  .view-mode-selector-wrap {
     width: 100%;
   }
 

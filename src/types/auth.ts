@@ -3,14 +3,29 @@
 // They help catch bugs by ensuring we use data correctly throughout the app
 
 /**
+ * CoreFrequency - Shared recurring cadence values used across features
+ */
+export type CoreFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly' | 'yearly';
+
+/**
  * PayFrequency - How often the user gets paid
  */
-export type PayFrequency = 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly';
+export type PayFrequency = Exclude<CoreFrequency, 'yearly'>;
 
 /**
  * BillFrequency - How often a bill is due
  */
-export type BillFrequency = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'semi-annual' | 'yearly' | 'custom';
+export type BillFrequency = CoreFrequency | 'quarterly' | 'semi-annual' | 'custom';
+
+/**
+ * LoanPaymentFrequency - Valid payment frequencies for loans (excludes 'custom')
+ */
+export type LoanPaymentFrequency = Exclude<BillFrequency, 'custom'>;
+
+/**
+ * SavingsFrequency - How often a savings/investment contribution occurs
+ */
+export type SavingsFrequency = CoreFrequency | 'quarterly' | 'semi-annual';
 
 /**
  * PayType - Whether user is paid by salary or hourly
@@ -64,6 +79,7 @@ export interface BudgetData {
   accounts: Account[];           // User's accounts (checking, savings, etc.)
   bills: Bill[];                 // Recurring bills and expenses
   loans: Loan[];                 // Loans and debts
+  savingsContributions?: SavingsContribution[]; // Savings/investment transfers funded from accounts
   settings: BudgetSettings;      // User preferences
   createdAt: string;            // ISO date string when created
   updatedAt: string;            // ISO date string when last modified
@@ -141,6 +157,22 @@ export interface AccountAllocationCategory {
   retirementCount?: number;      // Number of retirement contributions in this category (if isRetirement is true)
   isLoan?: boolean;              // If true, this is an auto-calculated sum of loan payments for this account
   loanCount?: number;            // Number of loan payments in this category (if isLoan is true)
+  isSavings?: boolean;           // If true, this is an auto-calculated sum of savings/investments for this account
+  savingsCount?: number;         // Number of savings/investment items in this category (if isSavings is true)
+}
+
+/**
+ * SavingsContribution - A recurring transfer to savings/investment funded from an account
+ */
+export interface SavingsContribution {
+  id: string;
+  name: string;                                  // Contribution label (e.g., "Brokerage Transfer")
+  amount: number;                                // Amount due each frequency interval
+  frequency: SavingsFrequency;                   // How often contribution occurs
+  accountId: string;                             // Which account funds this contribution
+  type: 'savings' | 'investment';                // Contribution category for badges/filtering
+  enabled?: boolean;                             // Whether this contribution is active
+  notes?: string;                                // Optional notes
 }
 
 /**
@@ -169,6 +201,8 @@ export interface Loan {
   principal: number;                   // Original loan amount
   currentBalance: number;              // Current remaining balance
   interestRate: number;                // Annual interest rate (percentage)
+  propertyTaxRate?: number;            // Annual property tax rate (mortgage only, percentage of property value)
+  propertyValue?: number;              // Property value used for mortgage tax calculations
   monthlyPayment: number;              // Monthly payment amount
   paymentFrequency?: Exclude<BillFrequency, 'custom'>; // Original entered payment frequency
   accountId: string;                   // Which account payments come from
@@ -177,8 +211,19 @@ export interface Loan {
   insurancePayment?: number;           // Monthly insurance amount (PMI/GAP/etc.) (optional)
   insuranceEndBalance?: number;        // Insurance stops at fixed balance amount (optional)
   insuranceEndBalancePercent?: number; // Insurance stops at % of original principal (optional)
+  paymentBreakdown?: LoanPaymentLine[]; // Optional line-item payment components for tracking
   enabled?: boolean;                   // Whether loan is active (undefined defaults to true)
   notes?: string;                      // Optional notes
+}
+
+/**
+ * LoanPaymentLine - A line item that contributes to a loan's recurring payment total
+ */
+export interface LoanPaymentLine {
+  id: string;
+  label: string;                                       // Line-item label (e.g., "Principal & Interest")
+  amount: number;                                      // Entered amount for this line item
+  frequency: LoanPaymentFrequency;                     // Frequency for this line item amount
 }
 
 /**
@@ -307,6 +352,11 @@ export interface BudgetContextType {
   addBenefit: (benefit: Omit<Benefit, 'id'>) => void;
   updateBenefit: (id: string, benefit: Partial<Benefit>) => void;
   deleteBenefit: (id: string) => void;
+
+  // Savings operations
+  addSavingsContribution: (contribution: Omit<SavingsContribution, 'id'>) => void;
+  updateSavingsContribution: (id: string, contribution: Partial<SavingsContribution>) => void;
+  deleteSavingsContribution: (id: string) => void;
   
   // Retirement operations
   addRetirementElection: (election: Omit<RetirementElection, 'id'>) => void;

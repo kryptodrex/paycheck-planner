@@ -71,6 +71,15 @@
   color: var(--text-primary);
 }
 
+.display-mode-toggle:focus {
+  outline: none;
+}
+
+.display-mode-toggle:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  outline: none;
+}
+
 .display-mode-toggle .toggle-icon {
   font-size: 1rem;
   line-height: 1;

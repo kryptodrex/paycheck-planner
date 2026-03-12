@@ -57,6 +57,31 @@
   transform: translateY(0);
 }
 
+/* Tertiary button */
+.btn-tertiary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.btn-tertiary:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+  transform: none;
+}
+
+.btn-tertiary:active:not(:disabled) {
+  transform: none;
+}
+
+.btn-tertiary:focus-visible,
+.btn-tertiary:focus:not(:focus-visible) {
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
 /* Danger button */
 .btn-danger {
   background: var(--error-color);

@@ -1,7 +1,7 @@
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   --page-header-sticky-offset: 1.5rem;
   --page-header-inline-bleed: 1.5rem;
   position: sticky;
@@ -58,7 +58,7 @@
 
 .page-header-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
 }
 

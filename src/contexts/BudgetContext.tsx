@@ -12,6 +12,7 @@ import type {
   Account,
   Bill,
   Benefit,
+  SavingsContribution,
   RetirementElection,
   PaycheckBreakdown,
   Loan
@@ -257,6 +258,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
       if (!data.retirement) {
         data.retirement = [];
+      }
+      if (!data.savingsContributions) {
+        data.savingsContributions = [];
       }
       if (!data.loans) {
         data.loans = [];
@@ -714,6 +718,60 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, []);
 
   /**
+   * Add a new savings/investment contribution
+   */
+  const addSavingsContribution = useCallback((contribution: Omit<SavingsContribution, 'id'>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      const existing = prev.savingsContributions ?? [];
+      return {
+        ...prev,
+        savingsContributions: [
+          ...existing,
+          {
+            ...contribution,
+            enabled: contribution.enabled !== false,
+            id: crypto.randomUUID(),
+          },
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Update an existing savings/investment contribution
+   */
+  const updateSavingsContribution = useCallback((id: string, contribution: Partial<SavingsContribution>) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      const existing = prev.savingsContributions ?? [];
+      return {
+        ...prev,
+        savingsContributions: existing.map((item) =>
+          item.id === id ? { ...item, ...contribution } : item
+        ),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
+   * Delete a savings/investment contribution
+   */
+  const deleteSavingsContribution = useCallback((id: string) => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+      const existing = prev.savingsContributions ?? [];
+      return {
+        ...prev,
+        savingsContributions: existing.filter((item) => item.id !== id),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  }, []);
+
+  /**
    * Add a new retirement election
    */
   const addRetirementElection = useCallback((election: Omit<RetirementElection, 'id'>) => {
@@ -983,6 +1041,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     addBenefit,
     updateBenefit,
     deleteBenefit,
+    addSavingsContribution,
+    updateSavingsContribution,
+    deleteSavingsContribution,
     addRetirementElection,
     updateRetirementElection,
     deleteRetirementElection,
