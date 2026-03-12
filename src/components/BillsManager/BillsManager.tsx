@@ -182,6 +182,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
               }, 0));
               return { account, accountBills, totalMonthly };
             })
+            .filter(({ accountBills }) => accountBills.length > 0)
             .sort((a, b) => b.totalMonthly - a.totalMonthly)
             .map(({ account, accountBills, totalMonthly }) => {
 
