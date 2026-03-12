@@ -138,7 +138,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0;
 }
 
 .loans-manager .loan-title h4 {
@@ -150,6 +150,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 0.6rem;
 }
 
 .loans-manager .loan-type-badge {
@@ -371,6 +372,116 @@
   width: 100%;
 }
 
+.loans-manager .loan-payment-modal {
+  max-width: 700px;
+  width: min(94vw, 700px);
+}
+
+.loans-manager .loan-setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.loan-component-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.loans-manager .loan-add-component {
+  flex-grow: 1;
+  height: 100%;
+}
+.loans-manager .loan-add-component:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  transform: none;
+}
+
+
+.loans-manager .loan-lines-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.loans-manager .loan-lines-header {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(140px, 1fr) auto;
+  gap: 0.6rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 0 0.15rem;
+}
+
+.loans-manager .loan-line-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.loans-manager .loan-line-fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(140px, 1fr) auto;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.loans-manager .loan-line-error {
+  font-size: 0.78rem;
+  color: var(--error-color, #b42318);
+  padding-left: 0.15rem;
+}
+
+.loans-manager .loan-lines-total {
+  margin-top: 0.25rem;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color-light);
+  padding-top: 0.5rem;
+}
+
+.loans-manager .loan-frequency {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.loans-manager .loan-breakdown {
+  margin: 1rem 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.loans-manager .loan-line-items-preview {
+  margin-top: 0.35rem;
+  border: 1px solid var(--border-color-light);
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.loans-manager .loan-line-items-preview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.loans-manager .loan-line-items-preview-row span:last-child {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .loans-manager {
     padding: 1rem;
@@ -408,6 +519,28 @@
 
   .loans-manager .loan-term-input-row {
     grid-template-columns: 1fr;
+  }
+
+  .loans-manager .loan-type-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .loans-manager .loan-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .loans-manager .loan-lines-header {
+    display: none;
+  }
+
+  .loans-manager .loan-line-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .loans-manager .loan-line-items-preview-row {
+    flex-direction: column;
+    gap: 0.1rem;
   }
 
   .loans-manager .insurance-end-balance-row {
