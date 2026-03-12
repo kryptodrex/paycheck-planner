@@ -94,7 +94,7 @@ export function initializeTabConfigs(existingConfigs?: TabConfig[]): TabConfig[]
       id: canonical.id,
       label: canonical.label,
       icon: canonical.icon,
-      pinned: canonical.pinned,
+      pinned: config.pinned ?? canonical.pinned,
     });
   });
 

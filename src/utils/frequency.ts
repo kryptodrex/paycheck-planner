@@ -70,6 +70,12 @@ export function getPayFrequencyOccurrencesPerYear(frequency: PayFrequency | stri
   return resolveOccurrences(frequency, PAY_FREQUENCY_OCCURRENCES, 26);
 }
 
+/**
+ * Returns the number of billing occurrences per year for a given frequency.
+ * For 'custom' frequency, customDays represents the custom billing period in days
+ * (e.g., 10 means every 10 days = 365/10 = 36.5 occurrences per year).
+ * When customDays is not provided, falls back to 1 (yearly) as the default.
+ */
 export function getBillFrequencyOccurrencesPerYear(frequency: BillFrequency | string, customDays?: number): number {
   if (normalizeFrequencyToken(frequency) === 'custom') {
     return customDays ? 365 / customDays : 1;

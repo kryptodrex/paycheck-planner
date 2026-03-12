@@ -3,6 +3,8 @@ import { roundUpToCent } from './money';
 import { getBillFrequencyOccurrencesPerYear } from './frequency';
 
 export function convertBillToYearly(amount: number, frequency: BillFrequency): number {
+  // 'custom' bills represent a monthly amount entered by the user
+  if (frequency === 'custom') return amount * 12;
   return amount * getBillFrequencyOccurrencesPerYear(frequency);
 }
 

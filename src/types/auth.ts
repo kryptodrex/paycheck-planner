@@ -23,11 +23,6 @@ export type BillFrequency = CoreFrequency | 'quarterly' | 'semi-annual' | 'custo
 export type SavingsFrequency = CoreFrequency | 'quarterly' | 'semi-annual';
 
 /**
- * LoanPaymentFrequency - How often loan payment line items occur
- */
-export type LoanPaymentFrequency = SavingsFrequency;
-
-/**
  * PayType - Whether user is paid by salary or hourly
  */
 export type PayType = 'salary' | 'hourly';
