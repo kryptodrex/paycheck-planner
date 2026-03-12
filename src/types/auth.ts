@@ -18,6 +18,11 @@ export type PayFrequency = Exclude<CoreFrequency, 'yearly'>;
 export type BillFrequency = CoreFrequency | 'quarterly' | 'semi-annual' | 'custom';
 
 /**
+ * LoanPaymentFrequency - Valid payment frequencies for loans (excludes 'custom')
+ */
+export type LoanPaymentFrequency = Exclude<BillFrequency, 'custom'>;
+
+/**
  * SavingsFrequency - How often a savings/investment contribution occurs
  */
 export type SavingsFrequency = CoreFrequency | 'quarterly' | 'semi-annual';

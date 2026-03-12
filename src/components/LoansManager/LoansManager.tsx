@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { BillFrequency, Loan, LoanPaymentLine } from '../../types/auth';
+import type { Loan, LoanPaymentFrequency, LoanPaymentLine } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
@@ -19,8 +19,6 @@ type LoanFieldErrors = {
     accountId?: string;
     paymentLines?: string;
 };
-
-type LoanPaymentFrequency = Exclude<BillFrequency, 'custom'>;
 
 type EditableLoanPaymentLine = {
     id: string;
