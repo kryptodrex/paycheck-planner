@@ -855,6 +855,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
 
+  const fileManagerAppName = (() => {
+    const platform = (typeof navigator !== 'undefined' ? navigator.platform : '').toLowerCase();
+    if (platform.includes('mac')) return 'Finder';
+    if (platform.includes('win')) return 'File Explorer';
+    return 'Files';
+  })();
+
   const handleRevealSavedFile = async () => {
     if (!budgetData?.settings?.filePath || !window.electronAPI?.revealInFolder) return;
     const result = await window.electronAPI.revealInFolder(budgetData.settings.filePath);
@@ -1186,7 +1193,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
                 onClick={handleRevealSavedFile}
                 title="Show file in folder"
               >
-                {budgetData.settings.filePath}
+                Open in {fileManagerAppName}
               </button>
             </>
           )}
