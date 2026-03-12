@@ -186,5 +186,6 @@ button:hover {
 
 button:focus,
 button:focus-visible {
-  outline: 4px auto var(--accent-primary);
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
