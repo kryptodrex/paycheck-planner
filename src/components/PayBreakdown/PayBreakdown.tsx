@@ -164,6 +164,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const grossPay = displayBreakdown.grossPay;
   const preTaxPct = (displayBreakdown.preTaxDeductions / grossPay) * 100;
   const taxPct = (displayBreakdown.totalTaxes / grossPay) * 100;
+  const postTaxPct = (displayBreakdown.postTaxDeductions / grossPay) * 100;
   const netPct = (displayBreakdown.netPay / grossPay) * 100;
 
   const startAccountEdit = (accountId: string) => {
@@ -337,6 +338,67 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         onClose={() => setShowPaySettingsModal(false)}
       />
 
+      {/* Visual Bar */}
+      <div className="breakdown-bar">
+        <h3>Your Pay Breakdown</h3>
+        <div className="bar-container">
+          {displayBreakdown.preTaxDeductions > 0 && (
+            <div 
+              className="bar-segment pretax-segment" 
+              style={{ width: `${preTaxPct}%` }}
+              title={`Pre-Tax: ${formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
+            >
+              {preTaxPct > 5 && <span>{preTaxPct.toFixed(1)}%</span>}
+            </div>
+          )}
+          <div 
+            className="bar-segment tax-segment" 
+            style={{ width: `${taxPct}%` }}
+            title={`Taxes: ${formatWithSymbol(displayBreakdown.totalTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
+          >
+            <span>{taxPct.toFixed(1)}%</span>
+          </div>
+          {displayBreakdown.postTaxDeductions > 0 && (
+            <div 
+              className="bar-segment posttax-segment" 
+              style={{ width: `${postTaxPct}%` }}
+              title={`Post-Tax: ${formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { maximumFractionDigits: 0 })} (${postTaxPct.toFixed(1)}%)`}
+            >
+              {postTaxPct > 5 && <span>{postTaxPct.toFixed(1)}%</span>}
+            </div>
+          )}
+          <div 
+            className="bar-segment net-segment" 
+            style={{ width: `${netPct}%` }}
+            title={`Net Pay: ${formatWithSymbol(displayBreakdown.netPay, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
+          >
+            <span>{netPct.toFixed(1)}%</span>
+          </div>
+        </div>
+        <div className="bar-labels">
+          {displayBreakdown.preTaxDeductions > 0 && (
+            <div className="bar-label pretax-label">
+              <span className="label-dot pretax-dot"></span>
+              Pre-Tax Deductions
+            </div>
+          )}
+          <div className="bar-label tax-label">
+            <span className="label-dot tax-dot"></span>
+            Taxes
+          </div>
+          {displayBreakdown.postTaxDeductions > 0 && (
+            <div className="bar-label posttax-label">
+              <span className="label-dot posttax-dot"></span>
+              Post-Tax Deductions
+            </div>
+          )}
+          <div className="bar-label net-label">
+            <span className="label-dot net-dot"></span>
+            Take Home
+          </div>
+        </div>
+      </div>
+
       {/* Visual Flow */}
       <div className="visual-flow">
         <div className="flow-stage">
@@ -417,52 +479,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Visual Bar */}
-      <div className="breakdown-bar">
-        <h3>Visual Breakdown</h3>
-        <div className="bar-container">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div 
-              className="bar-segment pretax-segment" 
-              style={{ width: `${preTaxPct}%` }}
-              title={`Pre-Tax: ${formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
-            >
-              {preTaxPct > 5 && <span>{preTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div 
-            className="bar-segment tax-segment" 
-            style={{ width: `${taxPct}%` }}
-            title={`Taxes: ${formatWithSymbol(displayBreakdown.totalTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
-          >
-            <span>{taxPct.toFixed(1)}%</span>
-          </div>
-          <div 
-            className="bar-segment net-segment" 
-            style={{ width: `${netPct}%` }}
-            title={`Net Pay: ${formatWithSymbol(displayBreakdown.netPay, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
-          >
-            <span>{netPct.toFixed(1)}%</span>
-          </div>
-        </div>
-        <div className="bar-labels">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div className="bar-label pretax-label">
-              <span className="label-dot pretax-dot"></span>
-              Pre-Tax Deductions
-            </div>
-          )}
-          <div className="bar-label tax-label">
-            <span className="label-dot tax-dot"></span>
-            Taxes
-          </div>
-          <div className="bar-label net-label">
-            <span className="label-dot net-dot"></span>
-            Take Home
           </div>
         </div>
       </div>
@@ -676,32 +692,6 @@ function normalizeAccounts(
   payFrequency: string,
   grossPayPerPaycheck: number
 ): AllocationAccount[] {
-  const getMonthlyLoanInsurance = (loan: Loan): number => {
-    const insurance = loan.insurancePayment ?? 0;
-    if (insurance <= 0) return 0;
-
-    let threshold = 0;
-    if (typeof loan.insuranceEndBalance === 'number') {
-      threshold = loan.insuranceEndBalance;
-    } else if (typeof loan.insuranceEndBalancePercent === 'number') {
-      threshold = (loan.principal * loan.insuranceEndBalancePercent) / 100;
-    }
-
-    if (threshold > 0 && loan.currentBalance <= threshold) {
-      return 0;
-    }
-
-    return insurance;
-  };
-
-  const getMonthlyLoanPropertyTax = (loan: Loan): number => {
-    if (loan.type !== 'mortgage') return 0;
-    if (!Number.isFinite(loan.propertyTaxRate) || (loan.propertyTaxRate ?? 0) <= 0) return 0;
-    const taxablePropertyValue = loan.propertyValue ?? loan.principal;
-    if (!Number.isFinite(taxablePropertyValue) || taxablePropertyValue <= 0) return 0;
-    return (taxablePropertyValue * (loan.propertyTaxRate ?? 0)) / 100 / 12;
-  };
-
   return accounts.map((account) => {
     // Check if there are existing auto-categories with custom names
     const existingBillCategory = (account.allocationCategories || []).find(
@@ -799,9 +789,7 @@ function normalizeAccounts(
     if (accountLoans.length > 0) {
       const paychecksPerYear = getPaychecksPerYear(payFrequency);
       const loanTotal = accountLoans.reduce((sum, loan) => {
-        const monthlyTotal = loan.monthlyPayment + getMonthlyLoanInsurance(loan) + getMonthlyLoanPropertyTax(loan);
-        // Convert monthly payment total to per-paycheck
-        const perPaycheckAmount = (monthlyTotal * 12) / paychecksPerYear;
+        const perPaycheckAmount = (loan.monthlyPayment * 12) / paychecksPerYear;
         return sum + perPaycheckAmount;
       }, 0);
 
