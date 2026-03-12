@@ -1,4 +1,4 @@
-import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency, Loan } from '../types/auth';
+import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency, Loan, SavingsContribution } from '../types/auth';
 import { getPaychecksPerYear } from './payPeriod';
 
 /**
@@ -168,6 +168,33 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
 
   // Generate demo loans based on income level and random selection
   const loans: Loan[] = [];
+  const savingsContributions: SavingsContribution[] = [];
+
+  // Add sample savings/investment transfers when there are non-checking accounts
+  const savingsAccount = accounts.find((account) => account.type === 'savings');
+  const investmentAccount = accounts.find((account) => account.type === 'investment');
+  if (savingsAccount && Math.random() > 0.25) {
+    savingsContributions.push({
+      id: crypto.randomUUID(),
+      name: 'Emergency Fund Transfer',
+      amount: roundToCents(Math.max(25, grossPerPaycheck * randomBetween(0.03, 0.08))),
+      frequency: 'bi-weekly',
+      accountId: checkingId,
+      type: 'savings',
+      enabled: true,
+    });
+  }
+  if (investmentAccount && Math.random() > 0.35) {
+    savingsContributions.push({
+      id: crypto.randomUUID(),
+      name: 'Brokerage Auto-Invest',
+      amount: roundToCents(Math.max(30, grossPerPaycheck * randomBetween(0.03, 0.07))),
+      frequency: 'monthly',
+      accountId: checkingId,
+      type: 'investment',
+      enabled: true,
+    });
+  }
   
   // Mortgage (30-40% of monthly gross for higher earners)
   if (annualGrossPay >= 50000 && Math.random() > 0.5) {
@@ -322,6 +349,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     loans,
     benefits,
     retirement,
+    savingsContributions,
     settings: {
       currency,
       locale: 'en-US',
