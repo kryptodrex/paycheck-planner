@@ -109,7 +109,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     ): number => {
         const grossPayPerPaycheck = getGrossPayPerPaycheck();
 
-        // Calculate employee contribution per paycheck
+        // Calculate contribution per paycheck
         let employeePerPaycheck = 0;
         if (isPercentage) {
             employeePerPaycheck = (grossPayPerPaycheck * employeeContribAmount) / 100;
@@ -158,7 +158,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
         };
     };
 
-    // Auto-calculate employee contribution to hit yearly limit exactly
+    // Auto-calculate contribution to hit yearly limit exactly
     const handleAutoCalculateYearlyAmount = () => {
         if (!yearlyLimit || parseFloat(yearlyLimit) <= 0) {
             setRetirementFormMessage({
@@ -373,7 +373,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
         const errors: RetirementFieldErrors = {};
 
         if (!Number.isFinite(parsedEmployeeContribution) || parsedEmployeeContribution < 0) {
-            errors.employeeAmount = 'Please enter a valid employee contribution amount.';
+            errors.employeeAmount = 'Please enter a valid contribution amount.';
         }
 
         if (retirementType === 'other' && !retirementCustomLabel.trim()) {
@@ -570,7 +570,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                         <h4>{displayLabel}</h4>
                                         <div className="retirement-details">
                                             <div className="detail">
-                                                <span className="label"><GlossaryTerm termId="retirement-contribution">Employee Contribution</GlossaryTerm>:</span>
+                                                <span className="label"><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm>:</span>
                                                 <span className="value">
                                                     {formatWithSymbol(employeeAmount || 0, currency, { minimumFractionDigits: 2 })} per paycheck
                                                     {retirement.employeeContributionIsPercentage && ` (${retirement.employeeContribution}%)`}
@@ -783,7 +783,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                 )}
 
                 <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-                    <h4 style={{ marginTop: 0 }}><GlossaryTerm termId="retirement-contribution">Employee Contribution</GlossaryTerm></h4>
+                    <h4 style={{ marginTop: 0 }}><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm></h4>
 
                     <FormGroup label="Deduction Source" error={retirementFieldErrors.sourceAccountId}>
                         <select
