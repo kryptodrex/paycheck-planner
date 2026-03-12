@@ -179,8 +179,19 @@ export interface Loan {
   insurancePayment?: number;           // Monthly insurance amount (PMI/GAP/etc.) (optional)
   insuranceEndBalance?: number;        // Insurance stops at fixed balance amount (optional)
   insuranceEndBalancePercent?: number; // Insurance stops at % of original principal (optional)
+  paymentBreakdown?: LoanPaymentLine[]; // Optional line-item payment components for tracking
   enabled?: boolean;                   // Whether loan is active (undefined defaults to true)
   notes?: string;                      // Optional notes
+}
+
+/**
+ * LoanPaymentLine - A line item that contributes to a loan's recurring payment total
+ */
+export interface LoanPaymentLine {
+  id: string;
+  label: string;                                       // Line-item label (e.g., "Principal & Interest")
+  amount: number;                                      // Entered amount for this line item
+  frequency: Exclude<BillFrequency, 'custom'>;         // Frequency for this line item amount
 }
 
 /**
