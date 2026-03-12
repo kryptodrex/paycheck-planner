@@ -706,7 +706,31 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setDraftYear('');
   };
 
-  const handleSavePlanEdit = () => {
+  const sanitizePlanFileName = (value: string) => {
+    return value
+      .split('')
+      .filter((char) => char.charCodeAt(0) >= 32)
+      .join('')
+      .replace(/[<>:"/\\|?*]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\.+$/, '');
+  };
+
+  const deriveRenamedPlanPath = (currentPath: string, nextPlanName: string) => {
+    const separator = currentPath.includes('\\') ? '\\' : '/';
+    const lastSeparatorIndex = Math.max(currentPath.lastIndexOf('/'), currentPath.lastIndexOf('\\'));
+    const directory = lastSeparatorIndex >= 0 ? currentPath.slice(0, lastSeparatorIndex) : '';
+    const currentFileName = lastSeparatorIndex >= 0 ? currentPath.slice(lastSeparatorIndex + 1) : currentPath;
+    const lastDotIndex = currentFileName.lastIndexOf('.');
+    const extension = lastDotIndex > 0 ? currentFileName.slice(lastDotIndex) : '.budget';
+    const safePlanName = sanitizePlanFileName(nextPlanName) || 'plan';
+    const renamedFileName = `${safePlanName}${extension}`;
+
+    return directory ? `${directory}${separator}${renamedFileName}` : renamedFileName;
+  };
+
+  const handleSavePlanEdit = async () => {
     if (!budgetData) {
       handleCancelPlanEdit();
       return;
@@ -736,9 +760,44 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       return;
     }
 
-    // Update both fields
-    updateBudgetData({ name: nextName, year: nextYear });
-    setStatusToast({ message: '✏️ Plan updated', type: 'success' });
+    let nextFilePath = budgetData.settings.filePath;
+    let renameWarning: string | null = null;
+    let renamedFile = false;
+
+    if (nameChanged && budgetData.settings.filePath && window.electronAPI?.renameBudgetFile) {
+      const currentFilePath = budgetData.settings.filePath;
+      const renamedPathCandidate = deriveRenamedPlanPath(currentFilePath, nextName);
+
+      if (renamedPathCandidate !== currentFilePath) {
+        const renameResult = await window.electronAPI.renameBudgetFile(currentFilePath, renamedPathCandidate);
+        if (renameResult.success) {
+          nextFilePath = renameResult.filePath || renamedPathCandidate;
+          renamedFile = true;
+          FileStorageService.removeRecentFile(currentFilePath);
+          FileStorageService.addRecentFile(nextFilePath);
+        } else {
+          renameWarning = renameResult.error || 'Unable to rename the plan file on disk.';
+        }
+      }
+    }
+
+    updateBudgetData({
+      name: nextName,
+      year: nextYear,
+      settings: {
+        ...budgetData.settings,
+        filePath: nextFilePath,
+      },
+    });
+
+    if (renameWarning) {
+      setStatusToast({ message: `⚠️ Plan updated, but file rename failed: ${renameWarning}`, type: 'warning' });
+    } else if (renamedFile) {
+      setStatusToast({ message: '✏️ Plan and file name updated', type: 'success' });
+    } else {
+      setStatusToast({ message: '✏️ Plan updated', type: 'success' });
+    }
+
     setIsEditingPlanName(false);
   };
 

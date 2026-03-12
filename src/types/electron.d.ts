@@ -12,6 +12,10 @@ export interface ElectronAPI {
   // Save budget data to a file
   // Returns whether it succeeded and any error message
   saveBudget: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Rename an existing budget file
+  // Returns whether it succeeded, optional updated path, and any error message
+  renameBudgetFile: (oldPath: string, newPath: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
   
   // Load budget data from a file
   // Returns the file contents or an error

@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: { success: boolean, error?: string }
   saveBudget: (filePath: string, data: string) => 
     ipcRenderer.invoke('save-budget', filePath, data),
+
+  // Rename an existing budget file
+  // Takes: current path and new path
+  // Returns: { success: boolean, filePath?: string, error?: string }
+  renameBudgetFile: (oldPath: string, newPath: string) =>
+    ipcRenderer.invoke('rename-budget-file', oldPath, newPath),
   
   // Load budget from file
   // Takes: file path

@@ -169,6 +169,8 @@ export interface Loan {
   principal: number;                   // Original loan amount
   currentBalance: number;              // Current remaining balance
   interestRate: number;                // Annual interest rate (percentage)
+  propertyTaxRate?: number;            // Annual property tax rate (mortgage only, percentage of property value)
+  propertyValue?: number;              // Property value used for mortgage tax calculations
   monthlyPayment: number;              // Monthly payment amount
   paymentFrequency?: Exclude<BillFrequency, 'custom'>; // Original entered payment frequency
   accountId: string;                   // Which account payments come from

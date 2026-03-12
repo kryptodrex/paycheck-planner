@@ -676,6 +676,32 @@ function normalizeAccounts(
   payFrequency: string,
   grossPayPerPaycheck: number
 ): AllocationAccount[] {
+  const getMonthlyLoanInsurance = (loan: Loan): number => {
+    const insurance = loan.insurancePayment ?? 0;
+    if (insurance <= 0) return 0;
+
+    let threshold = 0;
+    if (typeof loan.insuranceEndBalance === 'number') {
+      threshold = loan.insuranceEndBalance;
+    } else if (typeof loan.insuranceEndBalancePercent === 'number') {
+      threshold = (loan.principal * loan.insuranceEndBalancePercent) / 100;
+    }
+
+    if (threshold > 0 && loan.currentBalance <= threshold) {
+      return 0;
+    }
+
+    return insurance;
+  };
+
+  const getMonthlyLoanPropertyTax = (loan: Loan): number => {
+    if (loan.type !== 'mortgage') return 0;
+    if (!Number.isFinite(loan.propertyTaxRate) || (loan.propertyTaxRate ?? 0) <= 0) return 0;
+    const taxablePropertyValue = loan.propertyValue ?? loan.principal;
+    if (!Number.isFinite(taxablePropertyValue) || taxablePropertyValue <= 0) return 0;
+    return (taxablePropertyValue * (loan.propertyTaxRate ?? 0)) / 100 / 12;
+  };
+
   return accounts.map((account) => {
     // Check if there are existing auto-categories with custom names
     const existingBillCategory = (account.allocationCategories || []).find(
@@ -773,8 +799,9 @@ function normalizeAccounts(
     if (accountLoans.length > 0) {
       const paychecksPerYear = getPaychecksPerYear(payFrequency);
       const loanTotal = accountLoans.reduce((sum, loan) => {
-        // Convert monthly payment to per-paycheck
-        const perPaycheckAmount = (loan.monthlyPayment * 12) / paychecksPerYear;
+        const monthlyTotal = loan.monthlyPayment + getMonthlyLoanInsurance(loan) + getMonthlyLoanPropertyTax(loan);
+        // Convert monthly payment total to per-paycheck
+        const perPaycheckAmount = (monthlyTotal * 12) / paychecksPerYear;
         return sum + perPaycheckAmount;
       }, 0);
 
