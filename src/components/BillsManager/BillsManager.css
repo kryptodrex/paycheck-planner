@@ -66,6 +66,13 @@
   color: var(--text-secondary);
 }
 
+.empty-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .bills-by-account {
   display: flex;
   flex-direction: column;
@@ -195,6 +202,40 @@
   border-radius: 4px;
 }
 
+.benefit-deduction-item .bill-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.benefit-tax-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.benefit-tax-badge.pre-tax {
+  color: var(--success-color, #2a9d55);
+  background: color-mix(in srgb, var(--success-color, #2a9d55) 18%, transparent);
+}
+
+.benefit-tax-badge.post-tax {
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+}
+
+.benefit-source-note {
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
 .bill-end {
   display: flex;
   flex-direction: row;
@@ -302,5 +343,9 @@
 
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .empty-state-actions {
+    justify-content: stretch;
   }
 }
