@@ -333,6 +333,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               mode={displayMode}
               onChange={onDisplayModeChange}
               hintText={`Current setting: ${payFrequencyLabel}`}
+              hintVisibleModes={['paycheck']}
               reserveHintSpace
             />
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>

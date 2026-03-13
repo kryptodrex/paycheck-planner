@@ -995,28 +995,23 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               <p className="plan-year-subtitle">Year: {budgetData.year}</p>
             )}
           </div>
-          <button 
-            className="encryption-status-btn"
-            onClick={handleEncryptionModalOpen}
-            title="Click to open encryption configuration"
-          >
-            {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
-          </button>
         </div>
         <div className="header-right">
           <Button
             variant="secondary"
+            size="small"
+            className="header-btn-secondary"
             onClick={() => setShowAccountsModal(true)}
             title="Manage your financial accounts"
-            className="header-btn-secondary"
           >
             🏦 Accounts
           </Button>
           <Button
             variant="secondary"
+            size="small"
+            className="header-btn-secondary"
             onClick={() => setShowCopyModal(true)}
             title="Copy this plan to another year"
-            className="header-btn-secondary"
           >
             📋 Copy Plan
           </Button>
@@ -1031,6 +1026,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </Button> */}
           <Button
             variant="primary"
+            size="small"
             onClick={handleSave}
             disabled={loading}
             className="header-btn-primary"
@@ -1232,27 +1228,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* End plan-dashboard-content-wrapper */}
 
       <footer className="dashboard-footer">
-        <button
-          type="button"
-          className="footer-feedback-btn"
-          onClick={() => setShowFeedbackModal(true)}
-          title="Share feedback"
-        >
-          Share feedback
-        </button>
+        <div className="footer-left-actions">
+          <Button
+            size="small"
+            variant="utility"
+            onClick={() => setShowFeedbackModal(true)}
+            title="Share feedback"
+          >
+            Share feedback
+          </Button>
+        </div>
         <div className="footer-info">
           <span>Last saved: {budgetData.settings.lastSavedAt ? new Date(budgetData.settings.lastSavedAt).toLocaleString() : 'Never'}</span>
           {budgetData.settings.filePath && (
             <>
               <span className="bullet">•</span>
-              <button
-                type="button"
-                className="footer-file-link"
+              <Button
+                size="small"
+                variant="utility"
+                onClick={handleEncryptionModalOpen}
+                title="Click to open encryption configuration"
+                aria-label="Manage encryption settings"
+              >
+                {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
+              </Button>
+              <Button
+                size="small"
+                variant="utility"
                 onClick={handleRevealSavedFile}
                 title="Show file in folder"
               >
                 Open in {fileManagerAppName}
-              </button>
+              </Button>
             </>
           )}
         </div>

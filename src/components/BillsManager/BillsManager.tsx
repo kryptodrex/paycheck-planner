@@ -284,6 +284,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
               mode={displayMode}
               onChange={onDisplayModeChange}
               hintText={`Current setting: ${payFrequencyLabel}`}
+              hintVisibleModes={['paycheck']}
               reserveHintSpace
             />
             <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>

@@ -196,11 +196,21 @@
   transition: all 0.2s ease;
   text-align: left;
   width: 100%;
+  color: var(--text-secondary);
 }
 
 .recent-file-item:hover:not(.disabled) {
   background: var(--bg-tertiary);
   border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.recent-file-item:focus-visible:not(.disabled) {
+  outline: none;
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
 }
 
 .recent-file-item.disabled {
@@ -215,7 +225,6 @@
 
 .recent-file-name {
   font-weight: 600;
-  color: var(--text-primary);
   margin-bottom: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -94,14 +94,14 @@
 /* Utility button: compact, low-emphasis action for contextual UI (e.g. card chrome) */
 .btn.btn-utility {
   --btn-padding-y: 0.35rem;
-  --btn-padding-x: 0.65rem;
-  --btn-font-size: 0.82rem;
-  --btn-radius: 0.4rem;
-  background: transparent;
+  --btn-padding-x: 0.6rem;
+  --btn-font-size: 0.78rem;
+  --btn-radius: 0.5rem;
+  background: var(--bg-secondary);
   color: var(--text-secondary);
-  border: 1px solid transparent;
+  border: 1px solid var(--border-color);
   box-shadow: none;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1;
   gap: 0.35rem;
   font-family: inherit;
@@ -111,7 +111,7 @@
 
 .btn.btn-utility:hover:not(:disabled) {
   background: var(--bg-secondary);
-  border-color: var(--border-color);
+  border-color: var(--border-color-hover, var(--accent-primary));
   color: var(--text-primary);
   transform: none;
   box-shadow: none;
@@ -119,6 +119,13 @@
 
 .btn.btn-utility:active:not(:disabled) {
   transform: none;
+}
+
+.btn.btn-utility:focus-visible,
+.btn.btn-utility:focus:not(:focus-visible) {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
 }
 
 /* Danger button */

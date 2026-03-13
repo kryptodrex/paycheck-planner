@@ -123,6 +123,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                         <div className="button-group">
                             <Button
                                 variant="utility"
+                                size="small"
                                 onClick={() => onGenerateKey()}
                                 title="Generate New Key"
                             >
@@ -130,6 +131,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                             </Button>
                             <Button
                                 variant="utility"
+                                size="small"
                                 onClick={() => navigator.clipboard.writeText(generatedKey)}
                                 successText="✓ Copied!"
                                 title="Copy to clipboard"

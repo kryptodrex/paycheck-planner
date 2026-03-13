@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { BudgetData, PaySettings } from '../../types/auth';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
+import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { Modal, Button, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../shared';
 import './PaySettingsModal.css';
 
@@ -65,6 +66,36 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   }, [isOpen, onClose]);
 
   if (!budgetData) return null;
+
+  const estimateGrossPerPaycheck = () => {
+    const paychecksPerYear = getPaychecksPerYear(editPayFrequency);
+    if (paychecksPerYear <= 0) return 0;
+
+    if (editPayType === 'salary') {
+      return (parseFloat(editAnnualSalary) || 0) / paychecksPerYear;
+    }
+
+    return (parseFloat(editHourlyRate) || 0) * (parseFloat(editHoursPerPayPeriod) || 0);
+  };
+
+  const suggestedLeftoverPerPaycheck = (() => {
+    const estimatedGross = estimateGrossPerPaycheck();
+    if (estimatedGross <= 0) return 0;
+
+    // Mirror setup wizard recommendation: keep about 20% with practical rounding and floor.
+    const rawSuggestion = estimatedGross * 0.2;
+    const rounded = Math.round(rawSuggestion / 10) * 10;
+    return Math.max(75, rounded);
+  })();
+
+  const formattedSuggestedLeftover = suggestedLeftoverPerPaycheck > 0
+    ? new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: editCurrency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(suggestedLeftoverPerPaycheck)
+    : null;
 
   const roundCurrency = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
@@ -341,6 +372,31 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
             step="10"
           />
         </FormGroup>
+
+        {formattedSuggestedLeftover && (
+          <div className="pay-settings-leftover-suggestion">
+            <div className="pay-settings-leftover-suggestion-copy">
+              <strong>Suggested leftover: {formattedSuggestedLeftover} per paycheck</strong>
+              <span>
+                Based on your pay details, this is about 20% of estimated gross pay to leave room for variable spending.
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="small"
+              title="Use Suggested Amount"
+              onClick={() => {
+                setEditMinLeftover(String(suggestedLeftoverPerPaycheck));
+                if (fieldErrors.minLeftover) {
+                  setFieldErrors((prev) => ({ ...prev, minLeftover: undefined }));
+                }
+              }}
+            >
+              Use Suggested Amount
+            </Button>
+          </div>
+        )}
     </Modal>
   );
 };

@@ -235,6 +235,16 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
                   key={file.filePath}
                   className={`recent-file-item ${isBusy ? 'disabled' : ''}`}
                   onClick={() => !isBusy && handleOpenRecent(file.filePath)}
+                  onKeyDown={(e) => {
+                    if (isBusy) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleOpenRecent(file.filePath);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={isBusy ? -1 : 0}
+                  aria-disabled={isBusy}
                 >
                   <div className="recent-file-info">
                     <div className="recent-file-name">{file.fileName}</div>
