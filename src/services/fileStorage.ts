@@ -8,6 +8,20 @@ import { KeychainService } from './keychainService';
 const SETTINGS_KEY = 'paycheck-planner-settings';
 const RECENT_FILES_KEY = 'paycheck-planner-recent-files';
 const FILE_TO_PLAN_MAPPING_KEY = 'paycheck-planner-file-to-plan-mapping';
+const APP_STORAGE_PREFIX = 'paycheck-planner-';
+// All keys owned by the app — used for the full memory wipe
+const APP_STORAGE_KEYS = [
+  SETTINGS_KEY,
+  RECENT_FILES_KEY,
+  FILE_TO_PLAN_MAPPING_KEY,
+  'paycheck-planner-theme',
+  'paycheck-planner-accounts',
+];
+// Plan-specific fields that live inside the settings object but must never be
+// included in a global preferences backup (they are stored in the budget file).
+const SETTINGS_PLAN_SPECIFIC_FIELDS = ['encryptionEnabled', 'encryptionKey'] as const;
+// Keys that are plan-specific and must be excluded from global backups
+const BACKUP_EXCLUDED_KEYS = new Set<string>(['paycheck-planner-accounts']);
 const MAX_RECENT_FILES = 10;
 
 export interface RecentFile {
@@ -220,6 +234,145 @@ export class FileStorageService {
    */
   static clearRecentFiles(): void {
     localStorage.removeItem(RECENT_FILES_KEY);
+  }
+
+  /**
+   * Get all known plan IDs from file-to-plan mappings.
+   * Useful for cleaning up keychain entries when resetting app memory.
+   */
+  static getKnownPlanIds(): string[] {
+    const mapping = this.getPlanFileMappings();
+    return Array.from(new Set(Object.values(mapping).filter(Boolean)));
+  }
+
+  /**
+   * Remove all app-owned localStorage values.
+   * This does not delete budget files on disk.
+   */
+  static clearAppMemory(): void {
+    APP_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+
+    // Also clear any additional future keys under the paycheck-planner prefix.
+    if (typeof localStorage.key === 'function' && typeof localStorage.length === 'number') {
+      const prefixedKeys: string[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith(APP_STORAGE_PREFIX)) {
+          prefixedKeys.push(key);
+        }
+      }
+
+      prefixedKeys.forEach((key) => localStorage.removeItem(key));
+    }
+  }
+
+  /**
+   * Collect all global app preferences into a portable JSON envelope.
+   * Plan-specific data (accounts, encryption state) is intentionally excluded
+   * because it is already stored inside each .budget file.
+   */
+  static exportAppData(): string {
+    const data: Record<string, string> = {};
+
+    // Build candidate set from known keys + any future prefixed keys, then
+    // subtract plan-specific keys that must not be exported.
+    const candidates = new Set<string>(APP_STORAGE_KEYS);
+    if (typeof localStorage.key === 'function' && typeof localStorage.length === 'number') {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith(APP_STORAGE_PREFIX)) {
+          candidates.add(key);
+        }
+      }
+    }
+
+    for (const key of candidates) {
+      if (BACKUP_EXCLUDED_KEYS.has(key)) continue;
+
+      let value = localStorage.getItem(key);
+      if (value === null) continue;
+
+      // Strip plan-specific fields from the settings blob
+      if (key === SETTINGS_KEY) {
+        try {
+          const parsed = JSON.parse(value) as Record<string, unknown>;
+          for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
+            delete parsed[field];
+          }
+          value = JSON.stringify(parsed);
+        } catch {
+          // If parsing fails, skip this key entirely rather than export corrupt data
+          continue;
+        }
+      }
+
+      data[key] = value;
+    }
+
+    return JSON.stringify(
+      {
+        version: 1,
+        appName: 'paycheck-planner',
+        exportedAt: new Date().toISOString(),
+        data,
+      },
+      null,
+      2,
+    );
+  }
+
+  /**
+   * Restore app-owned localStorage keys from a JSON backup produced by exportAppData().
+   * Returns the parsed data object so callers can refresh in-memory state.
+   * Throws if the file is not a valid backup envelope.
+   */
+  static importAppData(rawJson: string): Record<string, string> {
+    let envelope: unknown;
+    try {
+      envelope = JSON.parse(rawJson);
+    } catch {
+      throw new Error('The selected file is not valid JSON.');
+    }
+
+    if (
+      !envelope ||
+      typeof envelope !== 'object' ||
+      (envelope as Record<string, unknown>)['appName'] !== 'paycheck-planner' ||
+      (envelope as Record<string, unknown>)['version'] !== 1 ||
+      typeof (envelope as Record<string, unknown>)['data'] !== 'object'
+    ) {
+      throw new Error(
+        'The selected file is not a Paycheck Planner settings backup.',
+      );
+    }
+
+    const rawData = (envelope as { data: Record<string, unknown> }).data;
+
+    const restored: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rawData)) {
+      if (!key.startsWith(APP_STORAGE_PREFIX) || typeof value !== 'string') continue;
+      // Never restore plan-specific keys even if present in an older backup file
+      if (BACKUP_EXCLUDED_KEYS.has(key)) continue;
+
+      let valueToStore = value;
+      // Strip plan-specific fields from a restored settings blob
+      if (key === SETTINGS_KEY) {
+        try {
+          const parsed = JSON.parse(value) as Record<string, unknown>;
+          for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
+            delete parsed[field];
+          }
+          valueToStore = JSON.stringify(parsed);
+        } catch {
+          continue;
+        }
+      }
+
+      localStorage.setItem(key, valueToStore);
+      restored[key] = valueToStore;
+    }
+
+    return restored;
   }
 
   /**
