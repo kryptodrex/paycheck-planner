@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../utils/accountDefaults';
+import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
@@ -39,7 +40,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [payType, setPayType] = useState<'salary' | 'hourly'>('salary');
   const [annualSalary, setAnnualSalary] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
-  const [hoursPerPayPeriod, setHoursPerPayPeriod] = useState('80');
+  const [hoursPerWeek, setHoursPerWeek] = useState('');
   const [payFrequency, setPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
   const [minLeftover, setMinLeftover] = useState('0');
 
@@ -49,6 +50,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2' },
     { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45' },
   ]);
+  const [taxRatesAutoEstimated, setTaxRatesAutoEstimated] = useState(false);
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
   const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
 
@@ -64,6 +66,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   ]);
 
   const handleNext = () => {
+    if (step === 3 && !taxRatesAutoEstimated) {
+      setTaxLines((prev) => applyEstimatedTaxRates(prev));
+      setTaxRatesAutoEstimated(true);
+    }
+
     if (step < totalSteps) {
       setStep(step + 1);
     }
@@ -145,6 +152,12 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     }
 
     // Save pay settings
+    const paychecksPerYear = getPaychecksPerYear(payFrequency);
+    const computedHoursPerPayPeriod =
+      payType === 'hourly'
+        ? ((parseFloat(hoursPerWeek) || 0) * 52) / paychecksPerYear
+        : undefined;
+
     const paySettings: PaySettings = {
       payType,
       payFrequency,
@@ -153,7 +166,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         ? { annualSalary: parseFloat(annualSalary) || 0 }
         : { 
             hourlyRate: parseFloat(hourlyRate) || 0,
-            hoursPerPayPeriod: parseFloat(hoursPerPayPeriod) || 0
+            hoursPerPayPeriod: computedHoursPerPayPeriod || 0
           }
       ),
     };
@@ -213,6 +226,93 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     setTaxLines((prev) => prev.filter((line) => line.id !== id));
   };
 
+  const getEstimatedAnnualGross = () => {
+    if (payType === 'salary') {
+      return parseFloat(annualSalary) || 0;
+    }
+
+    return (parseFloat(hourlyRate) || 0) * (parseFloat(hoursPerWeek) || 0) * 52;
+  };
+
+  const estimateFederalRate = (annualGross: number) => {
+    if (annualGross <= 25000) return 7;
+    if (annualGross <= 45000) return 10;
+    if (annualGross <= 70000) return 12;
+    if (annualGross <= 100000) return 15;
+    if (annualGross <= 160000) return 18;
+    if (annualGross <= 250000) return 22;
+    return 26;
+  };
+
+  const estimateStateRate = (annualGross: number) => {
+    if (annualGross <= 30000) return 3;
+    if (annualGross <= 60000) return 4;
+    if (annualGross <= 100000) return 5;
+    if (annualGross <= 160000) return 6;
+    return 7;
+  };
+
+  const applyEstimatedTaxRates = (lines: EditableTaxLine[]) => {
+    const annualGross = getEstimatedAnnualGross();
+    const federalRate = estimateFederalRate(annualGross);
+    const stateRate = estimateStateRate(annualGross);
+
+    return lines.map((line) => {
+      const normalizedLabel = line.label.trim().toLowerCase();
+
+      if (normalizedLabel === 'federal tax') {
+        return { ...line, rate: String(federalRate), error: undefined };
+      }
+
+      if (normalizedLabel === 'state tax') {
+        return { ...line, rate: String(stateRate), error: undefined };
+      }
+
+      if (normalizedLabel === 'social security') {
+        return { ...line, rate: '6.2', error: undefined };
+      }
+
+      if (normalizedLabel === 'medicare') {
+        return { ...line, rate: '1.45', error: undefined };
+      }
+
+      return line;
+    });
+  };
+
+  const estimateGrossPerPaycheck = () => {
+    const paychecksPerYear = getPaychecksPerYear(payFrequency);
+    if (paychecksPerYear <= 0) return 0;
+
+    if (payType === 'salary') {
+      return (parseFloat(annualSalary) || 0) / paychecksPerYear;
+    }
+
+    const weeklyHours = parseFloat(hoursPerWeek) || 0;
+    const hourly = parseFloat(hourlyRate) || 0;
+    return (hourly * weeklyHours * 52) / paychecksPerYear;
+  };
+
+  const suggestedLeftoverPerPaycheck = (() => {
+    const estimatedGross = estimateGrossPerPaycheck();
+    if (estimatedGross <= 0) return 0;
+
+    // Starter recommendation: keep about 20% as a stronger day-to-day buffer,
+    // rounded to $10 with a practical minimum floor.
+    const rawSuggestion = estimatedGross * 0.2;
+    const rounded = Math.round(rawSuggestion / 10) * 10;
+    return Math.max(75, rounded);
+  })();
+
+  const formattedSuggestedLeftover = suggestedLeftoverPerPaycheck > 0
+    ? new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(suggestedLeftoverPerPaycheck)
+    : null;
+
   const canProceed = () => {
     switch (step) {
       case 1:
@@ -222,7 +322,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
           return annualSalary && parseFloat(annualSalary) > 0;
         } else {
           return hourlyRate && parseFloat(hourlyRate) > 0 && 
-                 hoursPerPayPeriod && parseFloat(hoursPerPayPeriod) > 0;
+                 hoursPerWeek && parseFloat(hoursPerWeek) > 0;
         }
       case 3:
         return true;
@@ -330,7 +430,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                     type="number"
                     value={annualSalary}
                     onChange={(e) => setAnnualSalary(e.target.value)}
-                    placeholder="65000"
+                    placeholder="Your annual salary"
                     min="0"
                     step="1000"
                   />
@@ -343,19 +443,19 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                       type="number"
                       value={hourlyRate}
                       onChange={(e) => setHourlyRate(e.target.value)}
-                      placeholder="25.00"
+                      placeholder="Your hourly rate"
                       min="0"
                       step="0.50"
                     />
                   </FormGroup>
-                  <FormGroup label="Hours per Pay Period" helperText="e.g., 80 hours for bi-weekly pay (40 hrs/week × 2 weeks)">
+                  <FormGroup label="Total hours you most often work per week" helperText="This will be converted automatically based on your pay frequency in the next step.">
                     <input
                       type="number"
-                      value={hoursPerPayPeriod}
-                      onChange={(e) => setHoursPerPayPeriod(e.target.value)}
-                      placeholder="80"
+                      value={hoursPerWeek}
+                      onChange={(e) => setHoursPerWeek(e.target.value)}
+                      placeholder="Total hours per week"
                       min="0"
-                      step="1"
+                      step="0.5"
                     />
                   </FormGroup>
                 </>
@@ -390,10 +490,10 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
               <FormGroup 
                 label="Target Leftover Per Paycheck" 
-                helperText="The target amount you want to keep unallocated for spending. If you go below this amount, the app will alert you that you may be over-budget."
+                helperText="The target amount you want to keep around for spending on variable expenses like groceries, entertainment, and shopping. If you go below this amount, the app will alert you that you may be over-budget."
               >
                 <InputWithPrefix
-                  prefix="$"
+                  prefix={getCurrencySymbol(currency)}
                   type="number"
                   value={minLeftover}
                   onChange={(e) => setMinLeftover(e.target.value)}
@@ -402,6 +502,25 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   step="10"
                 />
               </FormGroup>
+
+              {formattedSuggestedLeftover && (
+                <div className="setup-leftover-suggestion">
+                  <div className="setup-leftover-suggestion-copy">
+                    <strong>Suggested leftover: {formattedSuggestedLeftover} per paycheck</strong>
+                    <span>
+                      Based on your pay details, this is about 20% of estimated gross pay to leave room for variable spending.
+                    </span>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    title="Use Suggested Amount"
+                    onClick={() => setMinLeftover(String(suggestedLeftoverPerPaycheck))}
+                  >
+                    Use Suggested Amount
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -411,6 +530,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               <p className="step-description">
                 Edit your tax labels and rates. You can keep these defaults or customize them now.
               </p>
+
+              <InfoBox>
+                <strong>Starter estimates loaded:</strong> These tax percentages were prefilled from the pay amount you entered.
+                Review and adjust them if your actual withholding differs.
+              </InfoBox>
 
               <div className="setup-tax-lines-editor">
                 <div className="setup-tax-lines-header">
@@ -481,9 +605,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
           {step === 5 && (
             <div className="wizard-step">
-              <h2>Where does your money go? 💰</h2>
+              <h2>Where does your money go?</h2>
               <p className="step-description">
-                Set up your accounts where you want to allocate your paycheck funds. We've created a default checking account to get you started.
+                Set up your accounts where you want to allocate your paychecks. We've created a default checking account to get you started.
               </p>
 
               <AccountsEditor
