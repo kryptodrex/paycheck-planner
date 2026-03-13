@@ -1,32 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BudgetData } from '../types/auth';
 
-const pdfInstances: Array<Record<string, unknown>> = [];
+const { pdfInstances, autoTableMock, MockJsPDF } = vi.hoisted(() => {
+  const instances: Array<Record<string, unknown>> = [];
 
-class MockJsPDF {
-  lastAutoTable?: { finalY: number };
-  internal = {
-    pageSize: {
-      getWidth: () => 210,
-      getHeight: () => 297,
-    },
-  };
+  class JsPDFMock {
+    lastAutoTable?: { finalY: number };
+    internal = {
+      pageSize: {
+        getWidth: () => 210,
+        getHeight: () => 297,
+      },
+    };
 
-  setFontSize = vi.fn();
-  setTextColor = vi.fn();
-  text = vi.fn();
-  addPage = vi.fn();
-  getNumberOfPages = vi.fn(() => 1);
-  setPage = vi.fn();
-  output = vi.fn(() => new ArrayBuffer(16));
+    setFontSize = vi.fn();
+    setTextColor = vi.fn();
+    text = vi.fn();
+    addPage = vi.fn();
+    getNumberOfPages = vi.fn(() => 1);
+    setPage = vi.fn();
+    output = vi.fn(() => new ArrayBuffer(16));
 
-  constructor() {
-    pdfInstances.push(this as unknown as Record<string, unknown>);
+    constructor() {
+      instances.push(this as unknown as Record<string, unknown>);
+    }
   }
-}
 
-const autoTableMock = vi.fn((doc: MockJsPDF, options: { startY?: number }) => {
-  doc.lastAutoTable = { finalY: (options.startY ?? 20) + 10 };
+  const tableMock = vi.fn((doc: { lastAutoTable?: { finalY: number } }, options: { startY?: number }) => {
+    doc.lastAutoTable = { finalY: (options.startY ?? 20) + 10 };
+  });
+
+  return {
+    pdfInstances: instances,
+    autoTableMock: tableMock,
+    MockJsPDF: JsPDFMock,
+  };
 });
 
 vi.mock('jspdf', () => ({
@@ -132,7 +140,7 @@ describe('pdfExport', () => {
     expect(bytes).toBeInstanceOf(Uint8Array);
     expect(bytes.byteLength).toBe(16);
 
-    const doc = pdfInstances[0] as MockJsPDF;
+    const doc = pdfInstances[0] as unknown as InstanceType<typeof MockJsPDF>;
     expect(doc.text).toHaveBeenCalledWith('My 2026 Plan', 20, 20);
     expect(doc.output).toHaveBeenCalledWith('arraybuffer');
     expect(autoTableMock).toHaveBeenCalled();
@@ -150,7 +158,7 @@ describe('pdfExport', () => {
     });
 
     expect(autoTableMock).not.toHaveBeenCalled();
-    const doc = pdfInstances[0] as MockJsPDF;
+    const doc = pdfInstances[0] as unknown as InstanceType<typeof MockJsPDF>;
     expect(doc.output).toHaveBeenCalledWith('arraybuffer');
   });
 
