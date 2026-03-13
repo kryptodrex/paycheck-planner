@@ -170,6 +170,7 @@ let welcomeWindow: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
 // Track if the app is quitting to avoid reopening welcome window
 let isQuitting = false;
+const welcomeWindowIdsPendingReopen = new Set<number>();
 // Track file requested via OS open-file/Open With integration.
 let pendingExternalBudgetFilePath: string | null = null;
 
@@ -285,6 +286,32 @@ function normalizeWindowBounds(
   );
 
   return { width, height, x, y };
+}
+
+function getDefaultPlanTransitionBounds(window: BrowserWindow): Required<WindowBoundsState> {
+  const bounds = window.getBounds();
+  const targetDisplay = screen.getDisplayMatching(bounds);
+  const workArea = targetDisplay.workArea;
+
+  // Keep visible side gaps while using full available desktop height.
+  const sideGap = Math.max(48, Math.min(180, Math.round(workArea.width * 0.06)));
+  const requestedWidth = Math.max(1000, workArea.width - sideGap * 2);
+  const requestedHeight = workArea.height;
+
+  return normalizeWindowBounds(
+    {
+      width: requestedWidth,
+      height: requestedHeight,
+      x: workArea.x + Math.floor((workArea.width - requestedWidth) / 2),
+      y: workArea.y,
+    },
+    {
+      width: requestedWidth,
+      height: requestedHeight,
+      minWidth: 1000,
+      minHeight: 600,
+    }
+  );
 }
 
 /**
@@ -539,7 +566,14 @@ function createWelcomeWindow(skipSessionRestore = false, windowState?: { width?:
   });
 
   welcomeWindow.on('closed', () => {
+    const closedWindowId = welcomeWindow?.id;
     welcomeWindow = null;
+
+    if (closedWindowId !== undefined && welcomeWindowIdsPendingReopen.has(closedWindowId)) {
+      welcomeWindowIdsPendingReopen.delete(closedWindowId);
+      return;
+    }
+
     // If no plan windows are open, quit the app instead of staying open with no windows
     if (openWindows.size === 0 && !isQuitting) {
       isQuitting = true;
@@ -822,8 +856,9 @@ function createApplicationMenu() {
         label: 'Toggle Developer Tools',
         accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
         click: () => {
-          if (mainWindow) {
-            mainWindow.webContents.toggleDevTools();
+          const targetWindow = BrowserWindow.getFocusedWindow() ?? mainWindow ?? welcomeWindow ?? BrowserWindow.getAllWindows()[0];
+          if (targetWindow) {
+            targetWindow.webContents.toggleDevTools();
           }
         },
       }] : []),
@@ -1430,6 +1465,34 @@ ipcMain.handle('clear-session-state', async () => {
   return { success: true };
 });
 
+ipcMain.handle('quit-app', async () => {
+  isQuitting = true;
+  app.quit();
+});
+
+ipcMain.handle('reopen-welcome-window', async (event) => {
+  const sourceWindow = BrowserWindow.fromWebContents(event.sender);
+  if (!sourceWindow || sourceWindow.isDestroyed()) {
+    return { success: false, error: 'Current window was not found.' };
+  }
+
+  if (sourceWindow === welcomeWindow || !openWindows.has(sourceWindow)) {
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      welcomeWindowIdsPendingReopen.add(sourceWindow.id);
+      sourceWindow.once('closed', () => {
+        createWelcomeWindow(true);
+        resolve({ success: true });
+      });
+      sourceWindow.close();
+    });
+  }
+
+  createWelcomeWindow(true);
+  approvedToClose.add(sourceWindow);
+  sourceWindow.close();
+  return { success: true };
+});
+
 /**
  * Reveal a file in the system file browser (Finder/Explorer)
  */
@@ -1502,6 +1565,9 @@ ipcMain.handle('budget-loaded', async (event, windowSize?: { width: number; heig
         { width: windowSize.width, height: windowSize.height, minWidth: 1000, minHeight: 600 }
       );
       window.setBounds(normalizedBounds);
+    } else {
+      const defaultPlanBounds = getDefaultPlanTransitionBounds(window);
+      window.setBounds(defaultPlanBounds);
     }
 
     // Attach the same close behavior as normal plan windows so unsaved-change

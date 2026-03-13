@@ -9,7 +9,6 @@ import Settings from './components/Settings'
 import About from './components/About'
 import Glossary from './components/Glossary'
 import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
-import { FileStorageService } from './services/fileStorage'
 import './App.css'
 
 function App() {
@@ -18,10 +17,7 @@ function App() {
   // Get the current budget data and actions from our context
   const { budgetData, saveBudget, saveWindowState, loadBudget } = useBudget()
   if (import.meta.env.DEV) console.debug('[APP] Budget data available:', !!budgetData);
-  
-  // Track whether user has completed initial setup
-  const [setupComplete, setSetupComplete] = useState(false)
-  const [checkingSetup, setCheckingSetup] = useState(true)
+
   // Track if user wants to force encryption setup again (for testing/changing)
   const [forceSetupAgain, setForceSetupAgain] = useState(false)
   // Track view mode (if this is a view window)
@@ -147,24 +143,6 @@ function App() {
     };
   }, [saveWindowState])
 
-  // Check if user has already configured encryption on app load
-  useEffect(() => {
-    // If user is forcing setup again, show setup screen regardless of saved settings
-    if (forceSetupAgain) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSetupComplete(false)
-      setCheckingSetup(false)
-      return
-    }
-
-    const settings = FileStorageService.getAppSettings()
-    // User has completed setup if they've made a choice about encryption
-    // (either enabled or explicitly disabled)
-    const hasCompletedSetup = settings.encryptionEnabled !== undefined
-    setSetupComplete(hasCompletedSetup)
-    setCheckingSetup(false)
-  }, [forceSetupAgain])
-
   // Handle going back to setup (for resetting encryption)
   const handleResetSetup = () => {
     if (import.meta.env.DEV) console.debug('Resetting encryption setup...')
@@ -175,33 +153,23 @@ function App() {
   const handleCancelEncryptionSetup = () => {
     if (import.meta.env.DEV) console.debug('Canceling encryption setup...')
     setForceSetupAgain(false)
-    setSetupComplete(true)
   }
 
   // Called when encryption setup is complete
   const handleSetupComplete = () => {
     if (import.meta.env.DEV) console.debug('Encryption setup completed')
-    setSetupComplete(true)
     setForceSetupAgain(false)
   }
 
-  // Show loading state while checking
-  if (checkingSetup) {
-    if (import.meta.env.DEV) console.debug('[APP] Showing loading state (checkingSetup=true)');
-    return <div className="loading">Loading...</div>
-  }
-
-  // If setup hasn't been completed, show encryption setup screen
-  if (!setupComplete) {
-    if (import.meta.env.DEV) console.debug('[APP] Showing encryption setup (setupComplete=false)');
-    // If we're forcing setup again (editing settings), provide a cancel option
-    const isEditing = forceSetupAgain;
+  // Show encryption setup only when explicitly requested from an active plan.
+  if (budgetData && forceSetupAgain) {
+    if (import.meta.env.DEV) console.debug('[APP] Showing encryption setup (manual reset flow)');
     return (
       <>
         <div className="drag-bar" />
         <EncryptionSetup 
           onComplete={handleSetupComplete}
-          onCancel={isEditing ? handleCancelEncryptionSetup : undefined}
+          onCancel={handleCancelEncryptionSetup}
         />
       </>
     )

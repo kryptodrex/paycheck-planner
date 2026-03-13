@@ -89,6 +89,12 @@ export interface ElectronAPI {
   
   // Clear session state (used when opening a new file or closing app)
   clearSessionState: () => Promise<{ success: boolean }>;
+
+  // Quit the application
+  quitApp: () => Promise<void>;
+
+  // Close current window and open a fresh welcome window
+  reopenWelcomeWindow: () => Promise<{ success: boolean; error?: string }>;
   
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
   budgetLoaded: (windowSize?: { width: number; height: number; x: number; y: number }) => Promise<void>;

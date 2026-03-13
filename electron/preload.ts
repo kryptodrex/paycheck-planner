@@ -132,6 +132,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: { success: boolean }
   clearSessionState: () =>
     ipcRenderer.invoke('clear-session-state'),
+
+  // Quit the application
+  quitApp: () =>
+    ipcRenderer.invoke('quit-app'),
+
+  // Close current window and open a fresh welcome window
+  reopenWelcomeWindow: () =>
+    ipcRenderer.invoke('reopen-welcome-window'),
   
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
   budgetLoaded: (windowSize?: { width: number; height: number }) =>

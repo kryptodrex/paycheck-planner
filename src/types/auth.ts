@@ -54,6 +54,7 @@ export interface RetirementElection {
   customLabel?: string;                    // Custom label when type is 'other'
   employeeContribution: number;            // Amount employee contributes per paycheck
   employeeContributionIsPercentage: boolean; // If true, amount is percentage of gross pay
+  enabled?: boolean;                       // Whether this retirement election is active
   isPreTax?: boolean;                      // If true/undefined, pre-tax; if false, post-tax
   deductionSource?: 'paycheck' | 'account'; // Where deduction is applied
   sourceAccountId?: string;                // Account ID when deductionSource is 'account'
