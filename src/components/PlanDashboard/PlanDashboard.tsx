@@ -31,6 +31,7 @@ import './PlanDashboard.css';
 import type { TabId } from '../../utils/tabManagement';
 
 type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
+type TabScrollPosition = 'top' | 'bottom';
 
 interface PlanHistoryState {
   kind: 'plan-tab';
@@ -64,6 +65,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
+  const [pendingTabScroll, setPendingTabScroll] = useState<{ tab: TabId; position: TabScrollPosition } | null>(null);
   const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
@@ -310,13 +312,17 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode]);
 
-  const scrollTabToTop = useCallback((tab: TabId) => {
-    tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
+    const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
+      return nextPosition === 'bottom' ? element.scrollHeight : 0;
+    };
+
+    tabContentRef.current?.scrollTo({ top: getScrollTop(tabContentRef.current, position), behavior: 'smooth' });
 
     const panel = tabPanelRefs.current[tab];
     if (!panel) return;
 
-    panel.scrollTo({ top: 0, behavior: 'smooth' });
+    panel.scrollTo({ top: getScrollTop(panel, position), behavior: 'smooth' });
 
     const scrollableDescendants = panel.querySelectorAll<HTMLElement>('*');
     scrollableDescendants.forEach((element) => {
@@ -329,11 +335,34 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           computedStyle.overflow === 'scroll';
 
         if (isScrollable) {
-          element.scrollTo({ top: 0, behavior: 'smooth' });
+          element.scrollTo({ top: getScrollTop(element, position), behavior: 'smooth' });
         }
       }
     });
   }, []);
+
+  const scrollTabToTop = useCallback((tab: TabId) => {
+    scrollTabToPosition(tab, 'top');
+  }, [scrollTabToPosition]);
+
+  useEffect(() => {
+    if (!pendingTabScroll || pendingTabScroll.tab !== activeTab) return;
+
+    let firstFrameId = 0;
+    let secondFrameId = 0;
+
+    firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(() => {
+        scrollTabToPosition(pendingTabScroll.tab, pendingTabScroll.position);
+        setPendingTabScroll(null);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      window.cancelAnimationFrame(secondFrameId);
+    };
+  }, [activeTab, pendingTabScroll, scrollTabToPosition]);
 
   // Keep refs updated with latest handlers to prevent event listener duplication
   useEffect(() => {
@@ -599,13 +628,23 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     movedDuringDragRef.current = false;
   }, []);
 
-  const openTabFromLink = useCallback((tab: TabId, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean }) => {
+  const openTabFromLink = useCallback((tab: TabId, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean; scrollPosition?: TabScrollPosition }) => {
+    if (options?.scrollPosition) {
+      if (activeTab === tab) {
+        scrollTabToPosition(tab, options.scrollPosition);
+      } else {
+        setPendingTabScroll({ tab, position: options.scrollPosition });
+      }
+    } else {
+      setPendingTabScroll(null);
+    }
+
     selectTab(tab, {
       scrollToAccountId: options?.scrollToAccountId,
       scrollToRetirement: options?.scrollToRetirement,
       revealIfHidden: true,
     });
-  }, [selectTab]);
+  }, [activeTab, scrollTabToPosition, selectTab]);
 
   const handleTabClick = useCallback((tab: TabId, options?: { resetBillsAnchor?: boolean }) => {
     if (activeTab === tab) {
@@ -1055,7 +1094,23 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             tabPanelRefs.current.metrics = element;
           }}
         >
-          <KeyMetrics />
+          <KeyMetrics
+            onNavigateToTaxes={() => {
+              openTabFromLink('taxes');
+            }}
+            onNavigateToNetPay={() => {
+              openTabFromLink('breakdown');
+            }}
+            onNavigateToSavings={() => {
+              openTabFromLink('savings', { scrollToRetirement: false });
+            }}
+            onNavigateToBills={() => {
+              openTabFromLink('bills', { scrollToRetirement: false });
+            }}
+            onNavigateToRemaining={() => {
+              openTabFromLink('breakdown', { scrollPosition: 'bottom', scrollToRetirement: false });
+            }}
+          />
         </div>
         <div
           className={`tab-panel ${activeTab === 'breakdown' ? 'active' : ''}`}

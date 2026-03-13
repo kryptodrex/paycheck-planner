@@ -8,7 +8,69 @@ import { PageHeader } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './KeyMetrics.css';
 
-const KeyMetrics: React.FC = () => {
+interface KeyMetricsProps {
+  onNavigateToTaxes?: () => void;
+  onNavigateToNetPay?: () => void;
+  onNavigateToSavings?: () => void;
+  onNavigateToBills?: () => void;
+  onNavigateToRemaining?: () => void;
+}
+
+interface MetricCardProps {
+  className: string;
+  icon: string;
+  title: React.ReactNode;
+  ariaLabel: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}
+
+const MetricCard: React.FC<MetricCardProps> = ({ className, icon, title, ariaLabel, onClick, children }) => {
+  const isInteractive = Boolean(onClick);
+
+  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!onClick) return;
+
+    const target = event.target as HTMLElement;
+    if (target.closest('.glossary-term-button')) {
+      return;
+    }
+
+    onClick();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick) return;
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
+  return (
+    <div
+      className={`metric-card ${className} ${isInteractive ? 'metric-card-interactive' : ''}`.trim()}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-label={isInteractive ? ariaLabel : undefined}
+    >
+      <div className="metric-icon">{icon}</div>
+      <h3>{title}</h3>
+      <div className="metric-values">{children}</div>
+    </div>
+  );
+};
+
+const KeyMetrics: React.FC<KeyMetricsProps> = ({
+  onNavigateToTaxes,
+  onNavigateToNetPay,
+  onNavigateToSavings,
+  onNavigateToBills,
+  onNavigateToRemaining,
+}) => {
   const { budgetData, calculatePaycheckBreakdown, calculateRetirementContributions } = useBudget();
 
   if (!budgetData) return null;
@@ -52,6 +114,8 @@ const KeyMetrics: React.FC = () => {
 
   const annualSavings = roundUpToCent(annualSavingsFromAccounts + annualSavingsFromRetirement);
   const savingsRate = annualGross > 0 ? (annualSavings / annualGross) * 100 : 0;
+  const effectiveTaxRate = annualGross > 0 ? (annualTaxes / annualGross) * 100 : 0;
+  const remainingShareOfNet = annualNet > 0 ? (annualRemaining / annualNet) * 100 : 0;
 
   // Get currency from budget settings
   const currency = budgetData.settings.currency || 'USD';
@@ -64,10 +128,13 @@ const KeyMetrics: React.FC = () => {
       />
       <div className="metrics-grid">
         {/* Income Card */}
-        <div className="metric-card income-card">
-          <div className="metric-icon">💰</div>
-          <h3>Total Income</h3>
-          <div className="metric-values">
+        <MetricCard 
+          className="income-card" 
+          icon="💰" 
+          title="Total Income" 
+          ariaLabel="Total income overview"
+          onClick={onNavigateToNetPay}
+        >
             <div className="metric-primary">
               <span className="label">Yearly</span>
               <span className="value">{formatWithSymbol(annualGross, currency, { maximumFractionDigits: 0 })}</span>
@@ -80,14 +147,16 @@ const KeyMetrics: React.FC = () => {
               <span className="label">Per Paycheck</span>
               <span className="value">{formatWithSymbol(breakdown.grossPay, currency, { maximumFractionDigits: 2 })}</span>
             </div>
-          </div>
-        </div>
+        </MetricCard>
 
         {/* Taxes Card */}
-        <div className="metric-card taxes-card">
-          <div className="metric-icon">🏛️</div>
-          <h3><GlossaryTerm termId="withholding">Taxes</GlossaryTerm></h3>
-          <div className="metric-values">
+        <MetricCard
+          className="taxes-card"
+          icon="🏛️"
+          title={<>Total <GlossaryTerm termId="withholding">Taxes</GlossaryTerm></>}
+          ariaLabel="Open taxes tab"
+          onClick={onNavigateToTaxes}
+        >
             <div className="metric-primary">
               <span className="label">Yearly</span>
               <span className="value">{formatWithSymbol(annualTaxes, currency, { maximumFractionDigits: 0 })}</span>
@@ -98,16 +167,18 @@ const KeyMetrics: React.FC = () => {
             </div>
             <div className="metric-secondary">
               <span className="label">Effective Rate</span>
-              <span className="value">{((annualTaxes / annualGross) * 100).toFixed(1)}%</span>
+              <span className="value">{effectiveTaxRate.toFixed(1)}%</span>
             </div>
-          </div>
-        </div>
+        </MetricCard>
 
         {/* Net Pay Card */}
-        <div className="metric-card net-card">
-          <div className="metric-icon">✅</div>
-          <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
-          <div className="metric-values">
+        <MetricCard
+          className="net-card"
+          icon="✅"
+          title={<>Total <GlossaryTerm termId="net-pay">Take Home Pay</GlossaryTerm></>}
+          ariaLabel="Open pay breakdown tab"
+          onClick={onNavigateToNetPay}
+        >
             <div className="metric-primary">
               <span className="label">Yearly</span>
               <span className="value">{formatWithSymbol(annualNet, currency, { maximumFractionDigits: 0 })}</span>
@@ -120,14 +191,16 @@ const KeyMetrics: React.FC = () => {
               <span className="label">Per Paycheck</span>
               <span className="value">{formatWithSymbol(breakdown.netPay, currency, { maximumFractionDigits: 2 })}</span>
             </div>
-          </div>
-        </div>
+        </MetricCard>
 
         {/* Bills Card */}
-        <div className="metric-card bills-card">
-          <div className="metric-icon">📋</div>
-          <h3>Total Bills</h3>
-          <div className="metric-values">
+        <MetricCard
+          className="bills-card"
+          icon="📋"
+          title="Total Bills"
+          ariaLabel="Open bills tab"
+          onClick={onNavigateToBills}
+        >
             <div className="metric-primary">
               <span className="label">Yearly</span>
               <span className="value">{formatWithSymbol(annualBills, currency, { maximumFractionDigits: 0 })}</span>
@@ -140,34 +213,16 @@ const KeyMetrics: React.FC = () => {
               <span className="label">Count</span>
               <span className="value">{budgetData.bills.length} bills</span>
             </div>
-          </div>
-        </div>
-
-        {/* Remaining Card */}
-        <div className="metric-card remaining-card">
-          <div className="metric-icon">💵</div>
-          <h3><GlossaryTerm termId="residual-amount">Remaining</GlossaryTerm> (After Bills)</h3>
-          <div className="metric-values">
-            <div className="metric-primary">
-              <span className="label">Yearly</span>
-              <span className="value">{formatWithSymbol(annualRemaining, currency, { maximumFractionDigits: 0 })}</span>
-            </div>
-            <div className="metric-secondary">
-              <span className="label">Monthly</span>
-              <span className="value">{formatWithSymbol(monthlyRemaining, currency, { maximumFractionDigits: 0 })}</span>
-            </div>
-            <div className="metric-secondary">
-              <span className="label">% of Net</span>
-              <span className="value">{((annualRemaining / annualNet) * 100).toFixed(1)}%</span>
-            </div>
-          </div>
-        </div>
+        </MetricCard>
 
         {/* Savings Rate Card */}
-        <div className="metric-card savings-card">
-          <div className="metric-icon">🏦</div>
-          <h3><GlossaryTerm termId="allocation">Savings Rate</GlossaryTerm></h3>
-          <div className="metric-values">
+        <MetricCard
+          className="savings-card"
+          icon="🏦"
+          title={<>Your <GlossaryTerm termId="allocation">Savings Rate</GlossaryTerm></>}
+          ariaLabel="Open savings tab"
+          onClick={onNavigateToSavings}
+        >
             <div className="metric-primary">
               <span className="label">Rate</span>
               <span className="value">{savingsRate.toFixed(1)}%</span>
@@ -180,8 +235,29 @@ const KeyMetrics: React.FC = () => {
               <span className="label">Monthly Savings</span>
               <span className="value">{formatWithSymbol(annualSavings / 12, currency, { maximumFractionDigits: 0 })}</span>
             </div>
-          </div>
-        </div>
+        </MetricCard>
+
+        {/* Remaining Card */}
+        <MetricCard
+          className="remaining-card"
+          icon="💵"
+          title={<><GlossaryTerm termId="residual-amount">Remaining</GlossaryTerm> for Spending</>}
+          ariaLabel="Open pay breakdown tab and scroll to remaining spending"
+          onClick={onNavigateToRemaining}
+        >
+            <div className="metric-primary">
+              <span className="label">Yearly</span>
+              <span className="value">{formatWithSymbol(annualRemaining, currency, { maximumFractionDigits: 0 })}</span>
+            </div>
+            <div className="metric-secondary">
+              <span className="label">Monthly</span>
+              <span className="value">{formatWithSymbol(monthlyRemaining, currency, { maximumFractionDigits: 0 })}</span>
+            </div>
+            <div className="metric-secondary">
+              <span className="label">% of Net</span>
+              <span className="value">{remainingShareOfNet.toFixed(1)}%</span>
+            </div>
+        </MetricCard>
       </div>
 
       {/* Summary Bar */}

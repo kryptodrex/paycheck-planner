@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import type { BudgetData } from '../types/auth';
 import { formatWithSymbol } from '../utils/currency';
 import { calculateGrossPayPerPaycheck } from '../utils/payPeriod';
+import { getRetirementPlanDisplayLabel } from '../utils/retirement';
 
 type JsPdfWithAutoTable = jsPDF & {
   lastAutoTable?: {
@@ -266,7 +267,7 @@ export async function exportToPDF(
           ? `${retirement.employerMatchCap}%`
           : formatWithSymbol(retirement.employerMatchCap, currency)
         : 'No match';
-      return [retirement.type.toUpperCase(), employeeAmt, matchInfo, taxType];
+      return [getRetirementPlanDisplayLabel(retirement), employeeAmt, matchInfo, taxType];
     });
 
     autoTable(doc, {
