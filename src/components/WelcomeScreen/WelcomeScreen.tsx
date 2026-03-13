@@ -10,6 +10,8 @@ interface WelcomeScreenProps {
   initialError?: string;
 }
 
+const DEMO_LAUNCH_DELAY_MS = 2200;
+
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const { createNewBudget, createDemoBudget, loadBudget, loading } = useBudget();
   const [planYear, setPlanYear] = useState(new Date().getFullYear().toString());
@@ -17,13 +19,25 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const [dismissedError, setDismissedError] = useState(false);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>(() => FileStorageService.getRecentFiles());
   const [showSettings, setShowSettings] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const isBusy = loading || demoLoading;
 
   const handleCreateNew = () => {
     setShowNewPlanForm(true);
   };
 
-  const handleTryDemo = () => {
-    createDemoBudget();
+  const handleTryDemo = async () => {
+    if (isBusy) return;
+
+    setDemoLoading(true);
+    try {
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, DEMO_LAUNCH_DELAY_MS);
+      });
+      createDemoBudget();
+    } finally {
+      setDemoLoading(false);
+    }
   };
 
   const handleSubmitNew = (e: React.FormEvent) => {
@@ -122,14 +136,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
               />
             </FormGroup>
             <div className="button-group">
-              <Button type="submit" variant="primary" disabled={loading}>
+              <Button type="submit" variant="primary" disabled={isBusy}>
                 Create Plan
               </Button>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => setShowNewPlanForm(false)}
-                disabled={loading}
+                disabled={isBusy}
               >
                 Cancel
               </Button>
@@ -161,23 +175,40 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
         </div>
       )}
       <div className="welcome-card">
-        <Button
-          className="welcome-settings-btn"
-          variant="utility"
-          onClick={() => setShowSettings(true)}
-          title="Settings"
-          aria-label="Open settings"
-        >
-          ⚙️ Settings
-        </Button>
+        <div className="welcome-header">
+          <Button
+            className="welcome-settings-btn"
+            variant="utility"
+            size="small"
+            onClick={handleTryDemo}
+            disabled={isBusy}
+            isLoading={demoLoading}
+            loadingText="Preparing Demo..."
+            title="Try Demo"
+            aria-label="Try demo plan"
+          >
+            ✨ Try Demo
+          </Button>
+
+          <Button
+            className="welcome-settings-btn"
+            variant="utility"
+            size="small"
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+            aria-label="Open settings"
+          >
+            ⚙️ Settings
+          </Button>
+        </div>
         <h1>Paycheck Planner</h1>
-        <p>Plan where every paycheck goes, from gross to net and beyond</p>
+        <p>Make a plan for where every paycheck goes</p>
         <div className="action-buttons">
           <Button
             variant="primary"
             size="large"
             onClick={handleCreateNew}
-            disabled={loading}
+            disabled={isBusy}
             className="btn-large btn-large-main"
           >
             <span className="icon">+</span>
@@ -187,21 +218,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             variant="secondary"
             size="large"
             onClick={handleLoadExisting}
-            disabled={loading}
+            disabled={isBusy}
             className="btn-large btn-large-main"
           >
             <span className="icon">📂</span>
             Open Existing Plan
-          </Button>
-          <Button
-            variant="secondary"
-            size="large"
-            onClick={handleTryDemo}
-            disabled={loading}
-            className="btn-large btn-large-demo"
-          >
-            <span className="icon">✨</span>
-            Try Demo
           </Button>
         </div>
 
@@ -212,8 +233,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
               {recentFiles.map((file) => (
                 <div
                   key={file.filePath}
-                  className={`recent-file-item ${loading ? 'disabled' : ''}`}
-                  onClick={() => !loading && handleOpenRecent(file.filePath)}
+                  className={`recent-file-item ${isBusy ? 'disabled' : ''}`}
+                  onClick={() => !isBusy && handleOpenRecent(file.filePath)}
                 >
                   <div className="recent-file-info">
                     <div className="recent-file-name">{file.fileName}</div>
@@ -225,7 +246,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
                     onClick={(e) => handleRemoveRecent(file.filePath, e)}
                     title="Remove from recent"
                     aria-label={`Remove ${file.fileName} from recent plans`}
-                    disabled={loading}
+                    disabled={isBusy}
                     type="button"
                   >
                     ✕

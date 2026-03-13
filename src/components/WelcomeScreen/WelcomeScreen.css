@@ -77,11 +77,10 @@
   position: relative;
 }
 
-.welcome-settings-btn {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  white-space: nowrap;
+.welcome-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .welcome-card h1 {
