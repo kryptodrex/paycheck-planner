@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, RadioGroup } from '../shared';
+import { Alert, RadioGroup, Button } from '../shared';
 import './EncryptionConfigPanel.css';
 
 interface EncryptionConfigPanelProps {
@@ -110,29 +110,32 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
 
             <Alert type="error">
                 <strong>Important:</strong> Save a backup of your encryption key in a secure location.
-                If this key is lost (for example, keychain data is removed), encrypted plan files cannot be recovered.
+                If this key is lost then your encrypted plan files cannot be recovered.
             </Alert>
 
             <div className="encryption-key-radio">
-                <h4 style={{marginTop: 0}}>Encryption Key Details</h4>
+                <h4 style={{marginTop: 0}}>Your Encryption Key</h4>
                 {!useCustomKey && (
                     <>
-                        <div className="encryption-key-display">
-                            <div className="encryption-key-box">
-                                <code onCopy={() => navigator.clipboard.writeText(generatedKey)}>{generatedKey}</code>
-                            </div>
+                        <div className="encryption-key-box">
+                            <code onCopy={() => navigator.clipboard.writeText(generatedKey)}>{generatedKey}</code>
                         </div>
                         <div className="button-group">
-                            <button className="btn encryption-btn-small" onClick={onGenerateKey}>
-                                🔄 Generate New Key
-                            </button>
-                            <button 
-                                className="btn encryption-btn-small"
+                            <Button
+                                variant="utility"
+                                onClick={() => onGenerateKey()}
+                                title="Generate New Key"
+                            >
+                                Generate New Key
+                            </Button>
+                            <Button
+                                variant="utility"
                                 onClick={() => navigator.clipboard.writeText(generatedKey)}
+                                successText="✓ Copied!"
                                 title="Copy to clipboard"
                             >
                                 Copy to Clipboard
-                            </button>
+                            </Button>
                         </div>
                     </>
                 )}
