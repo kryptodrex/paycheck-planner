@@ -277,7 +277,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     <div className="bills-manager">
       <PageHeader
         title="Bills & Expenses"
-        subtitle="Manage recurring bills, expenses, and benefit deductions"
+        subtitle="Manage recurring bills, expenses, and paycheck deductions"
         actions={
           <>
             <ViewModeSelector
