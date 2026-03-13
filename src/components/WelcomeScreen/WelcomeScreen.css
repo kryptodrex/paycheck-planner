@@ -98,11 +98,11 @@
 }
 
 .action-buttons {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
   align-items: stretch;
+  justify-content: space-between;
 }
 
 .btn {
