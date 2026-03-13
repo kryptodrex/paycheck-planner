@@ -3,6 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import { FileStorageService } from '../../services/fileStorage';
 import type { RecentFile } from '../../services/fileStorage';
 import { Button, FormGroup } from '../shared';
+import Settings from '../Settings';
 import './WelcomeScreen.css';
 
 interface WelcomeScreenProps {
@@ -15,6 +16,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const [showNewPlanForm, setShowNewPlanForm] = useState(false);
   const [dismissedError, setDismissedError] = useState(false);
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>(() => FileStorageService.getRecentFiles());
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleCreateNew = () => {
     setShowNewPlanForm(true);
@@ -159,6 +161,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
         </div>
       )}
       <div className="welcome-card">
+        <Button
+          className="welcome-settings-btn"
+          variant="utility"
+          onClick={() => setShowSettings(true)}
+          title="Settings"
+          aria-label="Open settings"
+        >
+          ⚙️ Settings
+        </Button>
         <h1>Paycheck Planner</h1>
         <p>Plan where every paycheck goes, from gross to net and beyond</p>
         <div className="action-buttons">
@@ -224,6 +235,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             </div>
           </div>
         )}
+        <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
       </div>
     </div>
   );
