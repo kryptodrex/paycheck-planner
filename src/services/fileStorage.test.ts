@@ -210,4 +210,64 @@ describe('FileStorageService', () => {
       FileStorageService.importAppData(JSON.stringify({ version: 1, appName: 'other-app', data: {} })),
     ).toThrow('Paycheck Planner settings backup');
   });
+
+  it('rejects opening a settings export file via loadBudget(filePath)', async () => {
+    const settingsExportEnvelope = JSON.stringify({
+      appName: 'paycheck-planner',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        'paycheck-planner-settings': '{"themeMode":"dark"}',
+      },
+    });
+
+    Object.assign(window.electronAPI, {
+      loadBudget: vi.fn(async () => ({ success: true, data: settingsExportEnvelope })),
+    });
+
+    await expect(FileStorageService.loadBudget('/tmp/paycheck-planner-backup.budget')).rejects.toThrow(
+      'settings export'
+    );
+  });
+
+  it('rejects settings export chosen from open file dialog', async () => {
+    const settingsExportEnvelope = JSON.stringify({
+      appName: 'paycheck-planner',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        'paycheck-planner-theme': 'dark',
+      },
+    });
+
+    Object.assign(window.electronAPI, {
+      openFileDialog: vi.fn(async () => '/tmp/paycheck-planner-backup.budget'),
+      loadBudget: vi.fn(async () => ({ success: true, data: settingsExportEnvelope })),
+    });
+
+    await expect(FileStorageService.loadBudget()).rejects.toThrow('settings export');
+  });
+
+  it('returns invalid status when relink picker chooses settings export file', async () => {
+    const settingsExportEnvelope = JSON.stringify({
+      appName: 'paycheck-planner',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        'paycheck-planner-theme': 'dark',
+      },
+    });
+
+    Object.assign(window.electronAPI, {
+      openFileDialog: vi.fn(async () => '/tmp/paycheck-planner-backup.budget'),
+      loadBudget: vi.fn(async () => ({ success: true, data: settingsExportEnvelope })),
+    });
+
+    const result = await FileStorageService.relinkMovedBudgetFile('/tmp/missing-plan.budget', 'plan-1');
+
+    expect(result.status).toBe('invalid');
+    if (result.status === 'invalid') {
+      expect(result.message).toContain('settings export');
+    }
+  });
 });
