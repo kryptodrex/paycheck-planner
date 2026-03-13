@@ -78,6 +78,18 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       return;
     }
 
+    const paySettings = budgetData.paySettings;
+    const isSetupComplete =
+      (paySettings.payType === 'salary' && (paySettings.annualSalary || 0) > 0) ||
+      (paySettings.payType === 'hourly' && (paySettings.hourlyRate || 0) > 0);
+
+    // Setup wizard plans are intentionally treated as not-yet-saveable.
+    // Avoid close/save prompts until setup has been completed.
+    if (!isSetupComplete) {
+      setHasUnsavedChanges(false);
+      return;
+    }
+
     // New plans that have never been saved should always prompt on close
     if (!budgetData.settings?.filePath) {
       setHasUnsavedChanges(true);
@@ -783,6 +795,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           ...prev.retirement,
           {
             ...election,
+            enabled: election.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],
@@ -871,6 +884,8 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
     // Add employee retirement contributions (pre-tax or account-sourced)
     (retirement || []).forEach((election) => {
+      if (election.enabled === false) return;
+
       if ((election.deductionSource || 'paycheck') === 'paycheck' && (election.isPreTax !== false)) {
         if (election.employeeContributionIsPercentage) {
           totalPreTaxDeductions += (grossPay * election.employeeContribution) / 100;
@@ -913,6 +928,8 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
     // Subtract post-tax retirement contributions deducted from paycheck
     (retirement || []).forEach((election) => {
+      if (election.enabled === false) return;
+
       if ((election.deductionSource || 'paycheck') === 'paycheck' && election.isPreTax === false) { // Post-tax paycheck retirement
         if (election.employeeContributionIsPercentage) {
           netPayBeforePostTax -= roundUpToCent((grossPay * election.employeeContribution) / 100);
@@ -942,7 +959,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
    * Returns estimated employee and employer contributions per paycheck
    */
   const calculateRetirementContributions = useCallback((election: RetirementElection) => {
-    if (!budgetData) {
+    if (!budgetData || election.enabled === false) {
       return { employeeAmount: 0, employerAmount: 0 };
     }
 
