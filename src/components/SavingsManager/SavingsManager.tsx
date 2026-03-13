@@ -6,6 +6,7 @@ import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, calcula
 import { getSavingsFrequencyOccurrencesPerYear } from '../../utils/frequency';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { formatBillFrequency } from '../../utils/billFrequency';
+import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
 import { Alert, Button, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './SavingsManager.css';
@@ -60,7 +61,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
 
   const [showAddRetirement, setShowAddRetirement] = useState(false);
   const [editingRetirement, setEditingRetirement] = useState<RetirementElection | null>(null);
-  const [retirementType, setRetirementType] = useState<'401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'pension' | 'other'>('401k');
+  const [retirementType, setRetirementType] = useState<RetirementElection['type']>('401k');
   const [retirementCustomLabel, setRetirementCustomLabel] = useState('');
   const [employeeAmount, setEmployeeAmount] = useState('');
   const [employeeIsPercentage, setEmployeeIsPercentage] = useState(true);
@@ -116,6 +117,11 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
 
   const savingsContributions = budgetData.savingsContributions || [];
 
+  const getAccountName = (accountId?: string) => {
+    if (!accountId) return 'Unknown Account';
+    return budgetData.accounts.find((account) => account.id === accountId)?.name || 'Unknown Account';
+  };
+
   const sortedSavings = [...savingsContributions].sort((a, b) => {
     const aEnabled = a.enabled !== false;
     const bEnabled = b.enabled !== false;
@@ -129,12 +135,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   }, 0);
 
   const sortedRetirement = [...(budgetData.retirement || [])].sort((a, b) => {
+    const aEnabled = a.enabled !== false;
+    const bEnabled = b.enabled !== false;
+    if (aEnabled !== bEnabled) return aEnabled ? -1 : 1;
+
     const aTotal = calculateRetirementContributions(a).employeeAmount + calculateRetirementContributions(a).employerAmount;
     const bTotal = calculateRetirementContributions(b).employeeAmount + calculateRetirementContributions(b).employerAmount;
     return bTotal - aTotal;
   });
 
   const retirementTotalPerPaycheck = sortedRetirement.reduce((sum, election) => {
+    if (election.enabled === false) return sum;
+
     const { employeeAmount: employeePerPaycheck, employerAmount } = calculateRetirementContributions(election);
     return sum + employeePerPaycheck + employerAmount;
   }, 0);
@@ -406,6 +418,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       customLabel: retirementType === 'other' ? retirementCustomLabel.trim() : undefined,
       employeeContribution: parsedEmployeeContribution,
       employeeContributionIsPercentage: employeeIsPercentage,
+      enabled: editingRetirement ? editingRetirement.enabled !== false : true,
       isPreTax: isAccountSource ? false : retirementIsPreTax,
       deductionSource: retirementSource,
       sourceAccountId: isAccountSource ? retirementSourceAccountId : undefined,
@@ -431,6 +444,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     if (window.confirm('Are you sure you want to delete this retirement election?')) {
       deleteRetirementElection(id);
     }
+  };
+
+  const handleToggleRetirementEnabled = (retirement: RetirementElection) => {
+    updateRetirementElection(retirement.id, { enabled: retirement.enabled === false });
   };
 
   return (
@@ -474,7 +491,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         ) : (
           <div className="savings-list">
             {sortedSavings.map((item) => {
-              const accountName = budgetData.accounts.find((account) => account.id === item.accountId)?.name || 'Unknown Account';
+              const accountName = getAccountName(item.accountId);
               const perPaycheck = getSavingsPerPaycheck(item);
               const displayAmount = toDisplayAmount(perPaycheck);
               const isEnabled = item.enabled !== false;
@@ -490,7 +507,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                       <span className="savings-account-badge">From {accountName}</span>
                     </div>
                     <div className="savings-frequency">
-                      Paid {formatBillFrequency(item.frequency)}: {formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}
+                      Saved {formatBillFrequency(item.frequency)}: {formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}
                     </div>
                     {item.notes && <div className="savings-notes">{item.notes}</div>}
                   </div>
@@ -523,7 +540,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       <div id="retirement-section" className="savings-section">
         <div className="section-header">
           <div>
-            <h2><GlossaryTerm termId="retirement-contribution">Retirement</GlossaryTerm> Elections</h2>
+            <h2><GlossaryTerm termId="retirement-contribution">Retirement</GlossaryTerm> Plans</h2>
             <p>401k, 403b, IRA, and other retirement plan contributions</p>
           </div>
           <div className="section-total">
@@ -541,7 +558,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           <div className="empty-state">
             <div className="empty-icon">🏦</div>
             <h3>No Retirement Plans Yet</h3>
-            <p>Add your retirement plan elections to get started</p>
+            <p>Add your retirement plans to get started</p>
           </div>
         ) : (
           <div className="retirement-list">
@@ -549,14 +566,23 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               const { employeeAmount: employeePerPaycheck, employerAmount } = calculateRetirementContributions(retirement);
               const totalPerPaycheck = employeePerPaycheck + employerAmount;
               const totalInDisplayMode = toDisplayAmount(totalPerPaycheck);
-              const displayLabel = retirement.type === 'other' && retirement.customLabel
-                ? retirement.customLabel
-                : retirement.type.toUpperCase();
+              const isEnabled = retirement.enabled !== false;
+              const isPreTaxRetirement = retirement.isPreTax !== false;
+              const sourceLabel = retirement.deductionSource === 'account'
+                ? `From ${getAccountName(retirement.sourceAccountId)}`
+                : 'From Paycheck';
+              const displayLabel = getRetirementPlanDisplayLabel(retirement);
 
               return (
-                <SectionItemCard key={retirement.id} className="retirement-item">
+                <SectionItemCard key={retirement.id} className={`retirement-item ${isEnabled ? '' : 'retirement-item-disabled'}`}>
                   <div className="retirement-info">
                     <h4>{displayLabel}</h4>
+                    <div className="savings-meta retirement-meta">
+                      <span className={`retirement-type-badge ${isPreTaxRetirement ? 'pre-tax' : 'post-tax'}`}>
+                        {isPreTaxRetirement ? 'Pre-Tax' : 'Post-Tax'}
+                      </span>
+                      <span className="savings-account-badge">{sourceLabel}</span>
+                    </div>
                     <div className="retirement-details">
                       <div className="detail">
                         <span className="label"><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm>:</span>
@@ -589,6 +615,9 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                     </div>
                   </div>
                   <div className="retirement-actions">
+                    <Button variant="icon" onClick={() => handleToggleRetirementEnabled(retirement)} title={isEnabled ? 'Disable retirement election' : 'Enable retirement election'}>
+                      {isEnabled ? '⏸️' : '▶️'}
+                    </Button>
                     <Button variant="icon" onClick={() => handleEditRetirement(retirement)} title="Edit">✏️</Button>
                     <Button variant="icon" onClick={() => handleDeleteRetirement(retirement.id)} title="Delete">🗑️</Button>
                   </div>
@@ -730,12 +759,9 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       >
         <FormGroup label={<><GlossaryTerm termId="retirement-contribution">Plan Type</GlossaryTerm></>} required>
           <select value={retirementType} onChange={(e) => setRetirementType(e.target.value as RetirementElection['type'])} required>
-            <option value="401k">401(k)</option>
-            <option value="403b">403(b)</option>
-            <option value="roth-ira">Roth IRA</option>
-            <option value="traditional-ira">Traditional IRA</option>
-            <option value="pension">Pension</option>
-            <option value="other">Other</option>
+            {RETIREMENT_PLAN_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </FormGroup>
 
