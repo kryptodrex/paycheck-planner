@@ -23,6 +23,12 @@ export interface ElectronAPI {
   
   // Check if a file exists at the given path
   fileExists: (filePath: string) => Promise<boolean>;
+
+  // Register currently open budget file path for local rename detection
+  setActiveBudgetFilePath: (filePath: string | null) => Promise<{ success: boolean; error?: string }>;
+
+  // Listen for local budget file rename events
+  onBudgetFileRenamed: (callback: (payload: { oldPath: string; newPath: string; planName: string }) => void) => () => void;
   
   // Open a file picker dialog (for loading files)
   openFileDialog: () => Promise<string | null>;

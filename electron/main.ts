@@ -5,6 +5,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell, globalShortcut } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { watch, type FSWatcher } from 'fs';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { FEEDBACK_FORM_ENTRY_IDS, FEEDBACK_FORM_URL } from './constants';
@@ -173,6 +174,141 @@ let isQuitting = false;
 const welcomeWindowIdsPendingReopen = new Set<number>();
 // Track file requested via OS open-file/Open With integration.
 let pendingExternalBudgetFilePath: string | null = null;
+
+type BudgetFileWatchState = {
+  watcher: FSWatcher | null;
+  filePath: string | null;
+  directoryPath: string | null;
+  baseName: string | null;
+  extension: string | null;
+  inode: number | null;
+  device: number | null;
+  resolving: boolean;
+};
+
+const budgetFileWatchByWindowId = new Map<number, BudgetFileWatchState>();
+
+const derivePlanNameFromFilePath = (filePath: string): string => {
+  const parsed = path.parse(filePath);
+  return (parsed.name || 'plan').trim() || 'plan';
+};
+
+const getOrCreateBudgetFileWatchState = (windowId: number): BudgetFileWatchState => {
+  const existing = budgetFileWatchByWindowId.get(windowId);
+  if (existing) return existing;
+
+  const created: BudgetFileWatchState = {
+    watcher: null,
+    filePath: null,
+    directoryPath: null,
+    baseName: null,
+    extension: null,
+    inode: null,
+    device: null,
+    resolving: false,
+  };
+  budgetFileWatchByWindowId.set(windowId, created);
+  return created;
+};
+
+const stopBudgetFileWatch = (windowId: number) => {
+  const state = budgetFileWatchByWindowId.get(windowId);
+  if (!state) return;
+
+  state.watcher?.close();
+  state.watcher = null;
+  state.filePath = null;
+  state.directoryPath = null;
+  state.baseName = null;
+  state.extension = null;
+  state.inode = null;
+  state.device = null;
+  state.resolving = false;
+};
+
+const clearBudgetFileWatch = (windowId: number) => {
+  stopBudgetFileWatch(windowId);
+  budgetFileWatchByWindowId.delete(windowId);
+};
+
+const maybeResolveRenamedBudgetFile = async (window: BrowserWindow, state: BudgetFileWatchState) => {
+  if (
+    state.resolving ||
+    !state.filePath ||
+    !state.directoryPath ||
+    state.inode === null ||
+    state.device === null
+  ) {
+    return;
+  }
+
+  state.resolving = true;
+  try {
+    // If the original path still exists, no rename to process.
+    try {
+      await fs.access(state.filePath);
+      return;
+    } catch {
+      // Continue resolving renamed file.
+    }
+
+    const entries = await fs.readdir(state.directoryPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+
+      if (state.extension && path.extname(entry.name).toLowerCase() !== state.extension.toLowerCase()) {
+        continue;
+      }
+
+      const candidatePath = path.join(state.directoryPath, entry.name);
+      try {
+        const stats = await fs.stat(candidatePath);
+        if (stats.ino === state.inode && stats.dev === state.device) {
+          const previousPath = state.filePath;
+          state.filePath = candidatePath;
+          state.baseName = path.basename(candidatePath);
+
+          window.webContents.send('budget-file-renamed', {
+            oldPath: previousPath,
+            newPath: candidatePath,
+            planName: derivePlanNameFromFilePath(candidatePath),
+          });
+          return;
+        }
+      } catch {
+        // Ignore transient stat errors and keep searching.
+      }
+    }
+  } finally {
+    state.resolving = false;
+  }
+};
+
+const startBudgetFileWatch = async (window: BrowserWindow, filePath: string) => {
+  const windowId = window.id;
+  const state = getOrCreateBudgetFileWatchState(windowId);
+  stopBudgetFileWatch(windowId);
+
+  try {
+    const stats = await fs.stat(filePath);
+    const directoryPath = path.dirname(filePath);
+    const extension = path.extname(filePath);
+
+    state.filePath = filePath;
+    state.directoryPath = directoryPath;
+    state.baseName = path.basename(filePath);
+    state.extension = extension;
+    state.inode = stats.ino;
+    state.device = stats.dev;
+
+    state.watcher = watch(directoryPath, () => {
+      void maybeResolveRenamedBudgetFile(window, state);
+    });
+  } catch (error) {
+    console.warn('Failed to start budget file watch:', error);
+    stopBudgetFileWatch(windowId);
+  }
+};
 
 function isBudgetFilePath(filePath: string): boolean {
   const extension = path.extname(filePath).toLowerCase();
@@ -455,6 +591,7 @@ function createPlanWindow(windowState?: any) {
 
   // Clean up when window is closed
   window.on('closed', () => {
+    clearBudgetFileWatch(window.id);
     openWindows.delete(window);
     if (mainWindow === window) mainWindow = null;
 
@@ -1268,6 +1405,28 @@ ipcMain.handle('file-exists', async (event, filePath: string) => {
 });
 
 /**
+ * Register or clear the active budget file path for local rename detection.
+ */
+ipcMain.handle('set-active-budget-file-path', async (event, filePath?: string | null) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) {
+    return { success: false, error: 'Window not found' };
+  }
+
+  try {
+    if (!filePath) {
+      stopBudgetFileWatch(window.id);
+      return { success: true };
+    }
+
+    await startBudgetFileWatch(window, filePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+/**
  * Open file dialog
  * Opens a native file picker for opening existing files
  */
@@ -1616,6 +1775,7 @@ ipcMain.handle('budget-loaded', async (event, windowSize?: { width: number; heig
     });
 
     window.on('closed', () => {
+      clearBudgetFileWatch(window.id);
       openWindows.delete(window);
       if (mainWindow === window) mainWindow = null;
 

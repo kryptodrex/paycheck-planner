@@ -33,6 +33,19 @@ type LegacyRetirementElection = Partial<RetirementElection> & {
   employerMatchIsPercentage?: boolean;
 };
 
+const derivePlanNameFromFilePath = (filePath?: string): string | null => {
+  if (!filePath) return null;
+
+  const lastSeparatorIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  const fileName = lastSeparatorIndex >= 0 ? filePath.slice(lastSeparatorIndex + 1) : filePath;
+  if (!fileName) return null;
+
+  const lastDotIndex = fileName.lastIndexOf('.');
+  const baseName = lastDotIndex > 0 ? fileName.slice(0, lastDotIndex) : fileName;
+  const normalized = baseName.trim();
+  return normalized || null;
+};
+
 /**
  * Custom hook to access budget data from any component
  * Usage: const { budgetData, saveBudget } = useBudget()
@@ -164,10 +177,25 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       // Note: Each plan maintains its own encryptionEnabled setting (set during SetupWizard)
       // Encryption keys are stored in the system keychain, not in settings
 
-      // Save to file and get back the file path
+      let targetFilePath = updatedBudget.settings.filePath;
+
+      // If the stored path no longer exists (for example, renamed in Finder/Explorer),
+      // force Save As so we don't silently recreate an outdated duplicate path.
+      if (targetFilePath && window.electronAPI?.fileExists) {
+        try {
+          const exists = await window.electronAPI.fileExists(targetFilePath);
+          if (!exists) {
+            targetFilePath = undefined;
+          }
+        } catch (error) {
+          console.warn('Could not verify saved file path before save:', error);
+        }
+      }
+
+      // Save to file and get back the canonical file path
       const filePath = await FileStorageService.saveBudget(
         updatedBudget,
-        updatedBudget.settings.filePath
+        targetFilePath
       );
 
       // If user canceled the dialog, filePath will be null
@@ -175,9 +203,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         return false;
       }
 
+      const derivedPlanName = derivePlanNameFromFilePath(filePath);
+
       // Update state with the new file path, window size, active tab, and save timestamp
       const savedBudget = {
         ...updatedBudget,
+        name: derivedPlanName || updatedBudget.name,
         settings: {
           ...updatedBudget.settings,
           filePath,
@@ -322,6 +353,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
         return migrated;
       });
+
+      // Keep plan name in sync with the actual file name when opened from disk.
+      const derivedPlanName = derivePlanNameFromFilePath(data.settings?.filePath);
+      if (derivedPlanName) {
+        data.name = derivedPlanName;
+      }
       
       setBudgetData(data);
       // Mark as saved (just loaded)

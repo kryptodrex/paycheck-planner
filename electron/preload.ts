@@ -40,6 +40,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: boolean
   fileExists: (filePath: string) => 
     ipcRenderer.invoke('file-exists', filePath),
+
+  // Register currently open budget path for local rename detection
+  setActiveBudgetFilePath: (filePath: string | null) =>
+    ipcRenderer.invoke('set-active-budget-file-path', filePath),
+
+  // Listen for local budget file rename events
+  onBudgetFileRenamed: (callback: (payload: { oldPath: string; newPath: string; planName: string }) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: { oldPath: string; newPath: string; planName: string }) => callback(payload);
+    ipcRenderer.on('budget-file-renamed', listener);
+    return () => ipcRenderer.removeListener('budget-file-renamed', listener);
+  },
   
   // Open file picker (for opening)
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
