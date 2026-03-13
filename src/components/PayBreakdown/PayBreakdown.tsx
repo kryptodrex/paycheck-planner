@@ -151,7 +151,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
   const preTaxDeductionCount = (budgetData.preTaxDeductions || []).filter((deduction) => deduction.amount > 0).length;
   const preTaxBenefitCount = (budgetData.benefits || []).filter((benefit) => (benefit.deductionSource || 'paycheck') === 'paycheck' && !benefit.isTaxable && benefit.amount > 0).length;
-  const retirementContributionCount = (budgetData.retirement || []).filter((election) => election.employeeContribution > 0).length;
+  const retirementContributionCount = (budgetData.retirement || []).filter((election) => election.enabled !== false && election.employeeContribution > 0).length;
   const totalPreTaxItemCount = preTaxDeductionCount + preTaxBenefitCount + retirementContributionCount;
   const postTaxDeductionCount = (budgetData.benefits || []).filter((benefit) => (benefit.deductionSource || 'paycheck') === 'paycheck' && benefit.isTaxable && benefit.amount > 0).length;
 
@@ -741,7 +741,7 @@ function normalizeAccounts(
 
     // Get account-sourced retirement contributions for this account and calculate total
     const accountRetirement = retirement.filter(
-      election => election.deductionSource === 'account' && election.sourceAccountId === account.id
+      election => election.enabled !== false && election.deductionSource === 'account' && election.sourceAccountId === account.id
     );
 
     // Get account-funded savings/investment contributions for this account
@@ -751,35 +751,34 @@ function normalizeAccounts(
 
     const autoCategories: AllocationCategory[] = [];
     
-    if (accountBills.length > 0) {
+    if (accountBills.length > 0 || accountBenefits.length > 0) {
       const billTotal = accountBills.reduce((sum, bill) => {
         const billPerPaycheck = calculateBillPerPaycheck(bill, payFrequency);
         return sum + billPerPaycheck;
       }, 0);
 
-      autoCategories.push({
-        id: `__bills_${account.id}`,
-        name: existingBillCategory?.name || 'Bills',
-        amount: roundUpToCent(billTotal),
-        isBill: true,
-        billCount: accountBills.length,
-      });
-    }
-
-    if (accountBenefits.length > 0) {
-      const benefitsTotal = accountBenefits.reduce((sum, benefit) => {
+      const deductionsTotal = accountBenefits.reduce((sum, benefit) => {
         const amountPerPaycheck = benefit.isPercentage
           ? roundUpToCent((grossPayPerPaycheck * benefit.amount) / 100)
           : roundUpToCent(benefit.amount);
         return sum + amountPerPaycheck;
       }, 0);
 
+      const defaultBillsTitle: string[] = [];
+      if (accountBills.length > 0) {
+        defaultBillsTitle.push('Bills');
+      }
+      if (accountBenefits.length > 0) {
+        defaultBillsTitle.push('Deductions');
+      }
+      const defaultBillsName = defaultBillsTitle.join(' & ') || 'Bills';
+
       autoCategories.push({
-        id: `__benefits_${account.id}`,
-        name: existingBenefitCategory?.name || 'Benefits',
-        amount: roundUpToCent(benefitsTotal),
-        isBenefit: true,
-        benefitCount: accountBenefits.length,
+        id: `__bills_${account.id}`,
+        name: existingBillCategory?.name || existingBenefitCategory?.name || defaultBillsName,
+        amount: roundUpToCent(billTotal + deductionsTotal),
+        isBill: true,
+        billCount: accountBills.length + accountBenefits.length,
       });
     }
 
@@ -793,7 +792,7 @@ function normalizeAccounts(
 
       autoCategories.push({
         id: `__retirement_${account.id}`,
-        name: existingRetirementCategory?.name || 'Retirement',
+        name: existingRetirementCategory?.name || 'Retirement Plans',
         amount: roundUpToCent(retirementTotal),
         isRetirement: true,
         retirementCount: accountRetirement.length,
@@ -810,9 +809,19 @@ function normalizeAccounts(
         return sum + perPaycheck;
       }, 0);
 
+      // Set a default title based on if there are savings, investments, or both
+      const defaultSavingsTitle: string[] = [];
+      if (accountSavings.some((s) => s.type === 'savings')) {
+        defaultSavingsTitle.push('Savings');
+      }
+      if (accountSavings.some((s) => s.type === 'investment')) {
+        defaultSavingsTitle.push('Investment');
+      }
+      const defaultSavingsName = defaultSavingsTitle.join(' & ');
+
       autoCategories.push({
         id: `__savings_${account.id}`,
-        name: existingSavingsCategory?.name || 'Savings & Investments',
+        name: existingSavingsCategory?.name || defaultSavingsName + ' Contributions',
         amount: roundUpToCent(savingsTotal),
         isSavings: true,
         savingsCount: accountSavings.length,
