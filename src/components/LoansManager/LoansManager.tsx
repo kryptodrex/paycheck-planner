@@ -1,17 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Loan, LoanPaymentFrequency, LoanPaymentLine } from '../../types/auth';
+import type { ViewMode } from '../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
+import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
 import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
 import './LoansManager.css';
 
 interface LoansManagerProps {
     scrollToAccountId?: string;
-    displayMode: 'paycheck' | 'monthly' | 'yearly';
-    onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
+    displayMode: ViewMode;
+    onDisplayModeChange: (mode: ViewMode) => void;
 }
 
 type LoanFieldErrors = {
@@ -345,10 +347,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
     const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
 
-    const toDisplayAmount = (monthlyAmount: number): number => {
-        const perPaycheckAmount = (monthlyAmount * 12) / paychecksPerYear;
-        return convertToDisplayMode(perPaycheckAmount, paychecksPerYear, displayMode);
-    };
+    const displayAmount = (monthlyAmount: number): number => monthlyToDisplayAmount(monthlyAmount, paychecksPerYear, displayMode);
 
     return (
         <div className="loans-manager">
@@ -416,7 +415,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                         <div className="account-total">
                                             <span className="total-label">Total {getDisplayModeLabel(displayMode)}:</span>
                                             <span className="total-amount">
-                                                {formatWithSymbol(toDisplayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                {formatWithSymbol(displayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
                                     </div>
@@ -447,7 +446,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                                 </div>
                                                             </div>
                                                             <div className="loan-amount">
-                                                                {formatWithSymbol(toDisplayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                {formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                 <span className="amount-label">{getDisplayModeLabel(displayMode)}</span>
                                                             </div>
                                                         </div>
@@ -460,7 +459,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                                     <div key={line.id} className="loan-line-items-preview-row">
                                                                         <span>{line.label}</span>
                                                                         <span>
-                                                                            {formatWithSymbol(toDisplayAmount(convertBillToMonthly(line.amount, line.frequency)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            {formatWithSymbol(displayAmount(convertBillToMonthly(line.amount, line.frequency)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                         </span>
                                                                     </div>
                                                                 ))}

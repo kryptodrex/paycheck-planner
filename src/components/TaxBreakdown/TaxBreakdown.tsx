@@ -5,11 +5,12 @@ import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatP
 import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import type { TaxLine } from '../../types/auth';
+import type { ViewMode } from '../../types/viewMode';
 import './TaxBreakdown.css';
 
 interface TaxBreakdownProps {
-  displayMode: 'paycheck' | 'monthly' | 'yearly';
-  onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
+    displayMode: ViewMode;
+    onDisplayModeChange: (mode: ViewMode) => void;
 }
 
 interface EditableTaxLine {

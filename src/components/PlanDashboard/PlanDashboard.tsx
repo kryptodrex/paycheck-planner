@@ -25,11 +25,11 @@ import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, FormGroup } from '../shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/auth';
+import type { ViewMode } from '../../types/viewMode';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
 
-type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
 type TabScrollPosition = 'top' | 'bottom';
 
 interface PlanHistoryState {
@@ -65,7 +65,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [pendingTabScroll, setPendingTabScroll] = useState<{ tab: TabId; position: TabScrollPosition } | null>(null);
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
+  const [displayMode, setDisplayMode] = useState<ViewMode>('paycheck');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);

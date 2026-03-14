@@ -3,6 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import type { BudgetData, PaySettings } from '../../types/auth';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
+import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../utils/paySuggestions';
 import { Modal, Button, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../shared';
 import './PaySettingsModal.css';
 
@@ -78,24 +79,9 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
     return (parseFloat(editHourlyRate) || 0) * (parseFloat(editHoursPerPayPeriod) || 0);
   };
 
-  const suggestedLeftoverPerPaycheck = (() => {
-    const estimatedGross = estimateGrossPerPaycheck();
-    if (estimatedGross <= 0) return 0;
+  const suggestedLeftoverPerPaycheck = getSuggestedLeftoverPerPaycheck(estimateGrossPerPaycheck());
 
-    // Mirror setup wizard recommendation: keep about 20% with practical rounding and floor.
-    const rawSuggestion = estimatedGross * 0.2;
-    const rounded = Math.round(rawSuggestion / 10) * 10;
-    return Math.max(75, rounded);
-  })();
-
-  const formattedSuggestedLeftover = suggestedLeftoverPerPaycheck > 0
-    ? new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: editCurrency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(suggestedLeftoverPerPaycheck)
-    : null;
+  const formattedSuggestedLeftover = formatSuggestedLeftover(suggestedLeftoverPerPaycheck, editCurrency);
 
   const roundCurrency = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 

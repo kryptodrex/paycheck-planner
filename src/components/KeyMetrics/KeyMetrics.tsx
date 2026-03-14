@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { calculateAnnualizedPaySummary } from '../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
@@ -79,9 +80,14 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
   // Calculate annualized values
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const annualGross = roundUpToCent(breakdown.grossPay * paychecksPerYear);
-  const annualNet = roundUpToCent(breakdown.netPay * paychecksPerYear);
-  const annualTaxes = roundUpToCent(breakdown.totalTaxes * paychecksPerYear);
+  const {
+    annualGross,
+    annualNet,
+    annualTaxes,
+    monthlyGross,
+    monthlyNet,
+    monthlyTaxes,
+  } = calculateAnnualizedPaySummary(breakdown, paychecksPerYear);
 
   // Calculate total bills (annualized)
   const annualBills = roundUpToCent(budgetData.bills.reduce((sum, bill) => {
@@ -89,9 +95,6 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   }, 0));
 
   // Calculate monthly averages
-  const monthlyGross = roundUpToCent(annualGross / 12);
-  const monthlyNet = roundUpToCent(annualNet / 12);
-  const monthlyTaxes = roundUpToCent(annualTaxes / 12);
   const monthlyBills = roundUpToCent(annualBills / 12);
 
   // Calculate remaining/free money

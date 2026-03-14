@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Benefit, RetirementElection } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
+import type { ViewMode } from '../../types/viewMode';
+import { toDisplayAmount } from '../../utils/displayAmounts';
 import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard, Alert, ViewModeSelector, PageHeader } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './BenefitsManager.css';
@@ -12,8 +14,8 @@ import './BenefitsManager.css';
 interface BenefitsManagerProps {
     shouldScrollToRetirement?: boolean;
     onScrollToRetirementComplete?: () => void;
-    displayMode?: 'paycheck' | 'monthly' | 'yearly';
-    onDisplayModeChange?: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
+    displayMode?: ViewMode;
+    onDisplayModeChange?: (mode: ViewMode) => void;
 }
 
 type BenefitFieldErrors = {
@@ -96,10 +98,6 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     };
 
     // Convert per-paycheck amount to display mode
-    const toDisplayAmount = (perPaycheckAmount: number): number => {
-        return convertToDisplayMode(perPaycheckAmount, paychecksPerYear, displayMode);
-    };
-
     // Calculate yearly retirement contribution (employee + employer)
     const calculateYearlyRetirementContribution = (
         employeeContribAmount: number,
@@ -470,7 +468,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         <div>
                             <span className="section-total-label">Total {getDisplayModeLabel(displayMode)}</span>
                             <span className="section-total-amount">
-                                {formatWithSymbol(toDisplayAmount(benefitsTotalPerPaycheck), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatWithSymbol(toDisplayAmount(benefitsTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
                         <Button variant="primary" onClick={handleAddBenefit}>
@@ -492,7 +490,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                                 ? budgetData.accounts.find(acc => acc.id === benefit.sourceAccountId)?.name
                                 : null;
                             const benefitPerPaycheck = getBenefitPerPaycheck(benefit);
-                            const benefitInDisplayMode = toDisplayAmount(benefitPerPaycheck);
+                            const benefitInDisplayMode = toDisplayAmount(benefitPerPaycheck, paychecksPerYear, displayMode);
 
                             return (
                                 <SectionItemCard key={benefit.id} className="benefit-item">
@@ -540,7 +538,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         <div>
                             <span className="section-total-label">Total {getDisplayModeLabel(displayMode)}</span>
                             <span className="section-total-amount">
-                                {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                         </div>
                         <Button variant="primary" onClick={handleAddRetirement}>
@@ -560,7 +558,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                         {sortedRetirement.map(retirement => {
                             const { employeeAmount, employerAmount } = calculateRetirementContributions(retirement);
                             const totalPerPaycheck = employeeAmount + employerAmount;
-                            const totalInDisplayMode = toDisplayAmount(totalPerPaycheck);
+                            const totalInDisplayMode = toDisplayAmount(totalPerPaycheck, paychecksPerYear, displayMode);
                             const displayLabel = getRetirementPlanDisplayLabel(retirement);
 
                             return (

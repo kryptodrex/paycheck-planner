@@ -3,6 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
+import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../utils/paySuggestions';
 import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
@@ -293,25 +294,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     return (hourly * weeklyHours * 52) / paychecksPerYear;
   };
 
-  const suggestedLeftoverPerPaycheck = (() => {
-    const estimatedGross = estimateGrossPerPaycheck();
-    if (estimatedGross <= 0) return 0;
+  const suggestedLeftoverPerPaycheck = getSuggestedLeftoverPerPaycheck(estimateGrossPerPaycheck());
 
-    // Starter recommendation: keep about 20% as a stronger day-to-day buffer,
-    // rounded to $10 with a practical minimum floor.
-    const rawSuggestion = estimatedGross * 0.2;
-    const rounded = Math.round(rawSuggestion / 10) * 10;
-    return Math.max(75, rounded);
-  })();
-
-  const formattedSuggestedLeftover = suggestedLeftoverPerPaycheck > 0
-    ? new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(suggestedLeftoverPerPaycheck)
-    : null;
+  const formattedSuggestedLeftover = formatSuggestedLeftover(suggestedLeftoverPerPaycheck, currency);
 
   const canProceed = () => {
     switch (step) {

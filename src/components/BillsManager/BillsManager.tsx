@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { Benefit, Bill, BillFrequency } from '../../types/auth';
+import type { ViewMode } from '../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
-import { calculateGrossPayPerPaycheck, convertToDisplayMode, getDisplayModeLabel, getPaychecksPerYear, formatPayFrequencyLabel } from '../../utils/payPeriod';
+import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
+import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
 import { Button, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../shared';
 import './BillsManager.css';
 
 interface BillsManagerProps {
   scrollToAccountId?: string;
-  displayMode: 'paycheck' | 'monthly' | 'yearly';
-  onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
+  displayMode: ViewMode;
+  onDisplayModeChange: (mode: ViewMode) => void;
 }
 
 type BillFieldErrors = {
@@ -68,10 +70,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
   const isBillEnabled = (bill: Bill) => bill.enabled !== false;
 
-  const toDisplayAmount = (monthlyAmount: number): number => {
-    const perPaycheckAmount = (monthlyAmount * 12) / paychecksPerYear;
-    return convertToDisplayMode(perPaycheckAmount, paychecksPerYear, displayMode);
-  };
+  const displayAmount = (monthlyAmount: number): number => monthlyToDisplayAmount(monthlyAmount, paychecksPerYear, displayMode);
 
   const getBenefitPerPaycheck = (benefit: Benefit): number => {
     if (benefit.isPercentage) {
@@ -323,14 +322,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 </div>
                 <div className="account-total">
                   <span className="total-label">{getDisplayModeLabel(displayMode)} Total</span>
-                  <span className="total-amount">{formatWithSymbol(toDisplayAmount(paycheckBenefitsTotalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="total-amount">{formatWithSymbol(displayAmount(paycheckBenefitsTotalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
               <div className="bills-list">
                 {paycheckBenefits.map((benefit) => {
                   const perPaycheck = getBenefitPerPaycheck(benefit);
-                  const inDisplayMode = toDisplayAmount(getBenefitMonthly(benefit));
+                  const inDisplayMode = displayAmount(getBenefitMonthly(benefit));
                   return (
                     <SectionItemCard key={benefit.id} className="bill-item benefit-deduction-item">
                       <div className="bill-main">
@@ -373,7 +372,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 </div>
                 <div className="account-total">
                   <span className="total-label">{getDisplayModeLabel(displayMode)} Total</span>
-                  <span className="total-amount">{formatWithSymbol(toDisplayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="total-amount">{formatWithSymbol(displayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
@@ -382,7 +381,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                   .sort((a, b) => getBenefitPerPaycheck(b) - getBenefitPerPaycheck(a))
                   .map((benefit) => {
                     const perPaycheck = getBenefitPerPaycheck(benefit);
-                    const inDisplayMode = toDisplayAmount(getBenefitMonthly(benefit));
+                    const inDisplayMode = displayAmount(getBenefitMonthly(benefit));
                     return (
                       <SectionItemCard key={benefit.id} className="bill-item benefit-deduction-item">
                         <div className="bill-main">
@@ -426,7 +425,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                         </div>
                         <div className="bill-end">
                           <div className="bill-amount">
-                            <span className="amount">{formatWithSymbol(toDisplayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
+                            <span className="amount">{formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
                             <span className="frequency">{getDisplayModeLabel(displayMode)}</span>
                           </div>
                           <div className="bill-actions">

@@ -1,7 +1,6 @@
 import React from 'react';
+import type { ViewMode } from '../../../types/viewMode';
 import './ViewModeSelector.css';
-
-type ViewMode = 'paycheck' | 'monthly' | 'yearly';
 
 interface ViewModeSelectorProps {
   mode: ViewMode;

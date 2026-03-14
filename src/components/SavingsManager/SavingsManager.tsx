@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import type { RetirementElection, SavingsContribution } from '../../types/auth';
+import type { ViewMode } from '../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, calculateGrossPayPerPaycheck, formatPayFrequencyLabel } from '../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../utils/frequency';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { formatBillFrequency } from '../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
+import { toDisplayAmount } from '../../utils/displayAmounts';
 import { Alert, Button, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './SavingsManager.css';
@@ -14,8 +16,8 @@ import './SavingsManager.css';
 interface SavingsManagerProps {
   shouldScrollToRetirement?: boolean;
   onScrollToRetirementComplete?: () => void;
-  displayMode?: 'paycheck' | 'monthly' | 'yearly';
-  onDisplayModeChange?: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
+  displayMode?: ViewMode;
+  onDisplayModeChange?: (mode: ViewMode) => void;
 }
 
 type SavingsFieldErrors = {
@@ -98,10 +100,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
   const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
-
-  const toDisplayAmount = (perPaycheckAmount: number): number => {
-    return convertToDisplayMode(perPaycheckAmount, paychecksPerYear, displayMode);
-  };
 
   const frequencyMatchesPaySchedule = (itemFrequency: string): boolean => {
     return getSavingsFrequencyOccurrencesPerYear(itemFrequency) === paychecksPerYear;
@@ -476,7 +474,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             <div>
               <span className="section-total-label">Total {getDisplayModeLabel(displayMode)}</span>
               <span className="section-total-amount">
-                {formatWithSymbol(toDisplayAmount(savingsTotalPerPaycheck), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatWithSymbol(toDisplayAmount(savingsTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <Button variant="primary" onClick={handleAddSavings}>+ Add Contribution</Button>
@@ -494,7 +492,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             {sortedSavings.map((item) => {
               const accountName = getAccountName(item.accountId);
               const perPaycheck = getSavingsPerPaycheck(item);
-              const displayAmount = toDisplayAmount(perPaycheck);
+              const displayAmount = toDisplayAmount(perPaycheck, paychecksPerYear, displayMode);
               const isEnabled = item.enabled !== false;
 
               return (
@@ -548,7 +546,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             <div>
               <span className="section-total-label">Total {getDisplayModeLabel(displayMode)}</span>
               <span className="section-total-amount">
-                {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <Button variant="primary" onClick={handleAddRetirement}>+ Add Retirement Plan</Button>
@@ -566,7 +564,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             {sortedRetirement.map((retirement) => {
               const { employeeAmount: employeePerPaycheck, employerAmount } = calculateRetirementContributions(retirement);
               const totalPerPaycheck = employeePerPaycheck + employerAmount;
-              const totalInDisplayMode = toDisplayAmount(totalPerPaycheck);
+              const totalInDisplayMode = toDisplayAmount(totalPerPaycheck, paychecksPerYear, displayMode);
               const isEnabled = retirement.enabled !== false;
               const isPreTaxRetirement = retirement.isPreTax !== false;
               const sourceLabel = retirement.deductionSource === 'account'
