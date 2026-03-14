@@ -1,6 +1,8 @@
 // Budget Context - Manages all paycheck planning data and operations
 // This is like a "global state" that any component can access
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { useAppDialogs } from '../hooks';
+import { ErrorDialog } from '../components/shared';
 import type { ReactNode } from 'react';
 import type { 
   Account
@@ -70,6 +72,7 @@ interface BudgetProviderProps {
  * Think of this as the "manager" that holds and controls all budget data
  */
 export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   // State for the current budget data (null means no budget loaded)
   // The type annotation ensures budgetData matches our BudgetData interface
   const [budgetData, setBudgetData] = useState<BudgetData | null>(null);
@@ -225,14 +228,17 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       return true;
     } catch (error) {
       console.error('Error saving budget:', error);
-      // Type assertion: tell TypeScript that error is an Error object
-      alert('Failed to save budget: ' + (error as Error).message);
+      openErrorDialog({
+        title: 'Save Failed',
+        message: 'Failed to save budget: ' + (error as Error).message,
+        actionLabel: 'Retry',
+      });
       return false;
     } finally {
       // Always runs, even if there's an error
       setLoading(false);
     }
-  }, [budgetData]); // Dependency: recreate this function if budgetData changes
+  }, [budgetData, openErrorDialog]); // Dependency: recreate this function if budgetData changes
 
   /**
    * Save only window state (size and active tab) to the budget file
@@ -371,11 +377,15 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading budget:', error);
-      alert('Failed to load budget: ' + (error as Error).message);
+      openErrorDialog({
+        title: 'Load Failed',
+        message: 'Failed to load budget: ' + (error as Error).message,
+        actionLabel: 'Retry',
+      });
     } finally {
       setLoading(false);
     }
-  }, []); // No dependencies: this function never needs to be recreated
+  }, [openErrorDialog]); // No dependencies beyond dialog display
 
   /**
    * Create a new empty budget plan
@@ -952,9 +962,13 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error selecting save location:', error);
-      alert('Failed to select save location: ' + (error as Error).message);
+      openErrorDialog({
+        title: 'Select Save Location Failed',
+        message: 'Failed to select save location: ' + (error as Error).message,
+        actionLabel: 'Retry',
+      });
     }
-  }, [budgetData]);
+  }, [budgetData, openErrorDialog]);
 
   // Bundle all our state and functions into a single object
   // This is what gets provided to all child components
@@ -999,5 +1013,16 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   };
 
   // Provide the value to all children components
-  return <BudgetContext.Provider value={value}>{children}</BudgetContext.Provider>;
+  return (
+    <BudgetContext.Provider value={value}>
+      {children}
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
+      />
+    </BudgetContext.Provider>
+  );
 };
