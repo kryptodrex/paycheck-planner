@@ -10,18 +10,18 @@ import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
-import SetupWizard from '../SetupWizard';
+import SetupWizard from '../views/SetupWizard';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
-import KeyMetrics from '../KeyMetrics';
-import PayBreakdown from '../PayBreakdown';
-import BillsManager from '../BillsManager';
-import LoansManager from '../LoansManager';
-import SavingsManager from '../SavingsManager';
-import TaxBreakdown from '../TaxBreakdown';
-import Settings from '../Settings';
-import AccountsManager from '../AccountsManager';
-import ExportModal from '../ExportModal';
-import FeedbackModal from '../FeedbackModal';
+import KeyMetrics from '../tabViews/KeyMetrics';
+import PayBreakdown from '../tabViews/PayBreakdown';
+import BillsManager from '../tabViews/BillsManager';
+import LoansManager from '../tabViews/LoansManager';
+import SavingsManager from '../tabViews/SavingsManager';
+import TaxBreakdown from '../tabViews/TaxBreakdown';
+import SettingsModal from '../modals/SettingsModal';
+import AccountsModal from '../modals/AccountsModal';
+import ExportModal from '../modals/ExportModal';
+import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
@@ -1482,7 +1482,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       </Modal>
 
       {/* Settings Modal */}
-      <Settings 
+      <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)}
       />
@@ -1577,9 +1577,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         />
       )}
 
-      {/* Accounts Manager Modal */}
+      {/* Accounts Modal */}
       {showAccountsModal && (
-        <AccountsManager onClose={() => setShowAccountsModal(false)} />
+        <AccountsModal onClose={() => setShowAccountsModal(false)} />
       )}
 
       {/* Tab Management Modal */}

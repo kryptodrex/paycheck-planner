@@ -3,12 +3,12 @@ import { useState, useEffect } from 'react'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
 import EncryptionSetup from './components/EncryptionSetup'
-import WelcomeScreen from './components/WelcomeScreen'
+import WelcomeScreen from './components/views/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
-import Settings from './components/Settings'
-import About from './components/About'
-import Glossary from './components/Glossary'
-import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
+import SettingsModal from './components/modals/SettingsModal'
+import AboutModal from './components/modals/AboutModal'
+import GlossaryModal from './components/modals/GlossaryModal'
+import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal'
 import './App.css'
 
 function App() {
@@ -186,11 +186,11 @@ function App() {
       ) : (
         <>
           <WelcomeScreen />
-          <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+          <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </>
       )}
-      <About isOpen={showAbout} onClose={() => setShowAbout(false)} />
-      <Glossary
+      <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
+      <GlossaryModal
         isOpen={showGlossary}
         initialTermId={initialGlossaryTermId}
         onClose={() => {
