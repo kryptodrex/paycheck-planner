@@ -8,6 +8,7 @@ import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../utils/frequency';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
+import { getAccountNameById } from '../../utils/accountGrouping';
 import { formatBillFrequency } from '../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
 import { toDisplayAmount } from '../../utils/displayAmounts';
@@ -117,11 +118,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   };
 
   const savingsContributions = budgetData.savingsContributions || [];
-
-  const getAccountName = (accountId?: string) => {
-    if (!accountId) return 'Unknown Account';
-    return budgetData.accounts.find((account) => account.id === accountId)?.name || 'Unknown Account';
-  };
 
   const sortedSavings = [...savingsContributions].sort((a, b) => {
     const aEnabled = a.enabled !== false;
@@ -501,7 +497,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         ) : (
           <div className="savings-list">
             {sortedSavings.map((item) => {
-              const accountName = getAccountName(item.accountId);
+              const accountName = getAccountNameById(budgetData.accounts, item.accountId);
               const perPaycheck = getSavingsPerPaycheck(item);
               const displayAmount = toDisplayAmount(perPaycheck, paychecksPerYear, displayMode);
               const isEnabled = item.enabled !== false;
@@ -579,7 +575,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               const isEnabled = retirement.enabled !== false;
               const isPreTaxRetirement = retirement.isPreTax !== false;
               const sourceLabel = retirement.deductionSource === 'account'
-                ? `From ${getAccountName(retirement.sourceAccountId)}`
+                ? `From ${getAccountNameById(budgetData.accounts, retirement.sourceAccountId)}`
                 : 'From Paycheck';
               const displayLabel = getRetirementPlanDisplayLabel(retirement);
 

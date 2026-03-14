@@ -7,6 +7,7 @@ import type { ViewMode } from '../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
+import { buildAccountRows, groupByAccountId } from '../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
 import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
@@ -344,13 +345,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     };
 
     const loansList = budgetData.loans ?? [];
-    const loansByAccount = loansList.reduce((acc, loan) => {
-        if (!acc[loan.accountId]) {
-            acc[loan.accountId] = [];
-        }
-        acc[loan.accountId].push(loan);
-        return acc;
-    }, {} as Record<string, Loan[]>);
+    const loansByAccount = groupByAccountId(loansList);
 
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
     const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
@@ -396,22 +391,16 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                     </div>
                 ) : (
                     <>
-                        {budgetData.accounts
-                            .map((account) => {
-                                const accountLoans = loansByAccount[account.id] || [];
-                                const totalMonthly = roundToCent(
-                                    accountLoans.reduce((sum, loan) => {
-                                        if (!isLoanEnabled(loan)) {
-                                            return sum;
-                                        }
-                                        return sum + loan.monthlyPayment;
-                                    }, 0)
-                                );
-                                return { account, accountLoans, totalMonthly };
-                            })
-                            .filter(({ accountLoans }) => accountLoans.length > 0)
-                            .sort((a, b) => b.totalMonthly - a.totalMonthly)
-                            .map(({ account, accountLoans, totalMonthly }) => (
+                        {buildAccountRows(budgetData.accounts, loansByAccount, (accountLoans) => {
+                            return roundToCent(
+                                accountLoans.reduce((sum, loan) => {
+                                    if (!isLoanEnabled(loan)) {
+                                        return sum;
+                                    }
+                                    return sum + loan.monthlyPayment;
+                                }, 0)
+                            );
+                        }).map(({ account, items: accountLoans, totalMonthly }) => (
                                 <section key={account.id} className="account-section" id={`account-${account.id}`}>
                                     <div className="account-header">
                                         <div className="account-title">

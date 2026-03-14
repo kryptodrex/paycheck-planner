@@ -9,6 +9,7 @@ import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
 import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
+import { buildAccountRows, groupByAccountId } from '../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
 import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../shared';
@@ -97,13 +98,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     return roundUpToCent((getBenefitPerPaycheck(benefit) * paychecksPerYear) / 12);
   };
 
-  const billsByAccount = budgetData.bills.reduce((acc, bill) => {
-    if (!acc[bill.accountId]) {
-      acc[bill.accountId] = [];
-    }
-    acc[bill.accountId].push(bill);
-    return acc;
-  }, {} as Record<string, Bill[]>);
+  const billsByAccount = groupByAccountId(budgetData.bills);
 
   const accountBenefitsByAccount = budgetData.benefits.reduce((acc, benefit) => {
     if (benefit.deductionSource !== 'account' || !benefit.sourceAccountId) {
@@ -122,24 +117,19 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
 
   const paycheckBenefitsTotalMonthly = paycheckBenefits.reduce((sum, benefit) => sum + getBenefitMonthly(benefit), 0);
 
-  const accountRows = budgetData.accounts
-    .map((account) => {
-      const accountBills = billsByAccount[account.id] || [];
-      const accountBenefits = accountBenefitsByAccount[account.id] || [];
-      const billsTotalMonthly = accountBills.reduce((sum, bill) => {
-        if (!isBillEnabled(bill)) return sum;
-        return sum + convertBillToMonthly(bill.amount, bill.frequency);
-      }, 0);
-      const benefitsTotalMonthly = accountBenefits.reduce((sum, benefit) => sum + getBenefitMonthly(benefit), 0);
-      return {
-        account,
-        accountBills,
-        accountBenefits,
-        totalMonthly: roundUpToCent(billsTotalMonthly + benefitsTotalMonthly),
-      };
-    })
-    .filter(({ accountBills, accountBenefits }) => accountBills.length > 0 || accountBenefits.length > 0)
-    .sort((a, b) => b.totalMonthly - a.totalMonthly);
+  const accountRows = buildAccountRows(budgetData.accounts, billsByAccount, (accountBills, account) => {
+    const accountBenefits = accountBenefitsByAccount[account.id] || [];
+    const billsTotalMonthly = accountBills.reduce((sum, bill) => {
+      if (!isBillEnabled(bill)) return sum;
+      return sum + convertBillToMonthly(bill.amount, bill.frequency);
+    }, 0);
+    const benefitsTotalMonthly = accountBenefits.reduce((sum, benefit) => sum + getBenefitMonthly(benefit), 0);
+    return roundUpToCent(billsTotalMonthly + benefitsTotalMonthly);
+  }).map((row) => ({
+    ...row,
+    accountBills: row.items,
+    accountBenefits: accountBenefitsByAccount[row.account.id] || [],
+  }));
 
   const hasAnyItems = budgetData.bills.length > 0 || budgetData.benefits.length > 0;
 
