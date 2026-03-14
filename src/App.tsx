@@ -1,5 +1,6 @@
 // Main App component - decides whether to show setup, welcome screen, or dashboard
 import { useState, useEffect } from 'react'
+import { APP_CUSTOM_EVENTS, MENU_EVENTS } from './constants/events'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
 import EncryptionSetup from './components/EncryptionSetup'
@@ -51,7 +52,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-settings', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openSettings, () => {
       setShowSettings(true)
     })
 
@@ -62,7 +63,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-about', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openAbout, () => {
       setShowAbout(true)
     })
 
@@ -73,7 +74,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-glossary', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openGlossary, () => {
       setInitialGlossaryTermId(null)
       setShowGlossary(true)
     })
@@ -84,7 +85,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-keyboard-shortcuts', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openKeyboardShortcuts, () => {
       setShowKeyboardShortcuts(true)
     })
 
@@ -95,7 +96,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-budget-file', (arg) => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openBudgetFile, (arg) => {
       if (typeof arg === 'string' && arg.trim()) {
         loadBudget(arg)
       }
@@ -114,8 +115,8 @@ function App() {
       setShowGlossary(true)
     }
 
-    window.addEventListener('app:open-glossary', handleOpenGlossary as EventListener)
-    return () => window.removeEventListener('app:open-glossary', handleOpenGlossary as EventListener)
+    window.addEventListener(APP_CUSTOM_EVENTS.openGlossary, handleOpenGlossary as EventListener)
+    return () => window.removeEventListener(APP_CUSTOM_EVENTS.openGlossary, handleOpenGlossary as EventListener)
   }, [])
 
   // Expose a save hook for Electron close confirmation flow

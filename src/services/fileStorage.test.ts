@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { APP_STORAGE_KEYS, STORAGE_KEYS } from '../constants/storage';
 import { FileStorageService } from './fileStorage';
 
 class LocalStorageMock {
@@ -71,7 +72,7 @@ describe('FileStorageService', () => {
       lastOpenedFile: '/tmp/file',
     });
 
-    const raw = localStorage.getItem('paycheck-planner-settings');
+    const raw = localStorage.getItem(STORAGE_KEYS.settings);
     expect(raw).toBeTruthy();
     expect(raw).not.toContain('super-secret');
 
@@ -115,7 +116,7 @@ describe('FileStorageService', () => {
   });
 
   it('returns known plan IDs from path mappings', () => {
-    localStorage.setItem('paycheck-planner-file-to-plan-mapping', JSON.stringify({
+    localStorage.setItem(STORAGE_KEYS.fileToPlanMapping, JSON.stringify({
       '/plans/a.ppb': 'plan-a',
       '/plans/b.ppb': 'plan-a',
       '/plans/c.ppb': 'plan-c',
@@ -125,32 +126,30 @@ describe('FileStorageService', () => {
   });
 
   it('clears all app memory keys while preserving unrelated keys', () => {
-    localStorage.setItem('paycheck-planner-settings', '{}');
-    localStorage.setItem('paycheck-planner-recent-files', '[]');
-    localStorage.setItem('paycheck-planner-file-to-plan-mapping', '{}');
-    localStorage.setItem('paycheck-planner-theme', 'dark');
-    localStorage.setItem('paycheck-planner-accounts', '[]');
+    localStorage.setItem(STORAGE_KEYS.settings, '{}');
+    localStorage.setItem(STORAGE_KEYS.recentFiles, '[]');
+    localStorage.setItem(STORAGE_KEYS.fileToPlanMapping, '{}');
+    localStorage.setItem(STORAGE_KEYS.theme, 'dark');
+    localStorage.setItem(STORAGE_KEYS.accounts, '[]');
     localStorage.setItem('paycheck-planner-temp-experimental', '1');
     localStorage.setItem('external-key', 'keep-me');
 
     FileStorageService.clearAppMemory();
 
-    expect(localStorage.getItem('paycheck-planner-settings')).toBeNull();
-    expect(localStorage.getItem('paycheck-planner-recent-files')).toBeNull();
-    expect(localStorage.getItem('paycheck-planner-file-to-plan-mapping')).toBeNull();
-    expect(localStorage.getItem('paycheck-planner-theme')).toBeNull();
-    expect(localStorage.getItem('paycheck-planner-accounts')).toBeNull();
+    APP_STORAGE_KEYS.forEach((key) => {
+      expect(localStorage.getItem(key)).toBeNull();
+    });
     expect(localStorage.getItem('paycheck-planner-temp-experimental')).toBeNull();
     expect(localStorage.getItem('external-key')).toBe('keep-me');
   });
 
   it('exports app data as a valid JSON envelope containing only global preference keys', () => {
     localStorage.setItem(
-      'paycheck-planner-settings',
+      STORAGE_KEYS.settings,
       '{"themeMode":"dark","encryptionEnabled":true,"encryptionKey":"secret","glossaryTermsEnabled":true}',
     );
-    localStorage.setItem('paycheck-planner-theme', 'dark');
-    localStorage.setItem('paycheck-planner-accounts', '[{"id":"1","name":"Checking"}]');
+    localStorage.setItem(STORAGE_KEYS.theme, 'dark');
+    localStorage.setItem(STORAGE_KEYS.accounts, '[{"id":"1","name":"Checking"}]');
     localStorage.setItem('external-key', 'ignore-me');
 
     const json = FileStorageService.exportAppData();
@@ -161,17 +160,17 @@ describe('FileStorageService', () => {
     expect(typeof envelope.exportedAt).toBe('string');
 
     // Global preferences must be present
-    expect(envelope.data['paycheck-planner-theme']).toBe('dark');
+    expect(envelope.data[STORAGE_KEYS.theme]).toBe('dark');
 
     // Settings blob must exist but plan-specific fields must be stripped
-    const settings = JSON.parse(envelope.data['paycheck-planner-settings']);
+    const settings = JSON.parse(envelope.data[STORAGE_KEYS.settings]);
     expect(settings.themeMode).toBe('dark');
     expect(settings.glossaryTermsEnabled).toBe(true);
     expect(settings.encryptionEnabled).toBeUndefined();
     expect(settings.encryptionKey).toBeUndefined();
 
     // Plan-specific and foreign keys must be absent
-    expect(envelope.data['paycheck-planner-accounts']).toBeUndefined();
+    expect(envelope.data[STORAGE_KEYS.accounts]).toBeUndefined();
     expect(envelope.data['external-key']).toBeUndefined();
   });
 
@@ -181,9 +180,9 @@ describe('FileStorageService', () => {
       appName: 'paycheck-planner',
       exportedAt: new Date().toISOString(),
       data: {
-        'paycheck-planner-theme': 'dark',
-        'paycheck-planner-settings': '{"themeMode":"dark","encryptionEnabled":true,"encryptionKey":"secret"}',
-        'paycheck-planner-accounts': '[{"id":"1"}]',
+        [STORAGE_KEYS.theme]: 'dark',
+        [STORAGE_KEYS.settings]: '{"themeMode":"dark","encryptionEnabled":true,"encryptionKey":"secret"}',
+        [STORAGE_KEYS.accounts]: '[{"id":"1"}]',
         'foreign-key': 'should-be-ignored',
       },
     });
@@ -191,16 +190,16 @@ describe('FileStorageService', () => {
     FileStorageService.importAppData(envelope);
 
     // Global preferences restored
-    expect(localStorage.getItem('paycheck-planner-theme')).toBe('dark');
+    expect(localStorage.getItem(STORAGE_KEYS.theme)).toBe('dark');
 
     // Settings blob restored, but plan-specific fields stripped
-    const settings = JSON.parse(localStorage.getItem('paycheck-planner-settings')!);
+    const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
     expect(settings.themeMode).toBe('dark');
     expect(settings.encryptionEnabled).toBeUndefined();
     expect(settings.encryptionKey).toBeUndefined();
 
     // Plan-specific and foreign keys must not be written
-    expect(localStorage.getItem('paycheck-planner-accounts')).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEYS.accounts)).toBeNull();
     expect(localStorage.getItem('foreign-key')).toBeNull();
   });
 
@@ -217,7 +216,7 @@ describe('FileStorageService', () => {
       version: 1,
       exportedAt: new Date().toISOString(),
       data: {
-        'paycheck-planner-settings': '{"themeMode":"dark"}',
+        [STORAGE_KEYS.settings]: '{"themeMode":"dark"}',
       },
     });
 
@@ -236,7 +235,7 @@ describe('FileStorageService', () => {
       version: 1,
       exportedAt: new Date().toISOString(),
       data: {
-        'paycheck-planner-theme': 'dark',
+        [STORAGE_KEYS.theme]: 'dark',
       },
     });
 
@@ -254,7 +253,7 @@ describe('FileStorageService', () => {
       version: 1,
       exportedAt: new Date().toISOString(),
       data: {
-        'paycheck-planner-theme': 'dark',
+        [STORAGE_KEYS.theme]: 'dark',
       },
     });
 

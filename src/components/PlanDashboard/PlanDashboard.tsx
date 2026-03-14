@@ -6,6 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
+import { MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
@@ -426,48 +427,48 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return;
 
-    const unsubscribeNew = window.electronAPI.onMenuEvent('new-budget', () => {
+    const unsubscribeNew = window.electronAPI.onMenuEvent(MENU_EVENTS.newBudget, () => {
       const year = new Date().getFullYear();
       createNewBudget(year);
     });
 
-    const unsubscribeOpen = window.electronAPI.onMenuEvent('open-budget', () => {
+    const unsubscribeOpen = window.electronAPI.onMenuEvent(MENU_EVENTS.openBudget, () => {
       loadBudget();
     });
 
-    const unsubscribeEncryption = window.electronAPI.onMenuEvent('change-encryption', () => {
+    const unsubscribeEncryption = window.electronAPI.onMenuEvent(MENU_EVENTS.changeEncryption, () => {
       onResetSetup?.();
     });
 
-    const unsubscribeSave = window.electronAPI.onMenuEvent('save-plan', () => {
+    const unsubscribeSave = window.electronAPI.onMenuEvent(MENU_EVENTS.savePlan, () => {
       handleSaveRef.current?.();
     });
 
-    const unsubscribeSettings = window.electronAPI.onMenuEvent('open-settings', () => {
+    const unsubscribeSettings = window.electronAPI.onMenuEvent(MENU_EVENTS.openSettings, () => {
       setShowSettings(true);
     });
 
-    const unsubscribePayOptions = window.electronAPI.onMenuEvent('open-pay-options', () => {
+    const unsubscribePayOptions = window.electronAPI.onMenuEvent(MENU_EVENTS.openPayOptions, () => {
       selectTab('breakdown', { resetBillsAnchor: true });
     });
 
-    const unsubscribeAccounts = window.electronAPI.onMenuEvent('open-accounts', () => {
+    const unsubscribeAccounts = window.electronAPI.onMenuEvent(MENU_EVENTS.openAccounts, () => {
       setShowAccountsModal(true);
     });
 
-    const unsubscribeHistoryBack = window.electronAPI.onMenuEvent('history-back', () => {
+    const unsubscribeHistoryBack = window.electronAPI.onMenuEvent(MENU_EVENTS.historyBack, () => {
       if (!viewMode) {
         window.history.back();
       }
     });
 
-    const unsubscribeHistoryForward = window.electronAPI.onMenuEvent('history-forward', () => {
+    const unsubscribeHistoryForward = window.electronAPI.onMenuEvent(MENU_EVENTS.historyForward, () => {
       if (!viewMode) {
         window.history.forward();
       }
     });
 
-    const unsubscribeHistoryHome = window.electronAPI.onMenuEvent('history-home', () => {
+    const unsubscribeHistoryHome = window.electronAPI.onMenuEvent(MENU_EVENTS.historyHome, () => {
       if (viewMode) return;
 
       const homeTab = visibleTabs[0]?.id as TabId | undefined;
@@ -481,7 +482,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       selectTab(homeTab, { resetBillsAnchor: true });
     });
 
-    const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent('set-tab-position', (position) => {
+    const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent(MENU_EVENTS.setTabPosition, (position) => {
       if (
         position === 'top' ||
         position === 'bottom' ||
@@ -492,7 +493,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       }
     });
 
-    const unsubscribeToggleDisplayMode = window.electronAPI.onMenuEvent('toggle-tab-display-mode', () => {
+    const unsubscribeToggleDisplayMode = window.electronAPI.onMenuEvent(MENU_EVENTS.toggleTabDisplayMode, () => {
       const newMode: TabDisplayMode = tabDisplayModeRef.current === 'icons-only' ? 'icons-with-labels' : 'icons-only';
       handleTabDisplayModeChangeRef.current?.(newMode);
     });

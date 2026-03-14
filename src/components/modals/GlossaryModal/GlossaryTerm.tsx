@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { FileStorageService } from '../../../services/fileStorage';
 import { glossaryTerms } from '../../../data/glossary';
 import './GlossaryTerm.css';
@@ -26,8 +27,8 @@ const GlossaryTerm: React.FC<GlossaryTermProps> = ({ termId, children, className
       setTermsEnabled(e.detail.enabled);
       if (!e.detail.enabled) setIsOpen(false);
     };
-    window.addEventListener('glossary-terms-changed', handleChange as EventListener);
-    return () => window.removeEventListener('glossary-terms-changed', handleChange as EventListener);
+    window.addEventListener(APP_CUSTOM_EVENTS.glossaryTermsChanged, handleChange as EventListener);
+    return () => window.removeEventListener(APP_CUSTOM_EVENTS.glossaryTermsChanged, handleChange as EventListener);
   }, []);
 
   useLayoutEffect(() => {
@@ -76,7 +77,7 @@ const GlossaryTerm: React.FC<GlossaryTermProps> = ({ termId, children, className
 
   const openGlossary = () => {
     window.dispatchEvent(
-      new CustomEvent('app:open-glossary', {
+      new CustomEvent(APP_CUSTOM_EVENTS.openGlossary, {
         detail: { termId },
       })
     );

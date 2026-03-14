@@ -8,6 +8,7 @@ import * as fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { MENU_EVENTS, menuChannel, type MenuEventName } from '../src/constants/events';
 import { FEEDBACK_FORM_ENTRY_IDS, FEEDBACK_FORM_URL } from './constants';
 
 // Create require function for ES modules
@@ -211,6 +212,10 @@ const getOrCreateBudgetFileWatchState = (windowId: number): BudgetFileWatchState
   return created;
 };
 
+const sendMenuEvent = (window: BrowserWindow, event: MenuEventName, arg?: unknown) => {
+  window.webContents.send(menuChannel(event), arg);
+};
+
 const stopBudgetFileWatch = (windowId: number) => {
   const state = budgetFileWatchByWindowId.get(windowId);
   if (!state) return;
@@ -345,7 +350,7 @@ function dispatchExternalBudgetOpen(filePath: string) {
   }
 
   const sendOpenFileEvent = () => {
-    targetWindow.webContents.send('menu:open-budget-file', filePath);
+    sendMenuEvent(targetWindow, MENU_EVENTS.openBudgetFile, filePath);
     pendingExternalBudgetFilePath = null;
     targetWindow.show();
     targetWindow.focus();
@@ -784,7 +789,7 @@ function createApplicationMenu() {
           click: () => {
             const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
             if (targetWindow) {
-              targetWindow.webContents.send('menu:open-about');
+              sendMenuEvent(targetWindow, MENU_EVENTS.openAbout);
             }
           },
         },
@@ -795,7 +800,7 @@ function createApplicationMenu() {
           click: () => {
             const focusedWindow = BrowserWindow.getFocusedWindow();
             if (focusedWindow) {
-              focusedWindow.webContents.send('menu:open-settings');
+              sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
             }
           },
         },
@@ -837,7 +842,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:new-budget');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.newBudget);
           }
         },
       },
@@ -854,7 +859,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-budget');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openBudget);
           }
         },
       },
@@ -864,7 +869,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:save-plan');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.savePlan);
           }
         },
       },
@@ -912,7 +917,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-accounts');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openAccounts);
           }
         },
       },
@@ -922,7 +927,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-pay-options');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openPayOptions);
           }
         },
       },
@@ -942,7 +947,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'top');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'top');
               }
             },
           },
@@ -952,7 +957,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'bottom');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'bottom');
               }
             },
           },
@@ -962,7 +967,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'left');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'left');
               }
             },
           },
@@ -972,7 +977,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'right');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'right');
               }
             },
           },
@@ -984,7 +989,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:toggle-tab-display-mode');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.toggleTabDisplayMode);
           }
         },
       },
@@ -1005,7 +1010,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-settings');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
           }
         },
       }] : []),
@@ -1066,7 +1071,7 @@ function createApplicationMenu() {
         click: () => {
           const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
           if (targetWindow) {
-            targetWindow.webContents.send('menu:open-glossary');
+            sendMenuEvent(targetWindow, MENU_EVENTS.openGlossary);
           }
         },
       },
@@ -1077,7 +1082,7 @@ function createApplicationMenu() {
         click: () => {
           const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
           if (targetWindow) {
-            targetWindow.webContents.send('menu:open-keyboard-shortcuts');
+            sendMenuEvent(targetWindow, MENU_EVENTS.openKeyboardShortcuts);
           }
         },
       },
@@ -1099,7 +1104,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(settingsShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:open-settings');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
         debug(`Settings shortcut triggered via globalShortcut (${settingsShortcut})`);
       }
     });
@@ -1108,7 +1113,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(backShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:history-back');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.historyBack);
         debug(`Back shortcut triggered via globalShortcut (${backShortcut})`);
       }
     });
@@ -1117,7 +1122,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(forwardShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:history-forward');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.historyForward);
         debug(`Forward shortcut triggered via globalShortcut (${forwardShortcut})`);
       }
     });
@@ -1126,7 +1131,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(homeShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:history-home');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.historyHome);
         debug(`Home shortcut triggered via globalShortcut (${homeShortcut})`);
       }
     });

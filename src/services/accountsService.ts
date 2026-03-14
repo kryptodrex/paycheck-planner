@@ -1,10 +1,8 @@
 // Service for managing app-wide accounts that can be reused across plans
 // Accounts are stored in localStorage and persist across sessions
+import { STORAGE_KEYS } from '../constants/storage';
 import type { Account } from '../types/accounts';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountDefaults';
-
-// LocalStorage key for global accounts
-const ACCOUNTS_KEY = 'paycheck-planner-accounts';
 
 // Helper function to generate color based on account type
 
@@ -14,7 +12,7 @@ export class AccountsService {
    * @returns Array of accounts or default accounts if none exist
    */
   static getAccounts(): Account[] {
-    const stored = localStorage.getItem(ACCOUNTS_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.accounts);
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -63,7 +61,7 @@ export class AccountsService {
    * @param accounts - Array of accounts to save
    */
   static saveAccounts(accounts: Account[]): void {
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    localStorage.setItem(STORAGE_KEYS.accounts, JSON.stringify(accounts));
   }
 
   /**

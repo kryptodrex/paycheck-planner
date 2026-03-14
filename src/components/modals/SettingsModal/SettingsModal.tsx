@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Button, ErrorDialog, Modal, PillToggle } from '../../_shared';
@@ -58,7 +59,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       }
 
       // Dispatch custom event to notify ThemeProvider
-      window.dispatchEvent(new Event('theme-mode-changed'));
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
 
       return updated;
     });
@@ -68,7 +69,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     setSettings((prev) => {
       const updated = { ...prev, glossaryTermsEnabled: enabled };
       persistSettings(updated);
-      window.dispatchEvent(new CustomEvent('glossary-terms-changed', { detail: { enabled } }));
+      window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled } }));
       return updated;
     });
   };
@@ -119,8 +120,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         setTheme(systemDark ? 'dark' : 'light');
       }
-      window.dispatchEvent(new Event('theme-mode-changed'));
-      window.dispatchEvent(new CustomEvent('glossary-terms-changed', { detail: { enabled: newGlossary } }));
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
+      window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled: newGlossary } }));
       const reopenResult = await window.electronAPI.reopenWelcomeWindow();
       if (!reopenResult.success) {
         throw new Error(reopenResult.error || 'Failed to reopen welcome window');
@@ -146,7 +147,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       // and encrypted plans reconnect automatically without needing to re-enter keys.
       FileStorageService.clearAppMemory();
       setTheme('light');
-      window.dispatchEvent(new Event('theme-mode-changed'));
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
 
       setBackedUp(false);
       setShowResetConfirm(false);
