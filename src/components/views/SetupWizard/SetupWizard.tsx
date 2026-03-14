@@ -5,10 +5,9 @@ import { getCurrencySymbol, CURRENCIES } from '../../../utils/currency';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
-import EncryptionConfigPanel from '../../EncryptionSetup/EncryptionConfigPanel';
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../../types/payroll';
-import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, ProgressBar, ErrorDialog } from '../../_shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog } from '../../_shared';
 import './SetupWizard.css';
 
 interface SetupWizardProps {

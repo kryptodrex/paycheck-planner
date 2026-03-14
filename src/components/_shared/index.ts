@@ -13,6 +13,7 @@ export { default as PillToggle } from './controls/PillToggle';
 export { default as SectionItemCard } from './layout/SectionItemCard';
 export { default as InfoBox } from './feedback/InfoBox';
 export { default as AccountsEditor } from './workflows/AccountsEditor';
+export { default as EncryptionConfigPanel } from './workflows/EncryptionConfigPanel';
 export { default as ViewModeSelector } from './layout/ViewModeSelector';
 export { default as PageHeader } from './layout/PageHeader';
 export { default as ProgressBar } from './feedback/ProgressBar';

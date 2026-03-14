@@ -1,9 +1,8 @@
 // Encryption Setup Component - Shown on first launch
 // Allows users to configure encryption or skip it
 import React from 'react';
-import { useAppDialogs, useEncryptionSetupFlow } from '../../hooks';
-import EncryptionConfigPanel from './EncryptionConfigPanel';
-import { Button, ErrorDialog } from '../_shared';
+import { useAppDialogs, useEncryptionSetupFlow } from '../../../hooks';
+import { Button, EncryptionConfigPanel, ErrorDialog } from '../../_shared';
 import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {
