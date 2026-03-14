@@ -18,8 +18,10 @@ import type {
   Loan
 } from '../types/auth';
 import { FileStorageService } from '../services/fileStorage';
+import { calculatePaycheckBreakdown as calculateBudgetPaycheckBreakdown, getEmptyPaycheckBreakdown } from '../services/budgetCalculations';
 import { KeychainService } from '../services/keychainService';
 import { roundUpToCent } from '../utils/money';
+import { getPlanNameFromPath } from '../utils/filePath';
 import { getPaychecksPerYear } from '../utils/payPeriod';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
 
@@ -31,19 +33,6 @@ type LegacyRetirementElection = Partial<RetirementElection> & {
   employeeContributionAmount?: number;
   employerMatchAmount?: number;
   employerMatchIsPercentage?: boolean;
-};
-
-const derivePlanNameFromFilePath = (filePath?: string): string | null => {
-  if (!filePath) return null;
-
-  const lastSeparatorIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
-  const fileName = lastSeparatorIndex >= 0 ? filePath.slice(lastSeparatorIndex + 1) : filePath;
-  if (!fileName) return null;
-
-  const lastDotIndex = fileName.lastIndexOf('.');
-  const baseName = lastDotIndex > 0 ? fileName.slice(0, lastDotIndex) : fileName;
-  const normalized = baseName.trim();
-  return normalized || null;
 };
 
 /**
@@ -203,7 +192,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         return false;
       }
 
-      const derivedPlanName = derivePlanNameFromFilePath(filePath);
+      const derivedPlanName = getPlanNameFromPath(filePath);
 
       // Update state with the new file path, window size, active tab, and save timestamp
       const savedBudget = {
@@ -355,7 +344,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       });
 
       // Keep plan name in sync with the actual file name when opened from disk.
-      const derivedPlanName = derivePlanNameFromFilePath(data.settings?.filePath);
+      const derivedPlanName = getPlanNameFromPath(data.settings?.filePath);
       if (derivedPlanName) {
         data.name = derivedPlanName;
       }
@@ -876,119 +865,10 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
    */
   const calculatePaycheckBreakdown = useCallback((): PaycheckBreakdown => {
     if (!budgetData) {
-      return {
-        grossPay: 0,
-        preTaxDeductions: 0,
-        taxableIncome: 0,
-        taxLineAmounts: [],
-        additionalWithholding: 0,
-        totalTaxes: 0,
-        netPay: 0,
-      };
+      return getEmptyPaycheckBreakdown();
     }
 
-    const { paySettings, preTaxDeductions, benefits = [], retirement = [], taxSettings } = budgetData;
-    
-    // Calculate gross pay per paycheck
-    let grossPay = 0;
-    if (paySettings.payType === 'salary' && paySettings.annualSalary) {
-      const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
-      grossPay = roundUpToCent(paySettings.annualSalary / paychecksPerYear);
-    } else if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
-      grossPay = roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
-    }
-
-    // Calculate pre-tax deductions (existing deductions)
-    let totalPreTaxDeductions = 0;
-    preTaxDeductions.forEach((deduction) => {
-      if (deduction.isPercentage) {
-        totalPreTaxDeductions += (grossPay * deduction.amount) / 100;
-      } else {
-        totalPreTaxDeductions += deduction.amount;
-      }
-    });
-
-    // Add pre-tax benefits deducted from paycheck
-    (benefits || []).forEach((benefit) => {
-      if ((benefit.deductionSource || 'paycheck') === 'paycheck' && !benefit.isTaxable) { // Pre-tax paycheck benefit
-        if (benefit.isPercentage) {
-          totalPreTaxDeductions += (grossPay * benefit.amount) / 100;
-        } else {
-          totalPreTaxDeductions += benefit.amount;
-        }
-      }
-    });
-
-    // Add employee retirement contributions (pre-tax or account-sourced)
-    (retirement || []).forEach((election) => {
-      if (election.enabled === false) return;
-
-      if ((election.deductionSource || 'paycheck') === 'paycheck' && (election.isPreTax !== false)) {
-        if (election.employeeContributionIsPercentage) {
-          totalPreTaxDeductions += (grossPay * election.employeeContribution) / 100;
-        } else {
-          totalPreTaxDeductions += election.employeeContribution;
-        }
-      }
-    });
-
-    totalPreTaxDeductions = roundUpToCent(totalPreTaxDeductions);
-
-    // Calculate taxable income
-    const taxableIncome = roundUpToCent(grossPay - totalPreTaxDeductions);
-
-    // Calculate taxes
-    const taxLineAmounts = (taxSettings.taxLines || []).map(line => ({
-      id: line.id,
-      label: line.label,
-      amount: roundUpToCent((taxableIncome * line.rate) / 100),
-    }));
-    const additionalWithholding = roundUpToCent(taxSettings.additionalWithholding);
-
-    const totalTaxes = roundUpToCent(
-      taxLineAmounts.reduce((sum, l) => sum + l.amount, 0) + additionalWithholding
-    );
-
-    // Calculate net pay before post-tax deductions
-    let netPayBeforePostTax = roundUpToCent(taxableIncome - totalTaxes);
-
-    // Subtract post-tax benefits deducted from paycheck
-    (benefits || []).forEach((benefit) => {
-      if ((benefit.deductionSource || 'paycheck') === 'paycheck' && benefit.isTaxable) { // Post-tax paycheck benefit
-        if (benefit.isPercentage) {
-          netPayBeforePostTax -= roundUpToCent((grossPay * benefit.amount) / 100);
-        } else {
-          netPayBeforePostTax -= roundUpToCent(benefit.amount);
-        }
-      }
-    });
-
-    // Subtract post-tax retirement contributions deducted from paycheck
-    (retirement || []).forEach((election) => {
-      if (election.enabled === false) return;
-
-      if ((election.deductionSource || 'paycheck') === 'paycheck' && election.isPreTax === false) { // Post-tax paycheck retirement
-        if (election.employeeContributionIsPercentage) {
-          netPayBeforePostTax -= roundUpToCent((grossPay * election.employeeContribution) / 100);
-        } else {
-          netPayBeforePostTax -= roundUpToCent(election.employeeContribution);
-        }
-      }
-    });
-
-    // Note: Employer match is not deducted from net pay, it's added to the employee's retirement account
-    // So we don't subtract it here - it's handled separately
-    const netPay = roundUpToCent(Math.max(0, netPayBeforePostTax));
-
-    return {
-      grossPay,
-      preTaxDeductions: totalPreTaxDeductions,
-      taxableIncome,
-      taxLineAmounts,
-      additionalWithholding,
-      totalTaxes,
-      netPay,
-    };
+    return calculateBudgetPaycheckBreakdown(budgetData);
   }, [budgetData]);
 
   /**
