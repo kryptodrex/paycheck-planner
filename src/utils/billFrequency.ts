@@ -1,4 +1,4 @@
-import type { BillFrequency } from '../types/auth';
+import type { BillFrequency } from '../types/frequencies';
 import { roundUpToCent } from './money';
 import { getBillFrequencyOccurrencesPerYear } from './frequency';
 

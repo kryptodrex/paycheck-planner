@@ -1,28 +1,20 @@
 // Service for handling local file storage and encryption
 // This class manages reading/writing budget files and encrypting/decrypting the data
 import CryptoJS from 'crypto-js';
-import type { BudgetData, AppSettings } from '../types/auth';
+import {
+  APP_STORAGE_KEYS,
+  APP_STORAGE_PREFIX,
+  BACKUP_EXCLUDED_STORAGE_KEYS,
+  MAX_RECENT_FILES,
+  SETTINGS_PLAN_SPECIFIC_FIELDS,
+  STORAGE_KEYS,
+} from '../constants/storage';
+import type { BudgetData } from '../types/budget';
+import type { AppSettings } from '../types/settings';
 import { KeychainService } from './keychainService';
+import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
 
-// LocalStorage key for app settings
-const SETTINGS_KEY = 'paycheck-planner-settings';
-const RECENT_FILES_KEY = 'paycheck-planner-recent-files';
-const FILE_TO_PLAN_MAPPING_KEY = 'paycheck-planner-file-to-plan-mapping';
-const APP_STORAGE_PREFIX = 'paycheck-planner-';
-// All keys owned by the app — used for the full memory wipe
-const APP_STORAGE_KEYS = [
-  SETTINGS_KEY,
-  RECENT_FILES_KEY,
-  FILE_TO_PLAN_MAPPING_KEY,
-  'paycheck-planner-theme',
-  'paycheck-planner-accounts',
-];
-// Plan-specific fields that live inside the settings object but must never be
-// included in a global preferences backup (they are stored in the budget file).
-const SETTINGS_PLAN_SPECIFIC_FIELDS = ['encryptionEnabled', 'encryptionKey'] as const;
-// Keys that are plan-specific and must be excluded from global backups
-const BACKUP_EXCLUDED_KEYS = new Set<string>(['paycheck-planner-accounts']);
-const MAX_RECENT_FILES = 10;
+const BACKUP_EXCLUDED_KEYS = new Set<string>(BACKUP_EXCLUDED_STORAGE_KEYS);
 
 export interface RecentFile {
   filePath: string;
@@ -141,11 +133,7 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
 
 export class FileStorageService {
   private static derivePlanNameFromFilePath(filePath: string): string {
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
-    const lastDotIndex = fileName.lastIndexOf('.');
-    const baseName = lastDotIndex > 0 ? fileName.slice(0, lastDotIndex) : fileName;
-    const normalized = baseName.trim();
-    return normalized || 'plan';
+    return getPlanNameFromPath(filePath) || 'plan';
   }
 
   private static async inspectBudgetFile(
@@ -243,7 +231,7 @@ export class FileStorageService {
    * @returns App settings or undefined if not yet configured
    */
   static getAppSettings(): AppSettings {
-    const stored = localStorage.getItem(SETTINGS_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.settings);
     if (stored) {
       try {
         const parsedSettings = JSON.parse(stored) as AppSettings & { encryptionKey?: string };
@@ -270,7 +258,7 @@ export class FileStorageService {
     // Remove encryptionKey if it exists - we don't store keys in localStorage
     const settingsToStore = { ...(settings as AppSettings & { encryptionKey?: string }) };
     Reflect.deleteProperty(settingsToStore, 'encryptionKey');
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsToStore));
+    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settingsToStore));
   }
 
   /**
@@ -278,7 +266,7 @@ export class FileStorageService {
    * @returns Array of recent files, sorted by most recently opened
    */
   static getRecentFiles(): RecentFile[] {
-    const stored = localStorage.getItem(RECENT_FILES_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.recentFiles);
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -294,8 +282,7 @@ export class FileStorageService {
    * @param filePath - The file path to add
    */
   static addRecentFile(filePath: string): void {
-    // Extract file name from path
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    const fileName = getBaseFileName(filePath) || filePath;
     
     const recentFiles = this.getRecentFiles();
     
@@ -312,15 +299,15 @@ export class FileStorageService {
     // Keep only the most recent MAX_RECENT_FILES
     const trimmed = filtered.slice(0, MAX_RECENT_FILES);
     
-    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(STORAGE_KEYS.recentFiles, JSON.stringify(trimmed));
   }
 
   /**
    * Add/update a recent file while de-duplicating other entries that belong to the same plan.
    * This keeps recents correct when a plan file is renamed/moved externally.
    */
-  private static addRecentFileForPlan(filePath: string, planId?: string): void {
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+  static addRecentFileForPlan(filePath: string, planId?: string): void {
+    const fileName = getBaseFileName(filePath) || filePath;
     const recentFiles = this.getRecentFiles();
     const mapping = this.getPlanFileMappings();
 
@@ -337,7 +324,7 @@ export class FileStorageService {
     });
 
     const trimmed = filtered.slice(0, MAX_RECENT_FILES);
-    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(STORAGE_KEYS.recentFiles, JSON.stringify(trimmed));
   }
 
   /**
@@ -347,14 +334,14 @@ export class FileStorageService {
   static removeRecentFile(filePath: string): void {
     const recentFiles = this.getRecentFiles();
     const filtered = recentFiles.filter(f => f.filePath !== filePath);
-    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(filtered));
+    localStorage.setItem(STORAGE_KEYS.recentFiles, JSON.stringify(filtered));
   }
 
   /**
    * Clear all recent files
    */
   static clearRecentFiles(): void {
-    localStorage.removeItem(RECENT_FILES_KEY);
+    localStorage.removeItem(STORAGE_KEYS.recentFiles);
   }
 
   /**
@@ -414,7 +401,7 @@ export class FileStorageService {
       if (value === null) continue;
 
       // Strip plan-specific fields from the settings blob
-      if (key === SETTINGS_KEY) {
+      if (key === STORAGE_KEYS.settings) {
         try {
           const parsed = JSON.parse(value) as Record<string, unknown>;
           for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
@@ -477,7 +464,7 @@ export class FileStorageService {
 
       let valueToStore = value;
       // Strip plan-specific fields from a restored settings blob
-      if (key === SETTINGS_KEY) {
+      if (key === STORAGE_KEYS.settings) {
         try {
           const parsed = JSON.parse(value) as Record<string, unknown>;
           for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
@@ -512,7 +499,7 @@ export class FileStorageService {
         }
       }
       mapping[filePath] = planId;
-      localStorage.setItem(FILE_TO_PLAN_MAPPING_KEY, JSON.stringify(mapping));
+      localStorage.setItem(STORAGE_KEYS.fileToPlanMapping, JSON.stringify(mapping));
     } catch {
       // If this fails, it's not critical - worst case the key lookup will fail
     }
@@ -524,7 +511,7 @@ export class FileStorageService {
    */
   private static getPlanFileMappings(): Record<string, string> {
     try {
-      const stored = localStorage.getItem(FILE_TO_PLAN_MAPPING_KEY);
+      const stored = localStorage.getItem(STORAGE_KEYS.fileToPlanMapping);
       if (stored) {
         return JSON.parse(stored);
       }
@@ -765,8 +752,7 @@ export class FileStorageService {
     }
 
     // Max attempts reached
-    alert(`Failed to decrypt file after ${maxAttempts} attempts. Please check your encryption key.`);
-    return null;
+    throw new Error(`Failed to decrypt file after ${maxAttempts} attempts. Please check your encryption key.`);
   }
 
   /**

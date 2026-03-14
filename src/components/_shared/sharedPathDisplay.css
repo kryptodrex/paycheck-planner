@@ -1,0 +1,15 @@
+.shared-path-display {
+  display: block;
+  padding: 0.75rem 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.shared-path-display--primary {
+  color: var(--text-primary);
+}

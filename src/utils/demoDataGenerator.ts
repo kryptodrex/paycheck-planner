@@ -1,4 +1,8 @@
-import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency, Loan, SavingsContribution } from '../types/auth';
+import type { Account } from '../types/accounts';
+import type { BudgetData } from '../types/budget';
+import type { Bill, Loan, SavingsContribution } from '../types/obligations';
+import type { Benefit, RetirementElection } from '../types/payroll';
+import type { PayFrequency } from '../types/frequencies';
 import { getPaychecksPerYear } from './payPeriod';
 
 /**

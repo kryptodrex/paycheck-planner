@@ -1,4 +1,4 @@
-import type { BillFrequency, CoreFrequency, PayFrequency, SavingsFrequency } from '../types/auth';
+import type { BillFrequency, CoreFrequency, PayFrequency, SavingsFrequency } from '../types/frequencies';
 
 export function normalizeFrequencyToken(value: string): string {
   return value

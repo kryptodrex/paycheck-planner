@@ -1,0 +1,23 @@
+.file-relink-modal {
+  max-width: 560px;
+}
+
+.file-relink-modal-message {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.file-relink-modal-path {
+  margin-top: 0.75rem;
+}
+
+.file-relink-modal-error {
+  margin: 0.75rem 0 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--danger-color) 45%, transparent);
+  background: color-mix(in srgb, var(--danger-color) 14%, transparent);
+  color: color-mix(in srgb, var(--danger-color) 85%, var(--text-primary));
+  border-radius: 8px;
+  font-size: 0.9rem;
+}

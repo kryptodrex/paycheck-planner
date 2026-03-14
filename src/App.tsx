@@ -1,14 +1,15 @@
 // Main App component - decides whether to show setup, welcome screen, or dashboard
 import { useState, useEffect } from 'react'
+import { APP_CUSTOM_EVENTS, MENU_EVENTS } from './constants/events'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
-import EncryptionSetup from './components/EncryptionSetup'
-import WelcomeScreen from './components/WelcomeScreen'
+import EncryptionSetup from './components/views/EncryptionSetup'
+import WelcomeScreen from './components/views/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
-import Settings from './components/Settings'
-import About from './components/About'
-import Glossary from './components/Glossary'
-import KeyboardShortcutsModal from './components/KeyboardShortcutsModal'
+import SettingsModal from './components/modals/SettingsModal'
+import AboutModal from './components/modals/AboutModal'
+import GlossaryModal from './components/modals/GlossaryModal'
+import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal'
 import './App.css'
 
 function App() {
@@ -51,7 +52,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-settings', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openSettings, () => {
       setShowSettings(true)
     })
 
@@ -62,7 +63,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-about', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openAbout, () => {
       setShowAbout(true)
     })
 
@@ -73,7 +74,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-glossary', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openGlossary, () => {
       setInitialGlossaryTermId(null)
       setShowGlossary(true)
     })
@@ -84,7 +85,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-keyboard-shortcuts', () => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openKeyboardShortcuts, () => {
       setShowKeyboardShortcuts(true)
     })
 
@@ -95,7 +96,7 @@ function App() {
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
-    const unsubscribe = window.electronAPI.onMenuEvent('open-budget-file', (arg) => {
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openBudgetFile, (arg) => {
       if (typeof arg === 'string' && arg.trim()) {
         loadBudget(arg)
       }
@@ -114,8 +115,8 @@ function App() {
       setShowGlossary(true)
     }
 
-    window.addEventListener('app:open-glossary', handleOpenGlossary as EventListener)
-    return () => window.removeEventListener('app:open-glossary', handleOpenGlossary as EventListener)
+    window.addEventListener(APP_CUSTOM_EVENTS.openGlossary, handleOpenGlossary as EventListener)
+    return () => window.removeEventListener(APP_CUSTOM_EVENTS.openGlossary, handleOpenGlossary as EventListener)
   }, [])
 
   // Expose a save hook for Electron close confirmation flow
@@ -186,11 +187,11 @@ function App() {
       ) : (
         <>
           <WelcomeScreen />
-          <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+          <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </>
       )}
-      <About isOpen={showAbout} onClose={() => setShowAbout(false)} />
-      <Glossary
+      <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
+      <GlossaryModal
         isOpen={showGlossary}
         initialTermId={initialGlossaryTermId}
         onClose={() => {

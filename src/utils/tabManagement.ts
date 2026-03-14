@@ -1,5 +1,5 @@
 // Utility functions for managing dashboard tabs
-import type { TabConfig } from '../types/auth';
+import type { TabConfig } from '../types/tabs';
 
 export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
 

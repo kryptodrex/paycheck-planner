@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { STORAGE_KEYS } from '../constants/storage';
 import { AccountsService } from './accountsService';
 
 class LocalStorageMock {
@@ -46,9 +47,12 @@ describe('AccountsService', () => {
   });
 
   it('falls back to defaults when stored JSON is invalid', () => {
-    localStorage.setItem('paycheck-planner-accounts', 'not-json');
+    localStorage.setItem(STORAGE_KEYS.accounts, 'not-json');
+
     const accounts = AccountsService.getAccounts();
+
     expect(accounts).toHaveLength(3);
+    expect(() => JSON.parse(localStorage.getItem(STORAGE_KEYS.accounts) ?? '')).not.toThrow();
   });
 
   it('adds and persists an account', () => {
@@ -63,7 +67,7 @@ describe('AccountsService', () => {
     const single = [
       { id: '1', name: 'Only', type: 'checking', color: '#000', icon: 'x' },
     ];
-    localStorage.setItem('paycheck-planner-accounts', JSON.stringify(single));
+    localStorage.setItem(STORAGE_KEYS.accounts, JSON.stringify(single));
 
     expect(AccountsService.deleteAccount('1')).toBe(false);
     expect(AccountsService.getAccounts()).toHaveLength(1);

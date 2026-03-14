@@ -5,6 +5,8 @@
  * ElectronAPI - Interface for communicating with Electron's main process
  * These functions are exposed from the preload script to the renderer (React)
  */
+import type { MenuEventName } from '../constants/events';
+
 export interface ElectronAPI {
   // Open a folder picker dialog
   selectDirectory: () => Promise<string | null>;
@@ -74,7 +76,7 @@ export interface ElectronAPI {
   // Takes an event name and a callback function
   // Returns an unsubscribe function to remove the listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-keyboard-shortcuts' | 'open-pay-options' | 'open-accounts' | 'save-plan' | 'set-tab-position' | 'toggle-tab-display-mode' | 'history-back' | 'history-forward' | 'history-home',
+    event: MenuEventName,
     callback: (arg?: unknown) => void
   ) => () => void;
 

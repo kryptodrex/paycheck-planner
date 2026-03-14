@@ -3,6 +3,8 @@
 // It's like a controlled doorway - only certain things can pass through
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import type { MenuEventName } from '../src/constants/events';
+import { menuChannel } from '../src/constants/events';
 
 console.log('[PRELOAD] Preload script starting...');
 
@@ -97,10 +99,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Takes: event name and callback function
   // Returns: () => unsubscribe function to remove listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-keyboard-shortcuts' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode' | 'history-back' | 'history-forward' | 'history-home',
+    event: MenuEventName,
     callback: (arg?: unknown) => void
   ) => {
-    const channel = `menu:${event}`;
+    const channel = menuChannel(event);
     const listener = (_event: IpcRendererEvent, arg?: unknown) => callback(arg);
     ipcRenderer.on(channel, listener);
     return () => ipcRenderer.removeListener(channel, listener);

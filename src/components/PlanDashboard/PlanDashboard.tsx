@@ -6,30 +6,30 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
+import { MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
-import { KeychainService } from '../../services/keychainService';
-import SetupWizard from '../SetupWizard';
-import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
-import KeyMetrics from '../KeyMetrics';
-import PayBreakdown from '../PayBreakdown';
-import BillsManager from '../BillsManager';
-import LoansManager from '../LoansManager';
-import SavingsManager from '../SavingsManager';
-import TaxBreakdown from '../TaxBreakdown';
-import Settings from '../Settings';
-import AccountsManager from '../AccountsManager';
-import ExportModal from '../ExportModal';
-import FeedbackModal from '../FeedbackModal';
+import SetupWizard from '../views/SetupWizard';
+import KeyMetrics from '../tabViews/KeyMetrics';
+import PayBreakdown from '../tabViews/PayBreakdown';
+import BillsManager from '../tabViews/BillsManager';
+import LoansManager from '../tabViews/LoansManager';
+import SavingsManager from '../tabViews/SavingsManager';
+import TaxBreakdown from '../tabViews/TaxBreakdown';
+import SettingsModal from '../modals/SettingsModal';
+import AccountsModal from '../modals/AccountsModal';
+import ExportModal from '../modals/ExportModal';
+import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, FormGroup } from '../shared';
+import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
-import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/auth';
+import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
+import type { ViewMode } from '../../types/viewMode';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
 
-type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
 type TabScrollPosition = 'top' | 'bottom';
 
 interface PlanHistoryState {
@@ -65,7 +65,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [pendingTabScroll, setPendingTabScroll] = useState<{ tab: TabId; position: TabScrollPosition } | null>(null);
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
+  const [displayMode, setDisplayMode] = useState<ViewMode>('paycheck');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
@@ -77,11 +77,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [isEditingPlanName, setIsEditingPlanName] = useState(false);
   const [draftPlanName, setDraftPlanName] = useState('');
   const [draftYear, setDraftYear] = useState('');
-  const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
-  const [customKey, setCustomKey] = useState('');
-  const [generatedKey, setGeneratedKey] = useState('');
-  const [useCustomKey, setUseCustomKey] = useState(false);
-  const [encryptionSaving, setEncryptionSaving] = useState(false);
   const [statusToast, setStatusToast] = useState<StatusToastState | null>(null);
   const [showTabManagementModal, setShowTabManagementModal] = useState(false);
   const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
@@ -90,6 +85,21 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
   const [tabPosition, setTabPosition] = useState<TabPosition>('left');
   const [tabDisplayMode, setTabDisplayMode] = useState<TabDisplayMode>('icons-with-labels');
+  const {
+    encryptionEnabled,
+    setEncryptionEnabled,
+    customKey,
+    setCustomKey,
+    generatedKey,
+    useCustomKey,
+    setUseCustomKey,
+    isSaving: encryptionSaving,
+    canSaveSelection,
+    generateKey: handleGenerateEncryptionKey,
+    reset: resetEncryptionSetupFlow,
+    goBackToSelection,
+    saveSelection: saveEncryptionSelection,
+  } = useEncryptionSetupFlow();
   const tabContentRef = useRef<HTMLDivElement | null>(null);
   const tabPanelRefs = useRef<Partial<Record<TabId, HTMLDivElement | null>>>({});
   const planLoadingStartRef = useRef<number | null>(null);
@@ -106,42 +116,56 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const historyStateKeyRef = useRef<string | null>(null);
   const suppressHistoryPushRef = useRef(false);
   const lastMissingPathPromptRef = useRef<string | null>(null);
-  const [missingActiveFilePath, setMissingActiveFilePath] = useState<string | null>(null);
-  const [activeRelinkMismatchMessage, setActiveRelinkMismatchMessage] = useState<string | null>(null);
-  const [activeRelinkLoading, setActiveRelinkLoading] = useState(false);
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
+  const {
+    missingFile: missingActiveFile,
+    relinkMismatchMessage: activeRelinkMismatchMessage,
+    relinkLoading: activeRelinkLoading,
+    promptFileRelink: promptActiveFileRelink,
+    clearFileRelinkPrompt: clearActiveFileRelinkPrompt,
+    locateRelinkedFile: locateActiveRelinkedFile,
+  } = useFileRelinkFlow({
+    getExpectedPlanId: () => budgetData?.id,
+    fallbackErrorMessage: 'Unable to relink moved file.',
+    onRelinkSuccess: (result) => {
+      lastMissingPathPromptRef.current = null;
+      updateBudgetData({
+        name: result.planName,
+        settings: {
+          ...budgetData!.settings,
+          filePath: result.filePath,
+        },
+      });
+      setStatusToast({ message: 'File moved on disk. Plan path was relinked.', type: 'success' });
+    },
+  });
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
     return budgetData?.settings?.tabConfigs 
       ? initializeTabConfigs(budgetData.settings.tabConfigs)
       : initializeTabConfigs();
-  }, [budgetData?.settings?.tabConfigs]);
+  }, [budgetData]);
   
   const visibleTabs = useMemo(() => getVisibleTabs(tabConfigs), [tabConfigs]);
   const hiddenTabs = useMemo(() => getHiddenTabs(tabConfigs), [tabConfigs]);
+  const effectiveTemporarilyVisibleTab = temporarilyVisibleTab === activeTab ? temporarilyVisibleTab : null;
   const visibleTabsForRender = useMemo(() => {
-    if (!temporarilyVisibleTab) return visibleTabs;
+    if (!effectiveTemporarilyVisibleTab) return visibleTabs;
 
-    const alreadyVisible = visibleTabs.some((tab) => tab.id === temporarilyVisibleTab);
+    const alreadyVisible = visibleTabs.some((tab) => tab.id === effectiveTemporarilyVisibleTab);
     if (alreadyVisible) return visibleTabs;
 
-    const tempTab = tabConfigs.find((tab) => tab.id === temporarilyVisibleTab);
+    const tempTab = tabConfigs.find((tab) => tab.id === effectiveTemporarilyVisibleTab);
     if (!tempTab) return visibleTabs;
 
     const maxOrder = visibleTabs.reduce((max, tab) => Math.max(max, tab.order), -1);
     return [...visibleTabs, { ...tempTab, visible: true, order: maxOrder + 1 }];
-  }, [visibleTabs, tabConfigs, temporarilyVisibleTab]);
+  }, [effectiveTemporarilyVisibleTab, visibleTabs, tabConfigs]);
 
   useEffect(() => {
     latestTabConfigsRef.current = tabConfigs;
   }, [tabConfigs]);
-
-  useEffect(() => {
-    if (!temporarilyVisibleTab) return;
-    if (activeTab !== temporarilyVisibleTab) {
-      setTemporarilyVisibleTab(null);
-    }
-  }, [activeTab, temporarilyVisibleTab]);
 
   // Restore active tab before paint to avoid flashing default tab
   useLayoutEffect(() => {
@@ -152,6 +176,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
     const normalizedViewMode = normalizeLegacyTabId(viewMode);
     if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(normalizedViewMode);
       initializedTabContextRef.current = tabRestoreContext;
       return;
@@ -265,6 +290,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   // Initialize tab position and display mode from budget settings
   useEffect(() => {
     if (budgetData?.settings?.tabPosition) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTabPosition(budgetData.settings.tabPosition);
     }
     if (budgetData?.settings?.tabDisplayMode) {
@@ -313,16 +339,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
 
     lastMissingPathPromptRef.current = currentPath;
-    setActiveRelinkMismatchMessage(null);
-    setMissingActiveFilePath(currentPath);
+    promptActiveFileRelink(currentPath);
     return false;
-  }, [budgetData?.settings?.filePath]);
+  }, [budgetData?.settings?.filePath, promptActiveFileRelink]);
 
   // Handle save with success toast
   const handleSave = useCallback(async () => {
     if (!budgetData) return;
 
-    if (missingActiveFilePath) {
+    if (missingActiveFile) {
       setStatusToast({ message: 'Locate moved file before saving this plan.', type: 'warning' });
       return;
     }
@@ -344,7 +369,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (success) {
       setStatusToast({ message: 'Saved successfully', type: 'success' });
     }
-  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, missingActiveFilePath, ensureValidSavePath]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, missingActiveFile, ensureValidSavePath]);
 
   const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
     const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
@@ -410,48 +435,48 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return;
 
-    const unsubscribeNew = window.electronAPI.onMenuEvent('new-budget', () => {
+    const unsubscribeNew = window.electronAPI.onMenuEvent(MENU_EVENTS.newBudget, () => {
       const year = new Date().getFullYear();
       createNewBudget(year);
     });
 
-    const unsubscribeOpen = window.electronAPI.onMenuEvent('open-budget', () => {
+    const unsubscribeOpen = window.electronAPI.onMenuEvent(MENU_EVENTS.openBudget, () => {
       loadBudget();
     });
 
-    const unsubscribeEncryption = window.electronAPI.onMenuEvent('change-encryption', () => {
+    const unsubscribeEncryption = window.electronAPI.onMenuEvent(MENU_EVENTS.changeEncryption, () => {
       onResetSetup?.();
     });
 
-    const unsubscribeSave = window.electronAPI.onMenuEvent('save-plan', () => {
+    const unsubscribeSave = window.electronAPI.onMenuEvent(MENU_EVENTS.savePlan, () => {
       handleSaveRef.current?.();
     });
 
-    const unsubscribeSettings = window.electronAPI.onMenuEvent('open-settings', () => {
+    const unsubscribeSettings = window.electronAPI.onMenuEvent(MENU_EVENTS.openSettings, () => {
       setShowSettings(true);
     });
 
-    const unsubscribePayOptions = window.electronAPI.onMenuEvent('open-pay-options', () => {
+    const unsubscribePayOptions = window.electronAPI.onMenuEvent(MENU_EVENTS.openPayOptions, () => {
       selectTab('breakdown', { resetBillsAnchor: true });
     });
 
-    const unsubscribeAccounts = window.electronAPI.onMenuEvent('open-accounts', () => {
+    const unsubscribeAccounts = window.electronAPI.onMenuEvent(MENU_EVENTS.openAccounts, () => {
       setShowAccountsModal(true);
     });
 
-    const unsubscribeHistoryBack = window.electronAPI.onMenuEvent('history-back', () => {
+    const unsubscribeHistoryBack = window.electronAPI.onMenuEvent(MENU_EVENTS.historyBack, () => {
       if (!viewMode) {
         window.history.back();
       }
     });
 
-    const unsubscribeHistoryForward = window.electronAPI.onMenuEvent('history-forward', () => {
+    const unsubscribeHistoryForward = window.electronAPI.onMenuEvent(MENU_EVENTS.historyForward, () => {
       if (!viewMode) {
         window.history.forward();
       }
     });
 
-    const unsubscribeHistoryHome = window.electronAPI.onMenuEvent('history-home', () => {
+    const unsubscribeHistoryHome = window.electronAPI.onMenuEvent(MENU_EVENTS.historyHome, () => {
       if (viewMode) return;
 
       const homeTab = visibleTabs[0]?.id as TabId | undefined;
@@ -465,7 +490,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       selectTab(homeTab, { resetBillsAnchor: true });
     });
 
-    const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent('set-tab-position', (position) => {
+    const unsubscribeSetTabPosition = window.electronAPI.onMenuEvent(MENU_EVENTS.setTabPosition, (position) => {
       if (
         position === 'top' ||
         position === 'bottom' ||
@@ -476,7 +501,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       }
     });
 
-    const unsubscribeToggleDisplayMode = window.electronAPI.onMenuEvent('toggle-tab-display-mode', () => {
+    const unsubscribeToggleDisplayMode = window.electronAPI.onMenuEvent(MENU_EVENTS.toggleTabDisplayMode, () => {
       const newMode: TabDisplayMode = tabDisplayModeRef.current === 'icons-only' ? 'icons-with-labels' : 'icons-only';
       handleTabDisplayModeChangeRef.current?.(newMode);
     });
@@ -562,20 +587,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       }
 
       lastMissingPathPromptRef.current = currentPath;
-      setActiveRelinkMismatchMessage(null);
-      setMissingActiveFilePath(currentPath);
+      promptActiveFileRelink(currentPath);
     }, 2500);
 
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [budgetData, updateBudgetData]);
+  }, [budgetData, promptActiveFileRelink]);
 
   const handleCloseActiveRelinkModal = useCallback(() => {
     if (activeRelinkLoading || !budgetData) return;
 
-    const stalePath = missingActiveFilePath || budgetData.settings.filePath || null;
+    const stalePath = missingActiveFile?.filePath || budgetData.settings.filePath || null;
     if (stalePath) {
       FileStorageService.removeRecentFile(stalePath);
     }
@@ -589,48 +613,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     lastMissingPathPromptRef.current = null;
-    setMissingActiveFilePath(null);
-    setActiveRelinkMismatchMessage(null);
+    clearActiveFileRelinkPrompt();
     setStatusToast({
       message: 'File location was cleared. Use Save to choose a new file location.',
       type: 'warning',
     });
-  }, [activeRelinkLoading, budgetData, missingActiveFilePath, updateBudgetData]);
-
-  const handleLocateActiveRelinkFile = useCallback(async () => {
-    if (!budgetData || !missingActiveFilePath || activeRelinkLoading) return;
-
-    setActiveRelinkLoading(true);
-    try {
-      const result = await FileStorageService.relinkMovedBudgetFile(missingActiveFilePath, budgetData.id);
-
-      if (result.status === 'cancelled') {
-        return;
-      }
-
-      if (result.status === 'mismatch' || result.status === 'invalid') {
-        setActiveRelinkMismatchMessage(result.message);
-        return;
-      }
-
-      lastMissingPathPromptRef.current = null;
-      setMissingActiveFilePath(null);
-      setActiveRelinkMismatchMessage(null);
-      updateBudgetData({
-        name: result.planName,
-        settings: {
-          ...budgetData.settings,
-          filePath: result.filePath,
-        },
-      });
-      setStatusToast({ message: 'File moved on disk. Plan path was relinked.', type: 'success' });
-    } catch (error) {
-      const message = (error as Error).message || 'Unable to relink moved file.';
-      setActiveRelinkMismatchMessage(message);
-    } finally {
-      setActiveRelinkLoading(false);
-    }
-  }, [activeRelinkLoading, budgetData, missingActiveFilePath, updateBudgetData]);
+  }, [activeRelinkLoading, budgetData, missingActiveFile, updateBudgetData, clearActiveFileRelinkPrompt]);
 
   // Auto-dismiss status toast
   useEffect(() => {
@@ -656,6 +644,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         planLoadingStartRef.current = Date.now();
       }
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowPlanLoadingScreen(true);
       return;
     }
@@ -691,7 +680,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (!visible) {
       const currentVisibleCount = tabConfigs.filter(t => t.visible).length;
       if (currentVisibleCount <= 1) {
-        alert('Cannot hide the last visible tab. At least one tab must remain visible.');
+        openErrorDialog({
+          title: 'Cannot Hide Tab',
+          message: 'Cannot hide the last visible tab. At least one tab must remain visible.',
+        });
         return;
       }
     }
@@ -706,7 +698,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (!visible && activeTab === tabId) {
       setActiveTab('metrics');
     }
-  }, [budgetData, tabConfigs, activeTab, updateBudgetSettings]);
+  }, [activeTab, budgetData, openErrorDialog, tabConfigs, updateBudgetSettings]);
 
   const handleReorderTab = useCallback((fromIndex: number, toIndex: number) => {
     if (!budgetData) return;
@@ -882,17 +874,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setNewYear('');
   };
 
-  const handleGenerateEncryptionKey = () => {
-    const key = FileStorageService.generateEncryptionKey();
-    setGeneratedKey(key);
-    setUseCustomKey(false);
-  };
-
   const handleEncryptionModalOpen = () => {
-    setEncryptionEnabled(null);
-    setCustomKey('');
-    setGeneratedKey('');
-    setUseCustomKey(false);
+    resetEncryptionSetupFlow();
     setShowEncryptionSetup(true);
   };
 
@@ -1005,54 +988,35 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   const handleEncryptionModalClose = () => {
     setShowEncryptionSetup(false);
-    setEncryptionEnabled(null);
-    setCustomKey('');
-    setGeneratedKey('');
-    setUseCustomKey(false);
-    setEncryptionSaving(false);
+    resetEncryptionSetupFlow();
   };
 
   const handleSaveEncryption = async () => {
     if (!budgetData) return;
-    
-    setEncryptionSaving(true);
-    try {
-      const settings = FileStorageService.getAppSettings();
-      
-      if (encryptionEnabled) {
-        const keyToUse = useCustomKey ? customKey : generatedKey;
-        
-        if (!keyToUse) {
-          alert('Please generate or enter an encryption key.');
-          setEncryptionSaving(false);
-          return;
-        }
-        
-        settings.encryptionEnabled = true;
-        await KeychainService.saveKey(budgetData.id, keyToUse);
-      } else {
-        settings.encryptionEnabled = false;
-        await KeychainService.deleteKey(budgetData.id);
-      }
-      
-      FileStorageService.saveAppSettings(settings);
+
+    const result = await saveEncryptionSelection({
+      planId: budgetData.id,
+      persistAppSettings: true,
+      deleteStoredKeyWhenDisabled: true,
+    });
+
+    if (!result.success) {
+      openErrorDialog(result.errorDialog);
+      return;
+    }
+
       updateBudgetSettings({
         ...budgetData.settings,
-        encryptionEnabled: Boolean(encryptionEnabled),
+        encryptionEnabled: result.encryptionEnabled,
       });
-      
+
       setStatusToast({
-        message: encryptionEnabled
+        message: result.encryptionEnabled
           ? '🔒 Encryption enabled for this plan'
           : '📄 Encryption disabled for this plan',
         type: 'success',
       });
       handleEncryptionModalClose();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to save encryption settings: ${errorMsg}`);
-      setEncryptionSaving(false);
-    }
   };
 
   const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
@@ -1188,7 +1152,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             variant="primary"
             size="small"
             onClick={handleSave}
-            disabled={loading || !!missingActiveFilePath || activeRelinkLoading}
+            disabled={loading || !!missingActiveFile || activeRelinkLoading}
             className="header-btn-primary"
           >
             💾 Save
@@ -1492,7 +1456,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       </Modal>
 
       {/* Settings Modal */}
-      <Settings 
+      <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)}
       />
@@ -1517,7 +1481,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setEncryptionEnabled(null)}
+                onClick={goBackToSelection}
                 disabled={encryptionSaving}
               >
                 Back
@@ -1527,11 +1491,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               type="button"
               variant="primary"
               onClick={handleSaveEncryption}
-              disabled={
-                encryptionEnabled === null ||
-                (encryptionEnabled === true && !useCustomKey && !generatedKey) ||
-                encryptionSaving
-              }
+              disabled={!canSaveSelection || encryptionSaving}
               isLoading={encryptionSaving}
               loadingText="Saving..."
             >
@@ -1559,38 +1519,24 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         />
       </Modal>
 
-      <Modal
-        isOpen={!!missingActiveFilePath}
+      <FileRelinkModal
+        isOpen={!!missingActiveFile}
         onClose={handleCloseActiveRelinkModal}
+        onLocate={locateActiveRelinkedFile}
         header="Plan File Moved"
-        contentClassName="plan-relink-modal"
-        footer={
-          <>
-            <Button variant="secondary" onClick={handleCloseActiveRelinkModal} disabled={activeRelinkLoading}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleLocateActiveRelinkFile}
-              isLoading={activeRelinkLoading}
-              loadingText="Opening Picker..."
-              disabled={activeRelinkLoading}
-            >
-              Locate File
-            </Button>
-          </>
-        }
-      >
-        <p className="plan-relink-modal-message">
-          Your open plan file was moved or renamed on disk. Locate it to keep saving to the correct file.
-        </p>
-        <code className="plan-relink-modal-path" title={missingActiveFilePath || ''}>
-          {missingActiveFilePath || ''}
-        </code>
-        {activeRelinkMismatchMessage && (
-          <p className="plan-relink-modal-error"><b>{activeRelinkMismatchMessage}</b> Please try again.</p>
-        )}
-      </Modal>
+        message="Your open plan file was moved or renamed on disk. Locate it to keep saving to the correct file."
+        filePath={missingActiveFile?.filePath || ''}
+        errorMessage={activeRelinkMismatchMessage ? `${activeRelinkMismatchMessage} Please try again.` : null}
+        isLoading={activeRelinkLoading}
+      />
+
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
+      />
 
       {statusToast && (
         <Toast 
@@ -1601,9 +1547,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         />
       )}
 
-      {/* Accounts Manager Modal */}
+      {/* Accounts Modal */}
       {showAccountsModal && (
-        <AccountsManager onClose={() => setShowAccountsModal(false)} />
+        <AccountsModal onClose={() => setShowAccountsModal(false)} />
       )}
 
       {/* Tab Management Modal */}
