@@ -47,8 +47,11 @@ describe('AccountsService', () => {
 
   it('falls back to defaults when stored JSON is invalid', () => {
     localStorage.setItem('paycheck-planner-accounts', 'not-json');
+
     const accounts = AccountsService.getAccounts();
+
     expect(accounts).toHaveLength(3);
+    expect(() => JSON.parse(localStorage.getItem('paycheck-planner-accounts') ?? '')).not.toThrow();
   });
 
   it('adds and persists an account', () => {

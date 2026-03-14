@@ -1,6 +1,6 @@
 // Service for managing app-wide accounts that can be reused across plans
 // Accounts are stored in localStorage and persist across sessions
-import type { Account } from '../types/auth';
+import type { Account } from '../types/accounts';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountDefaults';
 
 // LocalStorage key for global accounts
@@ -18,9 +18,10 @@ export class AccountsService {
     if (stored) {
       try {
         return JSON.parse(stored);
-      } catch (error) {
-        console.error('Error parsing stored accounts:', error);
-        return this.getDefaultAccounts();
+      } catch {
+        const defaultAccounts = this.getDefaultAccounts();
+        this.saveAccounts(defaultAccounts);
+        return defaultAccounts;
       }
     }
     // Return default accounts if none exist
