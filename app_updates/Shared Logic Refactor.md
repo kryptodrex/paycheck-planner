@@ -13,10 +13,11 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 1. Centralize Financial Calculation Engine
 **Priority:** Critical
 
-- [ ] Implement `src/services/budgetCalculations.ts` as the single source of truth for paycheck/tax/net/allocation math.
-- [ ] Migrate `BudgetContext.calculatePaycheckBreakdown` to use shared functions.
-- [ ] Migrate `PayBreakdown`, `KeyMetrics`, and `pdfExport` to use the same shared functions.
-- [ ] Add parity tests proving all consumers return identical numbers for the same fixture.
+- [x] Implement `src/services/budgetCalculations.ts` as the single source of truth for paycheck/tax/net/allocation math.
+- [x] Migrate `BudgetContext.calculatePaycheckBreakdown` to use shared functions.
+- [x] Migrate `KeyMetrics` and `pdfExport` to use the same shared functions.
+- [x] Migrate `PayBreakdown` to use the same shared functions.
+- [x] Add parity tests proving all consumers return identical numbers for the same fixture.
 
 **Problem:** Core pay/tax/net/leftover math is duplicated across multiple layers.
 
@@ -45,10 +46,10 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 2. Unified Missing/Moved File Relink Flow
 **Priority:** Critical
 
-- [ ] Extract shared relink state/decision logic to `src/hooks/useFileRelinkFlow.ts` (or equivalent service + hook).
-- [ ] Keep Welcome and PlanDashboard modal UIs, but wire both to the shared flow.
-- [ ] Ensure cancel behavior is identical across entry points (clear stale path policy, no stale saves).
-- [ ] Add tests for `success`, `cancelled`, `mismatch`, and `invalid` paths.
+- [x] Extract shared relink state/decision logic to `src/hooks/useFileRelinkFlow.ts` (or equivalent service + hook).
+- [x] Keep Welcome and PlanDashboard modal UIs, but wire both to the shared flow.
+- [x] Ensure cancel behavior is identical across entry points (clear stale path policy, no stale saves).
+- [x] Add tests for `success`, `cancelled`, `mismatch`, and `invalid` paths.
 
 **Problem:** Similar relink state + modal handling exists in multiple components.
 
@@ -76,9 +77,9 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 3. File Path / Plan Name Helpers
 **Priority:** High
 
-- [ ] Create `src/utils/filePath.ts` for all filename/path parsing.
-- [ ] Replace all ad-hoc basename/split logic in `BudgetContext` and `FileStorageService`.
-- [ ] Add unit tests for separators, extensions, whitespace, and empty input edge cases.
+- [x] Create `src/utils/filePath.ts` for all filename/path parsing.
+- [x] Replace all ad-hoc basename/split logic in `BudgetContext` and `FileStorageService`.
+- [x] Add unit tests for separators, extensions, whitespace, and empty input edge cases.
 
 **Problem:** Path-to-name parsing logic is duplicated in context/service and ad-hoc splits exist.
 
@@ -103,9 +104,9 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 4. Shared Dialog Strategy (Replace scattered `alert` / `confirm`)
 **Priority:** High
 
-- [ ] Introduce shared app dialogs (`ConfirmDialog`, `ErrorDialog`) and optional `useAppDialogs` helper.
-- [ ] Replace highest-impact `alert`/`confirm` calls first (PlanDashboard, Settings, SetupWizard, Welcome).
-- [ ] Standardize button wording (`Cancel`, `Confirm`, `Retry`) and error presentation.
+- [x] Introduce shared app dialogs (`ConfirmDialog`, `ErrorDialog`) and optional `useAppDialogs` helper.
+- [x] Replace highest-impact `alert`/`confirm` calls first (PlanDashboard, Settings, SetupWizard, Welcome).
+- [x] Standardize button wording (`Cancel`, `Confirm`, `Retry`) and error presentation.
 
 **Problem:** Browser dialogs are still scattered and inconsistent for UX/testing.
 
@@ -129,9 +130,9 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 5. Manager CRUD Form Patterns -> Shared Hooks
 **Priority:** High
 
-- [ ] Extract reusable hooks for modal entity editing and field error state.
-- [ ] Migrate at least two manager components first (recommended: Bills + Loans), then expand.
-- [ ] Preserve existing UX/validation messages while reducing duplicate handlers.
+- [x] Extract reusable hooks for modal entity editing and field error state.
+- [x] Migrate at least two manager components first (recommended: Bills + Loans), then expand.
+- [x] Preserve existing UX/validation messages while reducing duplicate handlers.
 
 **Problem:** Bills/Loans/Savings/Benefits managers all implement similar modal-form CRUD state and validation patterns.
 
@@ -156,8 +157,8 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 6. Display Mode Conversion Utilities
 **Priority:** Medium-High
 
-- [ ] Add `src/utils/displayAmounts.ts` and migrate manager-level `toDisplayAmount`/`fromDisplayAmount` helpers.
-- [ ] Keep pay frequency + display mode conversion rules centralized.
+- [x] Add `src/utils/displayAmounts.ts` and migrate manager-level `toDisplayAmount`/`fromDisplayAmount` helpers.
+- [x] Keep pay frequency + display mode conversion rules centralized.
 
 **Problem:** Local `toDisplayAmount` helpers repeated across managers.
 
@@ -179,9 +180,9 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 7. Suggested Leftover Logic
 **Priority:** Medium
 
-- [ ] Move suggestion formula to `src/utils/paySuggestions.ts`.
-- [ ] Use it in both SetupWizard and PaySettingsModal.
-- [ ] Add tests for rounding/minimum-floor behavior.
+- [x] Move suggestion formula to `src/utils/paySuggestions.ts`.
+- [x] Use it in both SetupWizard and PaySettingsModal.
+- [x] Add tests for rounding/minimum-floor behavior.
 
 **Problem:** Same suggestion formula exists in setup and pay settings modal.
 
@@ -198,34 +199,43 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 
 ---
 
-### 8. Retirement Yearly Limit/Auto-Calc Math
+### 8. Split And Rename `auth.ts` Types
 **Priority:** Medium
 
-- [ ] Extract yearly-limit and auto-calc math to `src/utils/retirementMath.ts`.
-- [ ] Replace duplicated logic in SavingsManager and BenefitsManager.
-- [ ] Add tests for match/no-match and percentage/amount cap variants.
+- [x] Break `src/types/auth.ts` into smaller domain-focused type files.
+- [x] Replace the misleading `auth.ts` entry point with a narrow compatibility barrel during migration.
+- [x] Update imports so active app code no longer keeps expanding the old catch-all file.
 
-**Problem:** Similar yearly-limit and auto-calc logic appears in multiple managers.
+**Problem:** `src/types/auth.ts` has become a catch-all type file for the entire app, and the name no longer matches the domain.
 
-**Current duplication evidence:**
-- `SavingsManager`
-- `BenefitsManager`
+**Current duplication / maintenance evidence:**
+- Unrelated budget, account, tax, loan, tab, and settings types all live in one file.
+- New shared services and components continue importing from `auth.ts`, increasing coupling and search noise.
+- The filename suggests authentication concerns even though this app does not have an auth domain.
 
 **Refactor target:**
-- Add `src/utils/retirementMath.ts`:
-  **Done Criteria:**
-  - One shared implementation powers both manager UIs.
-  - `calculateYearlyRetirementContribution`
-  - `checkYearlyLimitExceeded`
-  - `autoCalculateContributionForYearlyLimit`
+- Split `src/types/auth.ts` into clearer modules such as:
+  - `src/types/budget.ts`
+  - `src/types/accounts.ts`
+  - `src/types/payroll.ts`
+  - `src/types/settings.ts`
+  - `src/types/tabs.ts`
+- Optionally keep a temporary barrel during migration if needed, but the end state should avoid `auth.ts` as the main import surface.
+
+**Why here:** This is foundational cleanup for Phase 2 and later shared-service work, because type sprawl will otherwise keep leaking into every new abstraction.
+
+**Done Criteria:**
+- New code no longer imports app domain types from `src/types/auth.ts`.
+- Domain types are grouped into smaller files with clearer names.
+- Any compatibility barrel is temporary and no longer the default import target.
 
 ---
 
 ### 9. Budget Currency Conversion as Service
 **Priority:** Medium
 
-- [ ] Move `convertBudgetAmounts` + rounding logic from `PaySettingsModal` to `src/services/budgetCurrencyConversion.ts`.
-- [ ] Add tests covering major numeric fields and excluded percentage fields.
+- [x] Move `convertBudgetAmounts` + rounding logic from `PaySettingsModal` to `src/services/budgetCurrencyConversion.ts`.
+- [x] Add tests covering major numeric fields and excluded percentage fields.
 
 **Problem:** Deep budget amount conversion currently lives in component-level modal logic.
 
@@ -244,8 +254,8 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 10. Account Grouping and Totals Helpers
 **Priority:** Medium
 
-- [ ] Add `src/utils/accountGrouping.ts` helpers for repeated reducers/grouping.
-- [ ] Migrate Bills/Loans/Savings grouping and subtotal logic to shared helpers.
+- [x] Add `src/utils/accountGrouping.ts` helpers for repeated reducers/grouping.
+- [x] Migrate Bills/Loans/Savings grouping and subtotal logic to shared helpers.
 
 **Problem:** Multiple account-grouping reducers and subtotal patterns exist in managers.
 
@@ -265,8 +275,8 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 11. Shared `ViewMode` Type
 **Priority:** Medium-Low
 
-- [ ] Add `src/types/viewMode.ts`.
-- [ ] Replace local `'paycheck' | 'monthly' | 'yearly'` declarations with imported type.
+- [x] Add `src/types/viewMode.ts`.
+- [x] Replace local `'paycheck' | 'monthly' | 'yearly'` declarations with imported type.
 
 **Problem:** `'paycheck' | 'monthly' | 'yearly'` is redeclared in many places.
 
@@ -281,8 +291,8 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 12. Encryption Setup Flow Consolidation
 **Priority:** Medium-Low
 
-- [ ] Extract reusable encryption setup/save behavior into service/hook.
-- [ ] Remove duplicated key validation/saving code across SetupWizard, EncryptionSetup, PlanDashboard.
+- [x] Extract reusable encryption setup/save behavior into service/hook.
+- [x] Remove duplicated key validation/saving code across SetupWizard, EncryptionSetup, PlanDashboard.
 
 **Problem:** Encryption setup/save behavior is distributed across SetupWizard, EncryptionSetup, and PlanDashboard handlers.
 
@@ -297,8 +307,8 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 13. Shared Path Display Styling Utility
 **Priority:** Low
 
-- [ ] Create one shared CSS utility/class for relink path/code blocks.
-- [ ] Replace duplicated modal path classes in Welcome and PlanDashboard.
+- [x] Create one shared CSS utility/class for relink path/code blocks.
+- [x] Replace duplicated modal path classes in Welcome and PlanDashboard.
 
 **Problem:** Similar relink modal path styling classes exist in multiple component CSS files.
 
@@ -313,16 +323,16 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ### 14. Remove/Archive Backup and Unused Artifacts
 **Priority:** Low (Hygiene)
 
-- [ ] Remove or archive `*.backup` files outside `src`.
-- [ ] Confirm whether `BenefitsManager` is intentionally unused; either wire it or remove it.
-- [ ] Ensure search/indexing and maintenance docs no longer reference stale backups.
+- [x] Remove or archive `*.backup` files outside `src`.
+- [x] Confirm whether `BenefitsManager` is intentionally unused; either wire it or remove it.
+- [x] Ensure search/indexing and maintenance docs no longer reference stale backups.
 
 **Problem:** `*.backup` files and likely unused component artifacts increase confusion.
 
 **Current candidates:**
 - `src/components/BenefitsManager/*.backup`
 - `src/components/LoansManager/*.backup`
-- `src/components/shared/Button/*.backup`
+- `src/components/_shared/Button/*.backup`
 
 **Refactor target:**
 - Remove from active tree (or move to an archive folder outside `src`).
@@ -333,38 +343,41 @@ Reduce duplication, improve consistency, and lower bug risk by extracting reusab
 ## Phased Execution Plan
 
 ### Phase 1 (Low Risk, High ROI)
-- [ ] Shared file-path utils (`filePath.ts`)
-- [ ] Shared `ViewMode` type
-- [ ] Suggested leftover utility
-- [ ] Display amount utility
+- [x] Shared file-path utils (`filePath.ts`)
+- [x] Shared `ViewMode` type
+- [x] Suggested leftover utility
+- [x] Display amount utility
 
 ### Phase 2 (Core correctness)
-- [ ] `budgetCalculations` service
-- [ ] Migrate `PayBreakdown`, `KeyMetrics`, `pdfExport`, and context calculations to shared engine
-- [ ] Add regression tests for parity across all consumers
+- [x] `budgetCalculations` service
+- [x] Migrate `PayBreakdown`, `KeyMetrics`, `pdfExport`, and context calculations to shared engine
+- [x] Add regression tests for parity across all consumers
+- [x] Split and rename `src/types/auth.ts` into domain type modules
 
 ### Phase 3 (Workflow consistency)
-- [ ] File relink hook/service extraction
-- [ ] Dialog strategy (`ConfirmDialog`/`ErrorDialog`)
-- [ ] Replace high-impact `alert`/`confirm` usage
+- [x] File relink hook/service extraction
+- [x] Dialog strategy (`ConfirmDialog`/`ErrorDialog`)
+- [x] Replace high-impact `alert`/`confirm` usage
 
 ### Phase 4 (Form architecture)
-- [ ] Manager CRUD hooks
-- [ ] Retirement math extraction
-- [ ] Account grouping helpers
+- [x] Manager CRUD hooks
+- [x] Account grouping helpers
 
 ### Phase 5 (Cleanup)
-- [ ] Currency conversion service extraction
-- [ ] CSS/path styling utility extraction
-- [ ] Remove backup artifacts
+- [x] Currency conversion service extraction
+- [x] CSS/path styling utility extraction
+- [x] Remove backup artifacts
+- [x] Rename 'shared' directory under 'components' to '_shared' and adjust imports as necessary
+- [x] Reorganize the `components` directory to group related components together: tab-driven plan views under `tabViews`, separate non-plan windows under `views`, and `_shared` components into more intuitive subgroups.
+- [x] Extract any reused constants to a new `src/constants` directory, split out by files that make sense, and update imports
 
 ## Test Strategy Requirements
-- [ ] Any changed existing `src/services` or `src/utils` module includes updated tests.
-- [ ] Any new `src/services/*.ts` or `src/utils/*.ts` module includes a matching `*.test.ts`.
-- [ ] Parity tests added where math is migrated from components/context to shared service.
+- [x] Any changed existing `src/services` or `src/utils` module includes updated tests.
+- [x] Any new `src/services/*.ts` or `src/utils/*.ts` module includes a matching `*.test.ts`.
+- [x] Parity tests added where math is migrated from components/context to shared service.
 
 ## Success Metrics
-- [ ] Reduced duplicated logic blocks in manager/components/services.
-- [ ] Financial outputs match across UI and PDF export for the same input data.
-- [ ] Fewer direct `alert`/`confirm` calls in app components.
-- [ ] All new/refactored services/utils covered by unit tests.
+- [x] Reduced duplicated logic blocks in manager/components/services.
+- [x] Financial outputs match across UI and PDF export for the same input data.
+- [x] Fewer direct `alert`/`confirm` calls in app components.
+- [x] All new/refactored services/utils covered by unit tests.
