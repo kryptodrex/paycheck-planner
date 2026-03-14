@@ -45,7 +45,7 @@ describe('useFileRelinkFlow', () => {
   const onRelinkSuccess = vi.fn();
   const getExpectedPlanId = vi.fn(() => 'plan-1');
 
-  const renderHook = () => {
+  const useTestHook = () => {
     resetHookCursor();
     return useFileRelinkFlow({
       getExpectedPlanId,
@@ -60,10 +60,10 @@ describe('useFileRelinkFlow', () => {
   });
 
   it('stores the missing file prompt and clears any prior mismatch message', () => {
-    let hook = renderHook();
+    let hook = useTestHook();
 
     hook.promptFileRelink('/tmp/missing-plan.budget');
-    hook = renderHook();
+    hook = useTestHook();
 
     expect(hook.missingFile).toEqual({
       filePath: '/tmp/missing-plan.budget',
@@ -78,12 +78,12 @@ describe('useFileRelinkFlow', () => {
       message: 'That file belongs to a different plan.',
     });
 
-    let hook = renderHook();
+    let hook = useTestHook();
     hook.promptFileRelink('/tmp/missing-plan.budget');
-    hook = renderHook();
+    hook = useTestHook();
 
     await hook.locateRelinkedFile();
-    hook = renderHook();
+    hook = useTestHook();
 
     expect(FileStorageService.relinkMovedBudgetFile).toHaveBeenCalledWith('/tmp/missing-plan.budget', 'plan-1');
     expect(hook.missingFile).toEqual({
@@ -101,12 +101,12 @@ describe('useFileRelinkFlow', () => {
       planName: 'moved-plan',
     });
 
-    let hook = renderHook();
+    let hook = useTestHook();
     hook.promptFileRelink('/tmp/missing-plan.budget', 'Missing Plan');
-    hook = renderHook();
+    hook = useTestHook();
 
     await hook.locateRelinkedFile();
-    hook = renderHook();
+    hook = useTestHook();
 
     expect(onRelinkSuccess).toHaveBeenCalledWith(
       {
