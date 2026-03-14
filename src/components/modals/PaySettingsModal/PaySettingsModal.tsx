@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
+import type { BudgetData } from '../../../types/budget';
 import type { PaySettings } from '../../../types/payroll';
 import { convertBudgetAmounts } from '../../../services/budgetCurrencyConversion';
 import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
