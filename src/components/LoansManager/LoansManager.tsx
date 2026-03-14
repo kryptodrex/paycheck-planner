@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import { useAppDialogs } from '../../hooks';
+import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../hooks';
 import type { Loan, LoanPaymentLine } from '../../types/obligations';
 import type { LoanPaymentFrequency } from '../../types/frequencies';
 import type { ViewMode } from '../../types/viewMode';
@@ -103,15 +103,14 @@ const mapLoanPaymentLinesToEditable = (paymentBreakdown: LoanPaymentLine[]): Edi
 const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
     const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
     const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
-    const [showAddLoan, setShowAddLoan] = useState(false);
-    const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
+    const loanEditor = useModalEntityEditor<Loan>();
     const [loanName, setLoanName] = useState('');
     const [loanType, setLoanType] = useState<Loan['type']>('personal');
     const [loanPaymentFrequency, setLoanPaymentFrequency] = useState<LoanPaymentFrequency>('monthly');
     const [loanAccountId, setLoanAccountId] = useState('');
     const [loanNotes, setLoanNotes] = useState('');
     const [loanPaymentLines, setLoanPaymentLines] = useState<EditableLoanPaymentLine[]>(createDefaultPaymentLines('personal'));
-    const [loanFieldErrors, setLoanFieldErrors] = useState<LoanFieldErrors>({});
+    const loanErrors = useFieldErrors<LoanFieldErrors>();
 
     useEffect(() => {
         if (scrollToAccountId) {
@@ -124,6 +123,8 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
 
     const currency = budgetData?.settings?.currency || 'USD';
     const isLoanEnabled = (loan: Loan) => loan.enabled !== false;
+    const editingLoan = loanEditor.editingEntity;
+    const loanFieldErrors = loanErrors.errors;
 
     const parsedPaymentLinesSummary = useMemo(() => {
         const validLines = loanPaymentLines
@@ -145,25 +146,28 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     }, [loanPaymentLines, loanPaymentFrequency]);
 
     const resetForm = () => {
-        setEditingLoan(null);
         setLoanName('');
         setLoanType('personal');
         setLoanPaymentFrequency('monthly');
         setLoanAccountId(budgetData?.accounts[0]?.id || '');
         setLoanNotes('');
         setLoanPaymentLines(createDefaultPaymentLines('personal'));
-        setLoanFieldErrors({});
+        loanErrors.clearErrors();
+    };
+
+    const closeLoanModal = () => {
+        loanEditor.closeEditor();
+        resetForm();
     };
 
     if (!budgetData) return null;
 
     const handleAddLoan = () => {
         resetForm();
-        setShowAddLoan(true);
+        loanEditor.openForCreate();
     };
 
     const handleEditLoan = (loan: Loan) => {
-        setEditingLoan(loan);
         setLoanName(loan.name);
         setLoanType(loan.type);
         setLoanPaymentFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency);
@@ -183,8 +187,8 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
             ]);
         }
 
-        setLoanFieldErrors({});
-        setShowAddLoan(true);
+        loanErrors.clearErrors();
+        loanEditor.openForEdit(loan);
     };
 
     const handlePaymentLineChange = (
@@ -199,9 +203,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
             })
         );
 
-        if (loanFieldErrors.paymentLines) {
-            setLoanFieldErrors((prev) => ({ ...prev, paymentLines: undefined }));
-        }
+        loanErrors.clearFieldError('paymentLines');
     };
 
     const handleAddPaymentLine = () => {
@@ -221,7 +223,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
 
     const handleApplyTypeDefaults = () => {
         setLoanPaymentLines(createDefaultPaymentLines(loanType));
-        setLoanFieldErrors((prev) => ({ ...prev, paymentLines: undefined }));
+        loanErrors.clearFieldError('paymentLines');
     };
 
     const handleSaveLoan = () => {
@@ -275,7 +277,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
         }
 
         if (Object.keys(errors).length > 0) {
-            setLoanFieldErrors(errors);
+            loanErrors.setErrors(errors);
             return;
         }
 
@@ -324,8 +326,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
             });
         }
 
-        setShowAddLoan(false);
-        resetForm();
+        closeLoanModal();
     };
 
     const handleDeleteLoan = (id: string) => {
@@ -501,21 +502,15 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
             </div>
 
             <Modal
-                isOpen={showAddLoan}
-                onClose={() => {
-                    setShowAddLoan(false);
-                    resetForm();
-                }}
+                isOpen={loanEditor.isOpen}
+                onClose={closeLoanModal}
                 contentClassName="loan-payment-modal"
                 header={editingLoan ? 'Edit Loan Payment' : 'Add Loan Payment'}
                 footer={
                     <>
                         <Button
                             variant="secondary"
-                            onClick={() => {
-                                setShowAddLoan(false);
-                                resetForm();
-                            }}
+                            onClick={closeLoanModal}
                         >
                             Cancel
                         </Button>
@@ -532,9 +527,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                             value={loanName}
                             onChange={(event) => {
                                 setLoanName(event.target.value);
-                                if (loanFieldErrors.name) {
-                                    setLoanFieldErrors((prev) => ({ ...prev, name: undefined }));
-                                }
+                                loanErrors.clearFieldError('name');
                             }}
                             placeholder="e.g., Home Mortgage, Car Loan"
                             className={loanFieldErrors.name ? 'field-error' : ''}
@@ -567,9 +560,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                             value={loanAccountId}
                             onChange={(event) => {
                                 setLoanAccountId(event.target.value);
-                                if (loanFieldErrors.accountId) {
-                                    setLoanFieldErrors((prev) => ({ ...prev, accountId: undefined }));
-                                }
+                                loanErrors.clearFieldError('accountId');
                             }}
                             className={loanFieldErrors.accountId ? 'field-error' : ''}
                         >

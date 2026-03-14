@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import { useAppDialogs } from '../../hooks';
+import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../hooks';
 import type { Bill } from '../../types/obligations';
 import type { Benefit } from '../../types/payroll';
 import type { BillFrequency } from '../../types/frequencies';
@@ -35,19 +35,15 @@ type BenefitFieldErrors = {
 const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
-
-  const [showAddBill, setShowAddBill] = useState(false);
-  const [editingBill, setEditingBill] = useState<Bill | null>(null);
-
-  const [showAddBenefit, setShowAddBenefit] = useState(false);
-  const [editingBenefit, setEditingBenefit] = useState<Benefit | null>(null);
+  const billEditor = useModalEntityEditor<Bill>();
+  const benefitEditor = useModalEntityEditor<Benefit>();
 
   const [billName, setBillName] = useState('');
   const [billAmount, setBillAmount] = useState('');
   const [billFrequency, setBillFrequency] = useState<BillFrequency>('monthly');
   const [billAccountId, setBillAccountId] = useState('');
   const [billNotes, setBillNotes] = useState('');
-  const [billFieldErrors, setBillFieldErrors] = useState<BillFieldErrors>({});
+  const billErrors = useFieldErrors<BillFieldErrors>();
 
   const [benefitName, setBenefitName] = useState('');
   const [benefitAmount, setBenefitAmount] = useState('');
@@ -55,7 +51,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const [benefitIsTaxable, setBenefitIsTaxable] = useState(false);
   const [benefitSource, setBenefitSource] = useState<'paycheck' | 'account'>('paycheck');
   const [benefitSourceAccountId, setBenefitSourceAccountId] = useState('');
-  const [benefitFieldErrors, setBenefitFieldErrors] = useState<BenefitFieldErrors>({});
+  const benefitErrors = useFieldErrors<BenefitFieldErrors>();
 
   useEffect(() => {
     if (scrollToAccountId) {
@@ -73,6 +69,20 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
   const isBillEnabled = (bill: Bill) => bill.enabled !== false;
+  const editingBill = billEditor.editingEntity;
+  const editingBenefit = benefitEditor.editingEntity;
+  const billFieldErrors = billErrors.errors;
+  const benefitFieldErrors = benefitErrors.errors;
+
+  const closeBillModal = () => {
+    billEditor.closeEditor();
+    billErrors.clearErrors();
+  };
+
+  const closeBenefitModal = () => {
+    benefitEditor.closeEditor();
+    benefitErrors.clearErrors();
+  };
 
   const displayAmount = (monthlyAmount: number): number => monthlyToDisplayAmount(monthlyAmount, paychecksPerYear, displayMode);
 
@@ -134,25 +144,23 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const hasAnyItems = budgetData.bills.length > 0 || budgetData.benefits.length > 0;
 
   const handleAddBill = () => {
-    setEditingBill(null);
     setBillName('');
     setBillAmount('');
     setBillFrequency('monthly');
     setBillAccountId(budgetData.accounts[0]?.id || '');
     setBillNotes('');
-    setBillFieldErrors({});
-    setShowAddBill(true);
+    billErrors.clearErrors();
+    billEditor.openForCreate();
   };
 
   const handleEditBill = (bill: Bill) => {
-    setEditingBill(bill);
     setBillName(bill.name);
     setBillAmount(bill.amount.toString());
     setBillFrequency(bill.frequency);
     setBillAccountId(bill.accountId);
     setBillNotes(bill.notes || '');
-    setBillFieldErrors({});
-    setShowAddBill(true);
+    billErrors.clearErrors();
+    billEditor.openForEdit(bill);
   };
 
   const handleSaveBill = () => {
@@ -171,7 +179,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     }
 
     if (Object.keys(errors).length > 0) {
-      setBillFieldErrors(errors);
+      billErrors.setErrors(errors);
       return;
     }
 
@@ -190,9 +198,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       addBill(billData);
     }
 
-    setShowAddBill(false);
-    setEditingBill(null);
-    setBillFieldErrors({});
+    closeBillModal();
   };
 
   const handleDeleteBill = (id: string) => {
@@ -210,27 +216,25 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   };
 
   const handleAddBenefit = () => {
-    setEditingBenefit(null);
     setBenefitName('');
     setBenefitAmount('');
     setBenefitIsPercentage(false);
     setBenefitIsTaxable(false);
     setBenefitSource('paycheck');
     setBenefitSourceAccountId('');
-    setBenefitFieldErrors({});
-    setShowAddBenefit(true);
+    benefitErrors.clearErrors();
+    benefitEditor.openForCreate();
   };
 
   const handleEditBenefit = (benefit: Benefit) => {
-    setEditingBenefit(benefit);
     setBenefitName(benefit.name);
     setBenefitAmount(benefit.amount.toString());
     setBenefitIsPercentage(benefit.isPercentage || false);
     setBenefitSource(benefit.deductionSource || 'paycheck');
     setBenefitSourceAccountId(benefit.sourceAccountId || '');
     setBenefitIsTaxable((benefit.deductionSource || 'paycheck') === 'account' ? true : benefit.isTaxable);
-    setBenefitFieldErrors({});
-    setShowAddBenefit(true);
+    benefitErrors.clearErrors();
+    benefitEditor.openForEdit(benefit);
   };
 
   const handleSaveBenefit = () => {
@@ -250,7 +254,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     }
 
     if (Object.keys(errors).length > 0) {
-      setBenefitFieldErrors(errors);
+      benefitErrors.setErrors(errors);
       return;
     }
 
@@ -269,9 +273,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       addBenefit(payload);
     }
 
-    setShowAddBenefit(false);
-    setEditingBenefit(null);
-    setBenefitFieldErrors({});
+    closeBenefitModal();
   };
 
   const handleDeleteBenefit = (id: string) => {
@@ -459,21 +461,15 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       )}
 
       <Modal
-        isOpen={showAddBill}
-        onClose={() => {
-          setShowAddBill(false);
-          setBillFieldErrors({});
-        }}
+        isOpen={billEditor.isOpen}
+        onClose={closeBillModal}
         header={editingBill ? 'Edit Bill' : 'Add New Bill'}
         footer={
           <>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => {
-                setShowAddBill(false);
-                setBillFieldErrors({});
-              }}
+              onClick={closeBillModal}
             >
               Cancel
             </Button>
@@ -489,9 +485,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             value={billName}
             onChange={(e) => {
               setBillName(e.target.value);
-              if (billFieldErrors.name) {
-                setBillFieldErrors((prev) => ({ ...prev, name: undefined }));
-              }
+              billErrors.clearFieldError('name');
             }}
             placeholder="e.g., Electric Bill, Netflix"
             className={billFieldErrors.name ? 'field-error' : ''}
@@ -507,9 +501,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
               value={billAmount}
               onChange={(e) => {
                 setBillAmount(e.target.value);
-                if (billFieldErrors.amount) {
-                  setBillFieldErrors((prev) => ({ ...prev, amount: undefined }));
-                }
+                billErrors.clearFieldError('amount');
               }}
               placeholder="0.00"
               step="0.01"
@@ -536,9 +528,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             value={billAccountId}
             onChange={(e) => {
               setBillAccountId(e.target.value);
-              if (billFieldErrors.accountId) {
-                setBillFieldErrors((prev) => ({ ...prev, accountId: undefined }));
-              }
+              billErrors.clearFieldError('accountId');
             }}
             className={billFieldErrors.accountId ? 'field-error' : ''}
             required
@@ -562,18 +552,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       </Modal>
 
       <Modal
-        isOpen={showAddBenefit}
-        onClose={() => {
-          setShowAddBenefit(false);
-          setBenefitFieldErrors({});
-        }}
+        isOpen={benefitEditor.isOpen}
+        onClose={closeBenefitModal}
         header={editingBenefit ? 'Edit Deduction' : 'Add Deduction'}
         footer={
           <>
-            <Button type="button" variant="secondary" onClick={() => {
-              setShowAddBenefit(false);
-              setBenefitFieldErrors({});
-            }}>
+            <Button type="button" variant="secondary" onClick={closeBenefitModal}>
               Cancel
             </Button>
             <Button type="submit" variant="primary" onClick={handleSaveBenefit}>
@@ -589,9 +573,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             className={benefitFieldErrors.name ? 'field-error' : ''}
             onChange={(e) => {
               setBenefitName(e.target.value);
-              if (benefitFieldErrors.name) {
-                setBenefitFieldErrors((prev) => ({ ...prev, name: undefined }));
-              }
+              benefitErrors.clearFieldError('name');
             }}
             placeholder="e.g., Health Insurance, HSA"
             required
@@ -611,9 +593,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 setBenefitSourceAccountId(e.target.value);
                 setBenefitIsTaxable(true);
               }
-              if (benefitFieldErrors.sourceAccountId) {
-                setBenefitFieldErrors((prev) => ({ ...prev, sourceAccountId: undefined }));
-              }
+              benefitErrors.clearFieldError('sourceAccountId');
             }}
           >
             <option value="paycheck">Deduct from Paycheck</option>
@@ -635,9 +615,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
               className={benefitFieldErrors.amount ? 'field-error' : ''}
               onChange={(e) => {
                 setBenefitAmount(e.target.value);
-                if (benefitFieldErrors.amount) {
-                  setBenefitFieldErrors((prev) => ({ ...prev, amount: undefined }));
-                }
+                benefitErrors.clearFieldError('amount');
               }}
               placeholder={benefitIsPercentage ? '0' : '0.00'}
               step={benefitIsPercentage ? '0.1' : '0.01'}
