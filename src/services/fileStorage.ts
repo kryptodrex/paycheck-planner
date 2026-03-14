@@ -1,7 +1,8 @@
 // Service for handling local file storage and encryption
 // This class manages reading/writing budget files and encrypting/decrypting the data
 import CryptoJS from 'crypto-js';
-import type { BudgetData, AppSettings } from '../types/auth';
+import type { BudgetData } from '../types/budget';
+import type { AppSettings } from '../types/settings';
 import { KeychainService } from './keychainService';
 import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
 

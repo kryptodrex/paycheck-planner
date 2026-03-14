@@ -1,7 +1,7 @@
 // Service for exporting budget data to PDF format
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { BudgetData } from '../types/auth';
+import type { BudgetData } from '../types/budget';
 import { calculatePaycheckBreakdown } from './budgetCalculations';
 import { formatWithSymbol } from '../utils/currency';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';

@@ -7,7 +7,8 @@ import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../
 import { KeychainService } from '../../services/keychainService';
 import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
-import type { PaySettings, TaxSettings, Account } from '../../types/auth';
+import type { Account } from '../../types/accounts';
+import type { PaySettings, TaxSettings } from '../../types/payroll';
 import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, ProgressBar } from '../shared';
 import './SetupWizard.css';
 

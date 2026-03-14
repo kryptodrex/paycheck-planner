@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { RetirementElection, SavingsContribution } from '../../types/auth';
+import type { SavingsContribution } from '../../types/obligations';
+import type { RetirementElection } from '../../types/payroll';
 import type { ViewMode } from '../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, formatPayFrequencyLabel } from '../../utils/payPeriod';

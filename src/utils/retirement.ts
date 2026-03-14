@@ -1,4 +1,4 @@
-import type { RetirementElection } from '../types/auth';
+import type { RetirementElection } from '../types/payroll';
 
 export const RETIREMENT_PLAN_OPTIONS: Array<{ value: RetirementElection['type']; label: string }> = [
   { value: '401k', label: '401(k)' },

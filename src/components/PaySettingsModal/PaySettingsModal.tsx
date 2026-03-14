@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { BudgetData, PaySettings } from '../../types/auth';
+import type { BudgetData } from '../../types/budget';
+import type { PaySettings } from '../../types/payroll';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../utils/paySuggestions';

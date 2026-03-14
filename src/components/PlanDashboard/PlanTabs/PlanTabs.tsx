@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TabConfig, TabPosition, TabDisplayMode } from '../../../types/auth';
+import type { TabConfig, TabPosition, TabDisplayMode } from '../../../types/tabs';
 import TabPositionHandle from './TabPositionHandle';
 import './PlanTabs.css';
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Account } from '../../types/auth';
+import type { Account } from '../../types/accounts';
 import { Modal, Button, FormGroup, AccountsEditor } from '../shared';
 import './AccountsManager.css';
 

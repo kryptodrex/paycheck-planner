@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Loan, LoanPaymentFrequency, LoanPaymentLine } from '../../types/auth';
+import type { Loan, LoanPaymentLine } from '../../types/obligations';
+import type { LoanPaymentFrequency } from '../../types/frequencies';
 import type { ViewMode } from '../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';

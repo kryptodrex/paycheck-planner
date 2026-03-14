@@ -1,4 +1,5 @@
-import type { BudgetData, PaycheckBreakdown, TaxLineAmount } from '../types/auth';
+import type { BudgetData } from '../types/budget';
+import type { PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
 import { roundUpToCent } from '../utils/money';
 import { getPaychecksPerYear } from '../utils/payPeriod';

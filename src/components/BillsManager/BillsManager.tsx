@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import type { Benefit, Bill, BillFrequency } from '../../types/auth';
+import type { Bill } from '../../types/obligations';
+import type { Benefit } from '../../types/payroll';
+import type { BillFrequency } from '../../types/frequencies';
 import type { ViewMode } from '../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';

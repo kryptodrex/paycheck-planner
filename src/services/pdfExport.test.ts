@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BudgetData } from '../types/auth';
+import type { BudgetData } from '../types/budget';
 
 const { pdfInstances, autoTableMock, MockJsPDF } = vi.hoisted(() => {
   const instances: Array<Record<string, unknown>> = [];

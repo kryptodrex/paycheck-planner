@@ -4,7 +4,7 @@ import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
 import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../shared';
 import { GlossaryTerm } from '../Glossary';
-import type { TaxLine } from '../../types/auth';
+import type { TaxLine } from '../../types/payroll';
 import type { ViewMode } from '../../types/viewMode';
 import './TaxBreakdown.css';
 

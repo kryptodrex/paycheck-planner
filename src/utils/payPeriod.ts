@@ -3,7 +3,8 @@
  * These functions help convert between different time periods (paycheck, monthly, yearly)
  */
 
-import type { PayFrequency, PaySettings } from '../types/auth';
+import type { PayFrequency } from '../types/frequencies';
+import type { PaySettings } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
 import { getPayFrequencyOccurrencesPerYear } from './frequency';
 

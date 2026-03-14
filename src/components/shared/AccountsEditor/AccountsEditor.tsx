@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Account } from '../../../types/auth';
+import type { Account } from '../../../types/accounts';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { Button, InfoBox } from '../';
 import './AccountsEditor.css';

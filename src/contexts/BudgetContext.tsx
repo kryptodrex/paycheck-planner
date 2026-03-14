@@ -3,20 +3,30 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { 
-  BudgetData, 
-  BudgetContextType, 
-  PaySettings,
-  Deduction,
-  TaxSettings,
-  BudgetSettings,
-  Account,
+  Account
+} from '../types/accounts';
+import type {
+  BudgetData
+} from '../types/budget';
+import type {
+  BudgetContextType
+} from '../types/budgetContext';
+import type {
   Bill,
+  Loan,
+  SavingsContribution
+} from '../types/obligations';
+import type {
   Benefit,
-  SavingsContribution,
-  RetirementElection,
+  Deduction,
+  PaySettings,
   PaycheckBreakdown,
-  Loan
-} from '../types/auth';
+  RetirementElection,
+  TaxSettings
+} from '../types/payroll';
+import type {
+  BudgetSettings
+} from '../types/settings';
 import { FileStorageService } from '../services/fileStorage';
 import { calculatePaycheckBreakdown as calculateBudgetPaycheckBreakdown, getEmptyPaycheckBreakdown } from '../services/budgetCalculations';
 import { KeychainService } from '../services/keychainService';
