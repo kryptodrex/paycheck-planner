@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs } from '../../hooks';
-import type { BudgetData } from '../../types/budget';
 import type { PaySettings } from '../../types/payroll';
+import { convertBudgetAmounts } from '../../services/budgetCurrencyConversion';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../utils/paySuggestions';
@@ -85,63 +85,6 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   const suggestedLeftoverPerPaycheck = getSuggestedLeftoverPerPaycheck(estimateGrossPerPaycheck());
 
   const formattedSuggestedLeftover = formatSuggestedLeftover(suggestedLeftoverPerPaycheck, editCurrency);
-
-  const roundCurrency = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
-
-  const convertBudgetAmounts = (data: BudgetData, exchangeRate: number): BudgetData => {
-    const convert = (value: number | undefined) => {
-      if (typeof value !== 'number' || !Number.isFinite(value)) return value;
-      return roundCurrency(value * exchangeRate);
-    };
-
-    return {
-      ...data,
-      paySettings: {
-        ...data.paySettings,
-        annualSalary: convert(data.paySettings.annualSalary),
-        hourlyRate: convert(data.paySettings.hourlyRate),
-        minLeftover: convert(data.paySettings.minLeftover),
-      },
-      preTaxDeductions: data.preTaxDeductions.map((deduction) => ({
-        ...deduction,
-        amount: deduction.isPercentage ? deduction.amount : convert(deduction.amount) || 0,
-      })),
-      benefits: data.benefits.map((benefit) => ({
-        ...benefit,
-        amount: benefit.isPercentage ? benefit.amount : convert(benefit.amount) || 0,
-      })),
-      retirement: data.retirement.map((election) => ({
-        ...election,
-        employeeContribution: election.employeeContributionIsPercentage
-          ? election.employeeContribution
-          : convert(election.employeeContribution) || 0,
-        employerMatchCap: election.employerMatchCapIsPercentage
-          ? election.employerMatchCap
-          : convert(election.employerMatchCap) || 0,
-        yearlyLimit: convert(election.yearlyLimit),
-      })),
-      taxSettings: {
-        ...data.taxSettings,
-        additionalWithholding: convert(data.taxSettings.additionalWithholding) || 0,
-      },
-      accounts: data.accounts.map((account) => ({
-        ...account,
-        allocation: convert(account.allocation),
-        allocationCategories: (account.allocationCategories || []).map((category) => ({
-          ...category,
-          amount: convert(category.amount) || 0,
-        })),
-      })),
-      bills: data.bills.map((bill) => ({
-        ...bill,
-        amount: convert(bill.amount) || 0,
-      })),
-      savingsContributions: (data.savingsContributions || []).map((contribution) => ({
-        ...contribution,
-        amount: convert(contribution.amount) || 0,
-      })),
-    };
-  };
 
   const handleSaveSettings = () => {
     const parsedAnnualSalary = parseFloat(editAnnualSalary);
