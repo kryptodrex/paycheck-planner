@@ -762,8 +762,7 @@ export class FileStorageService {
     }
 
     // Max attempts reached
-    alert(`Failed to decrypt file after ${maxAttempts} attempts. Please check your encryption key.`);
-    return null;
+    throw new Error(`Failed to decrypt file after ${maxAttempts} attempts. Please check your encryption key.`);
   }
 
   /**

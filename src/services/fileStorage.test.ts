@@ -323,4 +323,32 @@ describe('FileStorageService', () => {
     expect(recentFiles.some((file) => file.filePath === '/tmp/moved-plan.budget')).toBe(true);
     expect(FileStorageService.getKnownPlanIdForFile('/tmp/moved-plan.budget')).toBe('plan-1');
   });
+
+  it('throws after repeated bad key attempts for encrypted plan files', async () => {
+    const plan = FileStorageService.createEmptyBudget(2026, 'USD');
+    const encryptedEnvelope = JSON.stringify({
+      format: 'paycheck-planner-encrypted-v1',
+      planId: 'plan-1',
+      payload: FileStorageService.encrypt(JSON.stringify(plan), 'correct-key'),
+    });
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    Object.assign(window.electronAPI, {
+      loadBudget: vi.fn(async () => ({ success: true, data: encryptedEnvelope })),
+      getKeychainKey: vi.fn(async () => ({ success: true, key: null })),
+    });
+
+    vi.spyOn(FileStorageService as unknown as {
+      requestEncryptionKeyInput: (message: string) => Promise<string | null>;
+    }, 'requestEncryptionKeyInput')
+      .mockResolvedValueOnce('wrong-key-1')
+      .mockResolvedValueOnce('wrong-key-2')
+      .mockResolvedValueOnce('wrong-key-3');
+
+    await expect(FileStorageService.loadBudget('/tmp/encrypted-plan.budget')).rejects.toThrow(
+      'Failed to decrypt file after 3 attempts. Please check your encryption key.',
+    );
+
+    consoleWarnSpy.mockRestore();
+  });
 });
