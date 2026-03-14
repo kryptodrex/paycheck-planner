@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Modal } from '../';
-import '../sharedPathDisplay.css';
+import '../_sharedPathDisplay.css';
 import './FileRelinkModal.css';
 
 interface FileRelinkModalProps {

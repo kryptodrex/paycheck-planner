@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../shared';
+import { Button } from '../_shared';
 import './About.css';
 
 interface AboutProps {

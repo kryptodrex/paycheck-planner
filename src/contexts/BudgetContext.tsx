@@ -2,7 +2,7 @@
 // This is like a "global state" that any component can access
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useAppDialogs } from '../hooks';
-import { ErrorDialog } from '../components/shared';
+import { ErrorDialog } from '../components/_shared';
 import type { ReactNode } from 'react';
 import type { 
   Account

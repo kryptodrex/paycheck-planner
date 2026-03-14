@@ -11,7 +11,7 @@ import type { Bill, Loan, SavingsContribution } from '../../types/obligations';
 import type { Benefit, RetirementElection } from '../../types/payroll';
 import type { ViewMode } from '../../types/viewMode';
 import { fromDisplayAmount, toDisplayAmount } from '../../utils/displayAmounts';
-import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../shared';
+import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../_shared';
 import PaySettingsModal from '../PaySettingsModal';
 import { GlossaryTerm } from '../Glossary';
 import './PayBreakdown.css';

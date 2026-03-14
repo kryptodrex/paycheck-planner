@@ -3,7 +3,7 @@ import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import type { RecentFile } from '../../services/fileStorage';
-import { Button, ErrorDialog, FileRelinkModal, FormGroup } from '../shared';
+import { Button, ErrorDialog, FileRelinkModal, FormGroup } from '../_shared';
 import Settings from '../Settings';
 import './WelcomeScreen.css';
 

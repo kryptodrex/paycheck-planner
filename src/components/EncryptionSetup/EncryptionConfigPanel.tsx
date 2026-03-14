@@ -1,6 +1,6 @@
 import React from 'react';
-import { Alert, RadioGroup, Button } from '../shared';
-import '../shared/sharedPathDisplay.css';
+import { Alert, RadioGroup, Button } from '../_shared';
+import '../_shared/sharedPathDisplay.css';
 import './EncryptionConfigPanel.css';
 
 interface EncryptionConfigPanelProps {

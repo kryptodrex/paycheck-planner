@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
-import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../shared';
+import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector } from '../_shared';
 import { GlossaryTerm } from '../Glossary';
 import type { TaxLine } from '../../types/payroll';
 import type { ViewMode } from '../../types/viewMode';

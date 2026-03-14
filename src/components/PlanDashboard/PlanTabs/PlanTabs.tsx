@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppDialogs } from '../../../hooks';
-import { ConfirmDialog, ErrorDialog } from '../../shared';
+import { ConfirmDialog, ErrorDialog } from '../../_shared';
 import type { TabConfig, TabPosition, TabDisplayMode } from '../../../types/tabs';
 import TabPositionHandle from './TabPositionHandle';
 import './PlanTabs.css';

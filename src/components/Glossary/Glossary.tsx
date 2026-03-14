@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Button } from '../shared';
+import { Modal, Button } from '../_shared';
 import {
   glossaryCategoryLabels,
   glossaryTerms,

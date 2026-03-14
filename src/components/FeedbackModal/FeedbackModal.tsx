@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Button, FormGroup, Modal } from '../shared';
+import { Button, FormGroup, Modal } from '../_shared';
 import './FeedbackModal.css';
 
 type FeedbackCategory = 'bug' | 'feature' | 'ui' | 'performance' | 'other';

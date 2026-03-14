@@ -10,7 +10,7 @@ import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
-import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
+import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../_shared';
 import './LoansManager.css';
 
 interface LoansManagerProps {

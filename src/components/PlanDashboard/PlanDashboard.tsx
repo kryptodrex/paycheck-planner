@@ -23,7 +23,7 @@ import AccountsManager from '../AccountsManager';
 import ExportModal from '../ExportModal';
 import FeedbackModal from '../FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup } from '../shared';
+import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';

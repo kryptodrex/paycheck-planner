@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Button } from '../../shared';
+import { Modal, Button } from '../../_shared';
 import type { TabConfig } from '../../../types/tabs';
 import './PlanTabs.css';
 import './TabManagementModal.css';

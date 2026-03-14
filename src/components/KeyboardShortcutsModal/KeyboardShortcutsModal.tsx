@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Modal } from '../shared';
+import { Button, Modal } from '../_shared';
 import './KeyboardShortcutsModal.css';
 
 interface KeyboardShortcutsModalProps {

@@ -12,7 +12,7 @@ import { getAccountNameById } from '../../utils/accountGrouping';
 import { formatBillFrequency } from '../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
 import { toDisplayAmount } from '../../utils/displayAmounts';
-import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
+import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../_shared';
 import { GlossaryTerm } from '../Glossary';
 import './SavingsManager.css';
 

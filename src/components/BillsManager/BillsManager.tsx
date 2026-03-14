@@ -12,7 +12,7 @@ import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
-import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../shared';
+import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../_shared';
 import './BillsManager.css';
 
 interface BillsManagerProps {

@@ -5,7 +5,7 @@ import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { convertBillToYearly } from '../../utils/billFrequency';
-import { PageHeader } from '../shared';
+import { PageHeader } from '../_shared';
 import { GlossaryTerm } from '../Glossary';
 import './KeyMetrics.css';
 

@@ -5,7 +5,7 @@ import { useAppDialogs } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
 import EncryptionConfigPanel from './EncryptionConfigPanel';
-import { Button, ErrorDialog } from '../shared';
+import { Button, ErrorDialog } from '../_shared';
 import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {

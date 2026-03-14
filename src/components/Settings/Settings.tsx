@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppDialogs } from '../../hooks';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Button, ErrorDialog, Modal, PillToggle } from '../shared';
+import { Button, ErrorDialog, Modal, PillToggle } from '../_shared';
 import { FileStorageService } from '../../services/fileStorage';
 import './Settings.css';
 

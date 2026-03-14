@@ -6,7 +6,7 @@ import { convertBudgetAmounts } from '../../services/budgetCurrencyConversion';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../utils/paySuggestions';
-import { Modal, Button, ErrorDialog, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../shared';
+import { Modal, Button, ErrorDialog, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../_shared';
 import './PaySettingsModal.css';
 
 interface PaySettingsModalProps {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { exportToPDF, type PDFExportOptions } from '../../services/pdfExport';
-import { Modal, Button, FormGroup } from '../shared';
+import { Modal, Button, FormGroup } from '../_shared';
 import './ExportModal.css';
 
 interface ExportModalProps {
