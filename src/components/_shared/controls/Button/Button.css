@@ -1,0 +1,229 @@
+.btn {
+  --btn-padding-y: 0.75rem;
+  --btn-padding-x: 1.5rem;
+  --btn-font-size: 0.95rem;
+  --btn-radius: 0.5rem;
+  padding: var(--btn-padding-y) var(--btn-padding-x);
+  border: none;
+  border-radius: var(--btn-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: var(--btn-font-size);
+  white-space: nowrap;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  line-height: 1.2;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.btn:focus:not(:focus-visible) {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Primary button */
+.btn-primary {
+  background: var(--bg-primary);
+  color: var(--accent-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Secondary button */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: white;
+  transform: translateY(-2px);
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Tertiary button */
+.btn-tertiary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.btn-tertiary:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+  transform: none;
+}
+
+.btn-tertiary:active:not(:disabled) {
+  transform: none;
+}
+
+.btn-tertiary:focus-visible,
+.btn-tertiary:focus:not(:focus-visible) {
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
+/* Utility button: compact, low-emphasis action for contextual UI (e.g. card chrome) */
+.btn.btn-utility {
+  --btn-padding-y: 0.35rem;
+  --btn-padding-x: 0.6rem;
+  --btn-font-size: 0.78rem;
+  --btn-radius: 0.5rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+  font-weight: 600;
+  line-height: 1;
+  gap: 0.35rem;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transform: none;
+}
+
+.btn.btn-utility:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--border-color-hover, var(--accent-primary));
+  color: var(--text-primary);
+  transform: none;
+  box-shadow: none;
+}
+
+.btn.btn-utility:active:not(:disabled) {
+  transform: none;
+}
+
+.btn.btn-utility:focus-visible,
+.btn.btn-utility:focus:not(:focus-visible) {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
+/* Danger button */
+.btn-danger {
+  background: var(--error-color);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--alert-error-text);
+  transform: translateY(-2px);
+}
+
+.btn-danger:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Icon button */
+.btn.btn-icon {
+  --btn-padding-y: 0.5rem;
+  --btn-padding-x: 0.5rem;
+  --btn-font-size: 1.2rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  min-width: auto;
+  line-height: 1;
+  gap: 0;
+  transition: all 0.2s;
+}
+
+.btn.btn-icon:hover:not(:disabled) {
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.btn.btn-icon:active:not(:disabled) {
+  transform: scale(1);
+}
+
+.btn.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.btn-icon:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.btn.btn-icon:focus:not(:focus-visible) {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Remove button — icon variant with red hover */
+.btn.btn-icon.btn-remove:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+}
+
+.btn.btn-icon.btn-danger {
+  color: var(--error-color);
+}
+
+.btn.btn-icon.btn-danger:hover:not(:disabled) {
+  color: var(--alert-error-text);
+}
+
+/* Size variants */
+.btn-xsmall {
+  --btn-padding-y: 0.3rem;
+  --btn-padding-x: 0.6rem;
+  --btn-font-size: 0.75rem;
+  --btn-radius: 0.25rem;
+}
+
+.btn-small {
+  --btn-padding-y: 0.5rem;
+  --btn-padding-x: 1rem;
+  --btn-font-size: 0.85rem;
+}
+
+.btn-large {
+  --btn-padding-y: 1rem;
+  --btn-padding-x: 2rem;
+  --btn-font-size: 1.05rem;
+}
+
+@media (max-width: 600px) {
+  .btn {
+    --btn-padding-y: 0.65rem;
+    --btn-padding-x: 1.25rem;
+    --btn-font-size: 0.9rem;
+  }
+
+  .btn-large {
+    --btn-padding-y: 0.85rem;
+    --btn-padding-x: 1.75rem;
+  }
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { TabPosition } from '../../../types/auth';
+import type { TabPosition } from '../../../types/tabs';
 import './TabPositionHandle.css';
 
 interface TabPositionHandleProps {

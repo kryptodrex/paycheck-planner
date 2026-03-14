@@ -1,0 +1,9 @@
+.confirm-dialog {
+  max-width: 500px;
+}
+
+.confirm-dialog-message {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}

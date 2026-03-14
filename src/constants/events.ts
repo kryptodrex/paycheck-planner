@@ -1,0 +1,28 @@
+export const MENU_EVENTS = {
+  newBudget: 'new-budget',
+  openBudget: 'open-budget',
+  openBudgetFile: 'open-budget-file',
+  changeEncryption: 'change-encryption',
+  savePlan: 'save-plan',
+  openSettings: 'open-settings',
+  openAbout: 'open-about',
+  openGlossary: 'open-glossary',
+  openKeyboardShortcuts: 'open-keyboard-shortcuts',
+  openPayOptions: 'open-pay-options',
+  openAccounts: 'open-accounts',
+  setTabPosition: 'set-tab-position',
+  toggleTabDisplayMode: 'toggle-tab-display-mode',
+  historyBack: 'history-back',
+  historyForward: 'history-forward',
+  historyHome: 'history-home',
+} as const;
+
+export type MenuEventName = (typeof MENU_EVENTS)[keyof typeof MENU_EVENTS];
+
+export const APP_CUSTOM_EVENTS = {
+  openGlossary: 'app:open-glossary',
+  themeModeChanged: 'theme-mode-changed',
+  glossaryTermsChanged: 'glossary-terms-changed',
+} as const;
+
+export const menuChannel = (event: MenuEventName) => `menu:${event}`;

@@ -1,5 +1,7 @@
 // Theme Context - Manages light/dark mode preference
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { APP_CUSTOM_EVENTS } from '../constants/events';
+import { STORAGE_KEYS } from '../constants/storage';
 import type { ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
@@ -11,8 +13,6 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
-
-const THEME_STORAGE_KEY = 'paycheck-planner-theme';
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
@@ -31,7 +31,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Initialize theme from localStorage or system preference
   const [theme, setTheme] = useState<Theme>(() => {
     // Check if user has selected system mode
-    const settingsStr = localStorage.getItem('paycheck-planner-settings');
+    const settingsStr = localStorage.getItem(STORAGE_KEYS.settings);
     if (settingsStr) {
       try {
         const settings = JSON.parse(settingsStr);
@@ -49,7 +49,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
     
     // Fallback: check stored theme
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.theme);
     if (stored === 'light' || stored === 'dark') {
       return stored;
     }
@@ -60,13 +60,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Apply theme to document element
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    localStorage.setItem(STORAGE_KEYS.theme, theme);
   }, [theme]);
 
   // Listen for system theme changes when in System mode
   useEffect(() => {
     const getCurrentThemeMode = () => {
-      const settingsStr = localStorage.getItem('paycheck-planner-settings');
+      const settingsStr = localStorage.getItem(STORAGE_KEYS.settings);
       if (settingsStr) {
         try {
           const settings = JSON.parse(settingsStr);
@@ -110,11 +110,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       setupSystemListener();
     };
 
-    window.addEventListener('theme-mode-changed', handleThemeModeChange);
+    window.addEventListener(APP_CUSTOM_EVENTS.themeModeChanged, handleThemeModeChange);
 
     return () => {
       if (cleanup) cleanup();
-      window.removeEventListener('theme-mode-changed', handleThemeModeChange);
+      window.removeEventListener(APP_CUSTOM_EVENTS.themeModeChanged, handleThemeModeChange);
     };
   }, []);
 

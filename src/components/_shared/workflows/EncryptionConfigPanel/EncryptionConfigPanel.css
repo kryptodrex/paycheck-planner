@@ -1,0 +1,127 @@
+.encryption-config-panel .encryption-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.encryption-config-panel .encryption-option-card {
+  border: 2px solid var(--border-color);
+  background: var(--bg-primary);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  text-align: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.encryption-config-panel .encryption-option-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.encryption-config-panel .encryption-option-card:focus-visible {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.encryption-config-panel .encryption-option-icon {
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  margin-bottom: 0.75rem;
+}
+
+.encryption-config-panel .encryption-option-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.encryption-config-panel .encryption-option-card p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  font-size: 0.95rem;
+}
+
+.encryption-config-panel .encryption-key-radio {
+  margin: 1.25rem 0;
+  text-align: left;
+  padding: 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 0.75rem;
+  background: var(--bg-primary);
+}
+
+.encryption-config-panel .encryption-key-choice {
+  margin: 1rem 0;
+}
+
+.encryption-config-panel .encryption-key-box {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.encryption-config-panel .encryption-key-code {
+  flex: 1;
+  margin: 0;
+}
+
+.encryption-config-panel .encryption-btn-icon {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  flex-shrink: 0;
+}
+
+.encryption-config-panel .encryption-btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.encryption-config-panel .encryption-key-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.encryption-config-panel .encryption-key-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.encryption-config-panel .encryption-help-text {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 600px) {
+  .encryption-config-panel .encryption-selection-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .encryption-config-panel .encryption-key-display {
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .encryption-config-panel .encryption-key-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .encryption-config-panel .encryption-key-code {
+    width: 100%;
+  }
+}

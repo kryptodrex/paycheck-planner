@@ -1,4 +1,4 @@
-import type { Account } from '../types/auth';
+import type { Account } from '../types/accounts';
 
 export function getDefaultAccountColor(type: Account['type']): string {
   switch (type) {

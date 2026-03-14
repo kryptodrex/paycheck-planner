@@ -1,0 +1,90 @@
+/* Settings-specific styles */
+.settings-section {
+  margin-bottom: 2rem;
+}
+
+.settings-section h3 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+.settings-group {
+  margin-bottom: 1.5rem;
+}
+
+.settings-group label {
+  display: block;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.theme-options {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.theme-option {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.theme-option:hover {
+  background: var(--bg-tertiary);
+}
+
+.theme-option.active {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: white;
+}
+
+.settings-info {
+  background: var(--bg-secondary);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.settings-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.settings-danger-zone {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+}
+
+.settings-danger-copy {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.settings-danger-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-reset-modal p {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}

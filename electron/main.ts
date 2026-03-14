@@ -5,8 +5,10 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell, globalShortcut } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { watch, type FSWatcher } from 'fs';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { MENU_EVENTS, menuChannel, type MenuEventName } from '../src/constants/events';
 import { FEEDBACK_FORM_ENTRY_IDS, FEEDBACK_FORM_URL } from './constants';
 
 // Create require function for ES modules
@@ -170,8 +172,148 @@ let welcomeWindow: BrowserWindow | null = null;
 let mainWindow: BrowserWindow | null = null;
 // Track if the app is quitting to avoid reopening welcome window
 let isQuitting = false;
+const welcomeWindowIdsPendingReopen = new Set<number>();
 // Track file requested via OS open-file/Open With integration.
 let pendingExternalBudgetFilePath: string | null = null;
+
+type BudgetFileWatchState = {
+  watcher: FSWatcher | null;
+  filePath: string | null;
+  directoryPath: string | null;
+  baseName: string | null;
+  extension: string | null;
+  inode: number | null;
+  device: number | null;
+  resolving: boolean;
+};
+
+const budgetFileWatchByWindowId = new Map<number, BudgetFileWatchState>();
+
+const derivePlanNameFromFilePath = (filePath: string): string => {
+  const parsed = path.parse(filePath);
+  return (parsed.name || 'plan').trim() || 'plan';
+};
+
+const getOrCreateBudgetFileWatchState = (windowId: number): BudgetFileWatchState => {
+  const existing = budgetFileWatchByWindowId.get(windowId);
+  if (existing) return existing;
+
+  const created: BudgetFileWatchState = {
+    watcher: null,
+    filePath: null,
+    directoryPath: null,
+    baseName: null,
+    extension: null,
+    inode: null,
+    device: null,
+    resolving: false,
+  };
+  budgetFileWatchByWindowId.set(windowId, created);
+  return created;
+};
+
+const sendMenuEvent = (window: BrowserWindow, event: MenuEventName, arg?: unknown) => {
+  window.webContents.send(menuChannel(event), arg);
+};
+
+const stopBudgetFileWatch = (windowId: number) => {
+  const state = budgetFileWatchByWindowId.get(windowId);
+  if (!state) return;
+
+  state.watcher?.close();
+  state.watcher = null;
+  state.filePath = null;
+  state.directoryPath = null;
+  state.baseName = null;
+  state.extension = null;
+  state.inode = null;
+  state.device = null;
+  state.resolving = false;
+};
+
+const clearBudgetFileWatch = (windowId: number) => {
+  stopBudgetFileWatch(windowId);
+  budgetFileWatchByWindowId.delete(windowId);
+};
+
+const maybeResolveRenamedBudgetFile = async (window: BrowserWindow, state: BudgetFileWatchState) => {
+  if (
+    state.resolving ||
+    !state.filePath ||
+    !state.directoryPath ||
+    state.inode === null ||
+    state.device === null
+  ) {
+    return;
+  }
+
+  state.resolving = true;
+  try {
+    // If the original path still exists, no rename to process.
+    try {
+      await fs.access(state.filePath);
+      return;
+    } catch {
+      // Continue resolving renamed file.
+    }
+
+    const entries = await fs.readdir(state.directoryPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+
+      if (state.extension && path.extname(entry.name).toLowerCase() !== state.extension.toLowerCase()) {
+        continue;
+      }
+
+      const candidatePath = path.join(state.directoryPath, entry.name);
+      try {
+        const stats = await fs.stat(candidatePath);
+        if (stats.ino === state.inode && stats.dev === state.device) {
+          const previousPath = state.filePath;
+          state.filePath = candidatePath;
+          state.baseName = path.basename(candidatePath);
+
+          window.webContents.send('budget-file-renamed', {
+            oldPath: previousPath,
+            newPath: candidatePath,
+            planName: derivePlanNameFromFilePath(candidatePath),
+          });
+          return;
+        }
+      } catch {
+        // Ignore transient stat errors and keep searching.
+      }
+    }
+  } finally {
+    state.resolving = false;
+  }
+};
+
+const startBudgetFileWatch = async (window: BrowserWindow, filePath: string) => {
+  const windowId = window.id;
+  const state = getOrCreateBudgetFileWatchState(windowId);
+  stopBudgetFileWatch(windowId);
+
+  try {
+    const stats = await fs.stat(filePath);
+    const directoryPath = path.dirname(filePath);
+    const extension = path.extname(filePath);
+
+    state.filePath = filePath;
+    state.directoryPath = directoryPath;
+    state.baseName = path.basename(filePath);
+    state.extension = extension;
+    state.inode = stats.ino;
+    state.device = stats.dev;
+
+    state.watcher = watch(directoryPath, () => {
+      void maybeResolveRenamedBudgetFile(window, state);
+    });
+  } catch (error) {
+    console.warn('Failed to start budget file watch:', error);
+    stopBudgetFileWatch(windowId);
+  }
+};
 
 function isBudgetFilePath(filePath: string): boolean {
   const extension = path.extname(filePath).toLowerCase();
@@ -208,7 +350,7 @@ function dispatchExternalBudgetOpen(filePath: string) {
   }
 
   const sendOpenFileEvent = () => {
-    targetWindow.webContents.send('menu:open-budget-file', filePath);
+    sendMenuEvent(targetWindow, MENU_EVENTS.openBudgetFile, filePath);
     pendingExternalBudgetFilePath = null;
     targetWindow.show();
     targetWindow.focus();
@@ -285,6 +427,32 @@ function normalizeWindowBounds(
   );
 
   return { width, height, x, y };
+}
+
+function getDefaultPlanTransitionBounds(window: BrowserWindow): Required<WindowBoundsState> {
+  const bounds = window.getBounds();
+  const targetDisplay = screen.getDisplayMatching(bounds);
+  const workArea = targetDisplay.workArea;
+
+  // Keep visible side gaps while using full available desktop height.
+  const sideGap = Math.max(48, Math.min(180, Math.round(workArea.width * 0.06)));
+  const requestedWidth = Math.max(1000, workArea.width - sideGap * 2);
+  const requestedHeight = workArea.height;
+
+  return normalizeWindowBounds(
+    {
+      width: requestedWidth,
+      height: requestedHeight,
+      x: workArea.x + Math.floor((workArea.width - requestedWidth) / 2),
+      y: workArea.y,
+    },
+    {
+      width: requestedWidth,
+      height: requestedHeight,
+      minWidth: 1000,
+      minHeight: 600,
+    }
+  );
 }
 
 /**
@@ -428,6 +596,7 @@ function createPlanWindow(windowState?: any) {
 
   // Clean up when window is closed
   window.on('closed', () => {
+    clearBudgetFileWatch(window.id);
     openWindows.delete(window);
     if (mainWindow === window) mainWindow = null;
 
@@ -539,7 +708,14 @@ function createWelcomeWindow(skipSessionRestore = false, windowState?: { width?:
   });
 
   welcomeWindow.on('closed', () => {
+    const closedWindowId = welcomeWindow?.id;
     welcomeWindow = null;
+
+    if (closedWindowId !== undefined && welcomeWindowIdsPendingReopen.has(closedWindowId)) {
+      welcomeWindowIdsPendingReopen.delete(closedWindowId);
+      return;
+    }
+
     // If no plan windows are open, quit the app instead of staying open with no windows
     if (openWindows.size === 0 && !isQuitting) {
       isQuitting = true;
@@ -613,7 +789,7 @@ function createApplicationMenu() {
           click: () => {
             const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
             if (targetWindow) {
-              targetWindow.webContents.send('menu:open-about');
+              sendMenuEvent(targetWindow, MENU_EVENTS.openAbout);
             }
           },
         },
@@ -624,7 +800,7 @@ function createApplicationMenu() {
           click: () => {
             const focusedWindow = BrowserWindow.getFocusedWindow();
             if (focusedWindow) {
-              focusedWindow.webContents.send('menu:open-settings');
+              sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
             }
           },
         },
@@ -666,7 +842,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:new-budget');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.newBudget);
           }
         },
       },
@@ -683,7 +859,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-budget');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openBudget);
           }
         },
       },
@@ -693,7 +869,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:save-plan');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.savePlan);
           }
         },
       },
@@ -741,7 +917,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-accounts');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openAccounts);
           }
         },
       },
@@ -751,7 +927,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-pay-options');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openPayOptions);
           }
         },
       },
@@ -771,7 +947,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'top');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'top');
               }
             },
           },
@@ -781,7 +957,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'bottom');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'bottom');
               }
             },
           },
@@ -791,7 +967,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'left');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'left');
               }
             },
           },
@@ -801,7 +977,7 @@ function createApplicationMenu() {
             click: () => {
               const focusedWindow = BrowserWindow.getFocusedWindow();
               if (focusedWindow) {
-                focusedWindow.webContents.send('menu:set-tab-position', 'right');
+                sendMenuEvent(focusedWindow, MENU_EVENTS.setTabPosition, 'right');
               }
             },
           },
@@ -813,7 +989,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:toggle-tab-display-mode');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.toggleTabDisplayMode);
           }
         },
       },
@@ -822,8 +998,9 @@ function createApplicationMenu() {
         label: 'Toggle Developer Tools',
         accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
         click: () => {
-          if (mainWindow) {
-            mainWindow.webContents.toggleDevTools();
+          const targetWindow = BrowserWindow.getFocusedWindow() ?? mainWindow ?? welcomeWindow ?? BrowserWindow.getAllWindows()[0];
+          if (targetWindow) {
+            targetWindow.webContents.toggleDevTools();
           }
         },
       }] : []),
@@ -833,7 +1010,7 @@ function createApplicationMenu() {
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
-            focusedWindow.webContents.send('menu:open-settings');
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
           }
         },
       }] : []),
@@ -894,7 +1071,7 @@ function createApplicationMenu() {
         click: () => {
           const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
           if (targetWindow) {
-            targetWindow.webContents.send('menu:open-glossary');
+            sendMenuEvent(targetWindow, MENU_EVENTS.openGlossary);
           }
         },
       },
@@ -905,7 +1082,7 @@ function createApplicationMenu() {
         click: () => {
           const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
           if (targetWindow) {
-            targetWindow.webContents.send('menu:open-keyboard-shortcuts');
+            sendMenuEvent(targetWindow, MENU_EVENTS.openKeyboardShortcuts);
           }
         },
       },
@@ -927,7 +1104,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(settingsShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:open-settings');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
         debug(`Settings shortcut triggered via globalShortcut (${settingsShortcut})`);
       }
     });
@@ -936,7 +1113,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(backShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:history-back');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.historyBack);
         debug(`Back shortcut triggered via globalShortcut (${backShortcut})`);
       }
     });
@@ -945,7 +1122,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(forwardShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:history-forward');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.historyForward);
         debug(`Forward shortcut triggered via globalShortcut (${forwardShortcut})`);
       }
     });
@@ -954,7 +1131,7 @@ function registerGlobalShortcuts() {
     globalShortcut.register(homeShortcut, () => {
       const focusedWindow = BrowserWindow.getFocusedWindow();
       if (focusedWindow) {
-        focusedWindow.webContents.send('menu:history-home');
+        sendMenuEvent(focusedWindow, MENU_EVENTS.historyHome);
         debug(`Home shortcut triggered via globalShortcut (${homeShortcut})`);
       }
     });
@@ -1233,6 +1410,28 @@ ipcMain.handle('file-exists', async (event, filePath: string) => {
 });
 
 /**
+ * Register or clear the active budget file path for local rename detection.
+ */
+ipcMain.handle('set-active-budget-file-path', async (event, filePath?: string | null) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) {
+    return { success: false, error: 'Window not found' };
+  }
+
+  try {
+    if (!filePath) {
+      stopBudgetFileWatch(window.id);
+      return { success: true };
+    }
+
+    await startBudgetFileWatch(window, filePath);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: (error as Error).message };
+  }
+});
+
+/**
  * Open file dialog
  * Opens a native file picker for opening existing files
  */
@@ -1430,6 +1629,34 @@ ipcMain.handle('clear-session-state', async () => {
   return { success: true };
 });
 
+ipcMain.handle('quit-app', async () => {
+  isQuitting = true;
+  app.quit();
+});
+
+ipcMain.handle('reopen-welcome-window', async (event) => {
+  const sourceWindow = BrowserWindow.fromWebContents(event.sender);
+  if (!sourceWindow || sourceWindow.isDestroyed()) {
+    return { success: false, error: 'Current window was not found.' };
+  }
+
+  if (sourceWindow === welcomeWindow || !openWindows.has(sourceWindow)) {
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      welcomeWindowIdsPendingReopen.add(sourceWindow.id);
+      sourceWindow.once('closed', () => {
+        createWelcomeWindow(true);
+        resolve({ success: true });
+      });
+      sourceWindow.close();
+    });
+  }
+
+  createWelcomeWindow(true);
+  approvedToClose.add(sourceWindow);
+  sourceWindow.close();
+  return { success: true };
+});
+
 /**
  * Reveal a file in the system file browser (Finder/Explorer)
  */
@@ -1502,6 +1729,9 @@ ipcMain.handle('budget-loaded', async (event, windowSize?: { width: number; heig
         { width: windowSize.width, height: windowSize.height, minWidth: 1000, minHeight: 600 }
       );
       window.setBounds(normalizedBounds);
+    } else {
+      const defaultPlanBounds = getDefaultPlanTransitionBounds(window);
+      window.setBounds(defaultPlanBounds);
     }
 
     // Attach the same close behavior as normal plan windows so unsaved-change
@@ -1550,6 +1780,7 @@ ipcMain.handle('budget-loaded', async (event, windowSize?: { width: number; heig
     });
 
     window.on('closed', () => {
+      clearBudgetFileWatch(window.id);
       openWindows.delete(window);
       if (mainWindow === window) mainWindow = null;
 

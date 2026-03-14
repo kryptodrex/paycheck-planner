@@ -5,6 +5,8 @@
  * ElectronAPI - Interface for communicating with Electron's main process
  * These functions are exposed from the preload script to the renderer (React)
  */
+import type { MenuEventName } from '../constants/events';
+
 export interface ElectronAPI {
   // Open a folder picker dialog
   selectDirectory: () => Promise<string | null>;
@@ -23,6 +25,12 @@ export interface ElectronAPI {
   
   // Check if a file exists at the given path
   fileExists: (filePath: string) => Promise<boolean>;
+
+  // Register currently open budget file path for local rename detection
+  setActiveBudgetFilePath: (filePath: string | null) => Promise<{ success: boolean; error?: string }>;
+
+  // Listen for local budget file rename events
+  onBudgetFileRenamed: (callback: (payload: { oldPath: string; newPath: string; planName: string }) => void) => () => void;
   
   // Open a file picker dialog (for loading files)
   openFileDialog: () => Promise<string | null>;
@@ -68,7 +76,7 @@ export interface ElectronAPI {
   // Takes an event name and a callback function
   // Returns an unsubscribe function to remove the listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-keyboard-shortcuts' | 'open-pay-options' | 'open-accounts' | 'save-plan' | 'set-tab-position' | 'toggle-tab-display-mode' | 'history-back' | 'history-forward' | 'history-home',
+    event: MenuEventName,
     callback: (arg?: unknown) => void
   ) => () => void;
 
@@ -89,6 +97,12 @@ export interface ElectronAPI {
   
   // Clear session state (used when opening a new file or closing app)
   clearSessionState: () => Promise<{ success: boolean }>;
+
+  // Quit the application
+  quitApp: () => Promise<void>;
+
+  // Close current window and open a fresh welcome window
+  reopenWelcomeWindow: () => Promise<{ success: boolean; error?: string }>;
   
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
   budgetLoaded: (windowSize?: { width: number; height: number; x: number; y: number }) => Promise<void>;

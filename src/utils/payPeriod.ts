@@ -3,7 +3,9 @@
  * These functions help convert between different time periods (paycheck, monthly, yearly)
  */
 
-import type { PayFrequency, PaySettings } from '../types/auth';
+import type { PayFrequency } from '../types/frequencies';
+import type { PaySettings } from '../types/payroll';
+import type { ViewMode } from '../types/viewMode';
 import { getPayFrequencyOccurrencesPerYear } from './frequency';
 
 /**
@@ -25,7 +27,7 @@ export function getPaychecksPerYear(frequency: PayFrequency | string): number {
 export function convertToDisplayMode(
   paycheckAmount: number,
   paychecksPerYear: number,
-  displayMode: 'paycheck' | 'monthly' | 'yearly'
+  displayMode: ViewMode
 ): number {
   const roundToCent = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
 
@@ -51,7 +53,7 @@ export function convertToDisplayMode(
 export function convertFromDisplayMode(
   displayAmount: number,
   paychecksPerYear: number,
-  displayMode: 'paycheck' | 'monthly' | 'yearly'
+  displayMode: ViewMode
 ): number {
   switch (displayMode) {
     case 'paycheck':
@@ -70,7 +72,7 @@ export function convertFromDisplayMode(
  * @param displayMode - The display mode ('paycheck', 'monthly', 'yearly')
  * @returns Human-readable label
  */
-export function getDisplayModeLabel(displayMode: 'paycheck' | 'monthly' | 'yearly'): string {
+export function getDisplayModeLabel(displayMode: ViewMode): string {
   switch (displayMode) {
     case 'paycheck':
       return 'Per Paycheck';

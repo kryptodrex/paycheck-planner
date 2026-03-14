@@ -1,0 +1,108 @@
+/* Pay Settings Modal Styles */
+
+.pay-settings-modal-content {
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.pay-settings-overview {
+  padding: 1rem 0;
+}
+
+.pay-settings-overview p {
+  margin-bottom: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.overview-item span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.overview-item strong {
+  font-size: 1.125rem;
+  color: var(--text-primary);
+}
+
+.pay-settings-editor-body {
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field-error {
+  border-color: var(--error-color) !important;
+}
+
+.pay-settings-modal-content .form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.pay-settings-modal-content .form-row input {
+  flex: 1;
+}
+
+.pay-settings-leftover-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+}
+
+.pay-settings-leftover-suggestion-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.pay-settings-leftover-suggestion-copy strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.pay-settings-leftover-suggestion-copy span {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .pay-settings-leftover-suggestion {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pay-settings-modal-content .form-row {
+    flex-direction: column;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+}

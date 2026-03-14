@@ -1,25 +1,39 @@
 // Budget Context - Manages all paycheck planning data and operations
 // This is like a "global state" that any component can access
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { useAppDialogs } from '../hooks';
+import { ErrorDialog } from '../components/_shared';
 import type { ReactNode } from 'react';
 import type { 
-  BudgetData, 
-  BudgetContextType, 
-  PaySettings,
-  Deduction,
-  TaxSettings,
-  BudgetSettings,
-  Account,
+  Account
+} from '../types/accounts';
+import type {
+  BudgetData
+} from '../types/budget';
+import type {
+  BudgetContextType
+} from '../types/budgetContext';
+import type {
   Bill,
+  Loan,
+  SavingsContribution
+} from '../types/obligations';
+import type {
   Benefit,
-  SavingsContribution,
-  RetirementElection,
+  Deduction,
+  PaySettings,
   PaycheckBreakdown,
-  Loan
-} from '../types/auth';
+  RetirementElection,
+  TaxSettings
+} from '../types/payroll';
+import type {
+  BudgetSettings
+} from '../types/settings';
 import { FileStorageService } from '../services/fileStorage';
+import { calculatePaycheckBreakdown as calculateBudgetPaycheckBreakdown, getEmptyPaycheckBreakdown } from '../services/budgetCalculations';
 import { KeychainService } from '../services/keychainService';
 import { roundUpToCent } from '../utils/money';
+import { getPlanNameFromPath } from '../utils/filePath';
 import { getPaychecksPerYear } from '../utils/payPeriod';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
 
@@ -58,6 +72,7 @@ interface BudgetProviderProps {
  * Think of this as the "manager" that holds and controls all budget data
  */
 export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   // State for the current budget data (null means no budget loaded)
   // The type annotation ensures budgetData matches our BudgetData interface
   const [budgetData, setBudgetData] = useState<BudgetData | null>(null);
@@ -74,6 +89,18 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   // Update unsaved changes tracking whenever budgetData changes
   useEffect(() => {
     if (!budgetData) {
+      setHasUnsavedChanges(false);
+      return;
+    }
+
+    const paySettings = budgetData.paySettings;
+    const isSetupComplete =
+      (paySettings.payType === 'salary' && (paySettings.annualSalary || 0) > 0) ||
+      (paySettings.payType === 'hourly' && (paySettings.hourlyRate || 0) > 0);
+
+    // Setup wizard plans are intentionally treated as not-yet-saveable.
+    // Avoid close/save prompts until setup has been completed.
+    if (!isSetupComplete) {
       setHasUnsavedChanges(false);
       return;
     }
@@ -152,10 +179,25 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       // Note: Each plan maintains its own encryptionEnabled setting (set during SetupWizard)
       // Encryption keys are stored in the system keychain, not in settings
 
-      // Save to file and get back the file path
+      let targetFilePath = updatedBudget.settings.filePath;
+
+      // If the stored path no longer exists (for example, renamed in Finder/Explorer),
+      // force Save As so we don't silently recreate an outdated duplicate path.
+      if (targetFilePath && window.electronAPI?.fileExists) {
+        try {
+          const exists = await window.electronAPI.fileExists(targetFilePath);
+          if (!exists) {
+            targetFilePath = undefined;
+          }
+        } catch (error) {
+          console.warn('Could not verify saved file path before save:', error);
+        }
+      }
+
+      // Save to file and get back the canonical file path
       const filePath = await FileStorageService.saveBudget(
         updatedBudget,
-        updatedBudget.settings.filePath
+        targetFilePath
       );
 
       // If user canceled the dialog, filePath will be null
@@ -163,9 +205,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         return false;
       }
 
+      const derivedPlanName = getPlanNameFromPath(filePath);
+
       // Update state with the new file path, window size, active tab, and save timestamp
       const savedBudget = {
         ...updatedBudget,
+        name: derivedPlanName || updatedBudget.name,
         settings: {
           ...updatedBudget.settings,
           filePath,
@@ -183,14 +228,17 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       return true;
     } catch (error) {
       console.error('Error saving budget:', error);
-      // Type assertion: tell TypeScript that error is an Error object
-      alert('Failed to save budget: ' + (error as Error).message);
+      openErrorDialog({
+        title: 'Save Failed',
+        message: 'Failed to save budget: ' + (error as Error).message,
+        actionLabel: 'Retry',
+      });
       return false;
     } finally {
       // Always runs, even if there's an error
       setLoading(false);
     }
-  }, [budgetData]); // Dependency: recreate this function if budgetData changes
+  }, [budgetData, openErrorDialog]); // Dependency: recreate this function if budgetData changes
 
   /**
    * Save only window state (size and active tab) to the budget file
@@ -310,6 +358,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
         return migrated;
       });
+
+      // Keep plan name in sync with the actual file name when opened from disk.
+      const derivedPlanName = getPlanNameFromPath(data.settings?.filePath);
+      if (derivedPlanName) {
+        data.name = derivedPlanName;
+      }
       
       setBudgetData(data);
       // Mark as saved (just loaded)
@@ -323,11 +377,15 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading budget:', error);
-      alert('Failed to load budget: ' + (error as Error).message);
+      openErrorDialog({
+        title: 'Load Failed',
+        message: 'Failed to load budget: ' + (error as Error).message,
+        actionLabel: 'Retry',
+      });
     } finally {
       setLoading(false);
     }
-  }, []); // No dependencies: this function never needs to be recreated
+  }, [openErrorDialog]); // No dependencies beyond dialog display
 
   /**
    * Create a new empty budget plan
@@ -783,6 +841,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           ...prev.retirement,
           {
             ...election,
+            enabled: election.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],
@@ -826,115 +885,10 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
    */
   const calculatePaycheckBreakdown = useCallback((): PaycheckBreakdown => {
     if (!budgetData) {
-      return {
-        grossPay: 0,
-        preTaxDeductions: 0,
-        taxableIncome: 0,
-        taxLineAmounts: [],
-        additionalWithholding: 0,
-        totalTaxes: 0,
-        netPay: 0,
-      };
+      return getEmptyPaycheckBreakdown();
     }
 
-    const { paySettings, preTaxDeductions, benefits = [], retirement = [], taxSettings } = budgetData;
-    
-    // Calculate gross pay per paycheck
-    let grossPay = 0;
-    if (paySettings.payType === 'salary' && paySettings.annualSalary) {
-      const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
-      grossPay = roundUpToCent(paySettings.annualSalary / paychecksPerYear);
-    } else if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
-      grossPay = roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
-    }
-
-    // Calculate pre-tax deductions (existing deductions)
-    let totalPreTaxDeductions = 0;
-    preTaxDeductions.forEach((deduction) => {
-      if (deduction.isPercentage) {
-        totalPreTaxDeductions += (grossPay * deduction.amount) / 100;
-      } else {
-        totalPreTaxDeductions += deduction.amount;
-      }
-    });
-
-    // Add pre-tax benefits deducted from paycheck
-    (benefits || []).forEach((benefit) => {
-      if ((benefit.deductionSource || 'paycheck') === 'paycheck' && !benefit.isTaxable) { // Pre-tax paycheck benefit
-        if (benefit.isPercentage) {
-          totalPreTaxDeductions += (grossPay * benefit.amount) / 100;
-        } else {
-          totalPreTaxDeductions += benefit.amount;
-        }
-      }
-    });
-
-    // Add employee retirement contributions (pre-tax or account-sourced)
-    (retirement || []).forEach((election) => {
-      if ((election.deductionSource || 'paycheck') === 'paycheck' && (election.isPreTax !== false)) {
-        if (election.employeeContributionIsPercentage) {
-          totalPreTaxDeductions += (grossPay * election.employeeContribution) / 100;
-        } else {
-          totalPreTaxDeductions += election.employeeContribution;
-        }
-      }
-    });
-
-    totalPreTaxDeductions = roundUpToCent(totalPreTaxDeductions);
-
-    // Calculate taxable income
-    const taxableIncome = roundUpToCent(grossPay - totalPreTaxDeductions);
-
-    // Calculate taxes
-    const taxLineAmounts = (taxSettings.taxLines || []).map(line => ({
-      id: line.id,
-      label: line.label,
-      amount: roundUpToCent((taxableIncome * line.rate) / 100),
-    }));
-    const additionalWithholding = roundUpToCent(taxSettings.additionalWithholding);
-
-    const totalTaxes = roundUpToCent(
-      taxLineAmounts.reduce((sum, l) => sum + l.amount, 0) + additionalWithholding
-    );
-
-    // Calculate net pay before post-tax deductions
-    let netPayBeforePostTax = roundUpToCent(taxableIncome - totalTaxes);
-
-    // Subtract post-tax benefits deducted from paycheck
-    (benefits || []).forEach((benefit) => {
-      if ((benefit.deductionSource || 'paycheck') === 'paycheck' && benefit.isTaxable) { // Post-tax paycheck benefit
-        if (benefit.isPercentage) {
-          netPayBeforePostTax -= roundUpToCent((grossPay * benefit.amount) / 100);
-        } else {
-          netPayBeforePostTax -= roundUpToCent(benefit.amount);
-        }
-      }
-    });
-
-    // Subtract post-tax retirement contributions deducted from paycheck
-    (retirement || []).forEach((election) => {
-      if ((election.deductionSource || 'paycheck') === 'paycheck' && election.isPreTax === false) { // Post-tax paycheck retirement
-        if (election.employeeContributionIsPercentage) {
-          netPayBeforePostTax -= roundUpToCent((grossPay * election.employeeContribution) / 100);
-        } else {
-          netPayBeforePostTax -= roundUpToCent(election.employeeContribution);
-        }
-      }
-    });
-
-    // Note: Employer match is not deducted from net pay, it's added to the employee's retirement account
-    // So we don't subtract it here - it's handled separately
-    const netPay = roundUpToCent(Math.max(0, netPayBeforePostTax));
-
-    return {
-      grossPay,
-      preTaxDeductions: totalPreTaxDeductions,
-      taxableIncome,
-      taxLineAmounts,
-      additionalWithholding,
-      totalTaxes,
-      netPay,
-    };
+    return calculateBudgetPaycheckBreakdown(budgetData);
   }, [budgetData]);
 
   /**
@@ -942,7 +896,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
    * Returns estimated employee and employer contributions per paycheck
    */
   const calculateRetirementContributions = useCallback((election: RetirementElection) => {
-    if (!budgetData) {
+    if (!budgetData || election.enabled === false) {
       return { employeeAmount: 0, employerAmount: 0 };
     }
 
@@ -1008,9 +962,13 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error selecting save location:', error);
-      alert('Failed to select save location: ' + (error as Error).message);
+      openErrorDialog({
+        title: 'Select Save Location Failed',
+        message: 'Failed to select save location: ' + (error as Error).message,
+        actionLabel: 'Retry',
+      });
     }
-  }, [budgetData]);
+  }, [budgetData, openErrorDialog]);
 
   // Bundle all our state and functions into a single object
   // This is what gets provided to all child components
@@ -1055,5 +1013,16 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   };
 
   // Provide the value to all children components
-  return <BudgetContext.Provider value={value}>{children}</BudgetContext.Provider>;
+  return (
+    <BudgetContext.Provider value={value}>
+      {children}
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
+      />
+    </BudgetContext.Provider>
+  );
 };

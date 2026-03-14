@@ -1,14 +1,20 @@
 // Service for handling local file storage and encryption
 // This class manages reading/writing budget files and encrypting/decrypting the data
 import CryptoJS from 'crypto-js';
-import type { BudgetData, AppSettings } from '../types/auth';
+import {
+  APP_STORAGE_KEYS,
+  APP_STORAGE_PREFIX,
+  BACKUP_EXCLUDED_STORAGE_KEYS,
+  MAX_RECENT_FILES,
+  SETTINGS_PLAN_SPECIFIC_FIELDS,
+  STORAGE_KEYS,
+} from '../constants/storage';
+import type { BudgetData } from '../types/budget';
+import type { AppSettings } from '../types/settings';
 import { KeychainService } from './keychainService';
+import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
 
-// LocalStorage key for app settings
-const SETTINGS_KEY = 'paycheck-planner-settings';
-const RECENT_FILES_KEY = 'paycheck-planner-recent-files';
-const FILE_TO_PLAN_MAPPING_KEY = 'paycheck-planner-file-to-plan-mapping';
-const MAX_RECENT_FILES = 10;
+const BACKUP_EXCLUDED_KEYS = new Set<string>(BACKUP_EXCLUDED_STORAGE_KEYS);
 
 export interface RecentFile {
   filePath: string;
@@ -16,10 +22,22 @@ export interface RecentFile {
   lastOpened: string;
 }
 
+export type RelinkMovedBudgetFileResult =
+  | { status: 'success'; filePath: string; planName: string }
+  | { status: 'cancelled' }
+  | { status: 'mismatch'; message: string }
+  | { status: 'invalid'; message: string };
+
 interface EncryptedBudgetEnvelopeV1 {
   format: 'paycheck-planner-encrypted-v1';
   planId: string;
   payload: string;
+}
+
+interface SettingsBackupEnvelopeV1 {
+  appName: 'paycheck-planner';
+  version: 1;
+  data: Record<string, unknown>;
 }
 
 function isEncryptedBudgetEnvelopeV1(value: unknown): value is EncryptedBudgetEnvelopeV1 {
@@ -43,6 +61,17 @@ function isBudgetData(value: unknown): value is BudgetData {
     Array.isArray(candidate.accounts) &&
     Array.isArray(candidate.bills) &&
     typeof candidate.settings === 'object'
+  );
+}
+
+function isSettingsBackupEnvelopeV1(value: unknown): value is SettingsBackupEnvelopeV1 {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<SettingsBackupEnvelopeV1>;
+  return (
+    candidate.appName === 'paycheck-planner' &&
+    candidate.version === 1 &&
+    typeof candidate.data === 'object' &&
+    candidate.data !== null
   );
 }
 
@@ -103,12 +132,106 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
 }
 
 export class FileStorageService {
+  private static derivePlanNameFromFilePath(filePath: string): string {
+    return getPlanNameFromPath(filePath) || 'plan';
+  }
+
+  private static async inspectBudgetFile(
+    filePath: string
+  ): Promise<{ isBudgetFile: boolean; planId: string | null; invalidReason?: string }> {
+    if (!window.electronAPI) {
+      return { isBudgetFile: false, planId: null, invalidReason: 'Unable to read selected file.' };
+    }
+
+    const result = await window.electronAPI.loadBudget(filePath);
+    if (!result.success || !result.data) {
+      return { isBudgetFile: false, planId: null };
+    }
+
+    try {
+      const parsed = JSON.parse(result.data) as unknown;
+
+      if (isEncryptedBudgetEnvelopeV1(parsed)) {
+        return { isBudgetFile: true, planId: parsed.planId };
+      }
+
+      if (isBudgetData(parsed)) {
+        return { isBudgetFile: true, planId: parsed.id };
+      }
+
+      if (isSettingsBackupEnvelopeV1(parsed)) {
+        return {
+          isBudgetFile: false,
+          planId: null,
+          invalidReason: 'That file is an app settings export, not a plan file.',
+        };
+      }
+    } catch {
+      return { isBudgetFile: false, planId: null, invalidReason: 'The selected file is not a valid plan file.' };
+    }
+
+    return { isBudgetFile: false, planId: null, invalidReason: 'The selected file is not a valid plan file.' };
+  }
+
+  static getKnownPlanIdForFile(filePath: string): string | null {
+    return this.getPlanIdForFile(filePath);
+  }
+
+  /**
+   * Prompt the user to locate a moved budget file and relink metadata.
+   * Returns a typed outcome so caller can provide custom UX.
+   */
+  static async relinkMovedBudgetFile(
+    missingFilePath: string,
+    expectedPlanId?: string
+  ): Promise<RelinkMovedBudgetFileResult> {
+    if (!window.electronAPI) {
+      throw new Error('Electron API not available');
+    }
+
+    const selectedPath = await window.electronAPI.openFileDialog();
+    if (!selectedPath) {
+      return { status: 'cancelled' };
+    }
+
+    const inspected = await this.inspectBudgetFile(selectedPath);
+    if (!inspected.isBudgetFile || !inspected.planId) {
+      return {
+        status: 'invalid',
+        message: inspected.invalidReason || 'The selected file is not a valid Paycheck Planner plan file.',
+      };
+    }
+
+    if (expectedPlanId && inspected.planId !== expectedPlanId) {
+      return {
+        status: 'mismatch',
+        message: 'That file belongs to a different plan. Please choose the moved file for this plan.',
+      };
+    }
+
+    const planIdToPersist = expectedPlanId || inspected.planId;
+    if (planIdToPersist) {
+      this.savePlanFileMapping(selectedPath, planIdToPersist);
+      this.addRecentFileForPlan(selectedPath, planIdToPersist);
+    } else {
+      this.addRecentFile(selectedPath);
+    }
+
+    this.removeRecentFile(missingFilePath);
+
+    return {
+      status: 'success',
+      filePath: selectedPath,
+      planName: this.derivePlanNameFromFilePath(selectedPath),
+    };
+  }
+
   /**
    * Get app settings from localStorage
    * @returns App settings or undefined if not yet configured
    */
   static getAppSettings(): AppSettings {
-    const stored = localStorage.getItem(SETTINGS_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.settings);
     if (stored) {
       try {
         const parsedSettings = JSON.parse(stored) as AppSettings & { encryptionKey?: string };
@@ -135,7 +258,7 @@ export class FileStorageService {
     // Remove encryptionKey if it exists - we don't store keys in localStorage
     const settingsToStore = { ...(settings as AppSettings & { encryptionKey?: string }) };
     Reflect.deleteProperty(settingsToStore, 'encryptionKey');
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settingsToStore));
+    localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settingsToStore));
   }
 
   /**
@@ -143,7 +266,7 @@ export class FileStorageService {
    * @returns Array of recent files, sorted by most recently opened
    */
   static getRecentFiles(): RecentFile[] {
-    const stored = localStorage.getItem(RECENT_FILES_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.recentFiles);
     if (stored) {
       try {
         return JSON.parse(stored);
@@ -159,8 +282,7 @@ export class FileStorageService {
    * @param filePath - The file path to add
    */
   static addRecentFile(filePath: string): void {
-    // Extract file name from path
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    const fileName = getBaseFileName(filePath) || filePath;
     
     const recentFiles = this.getRecentFiles();
     
@@ -177,15 +299,15 @@ export class FileStorageService {
     // Keep only the most recent MAX_RECENT_FILES
     const trimmed = filtered.slice(0, MAX_RECENT_FILES);
     
-    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(STORAGE_KEYS.recentFiles, JSON.stringify(trimmed));
   }
 
   /**
    * Add/update a recent file while de-duplicating other entries that belong to the same plan.
    * This keeps recents correct when a plan file is renamed/moved externally.
    */
-  private static addRecentFileForPlan(filePath: string, planId?: string): void {
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+  static addRecentFileForPlan(filePath: string, planId?: string): void {
+    const fileName = getBaseFileName(filePath) || filePath;
     const recentFiles = this.getRecentFiles();
     const mapping = this.getPlanFileMappings();
 
@@ -202,7 +324,7 @@ export class FileStorageService {
     });
 
     const trimmed = filtered.slice(0, MAX_RECENT_FILES);
-    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(STORAGE_KEYS.recentFiles, JSON.stringify(trimmed));
   }
 
   /**
@@ -212,14 +334,153 @@ export class FileStorageService {
   static removeRecentFile(filePath: string): void {
     const recentFiles = this.getRecentFiles();
     const filtered = recentFiles.filter(f => f.filePath !== filePath);
-    localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(filtered));
+    localStorage.setItem(STORAGE_KEYS.recentFiles, JSON.stringify(filtered));
   }
 
   /**
    * Clear all recent files
    */
   static clearRecentFiles(): void {
-    localStorage.removeItem(RECENT_FILES_KEY);
+    localStorage.removeItem(STORAGE_KEYS.recentFiles);
+  }
+
+  /**
+   * Get all known plan IDs from file-to-plan mappings.
+   * Useful for cleaning up keychain entries when resetting app memory.
+   */
+  static getKnownPlanIds(): string[] {
+    const mapping = this.getPlanFileMappings();
+    return Array.from(new Set(Object.values(mapping).filter(Boolean)));
+  }
+
+  /**
+   * Remove all app-owned localStorage values.
+   * This does not delete budget files on disk.
+   */
+  static clearAppMemory(): void {
+    APP_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+
+    // Also clear any additional future keys under the paycheck-planner prefix.
+    if (typeof localStorage.key === 'function' && typeof localStorage.length === 'number') {
+      const prefixedKeys: string[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith(APP_STORAGE_PREFIX)) {
+          prefixedKeys.push(key);
+        }
+      }
+
+      prefixedKeys.forEach((key) => localStorage.removeItem(key));
+    }
+  }
+
+  /**
+   * Collect all global app preferences into a portable JSON envelope.
+   * Plan-specific data (accounts, encryption state) is intentionally excluded
+   * because it is already stored inside each .budget file.
+   */
+  static exportAppData(): string {
+    const data: Record<string, string> = {};
+
+    // Build candidate set from known keys + any future prefixed keys, then
+    // subtract plan-specific keys that must not be exported.
+    const candidates = new Set<string>(APP_STORAGE_KEYS);
+    if (typeof localStorage.key === 'function' && typeof localStorage.length === 'number') {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith(APP_STORAGE_PREFIX)) {
+          candidates.add(key);
+        }
+      }
+    }
+
+    for (const key of candidates) {
+      if (BACKUP_EXCLUDED_KEYS.has(key)) continue;
+
+      let value = localStorage.getItem(key);
+      if (value === null) continue;
+
+      // Strip plan-specific fields from the settings blob
+      if (key === STORAGE_KEYS.settings) {
+        try {
+          const parsed = JSON.parse(value) as Record<string, unknown>;
+          for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
+            delete parsed[field];
+          }
+          value = JSON.stringify(parsed);
+        } catch {
+          // If parsing fails, skip this key entirely rather than export corrupt data
+          continue;
+        }
+      }
+
+      data[key] = value;
+    }
+
+    return JSON.stringify(
+      {
+        version: 1,
+        appName: 'paycheck-planner',
+        exportedAt: new Date().toISOString(),
+        data,
+      },
+      null,
+      2,
+    );
+  }
+
+  /**
+   * Restore app-owned localStorage keys from a JSON backup produced by exportAppData().
+   * Returns the parsed data object so callers can refresh in-memory state.
+   * Throws if the file is not a valid backup envelope.
+   */
+  static importAppData(rawJson: string): Record<string, string> {
+    let envelope: unknown;
+    try {
+      envelope = JSON.parse(rawJson);
+    } catch {
+      throw new Error('The selected file is not valid JSON.');
+    }
+
+    if (
+      !envelope ||
+      typeof envelope !== 'object' ||
+      (envelope as Record<string, unknown>)['appName'] !== 'paycheck-planner' ||
+      (envelope as Record<string, unknown>)['version'] !== 1 ||
+      typeof (envelope as Record<string, unknown>)['data'] !== 'object'
+    ) {
+      throw new Error(
+        'The selected file is not a Paycheck Planner settings backup.',
+      );
+    }
+
+    const rawData = (envelope as { data: Record<string, unknown> }).data;
+
+    const restored: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rawData)) {
+      if (!key.startsWith(APP_STORAGE_PREFIX) || typeof value !== 'string') continue;
+      // Never restore plan-specific keys even if present in an older backup file
+      if (BACKUP_EXCLUDED_KEYS.has(key)) continue;
+
+      let valueToStore = value;
+      // Strip plan-specific fields from a restored settings blob
+      if (key === STORAGE_KEYS.settings) {
+        try {
+          const parsed = JSON.parse(value) as Record<string, unknown>;
+          for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
+            delete parsed[field];
+          }
+          valueToStore = JSON.stringify(parsed);
+        } catch {
+          continue;
+        }
+      }
+
+      localStorage.setItem(key, valueToStore);
+      restored[key] = valueToStore;
+    }
+
+    return restored;
   }
 
   /**
@@ -238,7 +499,7 @@ export class FileStorageService {
         }
       }
       mapping[filePath] = planId;
-      localStorage.setItem(FILE_TO_PLAN_MAPPING_KEY, JSON.stringify(mapping));
+      localStorage.setItem(STORAGE_KEYS.fileToPlanMapping, JSON.stringify(mapping));
     } catch {
       // If this fails, it's not critical - worst case the key lookup will fail
     }
@@ -250,7 +511,7 @@ export class FileStorageService {
    */
   private static getPlanFileMappings(): Record<string, string> {
     try {
-      const stored = localStorage.getItem(FILE_TO_PLAN_MAPPING_KEY);
+      const stored = localStorage.getItem(STORAGE_KEYS.fileToPlanMapping);
       if (stored) {
         return JSON.parse(stored);
       }
@@ -491,8 +752,7 @@ export class FileStorageService {
     }
 
     // Max attempts reached
-    alert(`Failed to decrypt file after ${maxAttempts} attempts. Please check your encryption key.`);
-    return null;
+    throw new Error(`Failed to decrypt file after ${maxAttempts} attempts. Please check your encryption key.`);
   }
 
   /**
@@ -640,6 +900,18 @@ export class FileStorageService {
       targetPath = selectedPath;
     }
 
+    if (targetPath && window.electronAPI?.fileExists) {
+      const exists = await window.electronAPI.fileExists(targetPath);
+      if (!exists) {
+        const expectedPlanId = this.getPlanIdForFile(targetPath) || undefined;
+        const relinked = await this.relinkMovedBudgetFile(targetPath, expectedPlanId);
+        if (relinked.status !== 'success') {
+          return null;
+        }
+        targetPath = relinked.filePath;
+      }
+    }
+
     // Request Electron's main process to read the file
     const result = await window.electronAPI.loadBudget(targetPath);
 
@@ -649,10 +921,16 @@ export class FileStorageService {
 
     const fileData = result.data;
 
-    // Try to parse as JSON first (unencrypted file or encrypted envelope)
+    // Parse JSON first. Only non-JSON payloads should go through legacy decryption fallback.
+    let parsedData: unknown;
+    let isJsonFile = true;
     try {
-      const parsedData: unknown = JSON.parse(fileData);
+      parsedData = JSON.parse(fileData);
+    } catch {
+      isJsonFile = false;
+    }
 
+    if (isJsonFile) {
       // New encrypted format: use embedded plan ID metadata to fetch key
       if (isEncryptedBudgetEnvelopeV1(parsedData)) {
         const envelope = parsedData;
@@ -662,7 +940,7 @@ export class FileStorageService {
         if (!encryptionKey) {
           console.warn('[FileStorage] Encryption key not found in keychain, prompting user');
           encryptionKey = await this.promptForEncryptionKey(envelope.payload, envelope.planId);
-          
+
           // User canceled or failed to provide valid key
           if (!encryptionKey) {
             throw new Error(
@@ -681,14 +959,14 @@ export class FileStorageService {
         const budgetData = migrateBudgetData(decryptedParsed as BudgetData);
         budgetData.settings = { ...budgetData.settings, filePath: targetPath };
         this.savePlanFileMapping(targetPath, budgetData.id);
-        
+
         // Ensure key is in keychain (may have been recovered)
         try {
           await KeychainService.saveKey(budgetData.id, encryptionKey);
         } catch (error) {
           console.warn('[FileStorage] Could not save encryption key to keychain:', error);
         }
-        
+
         this.addRecentFileForPlan(targetPath, budgetData.id);
         return budgetData;
       }
@@ -702,119 +980,122 @@ export class FileStorageService {
         return budgetData;
       }
 
+      if (isSettingsBackupEnvelopeV1(parsedData)) {
+        throw new Error('This file is a Paycheck Planner settings export, not a budget plan. Use Import Settings in the app settings screen.');
+      }
+
       throw new Error('Unsupported or invalid budget file format.');
-    } catch {
-      // If JSON parsing/validation fails, it may be a legacy encrypted raw payload.
-      // Try legacy decryption flow using path->plan mapping.
-      
-      // First, try to get the plan ID from our file mapping
-      const planId = this.getPlanIdForFile(targetPath);
-      let encryptionKey: string | null = null;
-      
-      if (planId) {
-        // Try to get the key from keychain using the plan ID
-        try {
-          encryptionKey = await KeychainService.getKey(planId);
-        } catch {
-          // Key lookup failed, will try alternatives below
-        }
-      }
-      
-      // If we don't have a key yet, try to prompt the user for it
-      if (!encryptionKey) {
-        console.warn('[FileStorage] Legacy encrypted file with no keychain entry, prompting user');
-        
-        // For legacy format, we need to try decryption first to get the plan ID
-        // So we'll use a special flow where we ask for the key and validate it
-        let attempts = 0;
-        const maxAttempts = 3;
-        
-        while (attempts < maxAttempts) {
-          const key = await this.requestEncryptionKeyInput(
-            attempts === 0
-              ? 'This file is encrypted but the key was not found in your keychain.\n\nPlease enter your encryption key to decrypt this file:'
-              : `Incorrect encryption key. Please try again (Attempt ${attempts + 1}/${maxAttempts}):`
-          );
+    }
 
-          // User canceled
-          if (key === null) {
-            throw new Error('File decryption canceled by user.');
-          }
+    // Non-JSON payloads may be legacy encrypted raw files. Try legacy decryption flow.
 
-          // User entered empty string
-          if (key.trim() === '') {
-            attempts++;
-            continue;
-          }
+    // First, try to get the plan ID from our file mapping
+    const planId = this.getPlanIdForFile(targetPath);
+    let encryptionKey: string | null = null;
 
-          // Try to decrypt with this key
-          try {
-            const decryptedData = this.decrypt(fileData, key);
-            const parsed: unknown = JSON.parse(decryptedData);
-            
-            if (isBudgetData(parsed)) {
-              // Success! This is the correct key
-              const budgetData = migrateBudgetData(parsed as BudgetData);
-              budgetData.settings = { ...budgetData.settings, filePath: targetPath };
-              
-              // Save the file-to-plan mapping for future reference
-              this.savePlanFileMapping(targetPath, budgetData.id);
-              
-              // Save the recovered key to keychain
-              try {
-                await KeychainService.saveKey(budgetData.id, key);
-                if (import.meta.env.DEV) console.debug('[FileStorage] Successfully saved recovered encryption key to keychain');
-              } catch (error) {
-                console.warn('[FileStorage] Could not save recovered key to keychain:', error);
-              }
-              
-              // Add to recent files on successful load
-              this.addRecentFileForPlan(targetPath, budgetData.id);
-              
-              return budgetData;
-            }
-          } catch {
-            // Wrong key or corrupted data
-            attempts++;
-          }
-        }
-        
-        // Max attempts reached
-        throw new Error(
-          `Failed to decrypt file after ${maxAttempts} attempts. The encryption key may be incorrect.`
-        );
-      }
-
+    if (planId) {
+      // Try to get the key from keychain using the plan ID
       try {
-        // We have a key from keychain, try to decrypt
-        const decryptedData = this.decrypt(fileData, encryptionKey);
-        
-        // Parse JSON back into a JavaScript object (deserialization)
-        const parsed: unknown = JSON.parse(decryptedData);
-        if (!isBudgetData(parsed)) {
-          throw new Error('Decrypted file data is not a valid budget format.');
-        }
-        const budgetData = migrateBudgetData(parsed as BudgetData);
-        budgetData.settings = { ...budgetData.settings, filePath: targetPath };
-        
-        // Save the file-to-plan mapping for future reference
-        this.savePlanFileMapping(targetPath, budgetData.id);
-        
-        // Ensure the key is stored in keychain with the correct plan ID
-        try {
-          await KeychainService.saveKey(budgetData.id, encryptionKey);
-        } catch (error) {
-          console.warn('[FileStorage] Could not save encryption key to keychain:', error);
-        }
-        
-        // Add to recent files on successful load
-        this.addRecentFileForPlan(targetPath, budgetData.id);
-        
-        return budgetData;
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        throw new Error(`Failed to decrypt file: ${errorMsg}. The encryption key may be incorrect.`);
+        encryptionKey = await KeychainService.getKey(planId);
+      } catch {
+        // Key lookup failed, will try alternatives below
       }
+    }
+
+    // If we don't have a key yet, try to prompt the user for it
+    if (!encryptionKey) {
+      console.warn('[FileStorage] Legacy encrypted file with no keychain entry, prompting user');
+
+      // For legacy format, we need to try decryption first to get the plan ID
+      // So we'll use a special flow where we ask for the key and validate it
+      let attempts = 0;
+      const maxAttempts = 3;
+
+      while (attempts < maxAttempts) {
+        const key = await this.requestEncryptionKeyInput(
+          attempts === 0
+            ? 'This file is encrypted but the key was not found in your keychain.\n\nPlease enter your encryption key to decrypt this file:'
+            : `Incorrect encryption key. Please try again (Attempt ${attempts + 1}/${maxAttempts}):`
+        );
+
+        // User canceled
+        if (key === null) {
+          throw new Error('File decryption canceled by user.');
+        }
+
+        // User entered empty string
+        if (key.trim() === '') {
+          attempts++;
+          continue;
+        }
+
+        // Try to decrypt with this key
+        try {
+          const decryptedData = this.decrypt(fileData, key);
+          const parsed: unknown = JSON.parse(decryptedData);
+
+          if (isBudgetData(parsed)) {
+            // Success! This is the correct key
+            const budgetData = migrateBudgetData(parsed as BudgetData);
+            budgetData.settings = { ...budgetData.settings, filePath: targetPath };
+
+            // Save the file-to-plan mapping for future reference
+            this.savePlanFileMapping(targetPath, budgetData.id);
+
+            // Save the recovered key to keychain
+            try {
+              await KeychainService.saveKey(budgetData.id, key);
+              if (import.meta.env.DEV) console.debug('[FileStorage] Successfully saved recovered encryption key to keychain');
+            } catch (error) {
+              console.warn('[FileStorage] Could not save recovered key to keychain:', error);
+            }
+
+            // Add to recent files on successful load
+            this.addRecentFileForPlan(targetPath, budgetData.id);
+
+            return budgetData;
+          }
+        } catch {
+          // Wrong key or corrupted data
+          attempts++;
+        }
+      }
+
+      // Max attempts reached
+      throw new Error(
+        `Failed to decrypt file after ${maxAttempts} attempts. The encryption key may be incorrect.`
+      );
+    }
+
+    try {
+      // We have a key from keychain, try to decrypt
+      const decryptedData = this.decrypt(fileData, encryptionKey);
+
+      // Parse JSON back into a JavaScript object (deserialization)
+      const parsed: unknown = JSON.parse(decryptedData);
+      if (!isBudgetData(parsed)) {
+        throw new Error('Decrypted file data is not a valid budget format.');
+      }
+      const budgetData = migrateBudgetData(parsed as BudgetData);
+      budgetData.settings = { ...budgetData.settings, filePath: targetPath };
+
+      // Save the file-to-plan mapping for future reference
+      this.savePlanFileMapping(targetPath, budgetData.id);
+
+      // Ensure the key is stored in keychain with the correct plan ID
+      try {
+        await KeychainService.saveKey(budgetData.id, encryptionKey);
+      } catch (error) {
+        console.warn('[FileStorage] Could not save encryption key to keychain:', error);
+      }
+
+      // Add to recent files on successful load
+      this.addRecentFileForPlan(targetPath, budgetData.id);
+
+      return budgetData;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to decrypt file: ${errorMsg}. The encryption key may be incorrect.`);
     }
   }
 

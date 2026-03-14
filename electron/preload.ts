@@ -3,6 +3,8 @@
 // It's like a controlled doorway - only certain things can pass through
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import type { MenuEventName } from '../src/constants/events';
+import { menuChannel } from '../src/constants/events';
 
 console.log('[PRELOAD] Preload script starting...');
 
@@ -40,6 +42,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: boolean
   fileExists: (filePath: string) => 
     ipcRenderer.invoke('file-exists', filePath),
+
+  // Register currently open budget path for local rename detection
+  setActiveBudgetFilePath: (filePath: string | null) =>
+    ipcRenderer.invoke('set-active-budget-file-path', filePath),
+
+  // Listen for local budget file rename events
+  onBudgetFileRenamed: (callback: (payload: { oldPath: string; newPath: string; planName: string }) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: { oldPath: string; newPath: string; planName: string }) => callback(payload);
+    ipcRenderer.on('budget-file-renamed', listener);
+    return () => ipcRenderer.removeListener('budget-file-renamed', listener);
+  },
   
   // Open file picker (for opening)
   openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
@@ -86,10 +99,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Takes: event name and callback function
   // Returns: () => unsubscribe function to remove listener
   onMenuEvent: (
-    event: 'new-budget' | 'open-budget' | 'open-budget-file' | 'change-encryption' | 'save-plan' | 'open-settings' | 'open-about' | 'open-glossary' | 'open-keyboard-shortcuts' | 'open-pay-options' | 'open-accounts' | 'set-tab-position' | 'toggle-tab-display-mode' | 'history-back' | 'history-forward' | 'history-home',
+    event: MenuEventName,
     callback: (arg?: unknown) => void
   ) => {
-    const channel = `menu:${event}`;
+    const channel = menuChannel(event);
     const listener = (_event: IpcRendererEvent, arg?: unknown) => callback(arg);
     ipcRenderer.on(channel, listener);
     return () => ipcRenderer.removeListener(channel, listener);
@@ -132,6 +145,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Returns: { success: boolean }
   clearSessionState: () =>
     ipcRenderer.invoke('clear-session-state'),
+
+  // Quit the application
+  quitApp: () =>
+    ipcRenderer.invoke('quit-app'),
+
+  // Close current window and open a fresh welcome window
+  reopenWelcomeWindow: () =>
+    ipcRenderer.invoke('reopen-welcome-window'),
   
   // Notify main process that a budget has been loaded (transitions welcome window to plan window)
   budgetLoaded: (windowSize?: { width: number; height: number }) =>
