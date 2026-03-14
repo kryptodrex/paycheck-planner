@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert, RadioGroup, Button } from '../shared';
+import '../shared/sharedPathDisplay.css';
 import './EncryptionConfigPanel.css';
 
 interface EncryptionConfigPanelProps {
@@ -118,7 +119,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                 {!useCustomKey && (
                     <>
                         <div className="encryption-key-box">
-                            <code onCopy={() => navigator.clipboard.writeText(generatedKey)}>{generatedKey}</code>
+                            <code className="shared-path-display shared-path-display--primary encryption-key-code" onCopy={() => navigator.clipboard.writeText(generatedKey)}>{generatedKey}</code>
                         </div>
                         <div className="button-group">
                             <Button

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Modal } from '../';
+import '../sharedPathDisplay.css';
 import './FileRelinkModal.css';
 
 interface FileRelinkModalProps {
@@ -58,7 +59,7 @@ const FileRelinkModal: React.FC<FileRelinkModalProps> = ({
       }
     >
       <p className="file-relink-modal-message">{message}</p>
-      <code className="file-relink-modal-path" title={filePath}>
+      <code className="shared-path-display file-relink-modal-path" title={filePath}>
         {filePath}
       </code>
       {errorMessage && <p className="file-relink-modal-error">{errorMessage}</p>}

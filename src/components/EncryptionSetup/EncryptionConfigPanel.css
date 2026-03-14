@@ -59,20 +59,12 @@
 .encryption-config-panel .encryption-key-box {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
   margin-bottom: 0.75rem;
-  overflow-x: auto;
 }
 
-.encryption-config-panel .encryption-key-box code {
+.encryption-config-panel .encryption-key-code {
   flex: 1;
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  word-break: break-all;
+  margin: 0;
 }
 
 .encryption-config-panel .encryption-btn-icon {
@@ -129,7 +121,7 @@
     align-items: flex-start;
   }
 
-  .encryption-config-panel .encryption-key-box code {
+  .encryption-config-panel .encryption-key-code {
     width: 100%;
   }
 }
