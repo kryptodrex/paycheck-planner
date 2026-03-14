@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useAppDialogs } from '../../hooks';
 import type { Loan, LoanPaymentLine } from '../../types/obligations';
 import type { LoanPaymentFrequency } from '../../types/frequencies';
 import type { ViewMode } from '../../types/viewMode';
@@ -8,7 +9,7 @@ import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } fro
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
-import { Modal, Button, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
+import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
 import './LoansManager.css';
 
 interface LoansManagerProps {
@@ -101,6 +102,7 @@ const mapLoanPaymentLinesToEditable = (paymentBreakdown: LoanPaymentLine[]): Edi
 
 const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
     const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
+    const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
     const [showAddLoan, setShowAddLoan] = useState(false);
     const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
     const [loanName, setLoanName] = useState('');
@@ -327,9 +329,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     };
 
     const handleDeleteLoan = (id: string) => {
-        if (confirm('Are you sure you want to delete this loan payment?')) {
-            deleteLoan(id);
-        }
+        openConfirmDialog({
+            title: 'Delete Loan Payment',
+            message: 'Are you sure you want to delete this loan payment?',
+            confirmLabel: 'Delete Loan',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteLoan(id),
+        });
     };
 
     const handleToggleLoanEnabled = (loan: Loan) => {
@@ -660,6 +666,17 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                     />
                 </FormGroup>
             </Modal>
+
+            <ConfirmDialog
+                isOpen={!!confirmDialog}
+                onClose={closeConfirmDialog}
+                onConfirm={confirmCurrentDialog}
+                title={confirmDialog?.title || 'Confirm'}
+                message={confirmDialog?.message || ''}
+                confirmLabel={confirmDialog?.confirmLabel}
+                cancelLabel={confirmDialog?.cancelLabel}
+                confirmVariant={confirmDialog?.confirmVariant}
+            />
         </div>
     );
 };

@@ -7,7 +7,7 @@ interface StatusToastState {
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { useBudget } from '../../contexts/BudgetContext';
-import { useFileRelinkFlow } from '../../hooks';
+import { useAppDialogs, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
 import SetupWizard from '../SetupWizard';
@@ -23,7 +23,7 @@ import AccountsManager from '../AccountsManager';
 import ExportModal from '../ExportModal';
 import FeedbackModal from '../FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, FileRelinkModal, FormGroup } from '../shared';
+import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup } from '../shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
@@ -107,6 +107,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const historyStateKeyRef = useRef<string | null>(null);
   const suppressHistoryPushRef = useRef(false);
   const lastMissingPathPromptRef = useRef<string | null>(null);
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   const {
     missingFile: missingActiveFile,
     relinkMismatchMessage: activeRelinkMismatchMessage,
@@ -670,7 +671,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (!visible) {
       const currentVisibleCount = tabConfigs.filter(t => t.visible).length;
       if (currentVisibleCount <= 1) {
-        alert('Cannot hide the last visible tab. At least one tab must remain visible.');
+        openErrorDialog({
+          title: 'Cannot Hide Tab',
+          message: 'Cannot hide the last visible tab. At least one tab must remain visible.',
+        });
         return;
       }
     }
@@ -685,7 +689,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (!visible && activeTab === tabId) {
       setActiveTab('metrics');
     }
-  }, [budgetData, tabConfigs, activeTab, updateBudgetSettings]);
+  }, [activeTab, budgetData, openErrorDialog, tabConfigs, updateBudgetSettings]);
 
   const handleReorderTab = useCallback((fromIndex: number, toIndex: number) => {
     if (!budgetData) return;
@@ -1002,7 +1006,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         const keyToUse = useCustomKey ? customKey : generatedKey;
         
         if (!keyToUse) {
-          alert('Please generate or enter an encryption key.');
+          openErrorDialog({
+            title: 'Encryption Key Required',
+            message: 'Please generate or enter an encryption key.',
+          });
           setEncryptionSaving(false);
           return;
         }
@@ -1029,7 +1036,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       handleEncryptionModalClose();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to save encryption settings: ${errorMsg}`);
+      openErrorDialog({
+        title: 'Encryption Save Failed',
+        message: `Failed to save encryption settings: ${errorMsg}`,
+        actionLabel: 'Retry',
+      });
       setEncryptionSaving(false);
     }
   };
@@ -1547,6 +1558,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         filePath={missingActiveFile?.filePath || ''}
         errorMessage={activeRelinkMismatchMessage ? `${activeRelinkMismatchMessage} Please try again.` : null}
         isLoading={activeRelinkLoading}
+      />
+
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
       />
 
       {statusToast && (

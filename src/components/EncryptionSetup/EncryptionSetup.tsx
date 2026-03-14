@@ -1,10 +1,11 @@
 // Encryption Setup Component - Shown on first launch
 // Allows users to configure encryption or skip it
 import React, { useState } from 'react';
+import { useAppDialogs } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
 import EncryptionConfigPanel from './EncryptionConfigPanel';
-import { Button } from '../shared';
+import { Button, ErrorDialog } from '../shared';
 import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {
@@ -14,6 +15,7 @@ interface EncryptionSetupProps {
 }
 
 const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel, planId }) => {
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
   const [customKey, setCustomKey] = useState('');
   const [generatedKey, setGeneratedKey] = useState('');
@@ -37,7 +39,10 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
         const keyToUse = useCustomKey ? customKey : generatedKey;
         
         if (!keyToUse) {
-          alert('Please generate or enter an encryption key.');
+          openErrorDialog({
+            title: 'Encryption Key Required',
+            message: 'Please generate or enter an encryption key.',
+          });
           setIsSaving(false);
           return;
         }
@@ -61,7 +66,11 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
       onComplete(Boolean(encryptionEnabled));
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to save encryption settings: ${errorMsg}`);
+      openErrorDialog({
+        title: 'Encryption Save Failed',
+        message: `Failed to save encryption settings: ${errorMsg}`,
+        actionLabel: 'Retry',
+      });
       setIsSaving(false);
     }
   };
@@ -120,6 +129,14 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
             Continue
           </Button>
         </div>
+
+        <ErrorDialog
+          isOpen={!!errorDialog}
+          onClose={closeErrorDialog}
+          title={errorDialog?.title || 'Error'}
+          message={errorDialog?.message || ''}
+          actionLabel={errorDialog?.actionLabel}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useAppDialogs } from '../../hooks';
 import { getCurrencySymbol, CURRENCIES } from '../../utils/currency';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
@@ -9,7 +10,7 @@ import { FileStorageService } from '../../services/fileStorage';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import type { Account } from '../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../types/payroll';
-import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, ProgressBar } from '../shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, ProgressBar, ErrorDialog } from '../shared';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -26,6 +27,7 @@ interface EditableTaxLine {
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData } = useBudget();
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   
   const [step, setStep] = useState(1);
   const totalSteps = 6; // Increased from 5 to include encryption step
@@ -104,7 +106,10 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     if (encryptionEnabled) {
       const keyToUse = useCustomEncryptionKey ? customEncryptionKey : generatedEncryptionKey;
       if (!keyToUse) {
-        alert('Please generate or enter an encryption key.');
+        openErrorDialog({
+          title: 'Encryption Key Required',
+          message: 'Please generate or enter an encryption key.',
+        });
         return;
       }
       // Save the encryption key to keychain
@@ -656,6 +661,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
           )}
         </div>
       </div>
+
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
+      />
     </div>
   );
 };

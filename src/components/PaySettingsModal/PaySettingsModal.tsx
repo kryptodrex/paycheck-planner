@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useAppDialogs } from '../../hooks';
 import type { BudgetData } from '../../types/budget';
 import type { PaySettings } from '../../types/payroll';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear } from '../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../utils/paySuggestions';
-import { Modal, Button, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../shared';
+import { Modal, Button, ErrorDialog, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../shared';
 import './PaySettingsModal.css';
 
 interface PaySettingsModalProps {
@@ -22,6 +23,7 @@ type PaySettingsFieldErrors = {
 
 const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) => {
   const { budgetData, updateBudgetData } = useBudget();
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   
   // Form state
   const [editPayType, setEditPayType] = useState<'salary' | 'hourly'>('salary');
@@ -198,7 +200,10 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
     if (currencyChanged && exchangeRate.trim() !== '') {
       const parsedExchangeRate = parseFloat(exchangeRate);
       if (!Number.isFinite(parsedExchangeRate) || parsedExchangeRate <= 0) {
-        alert('Please enter a valid exchange rate greater than zero, or leave it blank to skip conversion.');
+        openErrorDialog({
+          title: 'Invalid Exchange Rate',
+          message: 'Please enter a valid exchange rate greater than zero, or leave it blank to skip conversion.',
+        });
         return;
       }
       updatedBudget = convertBudgetAmounts(updatedBudget, parsedExchangeRate);
@@ -384,6 +389,13 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
             </Button>
           </div>
         )}
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
+      />
     </Modal>
   );
 };

@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAppDialogs } from '../../../hooks';
+import { ConfirmDialog, ErrorDialog } from '../../shared';
 import type { TabConfig, TabPosition, TabDisplayMode } from '../../../types/tabs';
 import TabPositionHandle from './TabPositionHandle';
 import './PlanTabs.css';
@@ -40,20 +42,36 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
   onTabPositionChange,
   onTabDisplayModeChange,
 }) => {
+  const {
+    confirmDialog,
+    errorDialog,
+    openConfirmDialog,
+    closeConfirmDialog,
+    confirmCurrentDialog,
+    openErrorDialog,
+    closeErrorDialog,
+  } = useAppDialogs();
+
   const handleHideTab = (e: React.MouseEvent, tab: TabConfig) => {
     e.stopPropagation();
     e.preventDefault();
     
     // Check if this is the last visible tab
     if (visibleTabs.length <= 1) {
-      alert('Cannot hide the last visible tab. At least one tab must remain visible.');
+      openErrorDialog({
+        title: 'Cannot Hide Tab',
+        message: 'Cannot hide the last visible tab. At least one tab must remain visible.',
+      });
       return;
     }
     
-    const confirmed = window.confirm(`Are you sure you want to hide the ${tab.label} tab?`);
-    if (confirmed) {
-      onHideTab(tab.id);
-    }
+    openConfirmDialog({
+      title: 'Hide Tab',
+      message: `Are you sure you want to hide the ${tab.label} tab?`,
+      confirmLabel: 'Hide Tab',
+      confirmVariant: 'danger',
+      onConfirm: () => onHideTab(tab.id),
+    });
   };
 
   const isSidebar = tabPosition === 'left' || tabPosition === 'right';
@@ -80,7 +98,8 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
   };
 
   return (
-    <div className={`tab-navigation tab-position-${tabPosition} ${isSidebar ? `tab-display-${tabDisplayMode}` : ''}`}>
+    <>
+      <div className={`tab-navigation tab-position-${tabPosition} ${isSidebar ? `tab-display-${tabDisplayMode}` : ''}`}>
       {/* Tab Position Handle Display */}
       {onTabPositionChange && (
         <TabPositionHandle
@@ -152,7 +171,27 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
           </button>
         )}
       </div>
-    </div>
+      </div>
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmCurrentDialog}
+        title={confirmDialog?.title || 'Confirm'}
+        message={confirmDialog?.message || ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={confirmDialog?.cancelLabel}
+        confirmVariant={confirmDialog?.confirmVariant}
+      />
+
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
+      />
+    </>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useAppDialogs } from '../../hooks';
 import type { SavingsContribution } from '../../types/obligations';
 import type { RetirementElection } from '../../types/payroll';
 import type { ViewMode } from '../../types/viewMode';
@@ -10,7 +11,7 @@ import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { formatBillFrequency } from '../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
 import { toDisplayAmount } from '../../utils/displayAmounts';
-import { Alert, Button, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
+import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './SavingsManager.css';
 
@@ -41,6 +42,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   displayMode = 'paycheck',
   onDisplayModeChange,
 }) => {
+  const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const {
     budgetData,
     addSavingsContribution,
@@ -218,9 +220,13 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   };
 
   const handleDeleteSavings = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this contribution?')) {
-      deleteSavingsContribution(id);
-    }
+    openConfirmDialog({
+      title: 'Delete Contribution',
+      message: 'Are you sure you want to delete this contribution?',
+      confirmLabel: 'Delete Contribution',
+      confirmVariant: 'danger',
+      onConfirm: () => deleteSavingsContribution(id),
+    });
   };
 
   const handleToggleSavingsEnabled = (item: SavingsContribution) => {
@@ -440,9 +446,13 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   };
 
   const handleDeleteRetirement = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this retirement election?')) {
-      deleteRetirementElection(id);
-    }
+    openConfirmDialog({
+      title: 'Delete Retirement Election',
+      message: 'Are you sure you want to delete this retirement election?',
+      confirmLabel: 'Delete Election',
+      confirmVariant: 'danger',
+      onConfirm: () => deleteRetirementElection(id),
+    });
   };
 
   const handleToggleRetirementEnabled = (retirement: RetirementElection) => {
@@ -930,6 +940,17 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           )}
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmCurrentDialog}
+        title={confirmDialog?.title || 'Confirm'}
+        message={confirmDialog?.message || ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={confirmDialog?.cancelLabel}
+        confirmVariant={confirmDialog?.confirmVariant}
+      />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useAppDialogs } from '../../hooks';
 import type { Benefit, RetirementElection } from '../../types/payroll';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../utils/payPeriod';
@@ -7,7 +8,7 @@ import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
 import type { ViewMode } from '../../types/viewMode';
 import { toDisplayAmount } from '../../utils/displayAmounts';
-import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard, Alert, ViewModeSelector, PageHeader } from '../shared';
+import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard, Alert, ViewModeSelector, PageHeader } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './BenefitsManager.css';
 
@@ -39,6 +40,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     onDisplayModeChange,
 }) => {
     const { budgetData, addBenefit, updateBenefit, deleteBenefit, addRetirementElection, updateRetirementElection, deleteRetirementElection, calculateRetirementContributions } = useBudget();
+    const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
     const [showAddBenefit, setShowAddBenefit] = useState(false);
     const [editingBenefit, setEditingBenefit] = useState<Benefit | null>(null);
     const [showAddRetirement, setShowAddRetirement] = useState(false);
@@ -321,9 +323,13 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     };
 
     const handleDeleteBenefit = (id: string) => {
-        if (confirm('Are you sure you want to delete this benefit?')) {
-            deleteBenefit(id);
-        }
+        openConfirmDialog({
+            title: 'Delete Benefit',
+            message: 'Are you sure you want to delete this benefit?',
+            confirmLabel: 'Delete Benefit',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteBenefit(id),
+        });
     };
 
     // Retirement handlers
@@ -444,9 +450,13 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     };
 
     const handleDeleteRetirement = (id: string) => {
-        if (confirm('Are you sure you want to delete this retirement election?')) {
-            deleteRetirementElection(id);
-        }
+        openConfirmDialog({
+            title: 'Delete Retirement Election',
+            message: 'Are you sure you want to delete this retirement election?',
+            confirmLabel: 'Delete Election',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteRetirementElection(id),
+        });
     };
 
     return (
@@ -963,6 +973,17 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                     )}
                 </div>
             </Modal>
+
+            <ConfirmDialog
+                isOpen={!!confirmDialog}
+                onClose={closeConfirmDialog}
+                onConfirm={confirmCurrentDialog}
+                title={confirmDialog?.title || 'Confirm'}
+                message={confirmDialog?.message || ''}
+                confirmLabel={confirmDialog?.confirmLabel}
+                cancelLabel={confirmDialog?.cancelLabel}
+                confirmVariant={confirmDialog?.confirmVariant}
+            />
         </div>
     );
 };

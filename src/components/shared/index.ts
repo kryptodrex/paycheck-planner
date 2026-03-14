@@ -17,3 +17,5 @@ export { default as ViewModeSelector } from './ViewModeSelector';
 export { default as PageHeader } from './PageHeader';
 export { default as ProgressBar } from './ProgressBar';
 export { default as FileRelinkModal } from './FileRelinkModal';
+export { default as ConfirmDialog } from './ConfirmDialog';
+export { default as ErrorDialog } from './ErrorDialog';

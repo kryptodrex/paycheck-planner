@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useAppDialogs } from '../../hooks';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Button, Modal, PillToggle } from '../shared';
+import { Button, ErrorDialog, Modal, PillToggle } from '../shared';
 import { FileStorageService } from '../../services/fileStorage';
 import './Settings.css';
 
@@ -23,6 +24,7 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   const [backingUp, setBackingUp] = useState(false);
   const [backedUp, setBackedUp] = useState(false);
   const [importing, setImporting] = useState(false);
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   const [settings, setSettings] = useState<SettingsState>(() => {
     const appSettings = FileStorageService.getAppSettings();
     return {
@@ -84,7 +86,11 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
       setBackedUp(true);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to export backup: ${message}`);
+      openErrorDialog({
+        title: 'Backup Export Failed',
+        message: `Failed to export backup: ${message}`,
+        actionLabel: 'Retry',
+      });
     } finally {
       setBackingUp(false);
     }
@@ -121,7 +127,11 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to import app data: ${message}`);
+      openErrorDialog({
+        title: 'Import Failed',
+        message: `Failed to import app data: ${message}`,
+        actionLabel: 'Retry',
+      });
     } finally {
       setImporting(false);
     }
@@ -143,7 +153,11 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
       await window.electronAPI.quitApp();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to reset app memory: ${message}`);
+      openErrorDialog({
+        title: 'Reset Failed',
+        message: `Failed to reset app memory: ${message}`,
+        actionLabel: 'Retry',
+      });
     } finally {
       setResettingMemory(false);
     }
@@ -290,6 +304,14 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
           Optionally back up your preferences first — they can be restored later via &quot;Import app data&quot; in Settings.
         </p>
       </Modal>
+
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
+      />
     </Modal>
   );
 };

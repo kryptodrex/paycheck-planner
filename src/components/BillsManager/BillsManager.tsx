@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useAppDialogs } from '../../hooks';
 import type { Bill } from '../../types/obligations';
 import type { Benefit } from '../../types/payroll';
 import type { BillFrequency } from '../../types/frequencies';
@@ -10,7 +11,7 @@ import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear,
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
 import { convertBillToMonthly, formatBillFrequency } from '../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../utils/displayAmounts';
-import { Button, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../shared';
+import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../shared';
 import './BillsManager.css';
 
 interface BillsManagerProps {
@@ -33,6 +34,7 @@ type BenefitFieldErrors = {
 
 const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
+  const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
 
   const [showAddBill, setShowAddBill] = useState(false);
   const [editingBill, setEditingBill] = useState<Bill | null>(null);
@@ -194,9 +196,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   };
 
   const handleDeleteBill = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this bill?')) {
-      deleteBill(id);
-    }
+    openConfirmDialog({
+      title: 'Delete Bill',
+      message: 'Are you sure you want to delete this bill?',
+      confirmLabel: 'Delete Bill',
+      confirmVariant: 'danger',
+      onConfirm: () => deleteBill(id),
+    });
   };
 
   const handleToggleBillEnabled = (bill: Bill) => {
@@ -269,9 +275,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   };
 
   const handleDeleteBenefit = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this deduction?')) {
-      deleteBenefit(id);
-    }
+    openConfirmDialog({
+      title: 'Delete Deduction',
+      message: 'Are you sure you want to delete this deduction?',
+      confirmLabel: 'Delete Deduction',
+      confirmVariant: 'danger',
+      onConfirm: () => deleteBenefit(id),
+    });
   };
 
   return (
@@ -663,6 +673,17 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           </p>
         )}
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmCurrentDialog}
+        title={confirmDialog?.title || 'Confirm'}
+        message={confirmDialog?.message || ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={confirmDialog?.cancelLabel}
+        confirmVariant={confirmDialog?.confirmVariant}
+      />
     </div>
   );
 };

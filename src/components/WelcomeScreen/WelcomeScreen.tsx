@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
-import { useFileRelinkFlow } from '../../hooks';
+import { useAppDialogs, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import type { RecentFile } from '../../services/fileStorage';
-import { Button, FileRelinkModal, FormGroup } from '../shared';
+import { Button, ErrorDialog, FileRelinkModal, FormGroup } from '../shared';
 import Settings from '../Settings';
 import './WelcomeScreen.css';
 
@@ -22,6 +22,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const isBusy = loading || demoLoading;
+  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   const {
     missingFile: missingRecentFile,
     relinkMismatchMessage,
@@ -93,7 +94,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
         return;
       }
 
-      alert('Failed to open file: ' + message);
+      openErrorDialog({
+        title: 'Open Plan Failed',
+        message: `Failed to open file: ${message}`,
+        actionLabel: 'Retry',
+      });
     }
   };
 
@@ -303,6 +308,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
           onClick: handleRemoveMissingRecent,
           variant: 'danger',
         }}
+      />
+
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
       />
     </div>
   );
