@@ -270,4 +270,57 @@ describe('FileStorageService', () => {
       expect(result.message).toContain('settings export');
     }
   });
+
+  it('returns cancelled when relink picker is dismissed', async () => {
+    Object.assign(window.electronAPI, {
+      openFileDialog: vi.fn(async () => null),
+    });
+
+    const result = await FileStorageService.relinkMovedBudgetFile('/tmp/missing-plan.budget', 'plan-1');
+
+    expect(result).toEqual({ status: 'cancelled' });
+  });
+
+  it('returns mismatch when relink picker chooses a different plan', async () => {
+    const otherPlan = FileStorageService.createEmptyBudget(2026, 'USD');
+    otherPlan.id = 'different-plan';
+
+    Object.assign(window.electronAPI, {
+      openFileDialog: vi.fn(async () => '/tmp/other-plan.budget'),
+      loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(otherPlan) })),
+    });
+
+    const result = await FileStorageService.relinkMovedBudgetFile('/tmp/missing-plan.budget', 'plan-1');
+
+    expect(result.status).toBe('mismatch');
+    if (result.status === 'mismatch') {
+      expect(result.message).toContain('different plan');
+    }
+  });
+
+  it('returns success and rewrites stale recent-file metadata when relinking a moved plan', async () => {
+    const movedPlan = FileStorageService.createEmptyBudget(2026, 'USD');
+    movedPlan.id = 'plan-1';
+    movedPlan.name = 'Moved Plan';
+
+    FileStorageService.addRecentFileForPlan('/tmp/missing-plan.budget', 'plan-1');
+
+    Object.assign(window.electronAPI, {
+      openFileDialog: vi.fn(async () => '/tmp/moved-plan.budget'),
+      loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(movedPlan) })),
+    });
+
+    const result = await FileStorageService.relinkMovedBudgetFile('/tmp/missing-plan.budget', 'plan-1');
+
+    expect(result).toEqual({
+      status: 'success',
+      filePath: '/tmp/moved-plan.budget',
+      planName: 'moved-plan',
+    });
+
+    const recentFiles = FileStorageService.getRecentFiles();
+    expect(recentFiles.some((file) => file.filePath === '/tmp/missing-plan.budget')).toBe(false);
+    expect(recentFiles.some((file) => file.filePath === '/tmp/moved-plan.budget')).toBe(true);
+    expect(FileStorageService.getKnownPlanIdForFile('/tmp/moved-plan.budget')).toBe('plan-1');
+  });
 });

@@ -316,7 +316,7 @@ export class FileStorageService {
    * Add/update a recent file while de-duplicating other entries that belong to the same plan.
    * This keeps recents correct when a plan file is renamed/moved externally.
    */
-  private static addRecentFileForPlan(filePath: string, planId?: string): void {
+  static addRecentFileForPlan(filePath: string, planId?: string): void {
     const fileName = getBaseFileName(filePath) || filePath;
     const recentFiles = this.getRecentFiles();
     const mapping = this.getPlanFileMappings();
