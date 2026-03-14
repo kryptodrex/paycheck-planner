@@ -70,10 +70,10 @@ Lint:
 npm run lint
 ```
 
-Type check:
+Type check (uses project references build, matching CI):
 
 ```bash
-npx tsc --noEmit
+npx tsc -b
 ```
 
 Run tests:
@@ -84,9 +84,9 @@ npm run test:run    # Run once
 ```
 
 Test coverage includes:
-- Unit tests for utility functions (pay periods, currency, bill frequency, money math, etc.)
-- Service tests with mocking (keychain, file storage, accounts service)
-- Hook tests (keyboard shortcuts)
+- Unit tests for utility functions (pay periods, currency, bill frequency, money math, display amounts, account grouping, retirement, pay suggestions, frequency, file paths, etc.)
+- Service tests with mocking (keychain, file storage, accounts service, budget calculations, currency conversion)
+- Hook tests (keyboard shortcuts, app dialogs, file relink flow, encryption setup flow, field errors, modal entity editor)
 
 ## Build & Package
 
@@ -192,7 +192,12 @@ Renderer Process (React + Context + Hooks)
   ├─ BudgetContext.tsx (state management, calculations, CRUD, save/load orchestration)
   ├─ ThemeContext.tsx (theme management with light/dark/system modes)
   ├─ Hooks
-  │   └─ useGlobalKeyboardShortcuts.ts (cross-platform keyboard shortcuts)
+  │   ├─ useGlobalKeyboardShortcuts.ts (cross-platform keyboard shortcuts)
+  │   ├─ useAppDialogs.ts (app-level dialog open/close state)
+  │   ├─ useEncryptionSetupFlow.ts (step-by-step encryption enable/disable flow)
+  │   ├─ useFieldErrors.ts (field-level validation error tracking)
+  │   ├─ useFileRelinkFlow.ts (relink plan file when path moves or is missing)
+  │   └─ useModalEntityEditor.ts (generic CRUD editor state for modal-based entity forms)
   └─ Components
   ├─ views/SetupWizard/ (onboarding flow)
   ├─ views/WelcomeScreen/ (new/open/recent/demo entry points)
@@ -208,13 +213,18 @@ Renderer Process (React + Context + Hooks)
   ├─ modals/AboutModal/ (version, credits, license)
   ├─ modals/GlossaryModal/ (searchable financial terms reference)
   ├─ modals/ExportModal/ (PDF export with password protection)
-  ├─ modals/PaySettingsModal/ (edit pay settings)
-      ├─ EncryptionSetup/ (encryption configuration)
+  ├─ modals/PaySettingsModal/ (edit pay settings post-setup)
+  ├─ modals/FeedbackModal/ (in-app bug/feature feedback submission)
+  ├─ modals/KeyboardShortcutsModal/ (keyboard shortcuts reference dialog)
+  ├─ views/EncryptionSetup/ (encryption enable/disable/rekey flow)
   └─ _shared/ (Button, Modal, Card, Input, Toggle, PillToggle, etc.)
 
 Services
   ├─ fileStorage.ts (save/load, encryption envelope, recent files, migrations, settings persistence)
   ├─ keychainService.ts (secure key management via Electron IPC)
+  ├─ accountsService.ts (accounts CRUD, default account setup, account validation)
+  ├─ budgetCalculations.ts (gross-to-net calculations, paycheck math, deduction totals)
+  ├─ budgetCurrencyConversion.ts (currency conversion and formatting for budget values)
   └─ pdfExport.ts (jsPDF generation with password protection)
 
 Utilities
@@ -222,8 +232,14 @@ Utilities
   ├─ currency.ts (formatting with symbol placement)
   ├─ money.ts (rounding and financial math)
   ├─ billFrequency.ts (bill frequency calculations)
+  ├─ frequency.ts (general frequency conversion helpers)
   ├─ accountDefaults.ts (default account configurations)
+  ├─ accountGrouping.ts (group and sort accounts by type)
   ├─ tabManagement.ts (tab visibility and ordering)
+  ├─ displayAmounts.ts (format amounts for display with period normalization)
+  ├─ filePath.ts (file path utilities for platform-safe path handling)
+  ├─ paySuggestions.ts (generate leftover/allocation suggestions based on pay)
+  ├─ retirement.ts (retirement contribution limits and calculation helpers)
   └─ demoDataGenerator.ts (demo plan generation)
 
 Electron Main Process
@@ -257,7 +273,8 @@ paycheck-planner/
 │   ├── components/
 │   │   ├── views/
 │   │   │   ├── SetupWizard/ (onboarding flow)
-│   │   │   └── WelcomeScreen/ (entry point selection)
+│   │   │   ├── WelcomeScreen/ (entry point selection)
+│   │   │   └── EncryptionSetup/ (encryption enable/disable/rekey)
 │   │   ├── PlanDashboard/
 │   │   │   ├── PlanTabs/ (tab management)
 │   │   │   ├── PlanDashboard.tsx (main shell)
@@ -275,17 +292,26 @@ paycheck-planner/
 │   │   │   ├── AboutModal/ (version/license)
 │   │   │   ├── GlossaryModal/ (terms reference)
 │   │   │   ├── ExportModal/ (PDF export)
-│   │   │   └── PaySettingsModal/ (pay settings editor)
-│   │   ├── EncryptionSetup/ (encryption config)
+│   │   │   ├── PaySettingsModal/ (pay settings editor)
+│   │   │   ├── FeedbackModal/ (in-app feedback)
+│   │   │   └── KeyboardShortcutsModal/ (shortcuts reference)
 │   │   └── _shared/ (reusable UI components)
 │   ├── contexts/
 │   │   ├── BudgetContext.tsx (budget state management)
 │   │   └── ThemeContext.tsx (theme management)
 │   ├── hooks/
-│   │   └── useGlobalKeyboardShortcuts.ts
+│   │   ├── useGlobalKeyboardShortcuts.ts
+│   │   ├── useAppDialogs.ts
+│   │   ├── useEncryptionSetupFlow.ts
+│   │   ├── useFieldErrors.ts
+│   │   ├── useFileRelinkFlow.ts
+│   │   └── useModalEntityEditor.ts
 │   ├── services/
 │   │   ├── fileStorage.ts (file I/O + encryption)
 │   │   ├── keychainService.ts (secure key storage)
+│   │   ├── accountsService.ts (accounts CRUD + validation)
+│   │   ├── budgetCalculations.ts (gross-to-net + deduction math)
+│   │   ├── budgetCurrencyConversion.ts (currency conversion for budget values)
 │   │   └── pdfExport.ts (PDF generation)
 │   ├── types/
 │   │   ├── auth.ts (budget data types)
@@ -295,8 +321,14 @@ paycheck-planner/
 │   │   ├── currency.ts
 │   │   ├── money.ts
 │   │   ├── billFrequency.ts
+│   │   ├── frequency.ts
 │   │   ├── accountDefaults.ts
+│   │   ├── accountGrouping.ts
 │   │   ├── tabManagement.ts
+│   │   ├── displayAmounts.ts
+│   │   ├── filePath.ts
+│   │   ├── paySuggestions.ts
+│   │   ├── retirement.ts
 │   │   └── demoDataGenerator.ts
 │   ├── App.tsx (main app component)
 │   ├── App.css
@@ -395,9 +427,9 @@ Use this checklist:
 ## Related Docs
 
 - `README.md` (project root) – User-facing feature overview and getting started guide
-- `app_updates/APP_MVP.md` – MVP scope and requirements
-- `app_updates/APP_UPDATES.md` – Shipped features and planned updates tracking
-- `app_updates/Implementations.md` – Implementation notes and technical decisions
+- `app_updates/Implementations.md` – Implementation notes and technical decisions for in-progress features
+- `app_updates/Shared Logic Refactor.md` – Shared logic extraction roadmap and progress checklist
+- `app_updates/Styles Refactor.md` – CSS deduplication and theme-token roadmap and progress checklist
 - `.github/workflows/` – CI/CD pipeline configurations
 
 ## License
