@@ -69,7 +69,7 @@ export class AccountsService {
    * @returns true if accounts exist in localStorage
    */
   static hasAccounts(): boolean {
-    return localStorage.getItem(ACCOUNTS_KEY) !== null;
+    return localStorage.getItem(STORAGE_KEYS.accounts) !== null;
   }
 
   /**
