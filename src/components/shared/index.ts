@@ -16,3 +16,4 @@ export { default as AccountsEditor } from './AccountsEditor';
 export { default as ViewModeSelector } from './ViewModeSelector';
 export { default as PageHeader } from './PageHeader';
 export { default as ProgressBar } from './ProgressBar';
+export { default as FileRelinkModal } from './FileRelinkModal';

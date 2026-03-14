@@ -7,6 +7,7 @@ interface StatusToastState {
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import { KeychainService } from '../../services/keychainService';
 import SetupWizard from '../SetupWizard';
@@ -22,7 +23,7 @@ import AccountsManager from '../AccountsManager';
 import ExportModal from '../ExportModal';
 import FeedbackModal from '../FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, FormGroup } from '../shared';
+import { Toast, Modal, Button, FileRelinkModal, FormGroup } from '../shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
@@ -106,42 +107,55 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const historyStateKeyRef = useRef<string | null>(null);
   const suppressHistoryPushRef = useRef(false);
   const lastMissingPathPromptRef = useRef<string | null>(null);
-  const [missingActiveFilePath, setMissingActiveFilePath] = useState<string | null>(null);
-  const [activeRelinkMismatchMessage, setActiveRelinkMismatchMessage] = useState<string | null>(null);
-  const [activeRelinkLoading, setActiveRelinkLoading] = useState(false);
+  const {
+    missingFile: missingActiveFile,
+    relinkMismatchMessage: activeRelinkMismatchMessage,
+    relinkLoading: activeRelinkLoading,
+    promptFileRelink: promptActiveFileRelink,
+    clearFileRelinkPrompt: clearActiveFileRelinkPrompt,
+    locateRelinkedFile: locateActiveRelinkedFile,
+  } = useFileRelinkFlow({
+    getExpectedPlanId: () => budgetData?.id,
+    fallbackErrorMessage: 'Unable to relink moved file.',
+    onRelinkSuccess: (result) => {
+      lastMissingPathPromptRef.current = null;
+      updateBudgetData({
+        name: result.planName,
+        settings: {
+          ...budgetData!.settings,
+          filePath: result.filePath,
+        },
+      });
+      setStatusToast({ message: 'File moved on disk. Plan path was relinked.', type: 'success' });
+    },
+  });
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
     return budgetData?.settings?.tabConfigs 
       ? initializeTabConfigs(budgetData.settings.tabConfigs)
       : initializeTabConfigs();
-  }, [budgetData?.settings?.tabConfigs]);
+  }, [budgetData]);
   
   const visibleTabs = useMemo(() => getVisibleTabs(tabConfigs), [tabConfigs]);
   const hiddenTabs = useMemo(() => getHiddenTabs(tabConfigs), [tabConfigs]);
+  const effectiveTemporarilyVisibleTab = temporarilyVisibleTab === activeTab ? temporarilyVisibleTab : null;
   const visibleTabsForRender = useMemo(() => {
-    if (!temporarilyVisibleTab) return visibleTabs;
+    if (!effectiveTemporarilyVisibleTab) return visibleTabs;
 
-    const alreadyVisible = visibleTabs.some((tab) => tab.id === temporarilyVisibleTab);
+    const alreadyVisible = visibleTabs.some((tab) => tab.id === effectiveTemporarilyVisibleTab);
     if (alreadyVisible) return visibleTabs;
 
-    const tempTab = tabConfigs.find((tab) => tab.id === temporarilyVisibleTab);
+    const tempTab = tabConfigs.find((tab) => tab.id === effectiveTemporarilyVisibleTab);
     if (!tempTab) return visibleTabs;
 
     const maxOrder = visibleTabs.reduce((max, tab) => Math.max(max, tab.order), -1);
     return [...visibleTabs, { ...tempTab, visible: true, order: maxOrder + 1 }];
-  }, [visibleTabs, tabConfigs, temporarilyVisibleTab]);
+  }, [effectiveTemporarilyVisibleTab, visibleTabs, tabConfigs]);
 
   useEffect(() => {
     latestTabConfigsRef.current = tabConfigs;
   }, [tabConfigs]);
-
-  useEffect(() => {
-    if (!temporarilyVisibleTab) return;
-    if (activeTab !== temporarilyVisibleTab) {
-      setTemporarilyVisibleTab(null);
-    }
-  }, [activeTab, temporarilyVisibleTab]);
 
   // Restore active tab before paint to avoid flashing default tab
   useLayoutEffect(() => {
@@ -152,6 +166,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
     const normalizedViewMode = normalizeLegacyTabId(viewMode);
     if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(normalizedViewMode);
       initializedTabContextRef.current = tabRestoreContext;
       return;
@@ -265,6 +280,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   // Initialize tab position and display mode from budget settings
   useEffect(() => {
     if (budgetData?.settings?.tabPosition) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTabPosition(budgetData.settings.tabPosition);
     }
     if (budgetData?.settings?.tabDisplayMode) {
@@ -313,16 +329,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
 
     lastMissingPathPromptRef.current = currentPath;
-    setActiveRelinkMismatchMessage(null);
-    setMissingActiveFilePath(currentPath);
+    promptActiveFileRelink(currentPath);
     return false;
-  }, [budgetData?.settings?.filePath]);
+  }, [budgetData?.settings?.filePath, promptActiveFileRelink]);
 
   // Handle save with success toast
   const handleSave = useCallback(async () => {
     if (!budgetData) return;
 
-    if (missingActiveFilePath) {
+    if (missingActiveFile) {
       setStatusToast({ message: 'Locate moved file before saving this plan.', type: 'warning' });
       return;
     }
@@ -344,7 +359,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (success) {
       setStatusToast({ message: 'Saved successfully', type: 'success' });
     }
-  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, missingActiveFilePath, ensureValidSavePath]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, missingActiveFile, ensureValidSavePath]);
 
   const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
     const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
@@ -562,20 +577,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       }
 
       lastMissingPathPromptRef.current = currentPath;
-      setActiveRelinkMismatchMessage(null);
-      setMissingActiveFilePath(currentPath);
+      promptActiveFileRelink(currentPath);
     }, 2500);
 
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);
     };
-  }, [budgetData, updateBudgetData]);
+  }, [budgetData, promptActiveFileRelink]);
 
   const handleCloseActiveRelinkModal = useCallback(() => {
     if (activeRelinkLoading || !budgetData) return;
 
-    const stalePath = missingActiveFilePath || budgetData.settings.filePath || null;
+    const stalePath = missingActiveFile?.filePath || budgetData.settings.filePath || null;
     if (stalePath) {
       FileStorageService.removeRecentFile(stalePath);
     }
@@ -589,48 +603,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     lastMissingPathPromptRef.current = null;
-    setMissingActiveFilePath(null);
-    setActiveRelinkMismatchMessage(null);
+    clearActiveFileRelinkPrompt();
     setStatusToast({
       message: 'File location was cleared. Use Save to choose a new file location.',
       type: 'warning',
     });
-  }, [activeRelinkLoading, budgetData, missingActiveFilePath, updateBudgetData]);
-
-  const handleLocateActiveRelinkFile = useCallback(async () => {
-    if (!budgetData || !missingActiveFilePath || activeRelinkLoading) return;
-
-    setActiveRelinkLoading(true);
-    try {
-      const result = await FileStorageService.relinkMovedBudgetFile(missingActiveFilePath, budgetData.id);
-
-      if (result.status === 'cancelled') {
-        return;
-      }
-
-      if (result.status === 'mismatch' || result.status === 'invalid') {
-        setActiveRelinkMismatchMessage(result.message);
-        return;
-      }
-
-      lastMissingPathPromptRef.current = null;
-      setMissingActiveFilePath(null);
-      setActiveRelinkMismatchMessage(null);
-      updateBudgetData({
-        name: result.planName,
-        settings: {
-          ...budgetData.settings,
-          filePath: result.filePath,
-        },
-      });
-      setStatusToast({ message: 'File moved on disk. Plan path was relinked.', type: 'success' });
-    } catch (error) {
-      const message = (error as Error).message || 'Unable to relink moved file.';
-      setActiveRelinkMismatchMessage(message);
-    } finally {
-      setActiveRelinkLoading(false);
-    }
-  }, [activeRelinkLoading, budgetData, missingActiveFilePath, updateBudgetData]);
+  }, [activeRelinkLoading, budgetData, missingActiveFile, updateBudgetData, clearActiveFileRelinkPrompt]);
 
   // Auto-dismiss status toast
   useEffect(() => {
@@ -656,6 +634,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         planLoadingStartRef.current = Date.now();
       }
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowPlanLoadingScreen(true);
       return;
     }
@@ -1188,7 +1167,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             variant="primary"
             size="small"
             onClick={handleSave}
-            disabled={loading || !!missingActiveFilePath || activeRelinkLoading}
+            disabled={loading || !!missingActiveFile || activeRelinkLoading}
             className="header-btn-primary"
           >
             💾 Save
@@ -1559,38 +1538,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         />
       </Modal>
 
-      <Modal
-        isOpen={!!missingActiveFilePath}
+      <FileRelinkModal
+        isOpen={!!missingActiveFile}
         onClose={handleCloseActiveRelinkModal}
+        onLocate={locateActiveRelinkedFile}
         header="Plan File Moved"
-        contentClassName="plan-relink-modal"
-        footer={
-          <>
-            <Button variant="secondary" onClick={handleCloseActiveRelinkModal} disabled={activeRelinkLoading}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleLocateActiveRelinkFile}
-              isLoading={activeRelinkLoading}
-              loadingText="Opening Picker..."
-              disabled={activeRelinkLoading}
-            >
-              Locate File
-            </Button>
-          </>
-        }
-      >
-        <p className="plan-relink-modal-message">
-          Your open plan file was moved or renamed on disk. Locate it to keep saving to the correct file.
-        </p>
-        <code className="plan-relink-modal-path" title={missingActiveFilePath || ''}>
-          {missingActiveFilePath || ''}
-        </code>
-        {activeRelinkMismatchMessage && (
-          <p className="plan-relink-modal-error"><b>{activeRelinkMismatchMessage}</b> Please try again.</p>
-        )}
-      </Modal>
+        message="Your open plan file was moved or renamed on disk. Locate it to keep saving to the correct file."
+        filePath={missingActiveFile?.filePath || ''}
+        errorMessage={activeRelinkMismatchMessage ? `${activeRelinkMismatchMessage} Please try again.` : null}
+        isLoading={activeRelinkLoading}
+      />
 
       {statusToast && (
         <Toast 

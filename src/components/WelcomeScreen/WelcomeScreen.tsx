@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
+import { useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import type { RecentFile } from '../../services/fileStorage';
-import { Button, FormGroup, Modal } from '../shared';
+import { Button, FileRelinkModal, FormGroup } from '../shared';
 import Settings from '../Settings';
 import './WelcomeScreen.css';
 
 interface WelcomeScreenProps {
   initialError?: string;
-}
-
-interface MissingRecentFileState {
-  filePath: string;
-  fileName: string;
 }
 
 const DEMO_LAUNCH_DELAY_MS = 2200;
@@ -25,10 +21,22 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>(() => FileStorageService.getRecentFiles());
   const [showSettings, setShowSettings] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
-  const [missingRecentFile, setMissingRecentFile] = useState<MissingRecentFileState | null>(null);
-  const [relinkMismatchMessage, setRelinkMismatchMessage] = useState<string | null>(null);
-  const [relinkLoading, setRelinkLoading] = useState(false);
   const isBusy = loading || demoLoading;
+  const {
+    missingFile: missingRecentFile,
+    relinkMismatchMessage,
+    relinkLoading,
+    promptFileRelink,
+    clearFileRelinkPrompt,
+    locateRelinkedFile,
+  } = useFileRelinkFlow({
+    getExpectedPlanId: (filePath) => FileStorageService.getKnownPlanIdForFile(filePath) || undefined,
+    fallbackErrorMessage: 'Unable to locate moved file.',
+    onRelinkSuccess: async (result) => {
+      await loadBudget(result.filePath);
+      setRecentFiles(FileStorageService.getRecentFiles());
+    },
+  });
 
   const handleCreateNew = () => {
     setShowNewPlanForm(true);
@@ -65,11 +73,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
       try {
         const exists = await window.electronAPI.fileExists(filePath);
         if (!exists) {
-          setMissingRecentFile({
-            filePath,
-            fileName: filePath.split(/[\\/]/).pop() || filePath,
-          });
-          setRelinkMismatchMessage(null);
+          promptFileRelink(filePath);
           return;
         }
       } catch (error) {
@@ -85,11 +89,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
       const isFileNotFound = /not found|enoent|no such file/i.test(message);
 
       if (isFileNotFound) {
-        setMissingRecentFile({
-          filePath,
-          fileName: filePath.split(/[\\/]/).pop() || filePath,
-        });
-        setRelinkMismatchMessage(null);
+        promptFileRelink(filePath);
         return;
       }
 
@@ -99,44 +99,14 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
 
   const handleCloseMissingRecentModal = () => {
     if (relinkLoading) return;
-    setMissingRecentFile(null);
-    setRelinkMismatchMessage(null);
+    clearFileRelinkPrompt();
   };
 
   const handleRemoveMissingRecent = () => {
     if (!missingRecentFile || relinkLoading) return;
     FileStorageService.removeRecentFile(missingRecentFile.filePath);
     setRecentFiles(FileStorageService.getRecentFiles());
-    setMissingRecentFile(null);
-    setRelinkMismatchMessage(null);
-  };
-
-  const handleRelinkMissingRecent = async () => {
-    if (!missingRecentFile || relinkLoading) return;
-
-    setRelinkLoading(true);
-    try {
-      const expectedPlanId = FileStorageService.getKnownPlanIdForFile(missingRecentFile.filePath) || undefined;
-      const result = await FileStorageService.relinkMovedBudgetFile(missingRecentFile.filePath, expectedPlanId);
-      if (result.status === 'cancelled') {
-        return;
-      }
-
-      if (result.status === 'mismatch' || result.status === 'invalid') {
-        setRelinkMismatchMessage(result.message);
-        return;
-      }
-
-      setMissingRecentFile(null);
-      setRelinkMismatchMessage(null);
-      await loadBudget(result.filePath);
-      setRecentFiles(FileStorageService.getRecentFiles());
-    } catch (error) {
-      const message = (error as Error).message || 'Unable to locate moved file.';
-      setRelinkMismatchMessage(message);
-    } finally {
-      setRelinkLoading(false);
-    }
+    clearFileRelinkPrompt();
   };
 
   const handleRemoveRecent = (filePath: string, e: React.MouseEvent) => {
@@ -315,39 +285,25 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
         <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
       </div>
       
-      <Modal
+      <FileRelinkModal
         isOpen={!!missingRecentFile}
         onClose={handleCloseMissingRecentModal}
+        onLocate={locateRelinkedFile}
         header="Recent File Missing"
-        contentClassName="welcome-relink-modal"
-        footer={
+        message={
           <>
-            <Button variant="secondary" onClick={handleCloseMissingRecentModal} disabled={relinkLoading}>
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={handleRemoveMissingRecent} disabled={relinkLoading}>
-              Remove
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleRelinkMissingRecent}
-              isLoading={relinkLoading}
-              loadingText="Opening Picker..."
-              disabled={relinkLoading}
-            >
-              Locate File
-            </Button>
+            "{missingRecentFile?.fileName || 'This file'}" could not be found. Locate it to open, or remove this entry from Recents.
           </>
         }
-      >
-        <p className="welcome-relink-modal-message">
-          "{missingRecentFile?.fileName || 'This file'}" could not be found. Locate it to open, or remove this entry from Recents.
-        </p>
-        <code className="welcome-relink-modal-path" title={missingRecentFile?.filePath || ''}>
-          {missingRecentFile?.filePath || ''}
-        </code>
-        {relinkMismatchMessage && <p className="welcome-relink-modal-error">{relinkMismatchMessage}</p>}
-      </Modal>
+        filePath={missingRecentFile?.filePath || ''}
+        errorMessage={relinkMismatchMessage}
+        isLoading={relinkLoading}
+        extraAction={{
+          label: 'Remove',
+          onClick: handleRemoveMissingRecent,
+          variant: 'danger',
+        }}
+      />
     </div>
   );
 };
