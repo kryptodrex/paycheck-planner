@@ -1,190 +1,89 @@
 # Styles Refactor Plan
 
-## Overview
+## Goal
+Eliminate CSS duplication, fix global class name collisions, and establish canonical shared style patterns — reducing long-term bug risk from load-order-sensitive rule shadowing, centralizing color/surface tokens for future theming, and making the visual language easier to maintain.
 
-Analysis of all 47 CSS files across the codebase, covering `src/index.css`, `src/App.css`, and all component-level stylesheets. The primary issues are:
-
-- **Global class name collisions** — broadly-scoped class names like `.btn`, `.form-group`, and `.empty-state` are redefined in multiple component files, shadowing the canonical shared components.
-- **Duplicate logic** — identical or near-identical rule blocks appear verbatim across 2–6 unrelated files.
-- **Scattered utility tokens** — repeating values (e.g. the `field-error` validation state, the monospace font stack) have no canonical home and are re-typed everywhere.
-- **Bypassed shared components** — `AboutModal` implements its own overlay/modal structure instead of using the shared `Modal` component.
-- **No directory-level stylesheets** — `tabViews/`, `modals/`, and `views/` each have a repeated structural baseline that could be consolidated into one import per directory.
-
----
-
-## Inventory of Findings
-
-### A. Global CSS Collision Hazards
-
-These class names are defined in dedicated shared components (`Button.css`, `FormGroup.css`) **and** also re-defined freely in multiple component-scoped files. Because CSS is globally scoped in this Vite/React setup, load order determines which rule wins. Any shuffle in import order can silently break appearance.
-
-| Class(es) | Canonical file | Also defined in |
-|---|---|---|
-| `.btn`, `.btn-primary`, `.btn-secondary` | `_shared/controls/Button/Button.css` | `WelcomeScreen.css`, `BillsManager.css`, `AboutModal.css` |
-| `.btn-icon` | `_shared/controls/Button/Button.css` | `BillsManager.css` (separate definition, slightly different padding) |
-| `.form-group`, `.form-group label`, `.form-group input`, `.form-group select` | `_shared/controls/FormGroup/FormGroup.css` | `SetupWizard.css`, `WelcomeScreen.css`, `BillsManager.css` |
-| `.button-group` | Not defined in shared, but collides between | `WelcomeScreen.css`, `EncryptionSetup.css` (different `margin-top` values) |
-
-### B. `.field-error` — No Canonical Home
-
-The rule `.field-error { border-color: var(--error-color) !important; }` appears identically in **six** component files with no shared definition. `ExportModal.css` uses a stale variant referencing `--error-border` (an undefined variable):
-
-| File | Note |
-|---|---|
-| `BillsManager.css` | Correct |
-| `SavingsManager.css` | Correct |
-| `TaxBreakdown.css` | Correct |
-| `PaySettingsModal.css` | Correct |
-| `LoansManager.css` | Correct, also extends to `.input-with-prefix input.field-error` |
-| `ExportModal.css` | Uses `--error-border` (undefined variable — broken in dark mode) |
-
-### C. AccountsModal.css Duplicates AccountsEditor.css
-
-`AccountsModal.css` and `AccountsEditor.css` are **near-identical files**. The modal wraps the `AccountsEditor` component, so it already inherits its classes. The modal CSS re-duplicates 80%+ of the editor CSS, including `.add-account-section`, `.add-account-row`, `.add-account-field`, `.account-item`, `.account-item:hover`, `.account-name-display`, `.account-icon-display`, `.account-info-text`, `.account-edit-form`, and all focus ring rules.
-
-### D. TabView Root Container — Repeated in 6 Files
-
-Every tabView uses the same root layout block verbatim:
-
-```css
-.bills-manager { /* also loans-manager, savings-manager, pay-breakdown, tax-breakdown, key-metrics */
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  overflow-y: auto;
-  height: 100%;
-}
-```
-
-Six separate class names with identical declarations. Only the selector name differs.
-
-### E. Full-Screen Gradient View Card — Repeated in 2 Files
-
-`WelcomeScreen.css` and `EncryptionSetup.css` both define a full-screen gradient wrapper + centered white card:
-
-| Property | `WelcomeScreen.css` | `EncryptionSetup.css` |
-|---|---|---|
-| Root display layout | `flex, center, 100vh, gradient bg` | Same |
-| Card class | `.welcome-card` | `.setup-card` |
-| Card `border-radius` | `1rem` | `1rem` |
-| Card `padding` | `clamp(1rem, 3vw, 2rem)` | `clamp(1rem, 3vw, 2rem)` |
-| Card `max-width` | `900px` | `900px` |
-| Card `box-shadow` | `0 20px 60px rgba(0,0,0,0.3)` | Same |
-| Card `max-height` / `overflow-y` | `90vh / auto` | Same |
-
-`SetupWizard.css` has a similar root with `max-width: 700px` — close enough to share a base.
-
-### F. Account-Section with Gradient Header — 2 Files
-
-Both `BillsManager.css` and `LoansManager.css` define an `.account-section` card with `.account-header` using `var(--header-gradient)`:
-
-```css
-/* Duplicated in both files */
-.account-section {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-}
-.account-header {
-  background: var(--header-gradient);
-  color: white;
-  padding: 1.25rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-```
-
-### G. `.empty-state` / `.empty-icon` — No Shared Definition
-
-An empty state card pattern recurs across `BillsManager.css`, `SavingsManager.css`, and `LoansManager.css`. All three define `.empty-state`, `.empty-icon`, and related children with similar or identical rules and no shared canonical version. Each uses slightly different dashed-border vs solid-border variations.
-
-### H. Badge/Tag Pattern — Scattered Across 7+ Files
-
-The pill-badge shape is repeated across many files with no shared base class:
-
-| Class | File | Notes |
-|---|---|---|
-| `.account-type-badge` | `SetupWizard.css` | Rounded, `bg-tertiary`, `text-secondary` |
-| `.account-type` | `AccountsEditor.css`, `AccountsModal.css` | Same visual intent |
-| `.loan-type-badge` | `LoansManager.css` | `border-radius: 999px` |
-| `.savings-type-badge`, `.savings-account-badge`, `.retirement-type-badge` | `SavingsManager.css` | Multiple color variants |
-| `.benefit-tax-badge` | `BillsManager.css` | Pre/post tax variants |
-| `.glossary-badge` | `GlossaryModal.css` | Accent-tinted |
-
-All share `border-radius: 999px`, `padding: 0.2rem 0.5rem`, `font-size: 0.72–0.85rem`, `font-weight: 600`.
-
-### I. Tax Line Editor — Duplicated Between TaxBreakdown and SetupWizard
-
-The tax line row editor UI (header grid layout, input styling, error display) is defined in both `TaxBreakdown.css` and `SetupWizard.css` separately, with slightly different class name prefixes (`tax-line-*` vs `setup-tax-line-*`) but near-identical structure.
-
-### J. AboutModal Bypasses Shared Modal Component
-
-`AboutModal.css` defines `.about-overlay` (a full-screen overlay with `position: fixed`, `z-index: 1000`, `rgba(0,0,0,0.5)` backdrop, `flex` centering) which is structurally identical to `.modal-overlay` in `Modal.css`. The `AboutModal` component does not use the shared `Modal` wrapper component.
-
-### K. Monospace Font Stack Not a CSS Variable
-
-The same monospace font stack appears hardcoded in 3 places:
-
-```css
-font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;  /* TaxBreakdown.css */
-font-family: 'SF Mono', 'Monaco', 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace; /* sharedPathDisplay.css */
-font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace; /* KeyboardShortcutsModal.css */
-```
-
-All three are inconsistent. No `--font-mono` CSS variable exists in `index.css`.
-
-### L. `.form-row` Two-Column Grid — 4 Files
-
-The standard two-column form row grid:
-```css
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-```
-Appears in `BillsManager.css`, `SavingsManager.css`, `SetupWizard.css`, and `WelcomeScreen.css` with no shared definition.
-
-### M. Leftover Suggestion Banner — 2 Files
-
-The "suggested leftover" hint banner with accent-tinted border and background appears almost identically in both `SetupWizard.css` (`.setup-leftover-suggestion`) and `PaySettingsModal.css` (`.pay-settings-leftover-suggestion`). Both render the same component for the same purpose.
+## How To Use This File
+- Mark an item complete only when its **Done Criteria** are fully met.
+- Validate after each phase: `npm run lint`, `npx tsc -b`, `npm run test:run`, and `npm run build` must all pass before moving on.
+- Keep each phase scope-limited — do not bundle multiple phases into one PR.
+- Prefer extracting repeated visual values into semantic tokens in `src/index.css` rather than adding one-off variables near a component. The target is future theme-editor support, not just local deduplication.
+- Phases are ordered by risk and dependency. Phases 1–2 are safe to do in any order; Phases 3–6 depend on Phase 1 being done first; Phases 7–9 are independent of each other; Phases 10–11 are polish and can be deferred.
 
 ---
 
-## Checklist of Work
+## Prioritized Checklist (Most Important → Least Important)
 
-### Phase 1 — Stop the Bleeding: Remove Collision-Risk Duplicate Globals
+### 1. Remove Global CSS Collision Hazards
+**Priority:** Critical
 
-Goal: Eliminate re-definitions of shared component classes from component-local CSS. These are the highest-risk items because they can silently break styling as import order changes.
+- [ ] Remove `.btn`, `.btn-primary`, `.btn-secondary` from `WelcomeScreen.css`. Audit the component JSX and confirm all buttons use `<Button variant="...">` from `_shared`. Remove any remaining `<button className="btn ...">` raw elements.
+- [ ] Remove `.btn`, `.btn-primary`, `.btn-secondary`, and `.btn-icon` from `BillsManager.css` — same reason.
+- [ ] Remove `.btn`, `.btn-primary` from `AboutModal.css` — same reason.
+- [ ] Remove the `.form-group` block (label, input, select, focus rules) from `SetupWizard.css`. The component already imports `<FormGroup>` from `_shared`; the local CSS is a latent collision.
+- [ ] Remove the `.form-group` block from `WelcomeScreen.css` — same.
+- [ ] Remove the `.form-group` block from `BillsManager.css` — same.
 
-- [ ] **1.1** Remove `.btn`, `.btn-primary`, `.btn-secondary` from `WelcomeScreen.css` — those screens already use the `Button` shared component. Replace `<button className="btn btn-primary">` style JSX with `<Button variant="primary">` where not already done.
-- [ ] **1.2** Remove `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-icon` from `BillsManager.css` — same reason.
-- [ ] **1.3** Remove `.btn`, `.btn-primary` from `AboutModal.css` — same reason.
-- [ ] **1.4** Remove `.form-group` block from `SetupWizard.css` — `SetupWizard` already imports `FormGroup` from `_shared`. Confirm all form fields use `<FormGroup>` and remove the duplicated CSS rules.
-- [ ] **1.5** Remove `.form-group` block from `WelcomeScreen.css` — same.
-- [ ] **1.6** Remove `.form-group` block from `BillsManager.css` — same.
+**Problem:** Class names already defined in `_shared/controls/Button/Button.css` and `_shared/controls/FormGroup/FormGroup.css` are re-defined in component-local files. Because CSS is globally scoped in this Vite/React setup, load order determines which rule wins — any import order change can silently break appearance.
 
-### Phase 2 — Canonical `.field-error` and Validation State
+**Duplication evidence:**
+- `.btn`, `.btn-primary`, `.btn-secondary` → `WelcomeScreen.css`, `BillsManager.css`, `AboutModal.css`
+- `.btn-icon` → `BillsManager.css` (slightly different padding from canonical)
+- `.form-group` and its children → `SetupWizard.css`, `WelcomeScreen.css`, `BillsManager.css`
 
-Goal: Give validated input error state a single canonical definition.
+**Done Criteria:**
+- No component-level CSS file redefines `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-icon`, or `.form-group`.
+- All button rendering in affected components goes through `<Button>` from `_shared`.
+- Visual regression check: app renders correctly after removal (no missing button or input styles).
 
-- [ ] **2.1** Add `.field-error { border-color: var(--error-color) !important; }` to `FormGroup.css` so it lives alongside the form input definitions.
-- [ ] **2.2** Remove the `.field-error` rule from `BillsManager.css`, `SavingsManager.css`, `TaxBreakdown.css`, `PaySettingsModal.css`, `LoansManager.css`.
-- [ ] **2.3** Fix `ExportModal.css` `.field-error` and `.export-error` to use `var(--error-color)` / `var(--alert-error-bg)` / `var(--alert-error-border)` / `var(--alert-error-text)` instead of the undefined `--error-bg`, `--error-border`, `--error-text` variables.
+**Why first:** Zero visual risk — removing a duplicate rule that the canonical component already provides cannot break appearance. Doing this first prevents future silent regressions.
 
-### Phase 3 — Consolidate AccountsModal.css into AccountsEditor.css
+---
 
-Goal: The modal wraps the editor — it should not duplicate the editor's CSS.
+### 2. Canonical `.field-error` and Fix Broken `ExportModal` Variables
+**Priority:** Critical
 
-- [ ] **3.1** Audit which rules in `AccountsModal.css` are actually unique to the modal container (the `.accounts-manager` max-width/height wrapper). Keep only those.
-- [ ] **3.2** Delete all rules from `AccountsModal.css` that duplicate `AccountsEditor.css` (`.add-account-*`, `.account-item`, `.account-*`, `.account-edit-form`, etc.).
-- [ ] **3.3** Rename `.accounts-manager` in `AccountsModal.css` to `.accounts-modal` to give it a clear non-colliding name scoped to the modal wrapper.
+- [ ] Add `.field-error { border-color: var(--error-color) !important; }` to `_shared/controls/FormGroup/FormGroup.css` as the single canonical definition.
+- [ ] Remove the `.field-error` rule from `BillsManager.css`, `SavingsManager.css`, `TaxBreakdown.css`, `PaySettingsModal.css`, and `LoansManager.css`.
+- [ ] Fix `ExportModal.css`: replace `--error-bg`, `--error-border`, `--error-text` (undefined variables) with `var(--alert-error-bg)`, `var(--alert-error-border)`, `var(--alert-error-text)` in both `.field-error` and `.export-error`.
 
-### Phase 4 — TabView Shared Baseline
+**Problem:** `.field-error` is defined identically in six component files with no shared home. `ExportModal.css` references three CSS variables that do not exist (`--error-bg`, `--error-border`, `--error-text`), causing broken error colors in dark mode.
 
-Goal: One shared class defines the tabView layout contract; each component only overrides what differs.
+**Duplication evidence:**
+- `.field-error { border-color: var(--error-color) !important; }` in: `BillsManager.css`, `SavingsManager.css`, `TaxBreakdown.css`, `PaySettingsModal.css`, `LoansManager.css`
+- `ExportModal.css` uses `var(--error-border)` and `var(--error-bg)` (both undefined)
 
-- [ ] **4.1** Create `src/components/tabViews/tabViews.shared.css` with a `.tab-view` class:
+**Done Criteria:**
+- Exactly one definition of `.field-error` exists in the codebase (`FormGroup.css`).
+- No CSS file references `--error-bg`, `--error-border`, or `--error-text`.
+- Error styling in `ExportModal` renders correctly in both light and dark mode.
+
+**Why second:** The `ExportModal` variable bug is an active visual defect in dark mode. The rest is pure consolidation with no visual risk.
+
+---
+
+### 3. Consolidate `AccountsModal.css` into `AccountsEditor.css`
+**Priority:** High
+
+- [ ] Audit `AccountsModal.css` and identify rules that are unique to the modal wrapper (only the `.accounts-manager` max-width/max-height container block).
+- [ ] Delete all rules from `AccountsModal.css` that duplicate `AccountsEditor.css` — this includes `.add-account-section`, `.add-account-row`, `.add-account-field`, `.account-item` and its hover/editing states, `.account-name-display`, `.account-icon-display`, `.account-info-text`, `.account-edit-form`, and all focus ring overrides.
+- [ ] Rename the modal wrapper class from `.accounts-manager` to `.accounts-modal` in both `AccountsModal.css` and `AccountsModal.tsx` so it has a non-colliding, scope-appropriate name.
+
+**Problem:** `AccountsModal.css` is ~80% a copy of `AccountsEditor.css`. The modal renders `<AccountsEditor>` as a child, so the editor's classes are already in scope — the duplicated rules in the modal file override (and diverge from) the editor's canonical styles.
+
+**Done Criteria:**
+- `AccountsModal.css` contains only the modal wrapper sizing rules.
+- No class defined in `AccountsEditor.css` appears in `AccountsModal.css`.
+- The accounts modal renders and behaves identically to before.
+
+**Why here:** Largest single-file cleanup. Depends on Phase 1 being done (so `.btn` is gone from both files before consolidation).
+
+---
+
+### 4. TabView Shared Baseline
+**Priority:** High
+
+- [ ] Create `src/components/tabViews/tabViews.shared.css` defining a `.tab-view` layout class:
   ```css
   .tab-view {
     display: flex;
@@ -198,57 +97,135 @@ Goal: One shared class defines the tabView layout contract; each component only 
     .tab-view { padding: 1rem; }
   }
   ```
-- [ ] **4.2** Each tabView root (`.bills-manager`, `.loans-manager`, `.savings-manager`, `.pay-breakdown`, `.tax-breakdown`, `.key-metrics`) replaces its container declarations with `@extend` equivalent (add `tab-view` class in JSX and remove the duplicated CSS, keeping only component-specific overrides).
-- [ ] **4.3** Remove the now-redundant `@media (max-width: 768px) { .bills-manager { padding: 1rem; } }` blocks from each tabView CSS (they are all the same).
+- [ ] Add `tab-view` to the root element className in `BillsManager.tsx`, `LoansManager.tsx`, `SavingsManager.tsx`, `PayBreakdown.tsx`, `TaxBreakdown.tsx`, and `KeyMetrics.tsx`.
+- [ ] Remove the now-redundant root container block (display/flex-direction/gap/padding/overflow/height) from each of those six component CSS files.
+- [ ] Remove the now-redundant `@media (max-width: 768px) { .[component] { padding: 1rem; } }` block from each file that has it.
 
-### Phase 5 — Shared Account-Section Card with Gradient Header
+**Problem:** All six tabView components start with an identical 5-property root layout block, each using a different class name. The mobile padding media query is also copy-pasted into every file identically.
 
-Goal: Bills and Loans managers share the same grouped-account card structure. Extract it.
+**Done Criteria:**
+- `tabViews.shared.css` is the sole definition of the tab-view root layout.
+- Each tabView JSX root has `className="tab-view [component-name]"` (retains own class for component-specific overrides).
+- No media query `padding: 1rem` for the root container remains in any individual tabView CSS.
 
-- [ ] **5.1** Add `.account-section`, `.account-header`, `.account-info`, `.account-icon`, `.account-total`, `.total-label`, `.total-amount`, `.no-bills-message`-equivalent empty list message to `tabViews/tabViews.shared.css` (or a dedicated `tabViews/accountSection.shared.css`).
-- [ ] **5.2** Remove those rules from `BillsManager.css` and `LoansManager.css`, keeping only the selectors that differ between the two.
+---
 
-### Phase 6 — Extract `.empty-state` to a Shared Utility
+### 5. Extract Shared Account-Section Card and Empty State
+**Priority:** High — depends on Phase 4 (`tabViews.shared.css` must exist first)
 
-Goal: One canonical empty state pattern importable by all list views.
+- [ ] Add `.account-section`, `.account-header`, `.account-info`, `.account-icon`, `.account-total`, `.total-label`, and `.total-amount` to `tabViews/tabViews.shared.css`. Use the common denominator between `BillsManager.css` and `LoansManager.css`.
+- [ ] Remove those rules from `BillsManager.css` and `LoansManager.css`. Keep only selectors that are unique to each.
+- [ ] Add `.empty-state`, `.empty-icon`, `.empty-state h3`, `.empty-state p`, and `.empty-state-actions` to `tabViews/tabViews.shared.css`. Extract the solid-border variant as the base; add `.empty-state--dashed` modifier for the dashed-border variant used in `LoansManager` and `SavingsManager`.
+- [ ] Remove the `.empty-state` / `.empty-icon` blocks from `BillsManager.css`, `LoansManager.css`, and `SavingsManager.css`.
 
-- [ ] **6.1** Add `.empty-state`, `.empty-icon`, `.empty-state h3`, `.empty-state p`, `.empty-state-actions` to `tabViews/tabViews.shared.css`. Reconcile the dashed-border variant into a modifier class (`.empty-state--dashed`).
-- [ ] **6.2** Remove the duplicate rules from `BillsManager.css`, `LoansManager.css`, and `SavingsManager.css`.
+**Problem:** `BillsManager.css` and `LoansManager.css` both define `.account-section` and `.account-header` with a gradient header — structurally identical across both files. All three list-view tabViews also each define their own `.empty-state` with no shared base.
 
-### Phase 7 — Shared Views Baseline (Full-Screen Gradient Card)
+**Done Criteria:**
+- `.account-section` and `.account-header` have exactly one definition (`tabViews.shared.css`).
+- `.empty-state` has exactly one base definition; dashed variant uses a modifier class.
+- Bills, Loans, and Savings empty states render correctly.
 
-Goal: WelcomeScreen and EncryptionSetup share an identical full-screen layout pattern.
+---
 
-- [ ] **7.1** Create `src/components/views/views.shared.css` with:
-  ```css
-  .view-screen { /* shared full-screen gradient wrapper */ }
-  .view-screen-card { /* shared centered card */ }
-  ```
-  Values come from the common denominator between `WelcomeScreen.css` and `EncryptionSetup.css`.
-- [ ] **7.2** Update `WelcomeScreen.css`: add `view-screen` / `view-screen-card` classes in JSX; only keep `welcome-screen`/`welcome-card` overrides for what is unique (e.g. `max-width: 900px`).
-- [ ] **7.3** Update `EncryptionSetup.css` the same way.
-- [ ] **7.4** Assess `SetupWizard.css` — share the wrapper background/centering pattern, keep `wizard-container` (different `max-width: 700px`, different internal header structure).
+### 6. Shared Views Baseline (Full-Screen Gradient Card)
+**Priority:** Medium
 
-### Phase 8 — Add `--font-mono` CSS Variable
+- [ ] Create `src/components/views/views.shared.css` with two classes:
+  - `.view-screen` — full-screen flex centering with gradient background (`display: flex`, `align-items/justify-content: center`, `height: 100vh`, `background: var(--header-gradient)`, `padding: 1rem`, `overflow: hidden`)
+  - `.view-screen-card` — centered card (`background: var(--bg-primary)`, `border-radius: 1rem`, `padding: clamp(1rem, 3vw, 2rem)`, `max-height: 90vh`, `overflow-y: auto`, `box-shadow: 0 20px 60px rgba(0,0,0,0.3)`, `width: 100%`)
+- [ ] Update `WelcomeScreen.tsx` root div to use `view-screen` and its card to use `view-screen-card`. Keep `welcome-screen` / `welcome-card` classes for component-specific overrides (e.g. `max-width: 900px`, `flex-direction: column`).
+- [ ] Update `EncryptionSetup.tsx` the same way. Keep `encryption-setup` / `setup-card` for its overrides.
+- [ ] Update `SetupWizard.tsx` to use `view-screen` for the wrapper. Keep `wizard-container` for its narrower card (`max-width: 700px`) and distinct internal layout.
+- [ ] Remove the duplicated wrapper/card layout declarations from `WelcomeScreen.css`, `EncryptionSetup.css`, and `SetupWizard.css`, keeping only what differs from the shared base.
 
-Goal: Consistent monospace stack across all code/key/path display elements.
+**Problem:** `WelcomeScreen.css` and `EncryptionSetup.css` define identical full-screen centered gradient wrappers and cards (same padding, border-radius, box-shadow, max-height). `SetupWizard.css` shares the gradient wrapper pattern.
 
-- [ ] **8.1** Add `--font-mono: 'SF Mono', 'Monaco', 'Cascadia Mono', 'Menlo', 'Consolas', monospace;` to `:root` in `src/index.css`.
-- [ ] **8.2** Update `sharedPathDisplay.css`, `TaxBreakdown.css` (`.summary-row .amount`), and `KeyboardShortcutsModal.css` (`.keyboard-shortcuts-key`) to use `var(--font-mono)`.
+**Done Criteria:**
+- `views.shared.css` defines the shared wrapper and card base.
+- Each view file contains only its layout overrides and component-specific content styles.
+- All three screens render correctly across light/dark themes.
 
-### Phase 9 — `.button-group` Canonical Definition
+---
 
-Goal: The flex row of action buttons at the bottom of views/panels should have one definition.
+### 7. Extract Hard-Coded Color and Surface Tokens
+**Priority:** Medium
 
-- [ ] **9.1** Define `.button-group` in a shared location — best candidate is `_shared/layout/StickyActions/StickyActions.css` or a new utility block in `_shared/index.css` (or add it to `FormGroup.css` since it follows form fields).
-- [ ] **9.2** Reconcile the two existing usages: `WelcomeScreen.css` (`.button-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }`) and `EncryptionSetup.css` (same with added `margin-top: 2rem`). Make `margin-top` an override, not part of the base.
-- [ ] **9.3** Remove local `.button-group` definitions from both files.
+- [ ] Audit the codebase for repeated hard-coded `rgb()`, `rgba()`, and hex values used for color, background, border, shadow tint, and overlay treatments. Group them by semantic purpose rather than exact literal value.
+- [ ] Add semantic CSS variables to `src/index.css` for reused values such as overlays, elevated surface borders, muted backgrounds, card shadows, gradient stops, and accent-tinted backgrounds. Prefer names like `--overlay-backdrop`, `--surface-muted`, `--surface-accent-subtle`, `--shadow-color-strong`, and `--gradient-hero-start/end` rather than component-specific names.
+- [ ] Replace repeated hard-coded literals across component CSS with the new variables. Start with values reused in 2+ places or values likely to vary by light/dark/custom theme.
+- [ ] Leave truly one-off decorative values alone unless they are part of a broader semantic system. The goal is not zero literals everywhere; it is removing reused theme-relevant values from component files.
+- [ ] Document any intentionally deferred literals that should become tokens later only if a second usage appears.
 
-### Phase 10 — Extract Badge Base Class
+**Problem:** Reused hard-coded colors, backgrounds, overlays, and shadow tints make theme changes expensive because each new theme requires hunting literals across component files. That works against the long-term goal of a user-facing theme editor with custom light and dark color schemes.
 
-Goal: All pill/tag badges share the same geometric base; colors should be modifiers.
+**Duplication evidence:**
+- Repeated `rgba(0, 0, 0, 0.3)` / `rgba(0, 0, 0, 0.5)` style overlays and shadows across modal/view wrappers
+- Repeated hard-coded tint values in badges, alerts, and empty-state treatments that should resolve through semantic theme variables
+- Existing shared tokens already live in `src/index.css`, so additional repeated visual values belong there as part of the same system
 
-- [ ] **10.1** Add a `.badge` utility class to `_shared` (best in a new `_shared/utilities.css` or appended to `index.css`):
+**Done Criteria:**
+- Reused theme-relevant hard-coded color/background/border/shadow literals are replaced with semantic variables in `src/index.css`.
+- Component CSS primarily references semantic variables for shared visual treatments instead of repeating raw `rgb()`, `rgba()`, or hex values.
+- The variable names are theme-oriented and reusable, not tied to one component.
+
+**Why here:** This is foundational for the future custom theme editor, but it is safer after the first structural CSS cleanup phases. Once shared patterns are extracted, tokenization becomes more obvious and less noisy.
+
+---
+
+### 8. Add `--font-mono` CSS Variable
+**Priority:** Medium
+
+- [ ] Add `--font-mono: 'SF Mono', 'Monaco', 'Cascadia Mono', 'Menlo', 'Consolas', monospace;` to `:root` in `src/index.css`.
+- [ ] Update `_shared/sharedPathDisplay.css` to use `font-family: var(--font-mono)`.
+- [ ] Update `TaxBreakdown.css` (`.summary-row .amount` and `.settings-row .value`) to use `font-family: var(--font-mono)`.
+- [ ] Update `KeyboardShortcutsModal.css` (`.keyboard-shortcuts-key`) to use `font-family: var(--font-mono)`.
+
+**Problem:** Three different, inconsistent monospace font stacks are hardcoded across three files. No `--font-mono` token exists in the design system.
+
+**Done Criteria:**
+- `--font-mono` is defined once in `:root`.
+- No hardcoded monospace `font-family` string remains in any component CSS.
+
+---
+
+### 9. Canonical `.button-group` Definition
+**Priority:** Medium
+
+- [ ] Add `.button-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }` to `_shared/controls/FormGroup/FormGroup.css` (or `StickyActions.css` if a better fit after review).
+- [ ] Remove the `.button-group` definition from `WelcomeScreen.css`.
+- [ ] Remove the `.button-group` definition from `EncryptionSetup.css`. Move the `margin-top: 2rem` override to a local rule scoped under `.encryption-setup .button-group` rather than redefining the whole block.
+
+**Problem:** `.button-group` is defined independently in `WelcomeScreen.css` and `EncryptionSetup.css` with slightly different values (`margin-top`), causing inconsistency. It has no canonical home.
+
+**Done Criteria:**
+- Exactly one base definition of `.button-group` in the codebase.
+- `EncryptionSetup` retains its `margin-top` via a scoped override, not a full redefinition.
+
+---
+
+### 10. Fix `AboutModal`: Use Shared `<Modal>` Component
+**Priority:** Medium
+
+- [ ] Refactor `AboutModal.tsx` to render its content inside the shared `<Modal>` component instead of the handrolled overlay.
+- [ ] Remove `.about-overlay`, `.about-modal`, `.about-header`, and `.about-close` from `AboutModal.css` — these are now provided by `Modal.css`.
+- [ ] Retain `.about-content`, `.about-intro`, `.about-feature`, `.about-feature-icon`, `.about-feature-content`, `.about-version`, and `.about-footer` in `AboutModal.css` for the component-specific content styles.
+- [ ] Verify: focus trap, Escape-to-close, and close-on-overlay-click all work through the shared `Modal` after the change.
+
+**Problem:** `AboutModal.css` defines `.about-overlay` — a full-screen fixed overlay with backdrop and flex centering — which is structurally identical to `.modal-overlay` in `Modal.css`. The `AboutModal` component bypasses the shared `<Modal>` component entirely.
+
+**Done Criteria:**
+- `AboutModal.tsx` uses `<Modal>` from `_shared`.
+- No `.about-overlay` or `.about-modal` class exists in the codebase.
+- Focus trap, Escape dismiss, and overlay-click dismiss work correctly.
+
+**Why here:** Most behaviorally impactful CSS change in this plan — it modifies component structure, not just styles. Do in its own PR. Test keyboard and mouse dismiss paths after.
+
+---
+
+### 11. Extract Badge Base Class
+**Priority:** Low
+
+- [ ] Add a `.badge` base utility class to `src/index.css` (or a new `_shared/utilities.css`):
   ```css
   .badge {
     display: inline-flex;
@@ -260,51 +237,40 @@ Goal: All pill/tag badges share the same geometric base; colors should be modifi
     letter-spacing: 0.02em;
   }
   ```
-- [ ] **10.2** Update `BillsManager.css`, `SavingsManager.css`, `LoansManager.css`, `SetupWizard.css`, `AccountsEditor.css` to use `.badge` as a base and keep only color-modifier overrides locally.
+- [ ] Update `BillsManager.css` (`.benefit-tax-badge`), `SavingsManager.css` (`.savings-type-badge`, `.savings-account-badge`, `.retirement-type-badge`), `LoansManager.css` (`.loan-type-badge`), `SetupWizard.css` (`.account-type-badge`), and `AccountsEditor.css` (`.account-type`) to add `.badge` in their JSX and remove the repeated geometry declarations, keeping only color/background modifiers locally.
 
-### Phase 11 — Fix AboutModal: Use Shared Modal Component
+**Problem:** The pill-badge shape (`border-radius: 999px`, small padding, small bold font) is copy-pasted across 7+ component files with no shared base class.
 
-Goal: Remove the handrolled overlay from `AboutModal`.
+**Done Criteria:**
+- `.badge` is defined once.
+- Each badge variant only specifies its color/background, not the shared geometry.
 
-- [ ] **11.1** Refactor `AboutModal.tsx` to render its content inside the shared `<Modal>` component.
-- [ ] **11.2** Delete `about-overlay`, `about-modal`, `about-header`, `about-close` from `AboutModal.css` — those are provided by `Modal.css` now.
-- [ ] **11.3** Keep `about-content`, `about-intro`, `about-feature`, `about-version`, `about-footer`-specific styles.
+---
 
-### Phase 12 — Consolidate Leftover Suggestion Banner
+### 12. Consolidate Duplicated Editor CSS (Tax Lines and Leftover Banner)
+**Priority:** Low
 
-Goal: The nudge banner that suggests a leftover amount is identical in `SetupWizard` and `PaySettingsModal`.
+- [ ] Align the tax line row editor class names: update `SetupWizard.tsx` to use the canonical `.tax-line-*` class names from `TaxBreakdown.css` (replace `.setup-tax-line-*` prefixes). Remove the duplicated `setup-tax-line-*` rules from `SetupWizard.css`.
+- [ ] Extract the leftover suggestion banner to a shared class `.leftover-suggestion` and `.leftover-suggestion-copy` in a suitable shared location (candidate: `_shared/feedback/` or a new `modals/modals.shared.css`). Remove `.setup-leftover-suggestion` from `SetupWizard.css` and `.pay-settings-leftover-suggestion` from `PaySettingsModal.css`.
 
-- [ ] **12.1** Extract to a shared class `.leftover-suggestion` in a new or existing shared location (a candidate is `_shared/feedback` or a `modals/modals.shared.css`).
-- [ ] **12.2** Remove `.setup-leftover-suggestion` from `SetupWizard.css` and `.pay-settings-leftover-suggestion` from `PaySettingsModal.css`.
+**Problem:** The tax line editor grid layout is defined twice with different prefixes (`tax-line-*` in `TaxBreakdown.css`, `setup-tax-line-*` in `SetupWizard.css`). The leftover suggestion banner is defined nearly identically in two files for the same UI element.
 
-### Phase 13 — Consolidate Tax Line Editor CSS
-
-Goal: The tax line row editor pattern is duplicated between `TaxBreakdown.css` and `SetupWizard.css`.
-
-- [ ] **13.1** The `TaxBreakdown` view is the canonical home for tax line editing. Move the shared structural rules to `TaxBreakdown.css` or a `tabViews/taxLines.shared.css` if used from a modal.
-- [ ] **13.2** Remove the `setup-tax-line-*` rules from `SetupWizard.css` in favor of the canonical `.tax-line-*` class names, and update the JSX class names accordingly.
+**Done Criteria:**
+- Tax line editor uses one class name set across `TaxBreakdown` and `SetupWizard`.
+- Leftover suggestion banner has one shared class definition.
+- Both tax editing screens render correctly.
 
 ---
 
 ## Success Metrics
 
-- [ ] No component-level CSS file redefines `.btn`, `.btn-primary`, `.btn-secondary`, `.form-group`, or any other class already defined and exported from `_shared`.
-- [ ] `.field-error` has exactly one definition in the codebase (in `FormGroup.css`).
-- [ ] `AccountsModal.css` contains only the wrapper-specific rules, not editor internals.
-- [ ] All six tabView root containers apply `.tab-view` (or equivalent) rather than each duplicating the same 5-property block.
-- [ ] `WelcomeScreen.css` and `EncryptionSetup.css` share a `views.shared.css` baseline.
-- [ ] `--font-mono` is defined in `:root` and used in all monospace display sites.
-- [ ] `AboutModal` renders through the shared `<Modal>` component.
-- [ ] No CSS file references an undefined CSS variable (specifically `--error-bg`, `--error-border`, `--error-text` in ExportModal).
-- [ ] Running a full-text search for `border-radius: 999px` across badge classes reduces to one canonical `.badge` base with modifier overrides.
-
----
-
-## Approach Notes
-
-- **Start with Phases 1 and 2** — they have zero visual risk. Removing a duplicate rule that the shared component already provides cannot break appearance; it can only prevent a future collision from breaking it.
-- **Phase 3 (AccountsModal/AccountsEditor deduplication) is the largest individual file cleanup.** Do it in a dedicated commit so it is easy to review.
-- **Phases 4–6 (tabViews shared baseline)** have the most mechanical work but are very low risk because the extracted rules are structurally identical — only the selector names are changing.
-- **Phase 11 (AboutModal → shared Modal)** is the most behaviorally impactful change in this plan because it changes the component hierarchy. Test focus trap, close-on-overlay-click, and keyboard dismiss after the change.
-- **Phases 12 and 13** are polish — defer them if earlier phases surface anything unexpected.
-- For each phase: run `npm run lint`, `npm run test:run`, and `npm run build` before moving to the next.
+- [ ] No component-level CSS file redefines `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-icon`, or `.form-group`.
+- [ ] `.field-error` has exactly one definition in the codebase (`FormGroup.css`).
+- [ ] No CSS file references an undefined CSS variable (`--error-bg`, `--error-border`, `--error-text`).
+- [ ] `AccountsModal.css` contains only the modal wrapper sizing rules — no editor internals.
+- [ ] All six tabView root containers use a shared `.tab-view` class instead of duplicating the layout block.
+- [ ] `WelcomeScreen.css`, `EncryptionSetup.css`, and `SetupWizard.css` share a `views.shared.css` wrapper baseline.
+- [ ] Reused theme-relevant color, background, border, overlay, and shadow literals are defined through semantic variables in `src/index.css` instead of being repeated across component CSS.
+- [ ] `--font-mono` is defined in `:root` and used everywhere a monospace font stack appears.
+- [ ] `AboutModal` renders through the shared `<Modal>` component with full keyboard and overlay dismiss behavior.
+- [ ] `.badge` is defined once; badge variants only specify color/background overrides.
