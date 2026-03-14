@@ -1,22 +1,13 @@
 .btn {
-  --btn-padding-y: 0.75rem;
-  --btn-padding-x: 1.5rem;
-  --btn-font-size: 0.95rem;
-  --btn-radius: 0.5rem;
-  padding: var(--btn-padding-y) var(--btn-padding-x);
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: var(--btn-radius);
+  border-radius: 0.5rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: var(--btn-font-size);
+  font-size: 0.95rem;
   white-space: nowrap;
   font-family: inherit;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  line-height: 1.2;
 }
 
 .btn:disabled {
@@ -93,16 +84,18 @@
 
 /* Utility button: compact, low-emphasis action for contextual UI (e.g. card chrome) */
 .btn.btn-utility {
-  --btn-padding-y: 0.35rem;
-  --btn-padding-x: 0.6rem;
-  --btn-font-size: 0.78rem;
-  --btn-radius: 0.5rem;
-  background: var(--bg-secondary);
+  background: transparent;
   color: var(--text-secondary);
-  border: 1px solid var(--border-color);
+  border: 1px solid transparent;
   box-shadow: none;
-  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: 0.4rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   font-family: inherit;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -111,7 +104,7 @@
 
 .btn.btn-utility:hover:not(:disabled) {
   background: var(--bg-secondary);
-  border-color: var(--border-color-hover, var(--accent-primary));
+  border-color: var(--border-color);
   color: var(--text-primary);
   transform: none;
   box-shadow: none;
@@ -119,13 +112,6 @@
 
 .btn.btn-utility:active:not(:disabled) {
   transform: none;
-}
-
-.btn.btn-utility:focus-visible,
-.btn.btn-utility:focus:not(:focus-visible) {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: inset 0 0 0 1px var(--accent-primary);
 }
 
 /* Danger button */
@@ -144,86 +130,81 @@
 }
 
 /* Icon button */
-.btn.btn-icon {
-  --btn-padding-y: 0.5rem;
-  --btn-padding-x: 0.5rem;
-  --btn-font-size: 1.2rem;
+.btn-icon {
   background: transparent;
   color: var(--text-secondary);
   border: none;
+  padding: 0.5rem;
   min-width: auto;
-  line-height: 1;
-  gap: 0;
+  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s;
 }
 
-.btn.btn-icon:hover:not(:disabled) {
+.btn-icon:hover:not(:disabled) {
   color: var(--text-primary);
   transform: scale(1.1);
 }
 
-.btn.btn-icon:active:not(:disabled) {
+.btn-icon:active:not(:disabled) {
   transform: scale(1);
 }
 
-.btn.btn-icon:disabled {
+.btn-icon:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn.btn-icon:focus-visible {
+.btn-icon:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
-.btn.btn-icon:focus:not(:focus-visible) {
+.btn-icon:focus:not(:focus-visible) {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
 /* Remove button — icon variant with red hover */
-.btn.btn-icon.btn-remove:hover:not(:disabled) {
+.btn-icon.btn-remove:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.1);
   color: var(--error-color);
 }
 
-.btn.btn-icon.btn-danger {
+.btn-icon.btn-danger {
   color: var(--error-color);
 }
 
-.btn.btn-icon.btn-danger:hover:not(:disabled) {
+.btn-icon.btn-danger:hover:not(:disabled) {
   color: var(--alert-error-text);
 }
 
 /* Size variants */
 .btn-xsmall {
-  --btn-padding-y: 0.3rem;
-  --btn-padding-x: 0.6rem;
-  --btn-font-size: 0.75rem;
-  --btn-radius: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem !important;
 }
 
 .btn-small {
-  --btn-padding-y: 0.5rem;
-  --btn-padding-x: 1rem;
-  --btn-font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
 }
 
 .btn-large {
-  --btn-padding-y: 1rem;
-  --btn-padding-x: 2rem;
-  --btn-font-size: 1.05rem;
+  padding: 1rem 2rem;
+  font-size: 1.05rem;
 }
 
 @media (max-width: 600px) {
   .btn {
-    --btn-padding-y: 0.65rem;
-    --btn-padding-x: 1.25rem;
-    --btn-font-size: 0.9rem;
+    padding: 0.65rem 1.25rem;
+    font-size: 0.9rem;
   }
 
   .btn-large {
-    --btn-padding-y: 0.85rem;
-    --btn-padding-x: 1.75rem;
+    padding: 0.85rem 1.75rem;
   }
 }

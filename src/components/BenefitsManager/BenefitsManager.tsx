@@ -4,6 +4,7 @@ import type { Benefit, RetirementElection } from '../../types/auth';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
+import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../utils/retirement';
 import { Modal, Button, FormGroup, InputWithPrefix, RadioGroup, SectionItemCard, Alert, ViewModeSelector, PageHeader } from '../shared';
 import { GlossaryTerm } from '../Glossary';
 import './BenefitsManager.css';
@@ -51,7 +52,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
     const [benefitSourceAccountId, setBenefitSourceAccountId] = useState('');
 
     // Retirement form state
-    const [retirementType, setRetirementType] = useState<'401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'pension' | 'other'>('401k');
+    const [retirementType, setRetirementType] = useState<RetirementElection['type']>('401k');
     const [retirementCustomLabel, setRetirementCustomLabel] = useState('');
     const [employeeAmount, setEmployeeAmount] = useState('');
     const [employeeIsPercentage, setEmployeeIsPercentage] = useState(true);
@@ -560,9 +561,7 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
                             const { employeeAmount, employerAmount } = calculateRetirementContributions(retirement);
                             const totalPerPaycheck = employeeAmount + employerAmount;
                             const totalInDisplayMode = toDisplayAmount(totalPerPaycheck);
-                            const displayLabel = retirement.type === 'other' && retirement.customLabel 
-                                ? retirement.customLabel 
-                                : retirement.type.toUpperCase();
+                            const displayLabel = getRetirementPlanDisplayLabel(retirement);
 
                             return (
                                 <SectionItemCard key={retirement.id} className="retirement-item">
@@ -755,12 +754,9 @@ const BenefitsManager: React.FC<BenefitsManagerProps> = ({
             >
                 <FormGroup label={<><GlossaryTerm termId="retirement-contribution">Plan Type</GlossaryTerm></>} required>
                     <select value={retirementType} onChange={e => setRetirementType(e.target.value as RetirementElection['type'])} required>
-                        <option value="401k">401(k)</option>
-                        <option value="403b">403(b)</option>
-                        <option value="roth-ira">Roth IRA</option>
-                        <option value="traditional-ira">Traditional IRA</option>
-                        <option value="pension">Pension</option>
-                        <option value="other">Other</option>
+                        {RETIREMENT_PLAN_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
                     </select>
                 </FormGroup>
 

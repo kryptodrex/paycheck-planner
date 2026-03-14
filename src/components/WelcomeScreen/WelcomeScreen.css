@@ -74,6 +74,13 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.welcome-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .welcome-card h1 {
@@ -91,11 +98,11 @@
 }
 
 .action-buttons {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
   align-items: stretch;
+  justify-content: space-between;
 }
 
 .btn {
@@ -189,11 +196,21 @@
   transition: all 0.2s ease;
   text-align: left;
   width: 100%;
+  color: var(--text-secondary);
 }
 
 .recent-file-item:hover:not(.disabled) {
   background: var(--bg-tertiary);
   border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.recent-file-item:focus-visible:not(.disabled) {
+  outline: none;
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
 }
 
 .recent-file-item.disabled {
@@ -208,7 +225,6 @@
 
 .recent-file-name {
   font-weight: 600;
-  color: var(--text-primary);
   margin-bottom: 0.25rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -263,6 +279,39 @@
   gap: 1rem;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+.welcome-relink-modal {
+  max-width: 560px;
+}
+
+.welcome-relink-modal-message {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.welcome-relink-modal-path {
+  display: block;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Mono', 'Segoe UI Mono', Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.welcome-relink-modal-error {
+  margin: 0.75rem 0 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--danger-color) 45%, transparent);
+  background: color-mix(in srgb, var(--danger-color) 14%, transparent);
+  color: color-mix(in srgb, var(--danger-color) 85%, var(--text-primary));
+  border-radius: 8px;
+  font-size: 0.9rem;
 }
 
 /* Mobile Responsive */

@@ -16,43 +16,6 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-const BUTTON_SIZE_STYLES: Record<NonNullable<ButtonProps['size']>, React.CSSProperties> = {
-  xsmall: {
-    padding: '0.3rem 0.6rem',
-    fontSize: '0.75rem',
-    borderRadius: '0.25rem',
-  },
-  small: {
-    padding: '0.5rem 1rem',
-    fontSize: '0.85rem',
-  },
-  medium: {},
-  large: {
-    padding: '1rem 2rem',
-    fontSize: '1.05rem',
-  },
-};
-
-const ICON_BUTTON_SIZE_STYLES: Record<NonNullable<ButtonProps['size']>, React.CSSProperties> = {
-  xsmall: {
-    padding: '0.3rem',
-    fontSize: '0.75rem',
-    borderRadius: '0.25rem',
-  },
-  small: {
-    padding: '0.5rem',
-    fontSize: '0.85rem',
-  },
-  medium: {
-    padding: '0.5rem',
-    fontSize: '1.2rem',
-  },
-  large: {
-    padding: '1rem',
-    fontSize: '1.05rem',
-  },
-};
-
 const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'medium',
@@ -104,19 +67,14 @@ const Button: React.FC<ButtonProps> = ({
 
   const variantClass = `btn-${variant}`;
   const sizeClass = size !== 'medium' ? `btn-${size}` : '';
-  const iconModifierClass = variant === 'icon' || variant === 'remove' ? 'btn-icon' : '';
-  const isIconButton = variant === 'icon' || variant === 'remove';
-  const allClasses = `btn ${iconModifierClass} ${variantClass} ${sizeClass} ${className || ''}`.trim();
+  const baseClass = variant === 'icon' || variant === 'remove' ? 'btn-icon' : 'btn';
+  const allClasses = `${baseClass} ${variantClass} ${sizeClass} ${className || ''}`.trim();
 
   let label: React.ReactNode = children;
   if (isLoading) label = loadingText;
   else if (showSuccess && successText) label = successText;
 
-  const mergedStyle: React.CSSProperties = {
-    ...(isIconButton ? ICON_BUTTON_SIZE_STYLES[size] : BUTTON_SIZE_STYLES[size]),
-    ...style,
-    ...(lockedWidth ? { width: `${lockedWidth}px` } : {}),
-  };
+  const mergedStyle = lockedWidth ? { ...style, width: `${lockedWidth}px` } : style;
 
   return (
     <button

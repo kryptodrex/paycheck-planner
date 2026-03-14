@@ -109,7 +109,8 @@
 }
 
 .savings-type-badge,
-.savings-account-badge {
+.savings-account-badge,
+.retirement-type-badge {
   display: inline-flex;
   align-items: center;
   padding: 0.2rem 0.5rem;
@@ -131,6 +132,16 @@
 .savings-account-badge {
   background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
   color: var(--text-secondary);
+}
+
+.retirement-type-badge.pre-tax {
+  background: color-mix(in srgb, var(--success-color) 18%, transparent);
+  color: var(--success-color);
+}
+
+.retirement-type-badge.post-tax {
+  background: color-mix(in srgb, var(--warning-color) 18%, transparent);
+  color: var(--warning-color);
 }
 
 .savings-frequency,
@@ -178,8 +189,16 @@
   gap: 1rem;
 }
 
+.retirement-item-disabled {
+  opacity: 0.55;
+}
+
 .retirement-info {
   flex: 1;
+}
+
+.retirement-meta {
+  margin-top: 0.35rem;
 }
 
 .retirement-details {

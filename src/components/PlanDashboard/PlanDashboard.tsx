@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect, react-hooks/preserve-manual-memoization */
 type StatusToastType = 'success' | 'warning' | 'error';
 
 interface StatusToastState {
@@ -31,6 +30,7 @@ import './PlanDashboard.css';
 import type { TabId } from '../../utils/tabManagement';
 
 type DisplayMode = 'paycheck' | 'monthly' | 'yearly';
+type TabScrollPosition = 'top' | 'bottom';
 
 interface PlanHistoryState {
   kind: 'plan-tab';
@@ -64,6 +64,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
+  const [pendingTabScroll, setPendingTabScroll] = useState<{ tab: TabId; position: TabScrollPosition } | null>(null);
   const [displayMode, setDisplayMode] = useState<DisplayMode>('paycheck');
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
@@ -104,6 +105,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const initializedTabContextRef = useRef<string | null>(null);
   const historyStateKeyRef = useRef<string | null>(null);
   const suppressHistoryPushRef = useRef(false);
+  const lastMissingPathPromptRef = useRef<string | null>(null);
+  const [missingActiveFilePath, setMissingActiveFilePath] = useState<string | null>(null);
+  const [activeRelinkMismatchMessage, setActiveRelinkMismatchMessage] = useState<string | null>(null);
+  const [activeRelinkLoading, setActiveRelinkLoading] = useState(false);
 
   // Initialize tab configs from budget settings or use defaults
   const tabConfigs = useMemo(() => {
@@ -293,9 +298,40 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
   }, [tabDisplayMode, budgetData, updateBudgetSettings]);
 
+  const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
+    const currentPath = budgetData?.settings?.filePath;
+    if (!currentPath) return true;
+    if (!window.electronAPI?.fileExists) return true;
+
+    try {
+      const exists = await window.electronAPI.fileExists(currentPath);
+      if (exists) {
+        return true;
+      }
+    } catch (error) {
+      console.warn('Failed to verify budget file path before save:', error);
+    }
+
+    lastMissingPathPromptRef.current = currentPath;
+    setActiveRelinkMismatchMessage(null);
+    setMissingActiveFilePath(currentPath);
+    return false;
+  }, [budgetData?.settings?.filePath]);
+
   // Handle save with success toast
   const handleSave = useCallback(async () => {
     if (!budgetData) return;
+
+    if (missingActiveFilePath) {
+      setStatusToast({ message: 'Locate moved file before saving this plan.', type: 'warning' });
+      return;
+    }
+
+    const canSaveToCurrentPath = await ensureValidSavePath();
+    if (!canSaveToCurrentPath) {
+      setStatusToast({ message: 'Plan file moved. Locate it or cancel relink before saving.', type: 'warning' });
+      return;
+    }
 
     const success = await saveBudget(activeTab, {
       settings: {
@@ -308,15 +344,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (success) {
       setStatusToast({ message: 'Saved successfully', type: 'success' });
     }
-  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, missingActiveFilePath, ensureValidSavePath]);
 
-  const scrollTabToTop = useCallback((tab: TabId) => {
-    tabContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
+    const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
+      return nextPosition === 'bottom' ? element.scrollHeight : 0;
+    };
+
+    tabContentRef.current?.scrollTo({ top: getScrollTop(tabContentRef.current, position), behavior: 'smooth' });
 
     const panel = tabPanelRefs.current[tab];
     if (!panel) return;
 
-    panel.scrollTo({ top: 0, behavior: 'smooth' });
+    panel.scrollTo({ top: getScrollTop(panel, position), behavior: 'smooth' });
 
     const scrollableDescendants = panel.querySelectorAll<HTMLElement>('*');
     scrollableDescendants.forEach((element) => {
@@ -329,11 +369,34 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           computedStyle.overflow === 'scroll';
 
         if (isScrollable) {
-          element.scrollTo({ top: 0, behavior: 'smooth' });
+          element.scrollTo({ top: getScrollTop(element, position), behavior: 'smooth' });
         }
       }
     });
   }, []);
+
+  const scrollTabToTop = useCallback((tab: TabId) => {
+    scrollTabToPosition(tab, 'top');
+  }, [scrollTabToPosition]);
+
+  useEffect(() => {
+    if (!pendingTabScroll || pendingTabScroll.tab !== activeTab) return;
+
+    let firstFrameId = 0;
+    let secondFrameId = 0;
+
+    firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(() => {
+        scrollTabToPosition(pendingTabScroll.tab, pendingTabScroll.position);
+        setPendingTabScroll(null);
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      window.cancelAnimationFrame(secondFrameId);
+    };
+  }, [activeTab, pendingTabScroll, scrollTabToPosition]);
 
   // Keep refs updated with latest handlers to prevent event listener duplication
   useEffect(() => {
@@ -442,6 +505,132 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       console.error('Failed to save session state:', error);
     });
   }, [activeTab, budgetData?.settings?.filePath]);
+
+  // Keep main process aware of the active budget file path for local rename detection.
+  useEffect(() => {
+    if (!window.electronAPI?.setActiveBudgetFilePath) return;
+
+    const filePath = budgetData?.settings?.filePath || null;
+    window.electronAPI.setActiveBudgetFilePath(filePath).catch((error) => {
+      console.warn('Failed to set active budget file path for watcher:', error);
+    });
+  }, [budgetData?.settings?.filePath]);
+
+  // If the open budget file is renamed locally (Finder/Explorer), update path and plan name live.
+  useEffect(() => {
+    if (!window.electronAPI?.onBudgetFileRenamed || !budgetData) return;
+
+    const unsubscribe = window.electronAPI.onBudgetFileRenamed(({ oldPath, newPath, planName }) => {
+      updateBudgetData({
+        name: planName,
+        settings: {
+          ...budgetData.settings,
+          filePath: newPath,
+        },
+      });
+
+      FileStorageService.removeRecentFile(oldPath);
+      FileStorageService.addRecentFile(newPath);
+      setStatusToast({ message: '✏️ File renamed on disk. Plan name updated.', type: 'success' });
+    });
+
+    return unsubscribe;
+  }, [budgetData, updateBudgetData]);
+
+  // If an active file is moved across folders, prompt once to relink and keep editing.
+  useEffect(() => {
+    if (!budgetData?.settings?.filePath || !window.electronAPI?.fileExists) return;
+
+    const fileExists = window.electronAPI.fileExists;
+    let cancelled = false;
+    const intervalId = window.setInterval(async () => {
+      if (cancelled) return;
+
+      const currentPath = budgetData.settings.filePath;
+      if (!currentPath) return;
+
+      const exists = await fileExists(currentPath);
+      if (exists) {
+        if (lastMissingPathPromptRef.current === currentPath) {
+          lastMissingPathPromptRef.current = null;
+        }
+        return;
+      }
+
+      if (lastMissingPathPromptRef.current === currentPath) {
+        return;
+      }
+
+      lastMissingPathPromptRef.current = currentPath;
+      setActiveRelinkMismatchMessage(null);
+      setMissingActiveFilePath(currentPath);
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [budgetData, updateBudgetData]);
+
+  const handleCloseActiveRelinkModal = useCallback(() => {
+    if (activeRelinkLoading || !budgetData) return;
+
+    const stalePath = missingActiveFilePath || budgetData.settings.filePath || null;
+    if (stalePath) {
+      FileStorageService.removeRecentFile(stalePath);
+    }
+
+    // Detach stale path so subsequent saves are explicit Save As operations.
+    updateBudgetData({
+      settings: {
+        ...budgetData.settings,
+        filePath: undefined,
+      },
+    });
+
+    lastMissingPathPromptRef.current = null;
+    setMissingActiveFilePath(null);
+    setActiveRelinkMismatchMessage(null);
+    setStatusToast({
+      message: 'File location was cleared. Use Save to choose a new file location.',
+      type: 'warning',
+    });
+  }, [activeRelinkLoading, budgetData, missingActiveFilePath, updateBudgetData]);
+
+  const handleLocateActiveRelinkFile = useCallback(async () => {
+    if (!budgetData || !missingActiveFilePath || activeRelinkLoading) return;
+
+    setActiveRelinkLoading(true);
+    try {
+      const result = await FileStorageService.relinkMovedBudgetFile(missingActiveFilePath, budgetData.id);
+
+      if (result.status === 'cancelled') {
+        return;
+      }
+
+      if (result.status === 'mismatch' || result.status === 'invalid') {
+        setActiveRelinkMismatchMessage(result.message);
+        return;
+      }
+
+      lastMissingPathPromptRef.current = null;
+      setMissingActiveFilePath(null);
+      setActiveRelinkMismatchMessage(null);
+      updateBudgetData({
+        name: result.planName,
+        settings: {
+          ...budgetData.settings,
+          filePath: result.filePath,
+        },
+      });
+      setStatusToast({ message: 'File moved on disk. Plan path was relinked.', type: 'success' });
+    } catch (error) {
+      const message = (error as Error).message || 'Unable to relink moved file.';
+      setActiveRelinkMismatchMessage(message);
+    } finally {
+      setActiveRelinkLoading(false);
+    }
+  }, [activeRelinkLoading, budgetData, missingActiveFilePath, updateBudgetData]);
 
   // Auto-dismiss status toast
   useEffect(() => {
@@ -599,13 +788,23 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     movedDuringDragRef.current = false;
   }, []);
 
-  const openTabFromLink = useCallback((tab: TabId, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean }) => {
+  const openTabFromLink = useCallback((tab: TabId, options?: { scrollToAccountId?: string; scrollToRetirement?: boolean; scrollPosition?: TabScrollPosition }) => {
+    if (options?.scrollPosition) {
+      if (activeTab === tab) {
+        scrollTabToPosition(tab, options.scrollPosition);
+      } else {
+        setPendingTabScroll({ tab, position: options.scrollPosition });
+      }
+    } else {
+      setPendingTabScroll(null);
+    }
+
     selectTab(tab, {
       scrollToAccountId: options?.scrollToAccountId,
       scrollToRetirement: options?.scrollToRetirement,
       revealIfHidden: true,
     });
-  }, [selectTab]);
+  }, [activeTab, scrollTabToPosition, selectTab]);
 
   const handleTabClick = useCallback((tab: TabId, options?: { resetBillsAnchor?: boolean }) => {
     if (activeTab === tab) {
@@ -956,28 +1155,23 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               <p className="plan-year-subtitle">Year: {budgetData.year}</p>
             )}
           </div>
-          <button 
-            className="encryption-status-btn"
-            onClick={handleEncryptionModalOpen}
-            title="Click to open encryption configuration"
-          >
-            {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
-          </button>
         </div>
         <div className="header-right">
           <Button
             variant="secondary"
+            size="small"
+            className="header-btn-secondary"
             onClick={() => setShowAccountsModal(true)}
             title="Manage your financial accounts"
-            className="header-btn-secondary"
           >
             🏦 Accounts
           </Button>
           <Button
             variant="secondary"
+            size="small"
+            className="header-btn-secondary"
             onClick={() => setShowCopyModal(true)}
             title="Copy this plan to another year"
-            className="header-btn-secondary"
           >
             📋 Copy Plan
           </Button>
@@ -992,8 +1186,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </Button> */}
           <Button
             variant="primary"
+            size="small"
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || !!missingActiveFilePath || activeRelinkLoading}
             className="header-btn-primary"
           >
             💾 Save
@@ -1055,7 +1250,23 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             tabPanelRefs.current.metrics = element;
           }}
         >
-          <KeyMetrics />
+          <KeyMetrics
+            onNavigateToTaxes={() => {
+              openTabFromLink('taxes');
+            }}
+            onNavigateToNetPay={() => {
+              openTabFromLink('breakdown');
+            }}
+            onNavigateToSavings={() => {
+              openTabFromLink('savings', { scrollToRetirement: false });
+            }}
+            onNavigateToBills={() => {
+              openTabFromLink('bills', { scrollToRetirement: false });
+            }}
+            onNavigateToRemaining={() => {
+              openTabFromLink('breakdown', { scrollPosition: 'bottom', scrollToRetirement: false });
+            }}
+          />
         </div>
         <div
           className={`tab-panel ${activeTab === 'breakdown' ? 'active' : ''}`}
@@ -1177,27 +1388,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* End plan-dashboard-content-wrapper */}
 
       <footer className="dashboard-footer">
-        <button
-          type="button"
-          className="footer-feedback-btn"
-          onClick={() => setShowFeedbackModal(true)}
-          title="Share feedback"
-        >
-          Share feedback
-        </button>
+        <div className="footer-left-actions">
+          <Button
+            size="small"
+            variant="utility"
+            onClick={() => setShowFeedbackModal(true)}
+            title="Share feedback"
+          >
+            Share feedback
+          </Button>
+        </div>
         <div className="footer-info">
           <span>Last saved: {budgetData.settings.lastSavedAt ? new Date(budgetData.settings.lastSavedAt).toLocaleString() : 'Never'}</span>
           {budgetData.settings.filePath && (
             <>
               <span className="bullet">•</span>
-              <button
-                type="button"
-                className="footer-file-link"
+              <Button
+                size="small"
+                variant="utility"
+                onClick={handleEncryptionModalOpen}
+                title="Click to open encryption configuration"
+                aria-label="Manage encryption settings"
+              >
+                {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
+              </Button>
+              <Button
+                size="small"
+                variant="utility"
                 onClick={handleRevealSavedFile}
                 title="Show file in folder"
               >
                 Open in {fileManagerAppName}
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -1335,6 +1557,39 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           generatedKey={generatedKey}
           onGenerateKey={handleGenerateEncryptionKey}
         />
+      </Modal>
+
+      <Modal
+        isOpen={!!missingActiveFilePath}
+        onClose={handleCloseActiveRelinkModal}
+        header="Plan File Moved"
+        contentClassName="plan-relink-modal"
+        footer={
+          <>
+            <Button variant="secondary" onClick={handleCloseActiveRelinkModal} disabled={activeRelinkLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleLocateActiveRelinkFile}
+              isLoading={activeRelinkLoading}
+              loadingText="Opening Picker..."
+              disabled={activeRelinkLoading}
+            >
+              Locate File
+            </Button>
+          </>
+        }
+      >
+        <p className="plan-relink-modal-message">
+          Your open plan file was moved or renamed on disk. Locate it to keep saving to the correct file.
+        </p>
+        <code className="plan-relink-modal-path" title={missingActiveFilePath || ''}>
+          {missingActiveFilePath || ''}
+        </code>
+        {activeRelinkMismatchMessage && (
+          <p className="plan-relink-modal-error"><b>{activeRelinkMismatchMessage}</b> Please try again.</p>
+        )}
       </Modal>
 
       {statusToast && (

@@ -8,10 +8,19 @@ interface ViewModeSelectorProps {
   onChange: (mode: ViewMode) => void;
   hintText?: string;
   reserveHintSpace?: boolean;
+  hintVisibleModes?: ViewMode[];
 }
 
-const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({ mode, onChange, hintText, reserveHintSpace = false }) => {
-  const shouldRenderHintRow = reserveHintSpace || Boolean(hintText);
+const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
+  mode,
+  onChange,
+  hintText,
+  reserveHintSpace = false,
+  hintVisibleModes,
+}) => {
+  const isHintVisibleForMode = !hintVisibleModes || hintVisibleModes.includes(mode);
+  const effectiveHintText = isHintVisibleForMode ? hintText : undefined;
+  const shouldRenderHintRow = reserveHintSpace || Boolean(effectiveHintText);
 
   return (
     <div className="view-mode-selector-wrap">
@@ -36,8 +45,8 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({ mode, onChange, hin
         </button>
       </div>
       {shouldRenderHintRow && (
-        <div className={`view-mode-selector-hint ${hintText ? '' : 'is-placeholder'}`}>
-          {hintText || ' '}
+        <div className={`view-mode-selector-hint ${effectiveHintText ? '' : 'is-placeholder'}`}>
+          {effectiveHintText || ' '}
         </div>
       )}
     </div>

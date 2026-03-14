@@ -277,13 +277,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     <div className="bills-manager">
       <PageHeader
         title="Bills & Expenses"
-        subtitle="Manage recurring bills, expenses, and benefit deductions"
+        subtitle="Manage recurring bills, expenses, and paycheck deductions"
         actions={
           <>
             <ViewModeSelector
               mode={displayMode}
               onChange={onDisplayModeChange}
               hintText={`Current setting: ${payFrequencyLabel}`}
+              hintVisibleModes={['paycheck']}
               reserveHintSpace
             />
             <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>

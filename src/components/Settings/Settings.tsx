@@ -18,6 +18,11 @@ interface SettingsState {
 
 const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   const { theme, setTheme } = useTheme();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resettingMemory, setResettingMemory] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
+  const [backedUp, setBackedUp] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [settings, setSettings] = useState<SettingsState>(() => {
     const appSettings = FileStorageService.getAppSettings();
     return {
@@ -64,6 +69,84 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
       window.dispatchEvent(new CustomEvent('glossary-terms-changed', { detail: { enabled } }));
       return updated;
     });
+  };
+
+  const handleExportBackup = async () => {
+    setBackingUp(true);
+    try {
+      const filePath = await window.electronAPI.saveFileDialog('paycheck-planner-backup');
+      if (!filePath) return;
+      const json = FileStorageService.exportAppData();
+      const result = await window.electronAPI.saveBudget(filePath, json);
+      if (!result.success) {
+        throw new Error(result.error || 'Save failed');
+      }
+      setBackedUp(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to export backup: ${message}`);
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
+  const handleImportAppData = async () => {
+    setImporting(true);
+    try {
+      const filePath = await window.electronAPI.openFileDialog();
+      if (!filePath) return;
+      const result = await window.electronAPI.loadBudget(filePath);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Could not read file');
+      }
+      FileStorageService.importAppData(result.data);
+
+      // Refresh component's settings state from newly restored values
+      const restored = FileStorageService.getAppSettings();
+      const newThemeMode = (restored.themeMode as ThemeOption) || 'light';
+      const newGlossary = restored.glossaryTermsEnabled !== false;
+      setSettings({ themeMode: newThemeMode, glossaryTermsEnabled: newGlossary });
+
+      if (newThemeMode === 'light' || newThemeMode === 'dark') {
+        setTheme(newThemeMode);
+      } else {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(systemDark ? 'dark' : 'light');
+      }
+      window.dispatchEvent(new Event('theme-mode-changed'));
+      window.dispatchEvent(new CustomEvent('glossary-terms-changed', { detail: { enabled: newGlossary } }));
+      const reopenResult = await window.electronAPI.reopenWelcomeWindow();
+      if (!reopenResult.success) {
+        throw new Error(reopenResult.error || 'Failed to reopen welcome window');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to import app data: ${message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleConfirmMemoryReset = async () => {
+    setResettingMemory(true);
+    try {
+      // Keychain entries are intentionally left intact.
+      // They live in the OS keychain (secured by login) and are keyed by plan ID.
+      // If the user restores from a backup the file-to-plan-ID mapping comes back
+      // and encrypted plans reconnect automatically without needing to re-enter keys.
+      FileStorageService.clearAppMemory();
+      setTheme('light');
+      window.dispatchEvent(new Event('theme-mode-changed'));
+
+      setBackedUp(false);
+      setShowResetConfirm(false);
+      await window.electronAPI.quitApp();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to reset app memory: ${message}`);
+    } finally {
+      setResettingMemory(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -138,6 +221,75 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
           </span>
         </div>
       </div>
+
+      <div className="settings-section settings-danger-zone">
+        <h3>App Memory Wipe</h3>
+        <p className="settings-danger-copy">
+          Remove this app&apos;s local preferences, recent files, and in-memory plan session. <b>Budget files themselves as well as keychain links are not deleted.</b>
+        </p>
+        <div className="settings-danger-actions">
+          <Button
+            variant="tertiary"
+            onClick={handleImportAppData}
+            isLoading={importing}
+            loadingText="Importing…"
+          >
+            Import app data
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => setShowResetConfirm(true)}
+          >
+            Reset App Memory
+          </Button>
+        </div>
+      </div>
+
+      <Modal
+        isOpen={showResetConfirm}
+        onClose={() => {
+          if (!resettingMemory) {
+            setShowResetConfirm(false);
+          }
+        }}
+        contentClassName="settings-reset-modal"
+        header="Confirm App Memory Wipe"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setShowResetConfirm(false)}
+              disabled={resettingMemory}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="tertiary"
+              onClick={handleExportBackup}
+              isLoading={backingUp}
+              loadingText="Backing up…"
+              disabled={resettingMemory}
+            >
+              {backedUp ? '✓ Backed up' : 'Back Up First'}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmMemoryReset}
+              isLoading={resettingMemory}
+              loadingText="Resetting..."
+            >
+              Reset
+            </Button>
+          </>
+        }
+      >
+        <p>
+          This will wipe app memory on this device and then quit the app so the next launch starts fresh.
+        </p>
+        <p>
+          Optionally back up your preferences first — they can be restored later via &quot;Import app data&quot; in Settings.
+        </p>
+      </Modal>
     </Modal>
   );
 };

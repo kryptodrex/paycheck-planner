@@ -120,6 +120,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                                                     mode={displayMode}
                                                     onChange={onDisplayModeChange}
                                                     hintText={`Current setting: ${payFrequencyLabel}`}
+                                                    hintVisibleModes={['paycheck']}
                                                     reserveHintSpace
                                                 />
                     </>

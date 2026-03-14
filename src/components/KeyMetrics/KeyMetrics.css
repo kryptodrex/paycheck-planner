@@ -45,9 +45,19 @@
   border: 1px solid var(--border-color);
 }
 
-.metric-card:hover {
+.metric-card-interactive {
+  cursor: pointer;
+}
+
+.metric-card-interactive:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
+}
+
+.metric-card-interactive:focus-visible {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-lg), 0 0 0 2px color-mix(in srgb, var(--accent-primary) 28%, transparent);
 }
 
 .metric-icon {

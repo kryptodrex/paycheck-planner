@@ -361,6 +361,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                     mode={displayMode}
                                                     onChange={onDisplayModeChange}
                                                     hintText={`Current setting: ${payFrequencyLabel}`}
+                                                    hintVisibleModes={['paycheck']}
                                                     reserveHintSpace
                                                 />
                         <Button variant="primary" onClick={handleAddLoan}>
