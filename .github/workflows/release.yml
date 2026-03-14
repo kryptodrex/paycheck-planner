@@ -28,31 +28,30 @@ jobs:
         id: version
         run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
 
-      - name: Generate changelog
+      - name: Build release notes
         id: changelog
         run: |
-          # Get commits since last production tag (excluding beta tags)
-          LAST_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 2 | tail -n 1 || echo "")
-          if [ -z "$LAST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"- %h: %s" --reverse)
-          else
-            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %h: %s" --reverse)
-          fi
-          
+          VERSION="${{ steps.version.outputs.VERSION }}"
+
           # Use a unique delimiter to avoid YAML conflicts
           {
             echo "CHANGELOG<<__END_CHANGELOG__"
-            echo "## ✅ Production Release v${{ steps.version.outputs.VERSION }}"
-            echo ""
-            echo "This release has been tested and approved for production use."
+            echo "## ✅ Release v${VERSION}"
             echo ""
             echo "### 📦 Platform Builds"
-            echo "- **macOS**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.dmg"
-            echo "- **Windows**: Paycheck Planner Setup ${{ steps.version.outputs.VERSION }}.exe"
-            echo "- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
+            echo "- **macOS**: Paycheck.Planner-${VERSION}-arm64.dmg (Apple Silicon), Paycheck.Planner-${VERSION}-x64.dmg (Intel)"
+            echo "- **Windows**: Paycheck.Planner.${VERSION}.exe, Paycheck.Planner.Setup.${VERSION}.exe"
+            echo "- **Linux**: Paycheck.Planner-${VERSION}.AppImage"
             echo ""
-            echo "### 📝 Changelog"
-            echo "$COMMITS"
+            if [ -f RELEASE_NOTES.md ]; then
+              echo "### 🆕 What's New"
+              echo ""
+              cat RELEASE_NOTES.md
+            else
+              echo "### 🆕 What's New"
+              echo ""
+              echo "See the [full feature overview](https://github.com/${{ github.repository }}/blob/main/README.md) for details on everything Paycheck Planner can do."
+            fi
             echo "__END_CHANGELOG__"
           } >> $GITHUB_OUTPUT
 
