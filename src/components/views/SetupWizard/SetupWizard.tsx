@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
-import { useAppDialogs } from '../../../hooks';
+import { useAppDialogs, useEncryptionSetupFlow } from '../../../hooks';
 import { getCurrencySymbol, CURRENCIES } from '../../../utils/currency';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
-import { KeychainService } from '../../../services/keychainService';
-import { FileStorageService } from '../../../services/fileStorage';
 import EncryptionConfigPanel from '../../EncryptionSetup/EncryptionConfigPanel';
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../../types/payroll';
@@ -36,10 +34,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [currency, setCurrency] = useState(budgetData?.settings?.currency || 'USD');
   
   // Encryption configuration
-  const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
-  const [customEncryptionKey, setCustomEncryptionKey] = useState('');
-  const [generatedEncryptionKey, setGeneratedEncryptionKey] = useState('');
-  const [useCustomEncryptionKey, setUseCustomEncryptionKey] = useState(false);
+  const {
+    encryptionEnabled,
+    setEncryptionEnabled,
+    customKey: customEncryptionKey,
+    setCustomKey: setCustomEncryptionKey,
+    generatedKey: generatedEncryptionKey,
+    useCustomKey: useCustomEncryptionKey,
+    setUseCustomKey: setUseCustomEncryptionKey,
+    generateKey: handleGenerateEncryptionKey,
+    goBackToSelection,
+    saveSelection: saveEncryptionSelection,
+  } = useEncryptionSetupFlow();
   
   const [payType, setPayType] = useState<'salary' | 'hourly'>('salary');
   const [annualSalary, setAnnualSalary] = useState('');
@@ -84,7 +90,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     // If on encryption step and currently in key setup view (encryptionEnabled is not null),
     // go back to the selection view instead of going to previous step
     if (step === 6 && encryptionEnabled !== null) {
-      setEncryptionEnabled(null);
+      goBackToSelection();
       return;
     }
     
@@ -93,34 +99,20 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     }
   };
 
-  // Generate a new encryption key
-  const handleGenerateEncryptionKey = () => {
-    const key = FileStorageService.generateEncryptionKey();
-    setGeneratedEncryptionKey(key);
-    setUseCustomEncryptionKey(false);
-  };
-
-  const handleCompleteEncryptionSetup = async () => {
+  const handleComplete = async () => {
     if (!budgetData) return;
 
-    if (encryptionEnabled) {
-      const keyToUse = useCustomEncryptionKey ? customEncryptionKey : generatedEncryptionKey;
-      if (!keyToUse) {
-        openErrorDialog({
-          title: 'Encryption Key Required',
-          message: 'Please generate or enter an encryption key.',
-        });
-        return;
-      }
-      // Save the encryption key to keychain
-      await KeychainService.saveKey(budgetData.id, keyToUse);
+    const encryptionResult = await saveEncryptionSelection({
+      planId: budgetData.id,
+      persistAppSettings: false,
+      deleteStoredKeyWhenDisabled: false,
+    });
+
+    if (!encryptionResult.success) {
+      openErrorDialog(encryptionResult.errorDialog);
+      return;
     }
 
-    // Proceed to next step
-    handleNext();
-  };
-
-  const handleComplete = async () => {
     let hasTaxErrors = false;
     const validatedTaxLines = taxLines.map((line) => {
       const parsedRate = parseFloat(line.rate);
@@ -638,14 +630,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
           {step < totalSteps ? (
             <Button
               variant="primary"
-              onClick={() => {
-                // Special handling for encryption step
-                if (step === 6) {
-                  handleCompleteEncryptionSetup();
-                } else {
-                  handleNext();
-                }
-              }}
+              onClick={handleNext}
               disabled={!canProceed()}
             >
               Next →

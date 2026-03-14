@@ -8,9 +8,8 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMe
 import { flushSync } from 'react-dom';
 import { MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
-import { useAppDialogs, useFileRelinkFlow } from '../../hooks';
+import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
-import { KeychainService } from '../../services/keychainService';
 import SetupWizard from '../views/SetupWizard';
 import EncryptionConfigPanel from '../EncryptionSetup/EncryptionConfigPanel';
 import KeyMetrics from '../tabViews/KeyMetrics';
@@ -79,11 +78,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [isEditingPlanName, setIsEditingPlanName] = useState(false);
   const [draftPlanName, setDraftPlanName] = useState('');
   const [draftYear, setDraftYear] = useState('');
-  const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
-  const [customKey, setCustomKey] = useState('');
-  const [generatedKey, setGeneratedKey] = useState('');
-  const [useCustomKey, setUseCustomKey] = useState(false);
-  const [encryptionSaving, setEncryptionSaving] = useState(false);
   const [statusToast, setStatusToast] = useState<StatusToastState | null>(null);
   const [showTabManagementModal, setShowTabManagementModal] = useState(false);
   const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
@@ -92,6 +86,21 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
   const [tabPosition, setTabPosition] = useState<TabPosition>('left');
   const [tabDisplayMode, setTabDisplayMode] = useState<TabDisplayMode>('icons-with-labels');
+  const {
+    encryptionEnabled,
+    setEncryptionEnabled,
+    customKey,
+    setCustomKey,
+    generatedKey,
+    useCustomKey,
+    setUseCustomKey,
+    isSaving: encryptionSaving,
+    canSaveSelection,
+    generateKey: handleGenerateEncryptionKey,
+    reset: resetEncryptionSetupFlow,
+    goBackToSelection,
+    saveSelection: saveEncryptionSelection,
+  } = useEncryptionSetupFlow();
   const tabContentRef = useRef<HTMLDivElement | null>(null);
   const tabPanelRefs = useRef<Partial<Record<TabId, HTMLDivElement | null>>>({});
   const planLoadingStartRef = useRef<number | null>(null);
@@ -866,17 +875,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setNewYear('');
   };
 
-  const handleGenerateEncryptionKey = () => {
-    const key = FileStorageService.generateEncryptionKey();
-    setGeneratedKey(key);
-    setUseCustomKey(false);
-  };
-
   const handleEncryptionModalOpen = () => {
-    setEncryptionEnabled(null);
-    setCustomKey('');
-    setGeneratedKey('');
-    setUseCustomKey(false);
+    resetEncryptionSetupFlow();
     setShowEncryptionSetup(true);
   };
 
@@ -989,61 +989,35 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   const handleEncryptionModalClose = () => {
     setShowEncryptionSetup(false);
-    setEncryptionEnabled(null);
-    setCustomKey('');
-    setGeneratedKey('');
-    setUseCustomKey(false);
-    setEncryptionSaving(false);
+    resetEncryptionSetupFlow();
   };
 
   const handleSaveEncryption = async () => {
     if (!budgetData) return;
-    
-    setEncryptionSaving(true);
-    try {
-      const settings = FileStorageService.getAppSettings();
-      
-      if (encryptionEnabled) {
-        const keyToUse = useCustomKey ? customKey : generatedKey;
-        
-        if (!keyToUse) {
-          openErrorDialog({
-            title: 'Encryption Key Required',
-            message: 'Please generate or enter an encryption key.',
-          });
-          setEncryptionSaving(false);
-          return;
-        }
-        
-        settings.encryptionEnabled = true;
-        await KeychainService.saveKey(budgetData.id, keyToUse);
-      } else {
-        settings.encryptionEnabled = false;
-        await KeychainService.deleteKey(budgetData.id);
-      }
-      
-      FileStorageService.saveAppSettings(settings);
+
+    const result = await saveEncryptionSelection({
+      planId: budgetData.id,
+      persistAppSettings: true,
+      deleteStoredKeyWhenDisabled: true,
+    });
+
+    if (!result.success) {
+      openErrorDialog(result.errorDialog);
+      return;
+    }
+
       updateBudgetSettings({
         ...budgetData.settings,
-        encryptionEnabled: Boolean(encryptionEnabled),
+        encryptionEnabled: result.encryptionEnabled,
       });
-      
+
       setStatusToast({
-        message: encryptionEnabled
+        message: result.encryptionEnabled
           ? '🔒 Encryption enabled for this plan'
           : '📄 Encryption disabled for this plan',
         type: 'success',
       });
       handleEncryptionModalClose();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      openErrorDialog({
-        title: 'Encryption Save Failed',
-        message: `Failed to save encryption settings: ${errorMsg}`,
-        actionLabel: 'Retry',
-      });
-      setEncryptionSaving(false);
-    }
   };
 
   const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
@@ -1508,7 +1482,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => setEncryptionEnabled(null)}
+                onClick={goBackToSelection}
                 disabled={encryptionSaving}
               >
                 Back
@@ -1518,11 +1492,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
               type="button"
               variant="primary"
               onClick={handleSaveEncryption}
-              disabled={
-                encryptionEnabled === null ||
-                (encryptionEnabled === true && !useCustomKey && !generatedKey) ||
-                encryptionSaving
-              }
+              disabled={!canSaveSelection || encryptionSaving}
               isLoading={encryptionSaving}
               loadingText="Saving..."
             >

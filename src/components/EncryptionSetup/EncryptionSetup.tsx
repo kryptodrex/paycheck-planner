@@ -1,9 +1,7 @@
 // Encryption Setup Component - Shown on first launch
 // Allows users to configure encryption or skip it
-import React, { useState } from 'react';
-import { useAppDialogs } from '../../hooks';
-import { FileStorageService } from '../../services/fileStorage';
-import { KeychainService } from '../../services/keychainService';
+import React from 'react';
+import { useAppDialogs, useEncryptionSetupFlow } from '../../hooks';
 import EncryptionConfigPanel from './EncryptionConfigPanel';
 import { Button, ErrorDialog } from '../_shared';
 import './EncryptionSetup.css';
@@ -16,63 +14,35 @@ interface EncryptionSetupProps {
 
 const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel, planId }) => {
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
-  const [encryptionEnabled, setEncryptionEnabled] = useState<boolean | null>(null);
-  const [customKey, setCustomKey] = useState('');
-  const [generatedKey, setGeneratedKey] = useState('');
-  const [useCustomKey, setUseCustomKey] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Generate a new random encryption key
-  const handleGenerateKey = () => {
-    const key = FileStorageService.generateEncryptionKey();
-    setGeneratedKey(key);
-    setUseCustomKey(false);
-  };
+  const {
+    encryptionEnabled,
+    setEncryptionEnabled,
+    customKey,
+    setCustomKey,
+    generatedKey,
+    useCustomKey,
+    setUseCustomKey,
+    isSaving,
+    canSaveSelection,
+    generateKey,
+    goBackToSelection,
+    saveSelection,
+  } = useEncryptionSetupFlow();
 
   // Save encryption settings and continue
   const handleSaveSettings = async () => {
-    setIsSaving(true);
-    try {
-      const settings = FileStorageService.getAppSettings();
-      
-      if (encryptionEnabled) {
-        const keyToUse = useCustomKey ? customKey : generatedKey;
-        
-        if (!keyToUse) {
-          openErrorDialog({
-            title: 'Encryption Key Required',
-            message: 'Please generate or enter an encryption key.',
-          });
-          setIsSaving(false);
-          return;
-        }
-        
-        settings.encryptionEnabled = true;
-        // Don't store the key in localStorage - it goes to keychain
-        
-        // If we have a plan ID, save the key to keychain for that plan
-        if (planId) {
-          await KeychainService.saveKey(planId, keyToUse);
-        }
-      } else {
-        settings.encryptionEnabled = false;
-        if (planId) {
-          await KeychainService.deleteKey(planId);
-        }
-        // No key needed for unencrypted plans
-      }
-      
-      FileStorageService.saveAppSettings(settings);
-      onComplete(Boolean(encryptionEnabled));
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      openErrorDialog({
-        title: 'Encryption Save Failed',
-        message: `Failed to save encryption settings: ${errorMsg}`,
-        actionLabel: 'Retry',
-      });
-      setIsSaving(false);
+    const result = await saveSelection({
+      planId,
+      persistAppSettings: true,
+      deleteStoredKeyWhenDisabled: true,
+    });
+
+    if (!result.success) {
+      openErrorDialog(result.errorDialog);
+      return;
     }
+
+    onComplete(result.encryptionEnabled);
   };
 
   // Reusable encryption config UI (used by SetupWizard too)
@@ -92,7 +62,7 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
           customKey={customKey}
           setCustomKey={setCustomKey}
           generatedKey={generatedKey}
-          onGenerateKey={handleGenerateKey}
+          onGenerateKey={generateKey}
         />
 
         <div className="button-group">
@@ -109,7 +79,7 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
           ) : (
             <Button
               variant="secondary"
-              onClick={() => setEncryptionEnabled(null)}
+              onClick={goBackToSelection}
               disabled={isSaving}
             >
               ← Back
@@ -118,11 +88,7 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
           <Button 
             variant="primary" 
             onClick={handleSaveSettings}
-            disabled={
-              encryptionEnabled === null ||
-              (encryptionEnabled === true && !useCustomKey && !generatedKey) ||
-              isSaving
-            }
+            disabled={!canSaveSelection || isSaving}
             loadingText="Saving..."
             isLoading={isSaving}
           >
