@@ -107,17 +107,20 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Cmd+N / Ctrl+N**: New budget plan
 - **Cmd+O / Ctrl+O**: Open existing plan
 - **Cmd+S / Ctrl+S**: Save current plan
+- **Keyboard shortcuts reference**: View a full list of all available shortcuts from the Help menu
 
 #### Native Menus
 - **File menu**: New, Open, Save, Close
 - **Edit menu**: Standard editing commands
 - **View menu**: Toggle developer tools (dev builds only)
 - **Window menu**: Minimize, zoom, bring all to front (macOS)
-- **Help menu**: Glossary, support email
+- **Help menu**: Glossary, keyboard shortcuts reference, support/feedback
 
 #### Application Features
 - **Settings panel**: Configure theme (light/dark/system), enable/disable glossary tooltips
 - **Glossary**: Built-in financial terms reference accessible from Help menu or inline tooltips
+- **Keyboard shortcuts reference**: View all available shortcuts in a dedicated in-app dialog, accessible from the Help menu
+- **In-app feedback**: Submit bug reports and feature requests directly from within the app via the Help menu
 - **About dialog**: Version info, credits, license
 - **Window state**: Automatically saves and restores window size, position, and active tab
 - **Confirmation dialogs**: Save prompts before closing unsaved work
@@ -149,7 +152,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Encryption**: AES (crypto-js)
 - **Keychain**: Native OS integration (keytar)
 - **PDF Generation**: jsPDF with autoTable
-- **Styling**: CSS with CSS variables for theming
+- **Styling**: CSS with CSS variables for theming (light/dark/system modes via `ThemeContext`)
 
 ## Who This Is For
 
