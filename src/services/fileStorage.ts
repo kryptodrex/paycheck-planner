@@ -3,6 +3,7 @@
 import CryptoJS from 'crypto-js';
 import type { BudgetData, AppSettings } from '../types/auth';
 import { KeychainService } from './keychainService';
+import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
 
 // LocalStorage key for app settings
 const SETTINGS_KEY = 'paycheck-planner-settings';
@@ -141,11 +142,7 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
 
 export class FileStorageService {
   private static derivePlanNameFromFilePath(filePath: string): string {
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
-    const lastDotIndex = fileName.lastIndexOf('.');
-    const baseName = lastDotIndex > 0 ? fileName.slice(0, lastDotIndex) : fileName;
-    const normalized = baseName.trim();
-    return normalized || 'plan';
+    return getPlanNameFromPath(filePath) || 'plan';
   }
 
   private static async inspectBudgetFile(
@@ -294,8 +291,7 @@ export class FileStorageService {
    * @param filePath - The file path to add
    */
   static addRecentFile(filePath: string): void {
-    // Extract file name from path
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    const fileName = getBaseFileName(filePath) || filePath;
     
     const recentFiles = this.getRecentFiles();
     
@@ -320,7 +316,7 @@ export class FileStorageService {
    * This keeps recents correct when a plan file is renamed/moved externally.
    */
   private static addRecentFileForPlan(filePath: string, planId?: string): void {
-    const fileName = filePath.split(/[\\/]/).pop() || filePath;
+    const fileName = getBaseFileName(filePath) || filePath;
     const recentFiles = this.getRecentFiles();
     const mapping = this.getPlanFileMappings();
 

@@ -2,8 +2,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { BudgetData } from '../types/auth';
+import { calculatePaycheckBreakdown } from './budgetCalculations';
 import { formatWithSymbol } from '../utils/currency';
-import { calculateGrossPayPerPaycheck } from '../utils/payPeriod';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';
 
 type JsPdfWithAutoTable = jsPDF & {
@@ -76,47 +76,17 @@ export async function exportToPDF(
   doc.text(`Exported: ${new Date().toLocaleDateString()}`, 20, yPosition);
   yPosition += 15;
 
-  // Calculate pay breakdown metrics
-  const paycheckAmount = calculateGrossPayPerPaycheck(budgetData.paySettings);
-  
-  // Calculate pre-tax deductions
-  const preTaxDeductions = budgetData.preTaxDeductions.reduce((sum, deduction) => {
-    const amount = deduction.isPercentage
-      ? (paycheckAmount * deduction.amount) / 100
-      : deduction.amount;
-    return sum + amount;
-  }, 0);
-
-  // Calculate taxes
-  const taxableIncome = paycheckAmount - preTaxDeductions;
-  const taxLineAmounts = (budgetData.taxSettings.taxLines || []).map(line => ({
+  const breakdown = calculatePaycheckBreakdown(budgetData);
+  const paycheckAmount = breakdown.grossPay;
+  const preTaxDeductions = breakdown.preTaxDeductions;
+  const taxLineAmounts = (budgetData.taxSettings.taxLines || []).map((line, index) => ({
     label: line.label,
     rate: line.rate,
-    amount: (taxableIncome * line.rate) / 100,
+    amount: breakdown.taxLineAmounts[index]?.amount ?? 0,
   }));
-  const additionalWithholding = budgetData.taxSettings.additionalWithholding || 0;
-  const totalTaxes = taxLineAmounts.reduce((sum, l) => sum + l.amount, 0) + additionalWithholding;
-
-  // Calculate post-tax deductions (benefits and retirement from paycheck)
-  const postTaxBenefits = budgetData.benefits
-    .filter(b => b.isTaxable && (!b.deductionSource || b.deductionSource === 'paycheck'))
-    .reduce((sum, benefit) => {
-      const amount = benefit.isPercentage
-        ? (paycheckAmount * benefit.amount) / 100
-        : benefit.amount;
-      return sum + amount;
-    }, 0);
-
-  const postTaxRetirement = budgetData.retirement
-    .filter(r => !r.isPreTax && (!r.deductionSource || r.deductionSource === 'paycheck'))
-    .reduce((sum, retirement) => {
-      const amount = retirement.employeeContributionIsPercentage
-        ? (paycheckAmount * retirement.employeeContribution) / 100
-        : retirement.employeeContribution;
-      return sum + amount;
-    }, 0);
-
-  const netPay = paycheckAmount - preTaxDeductions - totalTaxes - postTaxBenefits - postTaxRetirement;
+  const additionalWithholding = breakdown.additionalWithholding;
+  const totalTaxes = breakdown.totalTaxes;
+  const netPay = breakdown.netPay;
 
   // Calculate total account allocations
   const totalAllocations = budgetData.accounts.reduce((sum, account) => {

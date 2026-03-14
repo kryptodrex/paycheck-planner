@@ -46,6 +46,7 @@ vi.mock('jspdf-autotable', () => ({
 }));
 
 import { exportToPDF } from './pdfExport';
+import { calculatePaycheckBreakdown } from './budgetCalculations';
 
 function createBudgetFixture(): BudgetData {
   return {
@@ -190,5 +191,38 @@ describe('pdfExport', () => {
 
     expect(warnSpy).toHaveBeenCalledWith('PDF password protection not yet implemented');
     warnSpy.mockRestore();
+  });
+
+  it('uses shared budget calculation totals in the metrics section', async () => {
+    const budget = createBudgetFixture();
+    const breakdown = calculatePaycheckBreakdown(budget);
+
+    await exportToPDF(budget, {
+      includeMetrics: true,
+      includePayBreakdown: false,
+      includeAccounts: false,
+      includeBills: false,
+      includeBenefits: false,
+      includeRetirement: false,
+      includeTaxes: false,
+    });
+
+    const metricsCall = autoTableMock.mock.calls.find((call) => {
+      const options = call[1] as { head?: string[][] };
+      return options.head?.[0]?.[0] === 'Metric';
+    });
+
+    expect(metricsCall).toBeTruthy();
+    const options = metricsCall?.[1] as { body?: string[][] };
+    expect(options.body).toEqual([
+      ['Gross Pay (per paycheck)', '$5,000.00'],
+      ['Pre-Tax Deductions', '$175.00'],
+      ['Total Taxes', '$748.75'],
+      ['Net Pay', '$3,826.25'],
+      ['Total Allocations', '$1,200.00'],
+      ['Leftover', '$2,626.25'],
+    ]);
+    expect(breakdown.grossPay).toBe(5000);
+    expect(breakdown.netPay).toBe(3826.25);
   });
 });
