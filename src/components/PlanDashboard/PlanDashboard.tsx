@@ -16,7 +16,7 @@ import KeyMetrics from '../KeyMetrics';
 import PayBreakdown from '../PayBreakdown';
 import BillsManager from '../BillsManager';
 import LoansManager from '../LoansManager';
-import BenefitsManager from '../BenefitsManager';
+import SavingsManager from '../SavingsManager';
 import TaxBreakdown from '../TaxBreakdown';
 import Settings from '../Settings';
 import AccountsManager from '../AccountsManager';
@@ -24,7 +24,7 @@ import ExportModal from '../ExportModal';
 import FeedbackModal from '../FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, FormGroup } from '../shared';
-import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs } from '../../utils/tabManagement';
+import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/auth';
 import './PlanDashboard.css';
 
@@ -43,18 +43,19 @@ interface PlanDashboardProps {
   viewMode?: string | null; // If set, this is a view-only window
 }
 
-const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'benefits'];
+const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
   const getInitialTab = () => {
-    if (viewMode && VALID_TABS.includes(viewMode as TabId)) {
-      return viewMode as TabId;
+    const normalizedViewMode = normalizeLegacyTabId(viewMode);
+    if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
+      return normalizedViewMode;
     }
 
-    const savedTab = budgetData?.settings?.activeTab;
-    if (savedTab && VALID_TABS.includes(savedTab as TabId)) {
-      return savedTab as TabId;
+    const normalizedSavedTab = normalizeLegacyTabId(budgetData?.settings?.activeTab);
+    if (normalizedSavedTab && VALID_TABS.includes(normalizedSavedTab)) {
+      return normalizedSavedTab;
     }
 
     return 'metrics' as TabId;
@@ -144,15 +145,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       return;
     }
 
-    if (viewMode && VALID_TABS.includes(viewMode as TabId)) {
-      setActiveTab(viewMode as TabId);
+    const normalizedViewMode = normalizeLegacyTabId(viewMode);
+    if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
+      setActiveTab(normalizedViewMode);
       initializedTabContextRef.current = tabRestoreContext;
       return;
     }
 
-    const savedTab = budgetData?.settings?.activeTab;
-    if (savedTab && VALID_TABS.includes(savedTab as TabId)) {
-      setActiveTab(savedTab as TabId);
+    const normalizedSavedTab = normalizeLegacyTabId(budgetData?.settings?.activeTab);
+    if (normalizedSavedTab && VALID_TABS.includes(normalizedSavedTab)) {
+      setActiveTab(normalizedSavedTab);
       initializedTabContextRef.current = tabRestoreContext;
       return;
     }
@@ -242,12 +244,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       const state = event.state as PlanHistoryState | null;
       const budgetHistoryId = budgetData?.settings?.filePath ?? budgetData?.id ?? 'default-plan';
 
-      if (!state || state.kind !== 'plan-tab' || state.budgetHistoryId !== budgetHistoryId || !VALID_TABS.includes(state.tab)) {
+      const normalizedStateTab = normalizeLegacyTabId(state?.tab);
+      if (!state || state.kind !== 'plan-tab' || state.budgetHistoryId !== budgetHistoryId || !normalizedStateTab || !VALID_TABS.includes(normalizedStateTab)) {
         return;
       }
 
       suppressHistoryPushRef.current = true;
-      selectTab(state.tab, { resetBillsAnchor: true, revealIfHidden: true });
+      selectTab(normalizedStateTab, { resetBillsAnchor: true, revealIfHidden: true });
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -706,7 +709,31 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setDraftYear('');
   };
 
-  const handleSavePlanEdit = () => {
+  const sanitizePlanFileName = (value: string) => {
+    return value
+      .split('')
+      .filter((char) => char.charCodeAt(0) >= 32)
+      .join('')
+      .replace(/[<>:"/\\|?*]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\.+$/, '');
+  };
+
+  const deriveRenamedPlanPath = (currentPath: string, nextPlanName: string) => {
+    const separator = currentPath.includes('\\') ? '\\' : '/';
+    const lastSeparatorIndex = Math.max(currentPath.lastIndexOf('/'), currentPath.lastIndexOf('\\'));
+    const directory = lastSeparatorIndex >= 0 ? currentPath.slice(0, lastSeparatorIndex) : '';
+    const currentFileName = lastSeparatorIndex >= 0 ? currentPath.slice(lastSeparatorIndex + 1) : currentPath;
+    const lastDotIndex = currentFileName.lastIndexOf('.');
+    const extension = lastDotIndex > 0 ? currentFileName.slice(lastDotIndex) : '.budget';
+    const safePlanName = sanitizePlanFileName(nextPlanName) || 'plan';
+    const renamedFileName = `${safePlanName}${extension}`;
+
+    return directory ? `${directory}${separator}${renamedFileName}` : renamedFileName;
+  };
+
+  const handleSavePlanEdit = async () => {
     if (!budgetData) {
       handleCancelPlanEdit();
       return;
@@ -736,9 +763,44 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       return;
     }
 
-    // Update both fields
-    updateBudgetData({ name: nextName, year: nextYear });
-    setStatusToast({ message: '✏️ Plan updated', type: 'success' });
+    let nextFilePath = budgetData.settings.filePath;
+    let renameWarning: string | null = null;
+    let renamedFile = false;
+
+    if (nameChanged && budgetData.settings.filePath && window.electronAPI?.renameBudgetFile) {
+      const currentFilePath = budgetData.settings.filePath;
+      const renamedPathCandidate = deriveRenamedPlanPath(currentFilePath, nextName);
+
+      if (renamedPathCandidate !== currentFilePath) {
+        const renameResult = await window.electronAPI.renameBudgetFile(currentFilePath, renamedPathCandidate);
+        if (renameResult.success) {
+          nextFilePath = renameResult.filePath || renamedPathCandidate;
+          renamedFile = true;
+          FileStorageService.removeRecentFile(currentFilePath);
+          FileStorageService.addRecentFile(nextFilePath);
+        } else {
+          renameWarning = renameResult.error || 'Unable to rename the plan file on disk.';
+        }
+      }
+    }
+
+    updateBudgetData({
+      name: nextName,
+      year: nextYear,
+      settings: {
+        ...budgetData.settings,
+        filePath: nextFilePath,
+      },
+    });
+
+    if (renameWarning) {
+      setStatusToast({ message: `⚠️ Plan updated, but file rename failed: ${renameWarning}`, type: 'warning' });
+    } else if (renamedFile) {
+      setStatusToast({ message: '✏️ Plan and file name updated', type: 'success' });
+    } else {
+      setStatusToast({ message: '✏️ Plan updated', type: 'success' });
+    }
+
     setIsEditingPlanName(false);
   };
 
@@ -795,6 +857,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   };
 
   const showYearSubtitle = !budgetData.name.includes(String(budgetData.year));
+
+  const fileManagerAppName = (() => {
+    const platform = (typeof navigator !== 'undefined' ? navigator.platform : '').toLowerCase();
+    if (platform.includes('mac')) return 'Finder';
+    if (platform.includes('win')) return 'File Explorer';
+    return 'Files';
+  })();
 
   const handleRevealSavedFile = async () => {
     if (!budgetData?.settings?.filePath || !window.electronAPI?.revealInFolder) return;
@@ -1000,11 +1069,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
-            onNavigateToBenefits={() => {
-              openTabFromLink('benefits', { scrollToRetirement: false });
+            onNavigateToSavings={() => {
+              openTabFromLink('savings', { scrollToRetirement: false });
             }}
             onNavigateToRetirement={() => {
-              openTabFromLink('benefits', { scrollToRetirement: true });
+              openTabFromLink('savings', { scrollToRetirement: true });
             }}
             onNavigateToLoans={(accountId) => {
               openTabFromLink('loans', { scrollToAccountId: accountId, scrollToRetirement: false });
@@ -1047,12 +1116,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'benefits' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === 'savings' ? 'active' : ''}`}
           ref={(element) => {
-            tabPanelRefs.current.benefits = element;
+            tabPanelRefs.current.savings = element;
           }}
         >
-          <BenefitsManager 
+          <SavingsManager 
             shouldScrollToRetirement={shouldScrollToRetirement}
             onScrollToRetirementComplete={handleScrollToRetirementComplete}
             displayMode={displayMode}
@@ -1127,7 +1196,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
                 onClick={handleRevealSavedFile}
                 title="Show file in folder"
               >
-                {budgetData.settings.filePath}
+                Open in {fileManagerAppName}
               </button>
             </>
           )}

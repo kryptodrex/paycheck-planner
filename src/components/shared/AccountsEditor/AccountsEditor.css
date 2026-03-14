@@ -350,3 +350,124 @@
   color: white;
   transform: translateY(-2px);
 }
+
+/* Account Action Button for Move */
+.account-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.account-action-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+.account-action-btn:focus {
+  outline: none;
+}
+
+.account-action-btn:focus-visible {
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
+}
+
+.account-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.account-action-btn:hover:disabled {
+  background: var(--bg-primary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  transform: none;
+}
+
+/* Arrow Button Fade Out */
+.arrow-fade-out {
+  animation: arrowFadeOut 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes arrowFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Account Reorder Animation Styles */
+.account-item-moving-up {
+  animation: moveUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.account-item-moving-down {
+  animation: moveDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.account-item-displaced-up {
+  animation: displaceDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.account-item-displaced-down {
+  animation: displaceUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes moveUp {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(calc(-100% - 0.5rem));
+    opacity: 1;
+  }
+}
+
+@keyframes moveDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(calc(100% + 0.5rem));
+    opacity: 1;
+  }
+}
+
+@keyframes displaceUp {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(calc(-100% - 0.5rem));
+    opacity: 1;
+  }
+}
+
+@keyframes displaceDown {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(calc(100% + 0.5rem));
+    opacity: 1;
+  }
+}

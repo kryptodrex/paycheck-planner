@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { useBudget } from '../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../utils/currency';
 import { roundUpToCent } from '../../utils/money';
-import { getPaychecksPerYear, convertToDisplayMode, convertFromDisplayMode, getDisplayModeLabel } from '../../utils/payPeriod';
+import { getPaychecksPerYear, convertToDisplayMode, convertFromDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../utils/payPeriod';
+import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../utils/frequency';
 import { getDefaultAccountIcon } from '../../utils/accountDefaults';
-import type { Account, Bill, Benefit, RetirementElection, Loan } from '../../types/auth';
+import type { Account, Bill, Benefit, RetirementElection, Loan, SavingsContribution } from '../../types/auth';
 import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../shared';
 import PaySettingsModal from '../PaySettingsModal';
 import { GlossaryTerm } from '../Glossary';
@@ -22,6 +23,8 @@ type AllocationCategory = {
   retirementCount?: number; // Number of retirement contributions in this category (if isRetirement is true)
   isLoan?: boolean;        // If true, this is an auto-calculated sum of loans for this account
   loanCount?: number;      // Number of loans in this category (if isLoan is true)
+  isSavings?: boolean;     // If true, this is an auto-calculated sum of savings/investments for this account
+  savingsCount?: number;   // Number of savings/investment items in this category (if isSavings is true)
 };
 
 type AllocationAccount = Account & {
@@ -43,12 +46,12 @@ interface PayBreakdownProps {
   displayMode: 'paycheck' | 'monthly' | 'yearly';
   onDisplayModeChange: (mode: 'paycheck' | 'monthly' | 'yearly') => void;
   onNavigateToBills?: (accountId: string) => void;
-  onNavigateToBenefits?: (accountId: string) => void;
+  onNavigateToSavings?: (accountId: string) => void;
   onNavigateToRetirement?: (accountId: string) => void;
   onNavigateToLoans?: (accountId: string) => void;
 }
 
-const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeChange, onNavigateToBills, onNavigateToBenefits, onNavigateToRetirement, onNavigateToLoans }) => {
+const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeChange, onNavigateToBills, onNavigateToSavings, onNavigateToRetirement, onNavigateToLoans }) => {
   const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
   const [editingAccountIds, setEditingAccountIds] = useState<Set<string>>(new Set());
   const [draftAccounts, setDraftAccounts] = useState<Map<string, AllocationAccount>>(new Map());
@@ -60,6 +63,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+  const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   
   // Calculate yearly breakdown from configured salary/hourly rate
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -123,8 +127,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const paycheckBreakdown = calculatePaycheckBreakdown();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const normalizedAccounts = useMemo(
-    () => normalizeAccounts(budgetData.accounts, budgetData.bills, budgetData.benefits, budgetData.retirement, budgetData.loans, budgetData.paySettings.payFrequency, paycheckBreakdown.grossPay),
-    [budgetData.accounts, budgetData.bills, budgetData.benefits, budgetData.retirement, budgetData.loans, budgetData.paySettings.payFrequency, paycheckBreakdown.grossPay]
+    () => normalizeAccounts(budgetData.accounts, budgetData.bills, budgetData.benefits, budgetData.retirement, budgetData.loans, budgetData.savingsContributions || [], budgetData.paySettings.payFrequency, paycheckBreakdown.grossPay),
+    [budgetData.accounts, budgetData.bills, budgetData.benefits, budgetData.retirement, budgetData.loans, budgetData.savingsContributions, budgetData.paySettings.payFrequency, paycheckBreakdown.grossPay]
   );
   const allocationPlan = calculateAllocationPlan(normalizedAccounts, paycheckBreakdown.netPay);
   const leftoverPerPaycheck = allocationPlan.remaining;
@@ -164,6 +168,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const grossPay = displayBreakdown.grossPay;
   const preTaxPct = (displayBreakdown.preTaxDeductions / grossPay) * 100;
   const taxPct = (displayBreakdown.totalTaxes / grossPay) * 100;
+  const postTaxPct = (displayBreakdown.postTaxDeductions / grossPay) * 100;
   const netPct = (displayBreakdown.netPay / grossPay) * 100;
 
   const startAccountEdit = (accountId: string) => {
@@ -324,7 +329,12 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         subtitle="See where your paycheck goes from gross to net"
         actions={
           <>
-            <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
+            <ViewModeSelector
+              mode={displayMode}
+              onChange={onDisplayModeChange}
+              hintText={`Current setting: ${payFrequencyLabel}`}
+              reserveHintSpace
+            />
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
               ⚙️ Pay Settings
             </Button>
@@ -336,6 +346,67 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         isOpen={showPaySettingsModal}
         onClose={() => setShowPaySettingsModal(false)}
       />
+
+      {/* Visual Bar */}
+      <div className="breakdown-bar">
+        <h3>Your Pay Breakdown</h3>
+        <div className="bar-container">
+          {displayBreakdown.preTaxDeductions > 0 && (
+            <div 
+              className="bar-segment pretax-segment" 
+              style={{ width: `${preTaxPct}%` }}
+              title={`Pre-Tax: ${formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
+            >
+              {preTaxPct > 5 && <span>{preTaxPct.toFixed(1)}%</span>}
+            </div>
+          )}
+          <div 
+            className="bar-segment tax-segment" 
+            style={{ width: `${taxPct}%` }}
+            title={`Taxes: ${formatWithSymbol(displayBreakdown.totalTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
+          >
+            <span>{taxPct.toFixed(1)}%</span>
+          </div>
+          {displayBreakdown.postTaxDeductions > 0 && (
+            <div 
+              className="bar-segment posttax-segment" 
+              style={{ width: `${postTaxPct}%` }}
+              title={`Post-Tax: ${formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { maximumFractionDigits: 0 })} (${postTaxPct.toFixed(1)}%)`}
+            >
+              {postTaxPct > 5 && <span>{postTaxPct.toFixed(1)}%</span>}
+            </div>
+          )}
+          <div 
+            className="bar-segment net-segment" 
+            style={{ width: `${netPct}%` }}
+            title={`Net Pay: ${formatWithSymbol(displayBreakdown.netPay, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
+          >
+            <span>{netPct.toFixed(1)}%</span>
+          </div>
+        </div>
+        <div className="bar-labels">
+          {displayBreakdown.preTaxDeductions > 0 && (
+            <div className="bar-label pretax-label">
+              <span className="label-dot pretax-dot"></span>
+              Pre-Tax Deductions
+            </div>
+          )}
+          <div className="bar-label tax-label">
+            <span className="label-dot tax-dot"></span>
+            Taxes
+          </div>
+          {displayBreakdown.postTaxDeductions > 0 && (
+            <div className="bar-label posttax-label">
+              <span className="label-dot posttax-dot"></span>
+              Post-Tax Deductions
+            </div>
+          )}
+          <div className="bar-label net-label">
+            <span className="label-dot net-dot"></span>
+            Take Home
+          </div>
+        </div>
+      </div>
 
       {/* Visual Flow */}
       <div className="visual-flow">
@@ -421,52 +492,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         </div>
       </div>
 
-      {/* Visual Bar */}
-      <div className="breakdown-bar">
-        <h3>Visual Breakdown</h3>
-        <div className="bar-container">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div 
-              className="bar-segment pretax-segment" 
-              style={{ width: `${preTaxPct}%` }}
-              title={`Pre-Tax: ${formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
-            >
-              {preTaxPct > 5 && <span>{preTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div 
-            className="bar-segment tax-segment" 
-            style={{ width: `${taxPct}%` }}
-            title={`Taxes: ${formatWithSymbol(displayBreakdown.totalTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
-          >
-            <span>{taxPct.toFixed(1)}%</span>
-          </div>
-          <div 
-            className="bar-segment net-segment" 
-            style={{ width: `${netPct}%` }}
-            title={`Net Pay: ${formatWithSymbol(displayBreakdown.netPay, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
-          >
-            <span>{netPct.toFixed(1)}%</span>
-          </div>
-        </div>
-        <div className="bar-labels">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div className="bar-label pretax-label">
-              <span className="label-dot pretax-dot"></span>
-              Pre-Tax Deductions
-            </div>
-          )}
-          <div className="bar-label tax-label">
-            <span className="label-dot tax-dot"></span>
-            Taxes
-          </div>
-          <div className="bar-label net-label">
-            <span className="label-dot net-dot"></span>
-            Take Home
-          </div>
-        </div>
-      </div>
-
       {/* Waterfall Breakdown with Per-Account Editing */}
       {budgetData.accounts.length > 0 && (
         <div className="waterfall-breakdown">
@@ -519,14 +544,14 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       )}
 
                       {[...displayAccount.allocationCategories].sort((a, b) => b.amount - a.amount).map((category) => (
-                        <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan ? 'bill-category-row' : ''}`}>
-                          {category.isBill || category.isBenefit || category.isRetirement || category.isLoan ? (
+                        <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? 'bill-category-row' : ''}`}>
+                          {category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? (
                             <>
                               <input
                                 type="text"
                                 value={category.name}
                                 onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
-                                placeholder={category.isBill ? 'Bills category name' : (category.isBenefit ? 'Benefits category name' : (category.isRetirement ? 'Retirement category name' : 'Loan Payments category name'))}
+                                placeholder={category.isBill ? 'Bills category name' : (category.isBenefit ? 'Deductions category name' : (category.isRetirement ? 'Retirement category name' : (category.isLoan ? 'Loan Payments category name' : 'Savings category name')))}
                                 className="category-name-input"
                               />
                               <div className="bill-amount-display">
@@ -542,6 +567,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                 )}
                                 {category.isLoan && category.loanCount && category.loanCount > 0 && (
                                   <span className="bill-count-badge">{category.loanCount}</span>
+                                )}
+                                {category.isSavings && category.savingsCount && category.savingsCount > 0 && (
+                                  <span className="bill-count-badge">{category.savingsCount}</span>
                                 )}
                               </div>
                               <div className="category-spacer"></div>
@@ -592,11 +620,19 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                     </div>
                   ) : (
                     fundingItem.categories.length > 0 && [...fundingItem.categories].sort((a, b) => b.amount - a.amount).map((category) => (
-                      <div key={category.id} className={`waterfall-row waterfall-category-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan ? 'bill-category-view' : ''}`}>
-                        {category.isBill || category.isBenefit || category.isRetirement || category.isLoan ? (
+                      <div key={category.id} className={`waterfall-row waterfall-category-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? 'bill-category-view' : ''}`}>
+                        {category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? (
                           <button
                             className="waterfall-label category-label category-button"
-                            onClick={() => category.isBill ? onNavigateToBills?.(fundingItem.account.id) : (category.isBenefit ? onNavigateToBenefits?.(fundingItem.account.id) : (category.isRetirement ? onNavigateToRetirement?.(fundingItem.account.id) : onNavigateToLoans?.(fundingItem.account.id)))}
+                            onClick={() => category.isBill
+                              ? onNavigateToBills?.(fundingItem.account.id)
+                              : (category.isBenefit
+                                ? onNavigateToBills?.(fundingItem.account.id)
+                                : (category.isRetirement
+                                  ? onNavigateToRetirement?.(fundingItem.account.id)
+                                  : (category.isLoan
+                                    ? onNavigateToLoans?.(fundingItem.account.id)
+                                    : onNavigateToSavings?.(fundingItem.account.id))))}
                           >
                             {category.name}
                             {category.isBill && category.billCount && category.billCount > 0 && (
@@ -610,6 +646,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                             )}
                             {category.isLoan && category.loanCount && category.loanCount > 0 && (
                               <span className="bill-count-badge">{category.loanCount}</span>
+                            )}
+                            {category.isSavings && category.savingsCount && category.savingsCount > 0 && (
+                              <span className="bill-count-badge">{category.savingsCount}</span>
                             )}
                           </button>
                         ) : (
@@ -647,24 +686,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
 function calculateBillPerPaycheck(bill: Bill, payFrequency: string): number {
   const paychecksPerYear = getPaychecksPerYear(payFrequency);
-  const billsPerYear = getBillsPerYear(bill.frequency, bill.customFrequencyDays);
+  const billsPerYear = getBillFrequencyOccurrencesPerYear(bill.frequency, bill.customFrequencyDays);
   
   // Calculate average per paycheck: (total per year) / (paychecks per year)
   const totalPerYear = bill.amount * billsPerYear;
   return roundUpToCent(totalPerYear / paychecksPerYear);
-}
-
-function getBillsPerYear(frequency: string, customDays?: number): number {
-  switch (frequency) {
-    case 'weekly': return 52;
-    case 'bi-weekly': return 26;
-    case 'monthly': return 12;
-    case 'quarterly': return 4;
-    case 'semi-annual': return 2;
-    case 'yearly': return 1;
-    case 'custom': return customDays ? 365 / customDays : 1;
-    default: return 1;
-  }
 }
 
 function normalizeAccounts(
@@ -673,6 +699,7 @@ function normalizeAccounts(
   benefits: Benefit[],
   retirement: RetirementElection[],
   loans: Loan[],
+  savingsContributions: SavingsContribution[],
   payFrequency: string,
   grossPayPerPaycheck: number
 ): AllocationAccount[] {
@@ -687,10 +714,13 @@ function normalizeAccounts(
     const existingRetirementCategory = (account.allocationCategories || []).find(
       cat => cat.id.startsWith('__retirement_')
     );
+    const existingSavingsCategory = (account.allocationCategories || []).find(
+      cat => cat.id.startsWith('__savings_')
+    );
 
     // Get user-defined categories
     const userCategories = (account.allocationCategories || [])
-      .filter(cat => !cat.id.startsWith('__bills_') && !cat.id.startsWith('__benefits_') && !cat.id.startsWith('__retirement_') && !cat.id.startsWith('__loans_'))
+      .filter(cat => !cat.id.startsWith('__bills_') && !cat.id.startsWith('__benefits_') && !cat.id.startsWith('__retirement_') && !cat.id.startsWith('__loans_') && !cat.id.startsWith('__savings_'))
       .map((category) => ({
         id: category.id,
         name: category.name,
@@ -698,6 +728,7 @@ function normalizeAccounts(
         isBill: false,
         isBenefit: false,
         isRetirement: false,
+        isSavings: false,
       }));
 
     // Get bills for this account and calculate total
@@ -711,6 +742,11 @@ function normalizeAccounts(
     // Get account-sourced retirement contributions for this account and calculate total
     const accountRetirement = retirement.filter(
       election => election.deductionSource === 'account' && election.sourceAccountId === account.id
+    );
+
+    // Get account-funded savings/investment contributions for this account
+    const accountSavings = savingsContributions.filter(
+      item => item.accountId === account.id && item.enabled !== false
     );
 
     const autoCategories: AllocationCategory[] = [];
@@ -764,6 +800,25 @@ function normalizeAccounts(
       });
     }
 
+    if (accountSavings.length > 0) {
+      const paychecksPerYear = getPaychecksPerYear(payFrequency);
+      const savingsTotal = accountSavings.reduce((sum, item) => {
+        const occurrencesPerYear = getSavingsFrequencyOccurrencesPerYear(item.frequency);
+        const perPaycheck = occurrencesPerYear === paychecksPerYear
+          ? roundUpToCent(item.amount)
+          : roundUpToCent((item.amount * occurrencesPerYear) / paychecksPerYear);
+        return sum + perPaycheck;
+      }, 0);
+
+      autoCategories.push({
+        id: `__savings_${account.id}`,
+        name: existingSavingsCategory?.name || 'Savings & Investments',
+        amount: roundUpToCent(savingsTotal),
+        isSavings: true,
+        savingsCount: accountSavings.length,
+      });
+    }
+
     // Get loans for this account and calculate total
     const accountLoans = loans.filter(loan => loan.accountId === account.id && loan.enabled !== false);
     const existingLoanCategory = (account.allocationCategories || []).find(
@@ -773,7 +828,6 @@ function normalizeAccounts(
     if (accountLoans.length > 0) {
       const paychecksPerYear = getPaychecksPerYear(payFrequency);
       const loanTotal = accountLoans.reduce((sum, loan) => {
-        // Convert monthly payment to per-paycheck
         const perPaycheckAmount = (loan.monthlyPayment * 12) / paychecksPerYear;
         return sum + perPaycheckAmount;
       }, 0);
@@ -809,6 +863,8 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
       retirementCount: category.retirementCount,
       isLoan: category.isLoan,
       loanCount: category.loanCount,
+      isSavings: category.isSavings,
+      savingsCount: category.savingsCount,
     }));
 
     const totalAmount = categories.reduce((sum, cat) => sum + cat.amount, 0);

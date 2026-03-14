@@ -1,4 +1,4 @@
-import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency, Loan } from '../types/auth';
+import type { BudgetData, Account, Bill, Benefit, RetirementElection, PayFrequency, Loan, SavingsContribution } from '../types/auth';
 import { getPaychecksPerYear } from './payPeriod';
 
 /**
@@ -168,14 +168,43 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
 
   // Generate demo loans based on income level and random selection
   const loans: Loan[] = [];
+  const savingsContributions: SavingsContribution[] = [];
+
+  // Add sample savings/investment transfers when there are non-checking accounts
+  const savingsAccount = accounts.find((account) => account.type === 'savings');
+  const investmentAccount = accounts.find((account) => account.type === 'investment');
+  if (savingsAccount && Math.random() > 0.25) {
+    savingsContributions.push({
+      id: crypto.randomUUID(),
+      name: 'Emergency Fund Transfer',
+      amount: roundToCents(Math.max(25, grossPerPaycheck * randomBetween(0.03, 0.08))),
+      frequency: 'bi-weekly',
+      accountId: checkingId,
+      type: 'savings',
+      enabled: true,
+    });
+  }
+  if (investmentAccount && Math.random() > 0.35) {
+    savingsContributions.push({
+      id: crypto.randomUUID(),
+      name: 'Brokerage Auto-Invest',
+      amount: roundToCents(Math.max(30, grossPerPaycheck * randomBetween(0.03, 0.07))),
+      frequency: 'monthly',
+      accountId: checkingId,
+      type: 'investment',
+      enabled: true,
+    });
+  }
   
   // Mortgage (30-40% of monthly gross for higher earners)
   if (annualGrossPay >= 50000 && Math.random() > 0.5) {
     const mortgagePercent = randomBetween(0.25, 0.35);
     const monthlyPayment = roundToCents(monthlyGross * mortgagePercent);
-    const interestRate = randomBetween(3.5, 6.5);
+    const interestRate = roundToPrecision(randomBetween(3.5, 6.5), 3);
+    const propertyTaxRate = roundToPrecision(randomBetween(0.8, 2.2), 3);
     const termMonths = 360; // 30-year mortgage
     const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
+    const propertyValue = roundToCents(principal * randomBetween(1.05, 1.35));
     const monthsElapsed = Math.floor(Math.random() * 120); // 0-10 years into mortgage
     const currentBalance = roundToCents(calculateRemainingBalance(principal, interestRate, termMonths, monthsElapsed));
     
@@ -186,6 +215,8 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
       principal,
       currentBalance,
       interestRate,
+      propertyTaxRate,
+      propertyValue,
       monthlyPayment,
       accountId: checkingId,
       startDate: new Date(year - Math.floor(monthsElapsed / 12), (new Date().getMonth() - (monthsElapsed % 12) + 12) % 12).toISOString().split('T')[0],
@@ -198,7 +229,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
   if (annualGrossPay >= 35000 && Math.random() > 0.4) {
     const autoPercent = randomBetween(0.08, 0.14);
     const monthlyPayment = roundToCents(monthlyGross * autoPercent);
-    const interestRate = randomBetween(3.0, 8.5);
+    const interestRate = roundToPrecision(randomBetween(3.0, 8.5), 3);
     const termMonths = Math.random() > 0.5 ? 60 : 72; // 5 or 6 years
     const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
     const monthsElapsed = Math.floor(Math.random() * (termMonths * 0.7)); // Up to 70% through loan
@@ -223,7 +254,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
   if (annualGrossPay >= 30000 && annualGrossPay < 90000 && Math.random() > 0.5) {
     const studentPercent = randomBetween(0.07, 0.12);
     const monthlyPayment = roundToCents(monthlyGross * studentPercent);
-    const interestRate = randomBetween(4.5, 7.0);
+    const interestRate = roundToPrecision(randomBetween(4.5, 7.0), 3);
     const termMonths = 120; // 10-year standard repayment
     const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
     const monthsElapsed = Math.floor(Math.random() * 84); // Up to 7 years in
@@ -249,7 +280,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
   if (Math.random() > creditCardChance) {
     const ccPercent = randomBetween(0.02, 0.05);
     const monthlyPayment = roundToCents(monthlyGross * ccPercent);
-    const interestRate = randomBetween(15.0, 24.9);
+    const interestRate = roundToPrecision(randomBetween(15.0, 24.9), 3);
     const currentBalance = roundToCents(monthlyPayment * randomBetween(12, 36)); // 1-3 years worth
     const principal = currentBalance; // Credit cards don't have fixed principal
     
@@ -272,7 +303,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
   if (Math.random() > 0.75) {
     const personalPercent = randomBetween(0.05, 0.09);
     const monthlyPayment = roundToCents(monthlyGross * personalPercent);
-    const interestRate = randomBetween(7.0, 15.0);
+    const interestRate = roundToPrecision(randomBetween(7.0, 15.0), 3);
     const termMonths = Math.random() > 0.5 ? 36 : 60; // 3 or 5 years
     const principal = roundToCents(calculatePrincipal(monthlyPayment, interestRate, termMonths));
     const monthsElapsed = Math.floor(Math.random() * (termMonths * 0.5)); // Up to halfway through
@@ -318,6 +349,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     loans,
     benefits,
     retirement,
+    savingsContributions,
     settings: {
       currency,
       locale: 'en-US',
@@ -331,6 +363,11 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
 
 function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function roundToPrecision(value: number, precision: number): number {
+  const factor = Math.pow(10, precision);
+  return Math.round(value * factor) / factor;
 }
 
 function randomBetween(min: number, max: number): number {

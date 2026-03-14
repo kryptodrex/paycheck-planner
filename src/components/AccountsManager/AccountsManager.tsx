@@ -31,6 +31,12 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
     updateAccount(id, updates);
   };
 
+  const handleMoveAccount = (fromIndex: number, toIndex: number) => {
+    const newAccounts = [...accounts];
+    [newAccounts[fromIndex], newAccounts[toIndex]] = [newAccounts[toIndex], newAccounts[fromIndex]];
+    updateBudgetData({ accounts: newAccounts });
+  };
+
   const handleDeleteAccount = (id: string) => {
     if (accounts.length <= 1) {
       return;
@@ -140,6 +146,7 @@ const AccountsManager: React.FC<AccountsManagerProps> = ({ onClose }) => {
           onAdd={handleAddAccount}
           onUpdate={handleUpdateAccount}
           onDelete={handleDeleteAccount}
+          onMove={handleMoveAccount}
           showToggleButton={true}
           infoMessage="These accounts are specific to this plan. Changes will only affect this plan file."
         />

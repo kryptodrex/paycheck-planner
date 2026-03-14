@@ -81,13 +81,13 @@ jobs:
         id: version
         run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
 
-      - name: Create repository backup zip
-        run: |
-          # Create a zip of the repo for backup (excluding large folders)
-          zip -r paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip . \
-            -x "node_modules/*" "dist/*" "dist-electron/*" "release/*" ".git/*" "coverage/*" "build/*" ".vscode/*" \
-            -q
-          ls -lh paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
+      # - name: Create repository backup zip
+      #   run: |
+      #     # Create a zip of the repo for backup (excluding large folders)
+      #     zip -r paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip . \
+      #       -x "node_modules/*" "dist/*" "dist-electron/*" "release/*" ".git/*" "coverage/*" "build/*" ".vscode/*" \
+      #       -q
+      #     ls -lh paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
 
       - name: Create beta release metadata
         id: beta_meta
@@ -123,7 +123,6 @@ jobs:
             all-artifacts/paycheck-planner-mac/**/*.dmg
             all-artifacts/paycheck-planner-win/**/*.exe
             all-artifacts/paycheck-planner-linux/**/*.AppImage
-            paycheck-planner-repo-backup-v${{ steps.version.outputs.VERSION }}.zip
           draft: false
           prerelease: true
           fail_on_unmatched_files: false

@@ -1,0 +1,265 @@
+.savings-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.savings-section {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.savings-manager .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.savings-manager .section-header h2 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.savings-manager .section-header p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.savings-manager .section-total {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.savings-manager .section-total > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.savings-manager .section-total-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.savings-manager .section-total-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.savings-manager .field-error {
+  border-color: var(--error-color) !important;
+}
+
+.savings-manager .empty-state {
+  text-align: center;
+  padding: 2rem;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+}
+
+.savings-manager .empty-icon {
+  font-size: 2.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.savings-list,
+.retirement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.savings-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.savings-item-disabled {
+  opacity: 0.55;
+}
+
+.savings-info h4,
+.retirement-info h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.savings-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.savings-type-badge,
+.savings-account-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.savings-type-badge.savings {
+  background: color-mix(in srgb, var(--info-color) 18%, transparent);
+  color: var(--info-color);
+}
+
+.savings-type-badge.investment {
+  background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  color: var(--accent-primary);
+}
+
+.savings-account-badge {
+  background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
+  color: var(--text-secondary);
+}
+
+.savings-frequency,
+.savings-notes {
+  margin-top: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.savings-notes {
+  white-space: pre-wrap;
+}
+
+.savings-amount {
+  display: flex;
+  gap: 0.9rem;
+}
+
+.savings-amount .amount-display {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.savings-amount .amount-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.savings-amount .amount {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.savings-actions,
+.retirement-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.retirement-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.retirement-info {
+  flex: 1;
+}
+
+.retirement-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.retirement-details .detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.retirement-details .label {
+  color: var(--text-secondary);
+}
+
+.retirement-details .value {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.retirement-details .total-detail {
+  margin-top: 0.45rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.retirement-details .value.emphasized {
+  font-weight: 600;
+}
+
+.retirement-form-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.retirement-form-section h4 {
+  margin: 0 0 0.9rem 0;
+}
+
+.retirement-form-divider {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.savings-manager .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .savings-item {
+    grid-template-columns: 1fr;
+  }
+
+  .savings-amount {
+    justify-content: flex-start;
+  }
+
+  .savings-amount .amount-display {
+    align-items: flex-start;
+  }
+
+  .retirement-item {
+    flex-direction: column;
+  }
+
+  .retirement-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .savings-manager .form-row {
+    grid-template-columns: 1fr;
+  }
+}

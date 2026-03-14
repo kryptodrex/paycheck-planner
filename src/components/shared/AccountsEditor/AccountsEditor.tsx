@@ -9,6 +9,7 @@ interface AccountsEditorProps {
   onAdd: (account: Omit<Account, 'id'>) => void;
   onUpdate: (id: string, updates: Partial<Account>) => void;
   onDelete: (id: string) => void;
+  onMove?: (fromIndex: number, toIndex: number) => void;
   showToggleButton?: boolean;
   infoMessage?: string;
   listLabel?: string;
@@ -21,6 +22,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
   onAdd,
   onUpdate,
   onDelete,
+  onMove,
   showToggleButton = true,
   infoMessage,
   listLabel = 'Your Accounts',
@@ -35,6 +37,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<Account['type']>('checking');
   const [newAccountIcon, setNewAccountIcon] = useState(getDefaultAccountIcon('checking'));
+  const [animatingIndices, setAnimatingIndices] = useState<{ from: number; to: number } | null>(null);
 
   const handleStartEdit = (account: Account) => {
     setEditingId(account.id);
@@ -91,6 +94,19 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
     }
 
     onDelete(id);
+  };
+
+  const handleReorder = (fromIndex: number, toIndex: number) => {
+    if (!onMove) return;
+    
+    // Set animation state
+    setAnimatingIndices({ from: fromIndex, to: toIndex });
+    
+    // Wait for animation to complete before actually reordering
+    setTimeout(() => {
+      onMove(fromIndex, toIndex);
+      setAnimatingIndices(null);
+    }, 300); // Match this with CSS animation duration
   };
 
   return (
@@ -169,90 +185,133 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
       <div className="accounts-list">
         <h3>{listLabel}</h3>
         {listSubtitle && <p className="accounts-list-subtitle">{listSubtitle}</p>}
-        {accounts.map((account) => (
-          <div key={account.id} className="account-item">
-            <div className="account-details">
-              {editingId === account.id ? (
-                <>
-                  <div className="account-edit-form">
-                    <input
-                      type="text"
-                      className="account-icon-input"
-                      value={editingIcon}
-                      onChange={(e) => setEditingIcon(e.target.value)}
-                      placeholder="💰"
-                      maxLength={2}
-                    />
-                    <input
-                      autoFocus
-                      type="text"
-                      className="account-name-input"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSaveEdit(account);
-                        } else if (e.key === 'Escape') {
-                          handleCancelEdit();
-                        }
-                      }}
-                    />
-                    <select
-                      className="account-type-select"
-                      value={editingType}
-                      onChange={(e) => {
-                        const newType = e.target.value as Account['type'];
-                        setEditingType(newType);
-                        if (!editingIcon || editingIcon === getDefaultAccountIcon(account.type)) {
-                          setEditingIcon(getDefaultAccountIcon(newType));
-                        }
-                      }}
-                    >
-                      <option value="checking">Checking</option>
-                      <option value="savings">Savings</option>
-                      <option value="investment">Investment</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <div className="account-edit-actions">
-                      <Button variant="secondary" size="small" onClick={handleCancelEdit}>
-                        Cancel
-                      </Button>
-                      <Button variant="primary" size="small" onClick={() => handleSaveEdit(account)}>
-                        Save
-                      </Button>
+        {accounts.map((account, index) => {
+          const isMovingUp = animatingIndices?.from === index && animatingIndices?.to === index - 1;
+          const isMovingDown = animatingIndices?.from === index && animatingIndices?.to === index + 1;
+          const isBeingDisplacedUp = animatingIndices?.from === index - 1 && animatingIndices?.to === index;
+          const isBeingDisplacedDown = animatingIndices?.from === index + 1 && animatingIndices?.to === index;
+          
+          const upArrowWillDisappear = isMovingDown && index === 0;
+          const downArrowWillDisappear = isMovingUp && index === accounts.length - 1;
+          
+          const animationClass = 
+            isMovingUp ? 'account-item-moving-up' :
+            isMovingDown ? 'account-item-moving-down' :
+            isBeingDisplacedUp ? 'account-item-displaced-down' :
+            isBeingDisplacedDown ? 'account-item-displaced-up' :
+            '';
+          
+          return (
+            <div key={account.id} className={`account-item ${animationClass}`}>
+              <div className="account-details">
+                {editingId === account.id ? (
+                  <>
+                    <div className="account-edit-form">
+                      <input
+                        type="text"
+                        className="account-icon-input"
+                        value={editingIcon}
+                        onChange={(e) => setEditingIcon(e.target.value)}
+                        placeholder="💰"
+                        maxLength={2}
+                      />
+                      <input
+                        autoFocus
+                        type="text"
+                        className="account-name-input"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveEdit(account);
+                          } else if (e.key === 'Escape') {
+                            handleCancelEdit();
+                          }
+                        }}
+                      />
+                      <select
+                        className="account-type-select"
+                        value={editingType}
+                        onChange={(e) => {
+                          const newType = e.target.value as Account['type'];
+                          setEditingType(newType);
+                          if (!editingIcon || editingIcon === getDefaultAccountIcon(account.type)) {
+                            setEditingIcon(getDefaultAccountIcon(newType));
+                          }
+                        }}
+                      >
+                        <option value="checking">Checking</option>
+                        <option value="savings">Savings</option>
+                        <option value="investment">Investment</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <div className="account-edit-actions">
+                        <Button variant="secondary" size="small" onClick={handleCancelEdit}>
+                          Cancel
+                        </Button>
+                        <Button variant="primary" size="small" onClick={() => handleSaveEdit(account)}>
+                          Save
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="account-name-display">
+                    <span className="account-icon-display">
+                      {account.icon || getDefaultAccountIcon(account.type)}
+                    </span>
+                    <div className="account-info-text">
+                      <h4>{account.name}</h4>
+                      <span className="account-type">{account.type}</span>
                     </div>
                   </div>
-                </>
-              ) : (
-                <div className="account-name-display">
-                  <span className="account-icon-display">
-                    {account.icon || getDefaultAccountIcon(account.type)}
-                  </span>
-                  <div className="account-info-text">
-                    <h4>{account.name}</h4>
-                    <span className="account-type">{account.type}</span>
-                  </div>
+                )}
+              </div>
+
+              {editingId !== account.id && (
+                <div className="account-actions">
+                  {onMove && (
+                    <>
+                      {(index > 0 || upArrowWillDisappear) && (
+                        <button
+                          className={`account-action-btn ${upArrowWillDisappear ? 'arrow-fade-out' : ''}`}
+                          onClick={() => handleReorder(index, index - 1)}
+                          title="Move up"
+                          aria-label="Move up"
+                          disabled={!!animatingIndices || upArrowWillDisappear}
+                        >
+                          ↑
+                        </button>
+                      )}
+                      {(index < accounts.length - 1 || downArrowWillDisappear) && (
+                        <button
+                          className={`account-action-btn ${downArrowWillDisappear ? 'arrow-fade-out' : ''}`}
+                          onClick={() => handleReorder(index, index + 1)}
+                          title="Move down"
+                          aria-label="Move down"
+                          disabled={!!animatingIndices || downArrowWillDisappear}
+                        >
+                          ↓
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <Button variant="icon" onClick={() => handleStartEdit(account)} title="Edit account">
+                    ✎
+                  </Button>
+                  <Button
+                    variant="icon"
+                    onClick={() => handleDeleteAccount(account.id)}
+                    title="Delete account"
+                    disabled={accounts.length <= minAccounts}
+                  >
+                    🗑
+                  </Button>
                 </div>
               )}
             </div>
-
-            {editingId !== account.id && (
-              <div className="account-actions">
-                <Button variant="icon" onClick={() => handleStartEdit(account)} title="Edit account">
-                  ✎
-                </Button>
-                <Button
-                  variant="icon"
-                  onClick={() => handleDeleteAccount(account.id)}
-                  title="Delete account"
-                  disabled={accounts.length <= minAccounts}
-                >
-                  🗑
-                </Button>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {infoMessage && (

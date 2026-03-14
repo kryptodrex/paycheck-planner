@@ -94,6 +94,11 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
     migrated.retirement = [];
   }
 
+  // Ensure savingsContributions array exists
+  if (!migrated.savingsContributions) {
+    migrated.savingsContributions = [];
+  }
+
   return migrated;
 }
 
@@ -855,6 +860,7 @@ export class FileStorageService {
       loans: [],
       benefits: [],
       retirement: [],
+      savingsContributions: [],
       settings: {
         currency,
         locale: 'en-US',
