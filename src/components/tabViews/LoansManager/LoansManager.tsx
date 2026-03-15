@@ -11,6 +11,7 @@ import { buildAccountRows, groupByAccountId } from '../../../utils/accountGroupi
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
 import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../../_shared';
+import '../tabViews.shared.css';
 import './LoansManager.css';
 
 interface LoansManagerProps {
@@ -353,7 +354,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     const displayAmount = (monthlyAmount: number): number => monthlyToDisplayAmount(monthlyAmount, paychecksPerYear, displayMode);
 
     return (
-        <div className="loans-manager">
+        <div className="tab-view loans-manager">
             <PageHeader
                 title="Loan Payments"
                 subtitle="Track recurring mortgage, auto, student, and other loan payments"
@@ -375,13 +376,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
 
             <div className="loans-content">
                 {budgetData.accounts.length === 0 ? (
-                    <div className="empty-state loans-empty-state">
+                    <div className="empty-state empty-state--dashed empty-state--compact">
                         <div className="empty-icon">🏦</div>
                         <h3>No Accounts Set Up</h3>
                         <p>Accounts are created during setup. Add an account before assigning loan payments.</p>
                     </div>
                 ) : loansList.length === 0 ? (
-                    <div className="empty-state loans-empty-state">
+                    <div className="empty-state empty-state--dashed empty-state--compact">
                         <div className="empty-icon">💸</div>
                         <h3>No Loan Payments Yet</h3>
                         <p>Add your first recurring loan payment to track it across the app.</p>
@@ -403,7 +404,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                         }).map(({ account, items: accountLoans, totalMonthly }) => (
                                 <section key={account.id} className="account-section" id={`account-${account.id}`}>
                                     <div className="account-header">
-                                        <div className="account-title">
+                                        <div className="account-info">
                                             <span className="account-icon" style={{ color: account.color }}>
                                                 {account.icon || getDefaultAccountIcon(account.type)}
                                             </span>

@@ -133,7 +133,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
       <Modal
         isOpen={true}
         onClose={onClose}
-        contentClassName="accounts-manager"
+        contentClassName="accounts-modal"
         header="Manage Accounts"
         footer={
           <Button variant="primary" onClick={onClose}>

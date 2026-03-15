@@ -65,6 +65,10 @@
   color: var(--text-tertiary);
 }
 
+.field-error {
+  border-color: var(--error-color) !important;
+}
+
 .form-group textarea {
   resize: vertical;
   min-height: 100px;

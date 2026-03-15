@@ -14,6 +14,7 @@ import { fromDisplayAmount, toDisplayAmount } from '../../../utils/displayAmount
 import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../../_shared';
 import PaySettingsModal from '../../modals/PaySettingsModal';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
+import '../tabViews.shared.css';
 import './PayBreakdown.css';
 
 type AllocationCategory = {
@@ -250,7 +251,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   };
 
   return (
-    <div className="pay-breakdown">
+    <div className="tab-view pay-breakdown">
       <PageHeader
         title="Pay Breakdown"
         subtitle="See where your paycheck goes from gross to net"

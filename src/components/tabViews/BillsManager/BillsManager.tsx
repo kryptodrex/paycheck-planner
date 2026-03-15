@@ -13,6 +13,7 @@ import { buildAccountRows, groupByAccountId } from '../../../utils/accountGroupi
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
 import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import '../tabViews.shared.css';
 import './BillsManager.css';
 
 interface BillsManagerProps {
@@ -277,7 +278,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   };
 
   return (
-    <div className="bills-manager">
+    <div className="tab-view bills-manager">
       <PageHeader
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"

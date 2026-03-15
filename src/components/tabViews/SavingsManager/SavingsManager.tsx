@@ -14,6 +14,7 @@ import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../..
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
+import '../tabViews.shared.css';
 import './SavingsManager.css';
 
 interface SavingsManagerProps {
@@ -456,7 +457,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   };
 
   return (
-    <div className="savings-manager">
+    <div className="tab-view savings-manager">
       <PageHeader
         title="Savings"
         subtitle="Manage savings/investment transfers and retirement contributions"
@@ -489,7 +490,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         </div>
 
         {sortedSavings.length === 0 ? (
-          <div className="empty-state">
+          <div className="empty-state empty-state--dashed empty-state--compact">
             <div className="empty-icon">💰</div>
             <h3>No Savings Contributions Yet</h3>
             <p>Add regular savings or investment transfers to get started</p>
@@ -561,7 +562,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         </div>
 
         {sortedRetirement.length === 0 ? (
-          <div className="empty-state">
+          <div className="empty-state empty-state--dashed empty-state--compact">
             <div className="empty-icon">🏦</div>
             <h3>No Retirement Plans Yet</h3>
             <p>Add your retirement plans to get started</p>

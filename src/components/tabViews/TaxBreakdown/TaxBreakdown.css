@@ -1,12 +1,3 @@
-.tax-breakdown {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 1.5rem;
-    overflow-y: auto;
-    height: 100%;
-}
-
 .breakdown-header {
     display: flex;
     justify-content: space-between;
@@ -124,10 +115,6 @@
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
 }
 
-.field-error {
-    border-color: var(--error-color) !important;
-}
-
 .tax-lines-editor {
     display: flex;
     flex-direction: column;
@@ -200,10 +187,6 @@
 }
 
 @media (max-width: 768px) {
-    .tax-breakdown {
-        padding: 1rem;
-    }
-
     .breakdown-header {
         flex-direction: column;
         align-items: flex-start;

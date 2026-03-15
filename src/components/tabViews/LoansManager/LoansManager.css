@@ -1,99 +1,19 @@
-.loans-manager {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  overflow-y: auto;
-  height: 100%;
-}
-
 .loans-content {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.loans-manager .empty-state {
-  text-align: center;
-  color: var(--text-secondary);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: var(--shadow-md);
-  padding: 2.5rem 1.5rem;
-}
-
-.loans-manager .empty-state p {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.loans-manager .loans-empty-state {
-  padding: 2rem;
-  border: 2px dashed var(--border-color);
-  border-radius: 0.5rem;
-  background-color: var(--background-secondary);
-  box-shadow: none;
-}
-
-.loans-manager .loans-empty-state .empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.loans-manager .loans-empty-state h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem 0;
-  color: var(--text-primary);
-}
-
-.loans-manager .loans-empty-state p {
-  color: var(--text-secondary);
-  margin: 0;
-  font-size: 0.875rem;
-}
-
-.loans-manager .account-section {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-}
-
-.loans-manager .account-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.25rem;
-  background: var(--header-gradient);
-  color: white;
-}
-
-.loans-manager .account-title {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
 .loans-manager .account-icon {
   font-size: 1.75rem;
 }
 
-.loans-manager .account-title h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: white;
+.loans-manager .account-info {
+  gap: 0.75rem;
 }
 
-.loans-manager .account-total {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
+.loans-manager .account-info h3 {
+  font-weight: 600;
 }
 
 .loans-manager .total-label {
@@ -282,11 +202,6 @@
 
 .loans-manager .loan-actions .btn-icon:hover:not(:disabled) {
   opacity: 1;
-}
-
-.loans-manager .field-error,
-.loans-manager .input-with-prefix input.field-error {
-  border-color: var(--error-color) !important;
 }
 
 .loan-schedule-modal {
@@ -483,20 +398,6 @@
 }
 
 @media (max-width: 768px) {
-  .loans-manager {
-    padding: 1rem;
-  }
-
-  .loans-manager .account-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .loans-manager .account-total {
-    align-items: flex-start;
-    text-align: left;
-  }
-
   .loans-manager .loan-header {
     flex-direction: column;
     align-items: flex-start;
