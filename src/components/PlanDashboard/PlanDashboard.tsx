@@ -1038,7 +1038,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   return (
     <div className={`plan-dashboard layout-with-tabs-${tabPosition}`}>
-      <header className="dashboard-header">
+      <header className="dashboard-header app-drag-region">
         <div className="header-left">
           <div className="plan-title-block">
             {isEditingPlanName ? (

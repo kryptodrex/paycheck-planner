@@ -324,7 +324,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   return (
     <div className="view-screen setup-wizard">
       <div className="view-screen-card wizard-container">
-        <div className="wizard-header">
+        <div className="wizard-header app-drag-region">
           <h1>Setup Your Paycheck Plan</h1>
           <ProgressBar
             percentage={(step / totalSteps) * 100}

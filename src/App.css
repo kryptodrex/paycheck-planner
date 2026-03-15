@@ -90,3 +90,19 @@ html, body {
 .drag-bar select {
   -webkit-app-region: no-drag;
 }
+
+/* Opt-in utility: make an entire header/region draggable. */
+.app-drag-region {
+  -webkit-app-region: drag;
+}
+
+/* Keep controls inside draggable regions interactive. */
+.app-drag-region button,
+.app-drag-region a,
+.app-drag-region input,
+.app-drag-region select,
+.app-drag-region textarea,
+.app-drag-region [role="button"],
+.app-drag-region .btn {
+  -webkit-app-region: no-drag;
+}

@@ -197,7 +197,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
         </div>
       )}
       <div className="view-screen-card welcome-card">
-        <div className="welcome-header">
+        <div className="welcome-header app-drag-region">
           <Button
             className="welcome-settings-btn"
             variant="utility"
