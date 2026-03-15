@@ -39,7 +39,7 @@
         "name": "Paycheck Planner Budget",
         "description": "Paycheck Planner budget file",
         "role": "Editor",
-        "icon": "build/icon"
+        "icon": "build/budget-file-icon"
       }
     ],
     "directories": {
