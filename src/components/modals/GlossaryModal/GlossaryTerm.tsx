@@ -70,9 +70,9 @@ const GlossaryTerm: React.FC<GlossaryTermProps> = ({ termId, children, className
     };
   }, [isOpen, termsEnabled]);
 
-  // Unknown term or glossary disabled: render children as plain text
+  // Unknown term or glossary disabled: keep original casing while rendering plain text.
   if (!term || !termsEnabled) {
-    return <>{children}</>;
+    return <span className="glossary-term-static">{children}</span>;
   }
 
   const openGlossary = () => {

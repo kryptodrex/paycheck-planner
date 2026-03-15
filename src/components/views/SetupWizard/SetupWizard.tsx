@@ -24,6 +24,22 @@ interface EditableTaxLine {
   error?: string;
 }
 
+const getDefaultTaxLinesForCurrency = (currencyCode: string): EditableTaxLine[] => {
+  if (currencyCode === 'USD') {
+    return [
+      { id: crypto.randomUUID(), label: 'Federal Tax', rate: '12' },
+      { id: crypto.randomUUID(), label: 'State Tax', rate: '5' },
+      { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2' },
+      { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45' },
+    ];
+  }
+
+  // Non-USD plans start with neutral labels and no assumed rates.
+  return [
+    { id: crypto.randomUUID(), label: 'Income Tax', rate: '0' },
+  ];
+};
+
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData } = useBudget();
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
@@ -55,12 +71,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [payFrequency, setPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
   const [minLeftover, setMinLeftover] = useState('0');
 
-  const [taxLines, setTaxLines] = useState<EditableTaxLine[]>([
-    { id: crypto.randomUUID(), label: 'Federal Tax', rate: '12' },
-    { id: crypto.randomUUID(), label: 'State Tax', rate: '5' },
-    { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2' },
-    { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45' },
-  ]);
+  const [taxLines, setTaxLines] = useState<EditableTaxLine[]>(() => getDefaultTaxLinesForCurrency(budgetData?.settings?.currency || 'USD'));
+  const [hasEditedTaxLines, setHasEditedTaxLines] = useState(false);
   const [taxRatesAutoEstimated, setTaxRatesAutoEstimated] = useState(false);
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
   const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
@@ -77,7 +89,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   ]);
 
   const handleNext = () => {
-    if (step === 3 && !taxRatesAutoEstimated) {
+    if (step === 3 && currency === 'USD' && !taxRatesAutoEstimated) {
       setTaxLines((prev) => applyEstimatedTaxRates(prev));
       setTaxRatesAutoEstimated(true);
     }
@@ -210,12 +222,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   const handleTaxLineChange = (id: string, field: 'label' | 'rate', value: string) => {
+    setHasEditedTaxLines(true);
     setTaxLines((prev) => prev.map((line) => (
       line.id === id ? { ...line, [field]: value, error: undefined } : line
     )));
   };
 
   const handleAddTaxLine = () => {
+    setHasEditedTaxLines(true);
     setTaxLines((prev) => [
       ...prev,
       { id: crypto.randomUUID(), label: '', rate: '0' },
@@ -223,7 +237,17 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   const handleRemoveTaxLine = (id: string) => {
+    setHasEditedTaxLines(true);
     setTaxLines((prev) => prev.filter((line) => line.id !== id));
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    setCurrency(value);
+
+    if (!hasEditedTaxLines) {
+      setTaxLines(getDefaultTaxLinesForCurrency(value));
+      setTaxRatesAutoEstimated(value !== 'USD');
+    }
   };
 
   const getEstimatedAnnualGross = () => {
@@ -344,7 +368,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               <FormGroup label="Currency" helperText="Choose your local currency for this plan">
                 <select
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
                   className="currency-select"
                 >
                   {CURRENCIES.map(curr => (
@@ -516,8 +540,16 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               </p>
 
               <InfoBox>
-                <strong>Starter estimates loaded:</strong> These tax percentages were prefilled from the pay amount you entered.
-                Review and adjust them if your actual withholding differs.
+                {currency === 'USD' ? (
+                  <>
+                    <strong>Starter estimates loaded:</strong> These tax percentages were prefilled from the pay amount you entered.
+                    Review and adjust them if your actual withholding differs.
+                  </>
+                ) : (
+                  <>
+                    <strong>No country-specific defaults loaded:</strong> Non-USD plans start with neutral tax lines so you can enter rates that match your local tax rules.
+                  </>
+                )}
               </InfoBox>
 
               <div className="tax-lines-editor">

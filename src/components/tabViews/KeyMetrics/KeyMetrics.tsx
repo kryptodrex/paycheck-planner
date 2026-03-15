@@ -157,7 +157,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         <MetricCard
           className="taxes-card"
           icon="🏛️"
-          title={<>Total <GlossaryTerm termId="withholding">Taxes</GlossaryTerm></>}
+          title={<>Total <GlossaryTerm termId="withholding">TAXES</GlossaryTerm></>}
           ariaLabel="Open taxes tab"
           onClick={onNavigateToTaxes}
         >
@@ -179,7 +179,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         <MetricCard
           className="net-card"
           icon="✅"
-          title={<>Total <GlossaryTerm termId="net-pay">Take Home Pay</GlossaryTerm></>}
+          title={<>Total <GlossaryTerm termId="net-pay">TAKE HOME PAY</GlossaryTerm></>}
           ariaLabel="Open pay breakdown tab"
           onClick={onNavigateToNetPay}
         >
@@ -223,7 +223,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         <MetricCard
           className="savings-card"
           icon="🏦"
-          title={<>Your <GlossaryTerm termId="allocation">Savings Rate</GlossaryTerm></>}
+          title={<>Your <GlossaryTerm termId="allocation">SAVINGS RATE</GlossaryTerm></>}
           ariaLabel="Open savings tab"
           onClick={onNavigateToSavings}
         >
@@ -245,7 +245,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         <MetricCard
           className="remaining-card"
           icon="💵"
-          title={<><GlossaryTerm termId="residual-amount">Remaining</GlossaryTerm> for Spending</>}
+          title={<><GlossaryTerm termId="residual-amount">REMAINING</GlossaryTerm> for Spending</>}
           ariaLabel="Open pay breakdown tab and scroll to remaining spending"
           onClick={onNavigateToRemaining}
         >
