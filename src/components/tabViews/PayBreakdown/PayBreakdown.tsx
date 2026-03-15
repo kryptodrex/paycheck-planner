@@ -48,6 +48,19 @@ type ValidationMessage = {
   message: string;
 };
 
+const isAutoCategory = (category: AllocationCategory): boolean => {
+  return Boolean(category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings);
+};
+
+const getCategoryItemCount = (category: AllocationCategory): number | null => {
+  if (category.isBill && category.billCount && category.billCount > 0) return category.billCount;
+  if (category.isBenefit && category.benefitCount && category.benefitCount > 0) return category.benefitCount;
+  if (category.isRetirement && category.retirementCount && category.retirementCount > 0) return category.retirementCount;
+  if (category.isLoan && category.loanCount && category.loanCount > 0) return category.loanCount;
+  if (category.isSavings && category.savingsCount && category.savingsCount > 0) return category.savingsCount;
+  return null;
+};
+
 interface PayBreakdownProps {
   displayMode: ViewMode;
   onDisplayModeChange: (mode: ViewMode) => void;
@@ -247,6 +260,27 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     });
   };
 
+  const navigateToCategorySource = (category: AllocationCategory, accountId: string) => {
+    if (category.isBill || category.isBenefit) {
+      onNavigateToBills?.(accountId);
+      return;
+    }
+
+    if (category.isRetirement) {
+      onNavigateToRetirement?.(accountId);
+      return;
+    }
+
+    if (category.isLoan) {
+      onNavigateToLoans?.(accountId);
+      return;
+    }
+
+    if (category.isSavings) {
+      onNavigateToSavings?.(accountId);
+    }
+  };
+
   return (
     <div className="tab-view pay-breakdown">
       <PageHeader
@@ -403,9 +437,12 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                         </div>
                       )}
 
-                      {[...displayAccount.allocationCategories].sort((a, b) => b.amount - a.amount).map((category) => (
-                        <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? 'bill-category-row' : ''}`}>
-                          {category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? (
+                      {[...displayAccount.allocationCategories].sort((a, b) => b.amount - a.amount).map((category) => {
+                        const categoryItemCount = getCategoryItemCount(category);
+
+                        return (
+                        <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${isAutoCategory(category) ? 'bill-category-row' : ''}`}>
+                          {isAutoCategory(category) ? (
                             <>
                               <input
                                 type="text"
@@ -416,20 +453,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                               />
                               <div className="bill-amount-display">
                                 {formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                {category.isBill && category.billCount && category.billCount > 0 && (
-                                  <span className="bill-count-badge">{category.billCount}</span>
-                                )}
-                                {category.isBenefit && category.benefitCount && category.benefitCount > 0 && (
-                                  <span className="bill-count-badge">{category.benefitCount}</span>
-                                )}
-                                {category.isRetirement && category.retirementCount && category.retirementCount > 0 && (
-                                  <span className="bill-count-badge">{category.retirementCount}</span>
-                                )}
-                                {category.isLoan && category.loanCount && category.loanCount > 0 && (
-                                  <span className="bill-count-badge">{category.loanCount}</span>
-                                )}
-                                {category.isSavings && category.savingsCount && category.savingsCount > 0 && (
-                                  <span className="bill-count-badge">{category.savingsCount}</span>
+                                {categoryItemCount && (
+                                  <span className="bill-count-badge">{categoryItemCount}</span>
                                 )}
                               </div>
                               <div className="category-spacer"></div>
@@ -464,7 +489,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                             </>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
 
                       <div className="waterfall-row waterfall-category-row category-actions-row">
                         <Button style={{ flexGrow: 1 }} className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
@@ -483,40 +509,23 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       )}
                     </div>
                   ) : (
-                    fundingItem.categories.length > 0 && [...fundingItem.categories].sort((a, b) => b.amount - a.amount).map((category) => (
-                      <div key={category.id} className={`waterfall-row waterfall-category-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? 'bill-category-view' : ''}`}>
-                        {category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? (
+                    fundingItem.categories.length > 0 && [...fundingItem.categories].sort((a, b) => b.amount - a.amount).map((category) => {
+                      const categoryItemCount = getCategoryItemCount(category);
+
+                      return (
+                      <div key={category.id} className={`waterfall-row waterfall-category-row ${isAutoCategory(category) ? 'bill-category-view' : ''}`}>
+                        {isAutoCategory(category) ? (
                           <button
                             className="waterfall-label category-label category-button"
-                            onClick={() => category.isBill
-                              ? onNavigateToBills?.(fundingItem.account.id)
-                              : (category.isBenefit
-                                ? onNavigateToBills?.(fundingItem.account.id)
-                                : (category.isRetirement
-                                  ? onNavigateToRetirement?.(fundingItem.account.id)
-                                  : (category.isLoan
-                                    ? onNavigateToLoans?.(fundingItem.account.id)
-                                    : onNavigateToSavings?.(fundingItem.account.id))))}
+                            onClick={() => navigateToCategorySource(category, fundingItem.account.id)}
                           >
-                            {category.name}
-                            {category.isBill && category.billCount && category.billCount > 0 && (
-                              <span className="bill-count-badge">{category.billCount}</span>
+                            {categoryItemCount && (
+                              <span className="bill-count-badge">{categoryItemCount}</span>
                             )}
-                            {category.isBenefit && category.benefitCount && category.benefitCount > 0 && (
-                              <span className="bill-count-badge">{category.benefitCount}</span>
-                            )}
-                            {category.isRetirement && category.retirementCount && category.retirementCount > 0 && (
-                              <span className="bill-count-badge">{category.retirementCount}</span>
-                            )}
-                            {category.isLoan && category.loanCount && category.loanCount > 0 && (
-                              <span className="bill-count-badge">{category.loanCount}</span>
-                            )}
-                            {category.isSavings && category.savingsCount && category.savingsCount > 0 && (
-                              <span className="bill-count-badge">{category.savingsCount}</span>
-                            )}
+                            <span className="category-name-text">{category.name}</span>
                           </button>
                         ) : (
-                          <span className="waterfall-label category-label">
+                          <span className="waterfall-label category-label category-name-static">
                             {category.name}
                           </span>
                         )}
@@ -524,7 +533,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                           {category.amount === 0 ? '-' : formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </React.Fragment>
               );
@@ -537,7 +547,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             {leftoverPerPaycheck < 0 && (
               <div className="waterfall-alert-row">
                 <Alert type="error">
-                  Your allocations exceed net pay by {formatWithSymbol(toDisplayAmount(Math.abs(leftoverPerPaycheck), paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}. Reduce allocations to avoid a negative Remaining balance.
+                  Your allocations exceed net pay by {formatWithSymbol(toDisplayAmount(Math.abs(leftoverPerPaycheck), paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}. Reduce allocations to avoid a negative balance.
                 </Alert>
               </div>
             )}
