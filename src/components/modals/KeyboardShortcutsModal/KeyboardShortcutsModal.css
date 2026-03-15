@@ -65,7 +65,7 @@
   background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-primary));
   color: var(--text-primary);
   font-size: 0.85rem;
-  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent-primary) 20%, transparent);
 }
