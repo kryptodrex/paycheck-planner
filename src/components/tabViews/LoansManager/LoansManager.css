@@ -39,14 +39,13 @@
 
 .loans-manager .loan-item {
   padding: 1rem;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  border-radius: 10px;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s;
 }
 
 .loans-manager .loan-item:hover {
-  border-color: var(--border-color-hover, var(--accent-primary));
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .loans-manager .loan-item.loan-disabled {
