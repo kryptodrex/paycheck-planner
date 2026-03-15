@@ -12,7 +12,7 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import '../tabViews.shared.css';
 import './BillsManager.css';
 
@@ -343,9 +343,9 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                           <div className="bill-frequency-amount">
                             Deducted per paycheck: {benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}
                           </div>
-                          <span className={`benefit-tax-badge ${benefit.isTaxable ? 'post-tax' : 'pre-tax'}`}>
+                          <PillBadge variant={benefit.isTaxable ? 'accent' : 'success'}>
                             {benefit.isTaxable ? 'Post-Tax' : 'Pre-Tax'}
-                          </span>
+                          </PillBadge>
                         </div>
                         <div className="bill-end">
                           <div className="bill-amount">
@@ -395,7 +395,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                             <div className="bill-frequency-amount">
                               From account per paycheck: {benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}
                             </div>
-                            <span className="benefit-tax-badge post-tax">Post-Tax</span>
+                            <PillBadge variant="accent">Post-Tax</PillBadge>
                           </div>
                           <div className="bill-end">
                             <div className="bill-amount">

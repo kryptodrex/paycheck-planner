@@ -12,7 +12,7 @@ import { getAccountNameById } from '../../../utils/accountGrouping';
 import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
-import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, RadioGroup, SectionItemCard, ViewModeSelector, PageHeader } from '../../_shared';
+import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -508,10 +508,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   <div className="savings-info">
                     <h4>{item.name}</h4>
                     <div className="savings-meta">
-                      <span className={`savings-type-badge ${item.type === 'investment' ? 'investment' : 'savings'}`}>
+                      <PillBadge variant={item.type === 'investment' ? 'accent' : 'info'}>
                         {item.type === 'investment' ? 'Investment' : 'Savings'}
-                      </span>
-                      <span className="savings-account-badge">From {accountName}</span>
+                      </PillBadge>
+                      <PillBadge variant="neutral">From {accountName}</PillBadge>
                     </div>
                     <div className="savings-frequency">
                       Saved {formatBillFrequency(item.frequency)}: {formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}
@@ -585,10 +585,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   <div className="retirement-info">
                     <h4>{displayLabel}</h4>
                     <div className="savings-meta retirement-meta">
-                      <span className={`retirement-type-badge ${isPreTaxRetirement ? 'pre-tax' : 'post-tax'}`}>
+                      <PillBadge variant={isPreTaxRetirement ? 'success' : 'warning'}>
                         {isPreTaxRetirement ? 'Pre-Tax' : 'Post-Tax'}
-                      </span>
-                      <span className="savings-account-badge">{sourceLabel}</span>
+                      </PillBadge>
+                      <PillBadge variant="neutral">{sourceLabel}</PillBadge>
                     </div>
                     <div className="retirement-details">
                       <div className="detail">

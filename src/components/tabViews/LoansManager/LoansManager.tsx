@@ -10,7 +10,7 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, SectionItemCard, ViewModeSelector, PageHeader } from '../../_shared';
+import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector } from '../../_shared';
 import '../tabViews.shared.css';
 import './LoansManager.css';
 
@@ -437,7 +437,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                             <div className="loan-title">
                                                                 <h4>
                                                                     {loan.name}
-                                                                    <span className="loan-type-badge">{LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}</span>
+                                                                    <PillBadge variant="outline">{LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}</PillBadge>
                                                                 </h4>
                                                                 <div className="loan-frequency">
                                                                     <span>Paid {formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: {formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>

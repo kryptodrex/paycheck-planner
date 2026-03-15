@@ -83,42 +83,6 @@
   margin-top: 0.35rem;
 }
 
-.savings-type-badge,
-.savings-account-badge,
-.retirement-type-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.savings-type-badge.savings {
-  background: color-mix(in srgb, var(--info-color) 18%, transparent);
-  color: var(--info-color);
-}
-
-.savings-type-badge.investment {
-  background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
-  color: var(--accent-primary);
-}
-
-.savings-account-badge {
-  background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
-  color: var(--text-secondary);
-}
-
-.retirement-type-badge.pre-tax {
-  background: color-mix(in srgb, var(--success-color) 18%, transparent);
-  color: var(--success-color);
-}
-
-.retirement-type-badge.post-tax {
-  background: color-mix(in srgb, var(--warning-color) 18%, transparent);
-  color: var(--warning-color);
-}
-
 .savings-frequency,
 .savings-notes {
   margin-top: 0.4rem;

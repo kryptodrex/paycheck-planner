@@ -73,18 +73,6 @@
   margin-bottom: 0.6rem;
 }
 
-.loans-manager .loan-type-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  background-color: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .loans-manager .loan-amount {
   text-align: right;
   font-size: 1.2rem;
