@@ -46,36 +46,6 @@
   font-size: 0.95rem;
 }
 
-.setup-leftover-suggestion {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--border-accent-soft);
-  border-radius: 10px;
-  background: var(--surface-accent-subtle);
-}
-
-.setup-leftover-suggestion-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.setup-leftover-suggestion-copy strong {
-  color: var(--text-primary);
-  font-size: 0.95rem;
-}
-
-.setup-leftover-suggestion-copy span {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
 .wizard-footer {
   display: flex;
   justify-content: space-between;
@@ -84,61 +54,6 @@
   background: var(--bg-secondary);
 }
 
-.setup-tax-lines-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.setup-tax-lines-header {
-  display: grid;
-  grid-template-columns: 1fr 150px 36px;
-  gap: 0.5rem;
-  padding: 0 0.25rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.setup-tax-line-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.setup-tax-line-fields {
-  display: grid;
-  grid-template-columns: 1fr 150px 36px;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.setup-tax-line-label-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1rem;
-  line-height: 1.5;
-  transition: border-color 0.2s;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  box-sizing: border-box;
-}
-
-.setup-tax-line-label-input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-}
-
-.setup-tax-line-error {
-  font-size: 0.85rem;
-  color: var(--error-color);
-  padding-left: 0.25rem;
-}
 /* Account Management Styles */
 .accounts-list {
   display: flex;
@@ -505,11 +420,4 @@
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: var(--focus-ring-accent-soft);
-}
-
-@media (max-width: 768px) {
-  .setup-leftover-suggestion {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
