@@ -666,7 +666,7 @@ function normalizeAccounts(
 
     // Get account-sourced benefits for this account and calculate total
     const accountBenefits = benefits.filter(
-      benefit => benefit.deductionSource === 'account' && benefit.sourceAccountId === account.id
+      benefit => benefit.enabled !== false && benefit.deductionSource === 'account' && benefit.sourceAccountId === account.id
     );
 
     // Get account-sourced retirement contributions for this account and calculate total

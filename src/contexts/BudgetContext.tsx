@@ -737,6 +737,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           ...prev.benefits,
           {
             ...benefit,
+            enabled: benefit.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],
