@@ -57,36 +57,6 @@
   flex: 1;
 }
 
-.pay-settings-leftover-suggestion {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--border-accent-soft);
-  border-radius: 10px;
-  background: var(--surface-accent-subtle);
-}
-
-.pay-settings-leftover-suggestion-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.pay-settings-leftover-suggestion-copy strong {
-  color: var(--text-primary);
-  font-size: 0.95rem;
-}
-
-.pay-settings-leftover-suggestion-copy span {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
 /* Responsive */
 @media (max-width: 640px) {
   .pay-settings-leftover-suggestion {

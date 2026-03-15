@@ -8,6 +8,7 @@ import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
 import { Modal, Button, ErrorDialog, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../../_shared';
+import '../../_shared/payEditorShared.css';
 import './PaySettingsModal.css';
 
 interface PaySettingsModalProps {
@@ -309,9 +310,9 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           />
         </FormGroup>
 
-        {formattedSuggestedLeftover && (
-          <div className="pay-settings-leftover-suggestion">
-            <div className="pay-settings-leftover-suggestion-copy">
+        {formattedSuggestedLeftover && parseInt(formattedSuggestedLeftover.replace(/[^0-9]/g, ''), 10) > parseInt(editMinLeftover || '0', 10) && (
+          <div className="leftover-suggestion">
+            <div className="leftover-suggestion-copy">
               <strong>Suggested leftover: {formattedSuggestedLeftover} per paycheck</strong>
               <span>
                 Based on your pay details, this is about 20% of estimated gross pay to leave room for variable spending.
