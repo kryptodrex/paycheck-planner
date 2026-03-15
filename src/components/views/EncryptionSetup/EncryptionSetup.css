@@ -20,17 +20,13 @@
 }
 
 
-.button-group {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
+.encryption-setup .button-group {
   margin-top: 2rem;
-  flex-wrap: wrap;
 }
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-  .button-group {
+  .encryption-setup .button-group {
     gap: 0.75rem;
   }
 }
@@ -40,11 +36,7 @@
     font-size: 1.5rem;
   }
 
-  .button-group {
+  .encryption-setup .button-group {
     flex-direction: column;
-  }
-
-  .btn {
-    width: 100%;
   }
 }

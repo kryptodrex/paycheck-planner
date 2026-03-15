@@ -195,13 +195,6 @@
   margin: 0 auto;
 }
 
-.button-group {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .action-buttons {
@@ -236,7 +229,7 @@
     font-size: 1rem;
   }
 
-  .button-group {
+  .welcome-screen .button-group {
     gap: 0.5rem;
   }
 }

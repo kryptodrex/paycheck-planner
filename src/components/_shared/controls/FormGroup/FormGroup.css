@@ -69,6 +69,13 @@
   border-color: var(--error-color) !important;
 }
 
+.button-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .form-group textarea {
   resize: vertical;
   min-height: 100px;
