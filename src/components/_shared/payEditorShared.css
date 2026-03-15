@@ -1,0 +1,107 @@
+/* ============================================================
+   Leftover Suggestion Banner
+   Used in: SetupWizard, PaySettingsModal
+   ============================================================ */
+
+.leftover-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-accent-soft);
+  border-radius: 10px;
+  background: var(--surface-accent-subtle);
+}
+
+.leftover-suggestion-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.leftover-suggestion-copy strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.leftover-suggestion-copy span {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .leftover-suggestion {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ============================================================
+   Tax Line Editor Grid
+   Used in: TaxBreakdown, SetupWizard
+   ============================================================ */
+
+.tax-lines-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tax-lines-header {
+  display: grid;
+  grid-template-columns: 1fr 150px 36px;
+  gap: 0.5rem;
+  padding: 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.col-label { }
+.col-rate { text-align: center; }
+.col-actions { }
+
+.tax-line-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tax-line-fields {
+  display: grid;
+  grid-template-columns: 1fr 150px 36px;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.tax-line-label-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 8px;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.tax-line-label-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.tax-line-error {
+  font-size: 0.85rem;
+  color: var(--error-color);
+  padding-left: 0.25rem;
+}

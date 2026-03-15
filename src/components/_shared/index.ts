@@ -10,6 +10,8 @@ export { default as StickyActions } from './layout/StickyActions';
 export { default as RadioGroup } from './controls/RadioGroup';
 export { default as Toggle } from './controls/Toggle';
 export { default as PillToggle } from './controls/PillToggle';
+export { default as PillBadge } from './controls/PillBadge';
+export type { PillBadgeVariant } from './controls/PillBadge';
 export { default as SectionItemCard } from './layout/SectionItemCard';
 export { default as InfoBox } from './feedback/InfoBox';
 export { default as AccountsEditor } from './workflows/AccountsEditor';

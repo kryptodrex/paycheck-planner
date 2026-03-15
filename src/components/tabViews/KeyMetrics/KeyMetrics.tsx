@@ -7,6 +7,7 @@ import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { convertBillToYearly } from '../../../utils/billFrequency';
 import { PageHeader } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
+import '../tabViews.shared.css';
 import './KeyMetrics.css';
 
 interface KeyMetricsProps {
@@ -124,7 +125,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   const currency = budgetData.settings.currency || 'USD';
 
   return (
-    <div className="key-metrics">
+    <div className="tab-view key-metrics">
       <PageHeader
         title="Key Metrics"
         subtitle="Your financial overview at a glance"

@@ -1,12 +1,3 @@
-.key-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  overflow-y: auto;
-  height: 100%;
-}
-
 .metrics-header {
   margin-bottom: 1.25rem;
   display: flex;
@@ -241,10 +232,6 @@
 }
 
 @media (max-width: 768px) {
-  .key-metrics {
-    padding: 1rem;
-  }
-
   .metrics-grid {
     grid-template-columns: 1fr;
   }

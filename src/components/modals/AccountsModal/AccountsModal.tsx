@@ -3,6 +3,7 @@ import { useBudget } from '../../../contexts/BudgetContext';
 import type { Account } from '../../../types/accounts';
 import { Modal, Button, FormGroup, AccountsEditor } from '../../_shared';
 import './AccountsModal.css';
+import './AccountsDeleteModal.css';
 
 interface AccountsModalProps {
   onClose: () => void;
@@ -133,7 +134,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
       <Modal
         isOpen={true}
         onClose={onClose}
-        contentClassName="accounts-manager"
+        contentClassName="accounts-modal"
         header="Manage Accounts"
         footer={
           <Button variant="primary" onClick={onClose}>
@@ -180,7 +181,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
               </div>
               {hasLinkedItems && (
                 <div className="account-delete-footer-danger">
-                  <Button variant="danger" onClick={() => handleConfirmDelete('delete-all')}>
+                  <Button className="account-delete-danger-btn" variant="danger" onClick={() => handleConfirmDelete('delete-all')}>
                     Delete All Linked Items
                   </Button>
                 </div>

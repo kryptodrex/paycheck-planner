@@ -12,7 +12,8 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import '../tabViews.shared.css';
 import './BillsManager.css';
 
 interface BillsManagerProps {
@@ -277,7 +278,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   };
 
   return (
-    <div className="bills-manager">
+    <div className="tab-view bills-manager">
       <PageHeader
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
@@ -335,29 +336,20 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                   const perPaycheck = getBenefitPerPaycheck(benefit);
                   const inDisplayMode = displayAmount(getBenefitMonthly(benefit));
                   return (
-                    <SectionItemCard key={benefit.id} className="bill-item benefit-deduction-item">
-                      <div className="bill-main">
-                        <div className="bill-info">
-                          <h4>{benefit.name}</h4>
-                          <div className="bill-frequency-amount">
-                            Deducted per paycheck: {benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}
-                          </div>
-                          <span className={`benefit-tax-badge ${benefit.isTaxable ? 'post-tax' : 'pre-tax'}`}>
-                            {benefit.isTaxable ? 'Post-Tax' : 'Pre-Tax'}
-                          </span>
-                        </div>
-                        <div className="bill-end">
-                          <div className="bill-amount">
-                            <span className="amount">{formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}</span>
-                            <span className="frequency">{getDisplayModeLabel(displayMode)}</span>
-                          </div>
-                          <div className="bill-actions">
-                            <Button variant="icon" onClick={() => handleEditBenefit(benefit)} title="Edit">✏️</Button>
-                            <Button variant="icon" onClick={() => handleDeleteBenefit(benefit.id)} title="Delete">🗑️</Button>
-                          </div>
-                        </div>
-                      </div>
-                    </SectionItemCard>
+                    <SectionItemCard
+                      key={benefit.id}
+                      title={benefit.name}
+                      subtitle={`Deducted per paycheck: ${benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}`}
+                      amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
+                      amountLabel={getDisplayModeLabel(displayMode)}
+                      badges={
+                        <PillBadge variant={benefit.isTaxable ? 'accent' : 'success'}>
+                          {benefit.isTaxable ? 'Post-Tax' : 'Pre-Tax'}
+                        </PillBadge>
+                      }
+                      onEdit={() => handleEditBenefit(benefit)}
+                      onDelete={() => handleDeleteBenefit(benefit.id)}
+                    />
                   );
                 })}
               </div>
@@ -387,27 +379,16 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                     const perPaycheck = getBenefitPerPaycheck(benefit);
                     const inDisplayMode = displayAmount(getBenefitMonthly(benefit));
                     return (
-                      <SectionItemCard key={benefit.id} className="bill-item benefit-deduction-item">
-                        <div className="bill-main">
-                          <div className="bill-info">
-                            <h4>{benefit.name}</h4>
-                            <div className="bill-frequency-amount">
-                              From account per paycheck: {benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}
-                            </div>
-                            <span className="benefit-tax-badge post-tax">Post-Tax</span>
-                          </div>
-                          <div className="bill-end">
-                            <div className="bill-amount">
-                              <span className="amount">{formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}</span>
-                              <span className="frequency">{getDisplayModeLabel(displayMode)}</span>
-                            </div>
-                            <div className="bill-actions">
-                              <Button variant="icon" onClick={() => handleEditBenefit(benefit)} title="Edit">✏️</Button>
-                              <Button variant="icon" onClick={() => handleDeleteBenefit(benefit.id)} title="Delete">🗑️</Button>
-                            </div>
-                          </div>
-                        </div>
-                      </SectionItemCard>
+                      <SectionItemCard
+                        key={benefit.id}
+                        title={benefit.name}
+                        subtitle={`From account per paycheck: ${benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}`}
+                        amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
+                        amountLabel={getDisplayModeLabel(displayMode)}
+                        badges={<PillBadge variant="accent">Post-Tax</PillBadge>}
+                        onEdit={() => handleEditBenefit(benefit)}
+                        onDelete={() => handleDeleteBenefit(benefit.id)}
+                      />
                     );
                   })}
 
@@ -419,28 +400,17 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                     return b.amount - a.amount;
                   })
                   .map((bill) => (
-                    <SectionItemCard key={bill.id} className={`bill-item ${isBillEnabled(bill) ? '' : 'bill-disabled'}`}>
-                      <div className="bill-main">
-                        <div className="bill-info">
-                          <h4>{bill.name}</h4>
-                          <div className="bill-frequency-amount">
-                            Paid {formatBillFrequency(bill.frequency)}: {formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}
-                          </div>
-                        </div>
-                        <div className="bill-end">
-                          <div className="bill-amount">
-                            <span className="amount">{formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}</span>
-                            <span className="frequency">{getDisplayModeLabel(displayMode)}</span>
-                          </div>
-                          <div className="bill-actions">
-                            <Button variant="icon" onClick={() => handleToggleBillEnabled(bill)} title={isBillEnabled(bill) ? 'Disable bill' : 'Enable bill'}>
-                              {isBillEnabled(bill) ? '⏸️' : '▶️'}
-                            </Button>
-                            <Button variant="icon" onClick={() => handleEditBill(bill)} title="Edit">✏️</Button>
-                            <Button variant="icon" onClick={() => handleDeleteBill(bill.id)} title="Delete">🗑️</Button>
-                          </div>
-                        </div>
-                      </div>
+                    <SectionItemCard
+                      key={bill.id}
+                      title={bill.name}
+                      subtitle={`Paid ${formatBillFrequency(bill.frequency)}: ${formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}`}
+                      amount={formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}
+                      amountLabel={getDisplayModeLabel(displayMode)}
+                      isPaused={!isBillEnabled(bill)}
+                      onPauseToggle={() => handleToggleBillEnabled(bill)}
+                      onEdit={() => handleEditBill(bill)}
+                      onDelete={() => handleDeleteBill(bill.id)}
+                    >
                       {bill.notes && <div className="bill-notes">{bill.notes}</div>}
                     </SectionItemCard>
                   ))}

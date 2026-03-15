@@ -6,6 +6,8 @@ import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import type { TaxLine } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
+import '../tabViews.shared.css';
+import '../../_shared/payEditorShared.css';
 import './TaxBreakdown.css';
 
 interface TaxBreakdownProps {
@@ -111,7 +113,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
     };
 
     return (
-        <div className="tax-breakdown">
+        <div className="tab-view tax-breakdown">
             <PageHeader
                 title="Tax Breakdown"
                 subtitle="View and manage your tax withholding information"

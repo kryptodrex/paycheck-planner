@@ -1038,7 +1038,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
   return (
     <div className={`plan-dashboard layout-with-tabs-${tabPosition}`}>
-      <header className="dashboard-header">
+      <header className="dashboard-header app-drag-region">
         <div className="header-left">
           <div className="plan-title-block">
             {isEditingPlanName ? (
@@ -1139,21 +1139,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           >
             📋 Copy Plan
           </Button>
-          {/* Disabled until PDF export is fully implemented */}
-          {/* <Button
-            variant="secondary"
-            onClick={() => setShowExportModal(true)}
-            title="Export plan to PDF"
-            className="header-btn-secondary"
-          >
-            📄 Export PDF
-          </Button> */}
           <Button
-            variant="primary"
+            variant="secondary"
             size="small"
             onClick={handleSave}
             disabled={loading || !!missingActiveFile || activeRelinkLoading}
-            className="header-btn-primary"
+            className="header-btn-secondary"
           >
             💾 Save
           </Button>

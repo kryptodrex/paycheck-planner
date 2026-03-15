@@ -1,21 +1,9 @@
 .setup-wizard {
-  height: 100vh;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* background: var(--header-gradient); */
-  background: var(--header-gradient);
-  padding: 1rem;
-  overflow: hidden;
 }
 
 .wizard-container {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 700px;
-  width: 100%;
   overflow: hidden;
 }
 
@@ -58,80 +46,6 @@
   font-size: 0.95rem;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.form-group input[type="number"],
-.form-group input[type="text"],
-.form-group select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1rem;
-  line-height: 1.5;
-  transition: border-color 0.2s;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.form-group select {
-  appearance: auto;
-  -webkit-appearance: auto;
-  -moz-appearance: auto;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-}
-
-.form-group small {
-  display: block;
-  margin-top: 0.5rem;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
-.setup-leftover-suggestion {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
-}
-
-.setup-leftover-suggestion-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.setup-leftover-suggestion-copy strong {
-  color: var(--text-primary);
-  font-size: 0.95rem;
-}
-
-.setup-leftover-suggestion-copy span {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
 .wizard-footer {
   display: flex;
   justify-content: space-between;
@@ -140,61 +54,6 @@
   background: var(--bg-secondary);
 }
 
-.setup-tax-lines-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.setup-tax-lines-header {
-  display: grid;
-  grid-template-columns: 1fr 150px 36px;
-  gap: 0.5rem;
-  padding: 0 0.25rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.setup-tax-line-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.setup-tax-line-fields {
-  display: grid;
-  grid-template-columns: 1fr 150px 36px;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.setup-tax-line-label-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1rem;
-  line-height: 1.5;
-  transition: border-color 0.2s;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  box-sizing: border-box;
-}
-
-.setup-tax-line-label-input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-}
-
-.setup-tax-line-error {
-  font-size: 0.85rem;
-  color: var(--error-color);
-  padding-left: 0.25rem;
-}
 /* Account Management Styles */
 .accounts-list {
   display: flex;
@@ -216,7 +75,7 @@
 
 .account-item:hover {
   border-color: var(--accent-primary);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--shadow-accent-soft);
 }
 
 .account-info {
@@ -261,18 +120,6 @@
   color: var(--text-primary);
 }
 
-.account-type-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-  width: fit-content;
-}
-
 .account-actions {
   display: flex;
   gap: 0.5rem;
@@ -305,7 +152,7 @@
 .form-row input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .form-row select {
@@ -322,7 +169,7 @@
 .form-row select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .flex-grow {
@@ -344,7 +191,7 @@
 .account-name-input:focus {
   outline: none;
   border-color: var(--accent-secondary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 /* Account Details & Editing */
@@ -396,7 +243,7 @@
   border-color: var(--accent-primary);
   padding: 1.25rem;
   flex-wrap: wrap;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--shadow-accent-md);
 }
 
 .account-edit-form {
@@ -427,7 +274,7 @@
 .account-edit-form .account-icon-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-form .account-name-input {
@@ -447,7 +294,7 @@
 .account-edit-form .account-name-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-form .account-type-select {
@@ -466,7 +313,7 @@
 .account-edit-form .account-type-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-actions {
@@ -532,7 +379,7 @@
 .add-account-form .account-icon-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .add-account-form .account-name-input {
@@ -552,7 +399,7 @@
 .add-account-form .account-name-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .add-account-form .account-type-select {
@@ -572,12 +419,5 @@
 .add-account-form .account-type-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-@media (max-width: 768px) {
-  .setup-leftover-suggestion {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+  box-shadow: var(--focus-ring-accent-soft);
 }

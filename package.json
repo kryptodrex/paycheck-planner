@@ -1,7 +1,7 @@
 {
   "name": "paycheck-planner",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Desktop paycheck planning and budget management application.",
   "author": {
     "name": "Paycheck Planner",
@@ -39,7 +39,7 @@
         "name": "Paycheck Planner Budget",
         "description": "Paycheck Planner budget file",
         "role": "Editor",
-        "icon": "build/icon"
+        "icon": "build/budget-file-icon"
       }
     ],
     "directories": {

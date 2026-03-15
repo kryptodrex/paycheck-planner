@@ -8,6 +8,8 @@ import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../../types/payroll';
 import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog } from '../../_shared';
+import '../views.shared.css';
+import '../../_shared/payEditorShared.css';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -320,9 +322,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   return (
-    <div className="setup-wizard">
-      <div className="wizard-container">
-        <div className="wizard-header">
+    <div className="view-screen setup-wizard">
+      <div className="view-screen-card wizard-container">
+        <div className="wizard-header app-drag-region">
           <h1>Setup Your Paycheck Plan</h1>
           <ProgressBar
             percentage={(step / totalSteps) * 100}
@@ -485,9 +487,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 />
               </FormGroup>
 
-              {formattedSuggestedLeftover && (
-                <div className="setup-leftover-suggestion">
-                  <div className="setup-leftover-suggestion-copy">
+              {formattedSuggestedLeftover && parseInt(formattedSuggestedLeftover.replace(/[^0-9]/g, ''), 10) > parseInt(minLeftover || '0', 10) && (
+                <div className="leftover-suggestion">
+                  <div className="leftover-suggestion-copy">
                     <strong>Suggested leftover: {formattedSuggestedLeftover} per paycheck</strong>
                     <span>
                       Based on your pay details, this is about 20% of estimated gross pay to leave room for variable spending.
@@ -518,18 +520,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 Review and adjust them if your actual withholding differs.
               </InfoBox>
 
-              <div className="setup-tax-lines-editor">
-                <div className="setup-tax-lines-header">
-                  <span className="setup-col-label">Name</span>
-                  <span className="setup-col-rate">Rate (%)</span>
-                  <span className="setup-col-actions" />
+              <div className="tax-lines-editor">
+                <div className="tax-lines-header">
+                  <span className="col-label">Name</span>
+                  <span className="col-rate">Rate (%)</span>
+                  <span className="col-actions" />
                 </div>
 
                 {taxLines.map((line) => (
-                  <div key={line.id} className="setup-tax-line-row">
-                    <div className="setup-tax-line-fields">
+                  <div key={line.id} className="tax-line-row">
+                    <div className="tax-line-fields">
                       <input
-                        className={`setup-tax-line-label-input${line.error === 'Label is required.' ? ' field-error' : ''}`}
+                        className={`tax-line-label-input${line.error === 'Label is required.' ? ' field-error' : ''}`}
                         type="text"
                         placeholder="e.g. Federal Tax"
                         value={line.label}
@@ -554,7 +556,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                         ✕
                       </Button>
                     </div>
-                    {line.error && <div className="setup-tax-line-error">{line.error}</div>}
+                    {line.error && <div className="tax-line-error">{line.error}</div>}
                   </div>
                 ))}
 
