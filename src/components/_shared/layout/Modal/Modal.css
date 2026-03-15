@@ -76,6 +76,17 @@
   flex-shrink: 0;
 }
 
+/* Keep close button color consistent in both themes — avoid stark black-on-white in light mode */
+.modal-header .btn.btn-icon {
+  color: var(--text-secondary);
+}
+
+.modal-header .btn.btn-icon:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  transform: scale(1);
+}
+
 @media (max-width: 600px) {
   .modal-overlay {
     padding: 0.5rem;
