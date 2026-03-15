@@ -27,16 +27,6 @@
   background: var(--bg-secondary);
 }
 
-.stage-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0;
-  display: none;
-}
-
 .stage-box {
   width: 100%;
   padding: 0;
@@ -73,10 +63,6 @@
   font-size: 0.75rem;
   color: var(--text-tertiary);
   margin: 0;
-}
-
-.stage-arrow {
-  display: none;
 }
 
 .stage-breakdown {
@@ -373,6 +359,10 @@
   border-bottom: none;
 }
 
+.waterfall-footer-row.negative-remaining {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--error-color) 88%, var(--bg-primary)), var(--error-color));
+}
+
 .waterfall-label {
   display: flex;
   align-items: center;
@@ -385,6 +375,10 @@
   font-weight: 600;
   white-space: nowrap;
   margin-left: 0.75rem;
+}
+
+.waterfall-amount.negative-remaining {
+  color: var(--error-contrast-text, #fff);
 }
 
 .account-icon-small {

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { roundUpToCent } from '../../../utils/money';
+import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../../utils/payPeriod';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
@@ -340,7 +340,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       {/* Visual Flow */}
       <div className="visual-flow">
         <div className="flow-stage">
-          <div className="stage-label">START</div>
           <div className="stage-box gross-box">
             <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -351,7 +350,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               }
             </div>
           </div>
-          <div className="stage-arrow">↓</div>
         </div>
 
         {displayBreakdown.preTaxDeductions > 0 && (
@@ -363,7 +361,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 {totalPreTaxItemCount} deduction(s)
               </div>
             </div>
-            <div className="stage-arrow">↓</div>
           </div>
         )}
 
@@ -373,7 +370,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">Subject to taxes</div>
           </div>
-          <div className="stage-arrow">↓</div>
         </div>
 
         <div className="flow-stage">
@@ -395,7 +391,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               )}
             </div>
           </div>
-          <div className="stage-arrow">↓</div>
+          
         </div>
 
         {displayBreakdown.postTaxDeductions > 0 && (
@@ -407,12 +403,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 {postTaxDeductionCount} deduction(s)
               </div>
             </div>
-            <div className="stage-arrow">↓</div>
           </div>
         )}
 
         <div className="flow-stage">
-          <div className="stage-label">RESULT</div>
           <div className="stage-box net-box">
             <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -595,11 +589,18 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               );
             })}
 
-            <div className="waterfall-row waterfall-footer-row">
+            <div className={`waterfall-row waterfall-footer-row ${leftoverPerPaycheck < 0 ? 'negative-remaining' : ''}`}>
               <span className="waterfall-label"><GlossaryTerm termId="residual-amount">All that remains</GlossaryTerm> for spending</span>
-              <span className="waterfall-amount">{formatWithSymbol(Math.max(0, toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className={`waterfall-amount ${leftoverPerPaycheck < 0 ? 'negative-remaining' : ''}`}>{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            {leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
+            {leftoverPerPaycheck < 0 && (
+              <div className="waterfall-alert-row">
+                <Alert type="error">
+                  Your allocations exceed net pay by {formatWithSymbol(toDisplayAmount(Math.abs(leftoverPerPaycheck), paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}. Reduce allocations to avoid a negative Remaining balance.
+                </Alert>
+              </div>
+            )}
+            {leftoverPerPaycheck >= 0 && leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
               <div className="waterfall-alert-row">
                 <Alert type="warning">
                   You are {formatWithSymbol(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(budgetData.paySettings.minLeftover || 0, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}
@@ -714,8 +715,8 @@ function normalizeAccounts(
     if (accountRetirement.length > 0) {
       const retirementTotal = accountRetirement.reduce((sum, election) => {
         const amountPerPaycheck = election.employeeContributionIsPercentage
-          ? roundUpToCent((grossPayPerPaycheck * election.employeeContribution) / 100)
-          : roundUpToCent(election.employeeContribution);
+          ? roundToCent((grossPayPerPaycheck * election.employeeContribution) / 100)
+          : roundToCent(election.employeeContribution);
         return sum + amountPerPaycheck;
       }, 0);
 
@@ -815,7 +816,7 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
   });
 
   const totalAllocated = accountFunding.reduce((sum, item) => sum + item.totalAmount, 0);
-  const remaining = Math.max(0, netPay - totalAllocated);
+  const remaining = netPay - totalAllocated;
 
   return {
     accountFunding,

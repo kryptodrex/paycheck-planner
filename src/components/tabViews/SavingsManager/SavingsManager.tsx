@@ -12,6 +12,7 @@ import { getAccountNameById } from '../../../utils/accountGrouping';
 import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
+import { roundToCent } from '../../../utils/money';
 import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
@@ -142,8 +143,8 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     }
 
     return {
-      employeeAmount: employeeAmountPerPaycheck,
-      employerAmount: employerAmountPerPaycheck,
+      employeeAmount: roundToCent(employeeAmountPerPaycheck),
+      employerAmount: roundToCent(employerAmountPerPaycheck),
     };
   };
 
