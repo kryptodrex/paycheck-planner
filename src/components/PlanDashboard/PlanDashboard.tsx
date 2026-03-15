@@ -74,9 +74,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [isEditingPlanName, setIsEditingPlanName] = useState(false);
+  const [showPlanEditModal, setShowPlanEditModal] = useState(false);
   const [draftPlanName, setDraftPlanName] = useState('');
   const [draftYear, setDraftYear] = useState('');
+  const [draftYearSelection, setDraftYearSelection] = useState<string>('');
+  const [planEditNameError, setPlanEditNameError] = useState<string | null>(null);
+  const [planEditYearError, setPlanEditYearError] = useState<string | null>(null);
   const [statusToast, setStatusToast] = useState<StatusToastState | null>(null);
   const [showTabManagementModal, setShowTabManagementModal] = useState(false);
   const [draggedTabIndex, setDraggedTabIndex] = useState<number | null>(null);
@@ -880,15 +883,24 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   };
 
   const handleStartPlanEdit = () => {
+    const baseYear = budgetData?.year || new Date().getFullYear();
+    const defaultYear = String(baseYear);
+
     setDraftPlanName(budgetData?.name || '');
-    setDraftYear(String(budgetData?.year || new Date().getFullYear()));
-    setIsEditingPlanName(true);
+    setDraftYear(defaultYear);
+    setDraftYearSelection(defaultYear);
+    setPlanEditNameError(null);
+    setPlanEditYearError(null);
+    setShowPlanEditModal(true);
   };
 
   const handleCancelPlanEdit = () => {
-    setIsEditingPlanName(false);
+    setShowPlanEditModal(false);
     setDraftPlanName('');
     setDraftYear('');
+    setDraftYearSelection('');
+    setPlanEditNameError(null);
+    setPlanEditYearError(null);
   };
 
   const sanitizePlanFileName = (value: string) => {
@@ -924,17 +936,22 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     const nextName = draftPlanName.trim();
     const nextYear = parseInt(draftYear.trim(), 10);
 
+    const currentCalendarYear = new Date().getFullYear();
+    const maxAllowedYear = currentCalendarYear + 10;
+
     // Validate name
     if (!nextName) {
-      setStatusToast({ message: '⚠️ Plan name cannot be empty', type: 'warning' });
+      setPlanEditNameError('Plan name is required.');
       return;
     }
+    setPlanEditNameError(null);
 
     // Validate year
-    if (isNaN(nextYear) || nextYear < 2000 || nextYear > 2100) {
-      setStatusToast({ message: '⚠️ Please enter a valid year (2000-2100)', type: 'warning' });
+    if (isNaN(nextYear) || nextYear < 2000 || nextYear > maxAllowedYear) {
+      setPlanEditYearError(`Enter a year between 2000 and ${maxAllowedYear}.`);
       return;
     }
+    setPlanEditYearError(null);
 
     // Check if anything changed
     const nameChanged = nextName !== budgetData.name;
@@ -983,7 +1000,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       setStatusToast({ message: '✏️ Plan updated', type: 'success' });
     }
 
-    setIsEditingPlanName(false);
+    setShowPlanEditModal(false);
   };
 
   const handleEncryptionModalClose = () => {
@@ -1041,81 +1058,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <header className="dashboard-header app-drag-region">
         <div className="header-left">
           <div className="plan-title-block">
-            {isEditingPlanName ? (
-              <div className="plan-edit-container">
-                <div className="plan-edit-fields">
-                  <div className="plan-edit-field">
-                    <label>Name:</label>
-                    <input
-                      type="text"
-                      value={draftPlanName}
-                      onChange={(event) => setDraftPlanName(event.target.value)}
-                      className="plan-title-input"
-                      placeholder="Plan name"
-                      autoFocus
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          handleSavePlanEdit();
-                        }
-                        if (event.key === 'Escape') {
-                          handleCancelPlanEdit();
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="plan-edit-field">
-                    <label>Year:</label>
-                    <input
-                      type="number"
-                      value={draftYear}
-                      onChange={(event) => setDraftYear(event.target.value)}
-                      className="plan-year-input"
-                      placeholder="Year"
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          handleSavePlanEdit();
-                        }
-                        if (event.key === 'Escape') {
-                          handleCancelPlanEdit();
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="plan-edit-buttons">
-                  <Button
-                    variant="secondary"
-                    size="xsmall"
-                    className="header-btn-secondary plan-title-btn"
-                    onClick={handleSavePlanEdit}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="xsmall"
-                    className="header-btn-secondary plan-title-btn"
-                    onClick={handleCancelPlanEdit}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="plan-title-view-row">
-                <h1>{budgetData.name}</h1>
-                <Button
-                  variant="secondary"
-                  size="xsmall"
-                  className="header-btn-secondary plan-title-btn"
-                  onClick={handleStartPlanEdit}
-                  title="Edit plan name and year"
-                >
-                  Edit
-                </Button>
-              </div>
-            )}
-            {showYearSubtitle && !isEditingPlanName && (
+            <div className="plan-title-view-row">
+              <h1>{budgetData.name}</h1>
+              <Button
+                variant="secondary"
+                size="xsmall"
+                className="header-btn-secondary plan-title-btn"
+                onClick={handleStartPlanEdit}
+                title="Edit plan name and year"
+              >
+                Edit
+              </Button>
+            </div>
+            {showYearSubtitle && (
               <p className="plan-year-subtitle">Year: {budgetData.year}</p>
             )}
           </div>
@@ -1397,6 +1352,95 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           });
         }}
       />
+
+      {/* Edit Plan Metadata Modal */}
+      <Modal
+        isOpen={showPlanEditModal}
+        onClose={handleCancelPlanEdit}
+        header="Edit Plan Name and Year"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={handleCancelPlanEdit}>
+              Cancel
+            </Button>
+            <Button type="button" variant="primary" onClick={handleSavePlanEdit}>
+              Save
+            </Button>
+          </>
+        }
+      >
+        <p>Update your plan's name and the year. Editing the plan's name will also update the file name to match.</p>
+        <FormGroup label="Plan Name" required error={planEditNameError || undefined}>
+          <input
+            type="text"
+            className={planEditNameError ? 'field-error' : ''}
+            value={draftPlanName}
+            onChange={(event) => {
+              setDraftPlanName(event.target.value);
+              if (planEditNameError) {
+                setPlanEditNameError(null);
+              }
+            }}
+            placeholder="Plan name"
+            autoFocus
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                handleSavePlanEdit();
+              }
+            }}
+          />
+        </FormGroup>
+
+        <FormGroup label="Plan Year" required>
+          <select
+            value={draftYearSelection}
+            onChange={(event) => {
+              const selectedValue = event.target.value;
+              setDraftYearSelection(selectedValue);
+              if (selectedValue !== 'custom') {
+                setDraftYear(selectedValue);
+                if (planEditYearError) {
+                  setPlanEditYearError(null);
+                }
+              }
+            }}
+          >
+            <option value={String(budgetData.year - 1)}>{budgetData.year - 1}</option>
+            <option value={String(budgetData.year)}>{budgetData.year}</option>
+            <option value={String(budgetData.year + 1)}>{budgetData.year + 1}</option>
+            <option value="custom">Custom</option>
+          </select>
+        </FormGroup>
+
+        {draftYearSelection === 'custom' && (
+          <FormGroup
+            label="Custom Year"
+            required
+            helperText={`Allowed range: 2000 to ${new Date().getFullYear() + 10}`}
+            error={planEditYearError || undefined}
+          >
+            <input
+              type="number"
+              className={planEditYearError ? 'field-error' : ''}
+              value={draftYear}
+              onChange={(event) => {
+                setDraftYear(event.target.value);
+                if (planEditYearError) {
+                  setPlanEditYearError(null);
+                }
+              }}
+              min="2000"
+              max={String(new Date().getFullYear() + 10)}
+              placeholder="Enter year"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handleSavePlanEdit();
+                }
+              }}
+            />
+          </FormGroup>
+        )}
+      </Modal>
 
       {/* Copy Plan Modal */}
       <Modal
