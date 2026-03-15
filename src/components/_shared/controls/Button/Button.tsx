@@ -20,7 +20,7 @@ const BUTTON_SIZE_STYLES: Record<NonNullable<ButtonProps['size']>, React.CSSProp
   xsmall: {
     padding: '0.3rem 0.6rem',
     fontSize: '0.75rem',
-    borderRadius: '0.25rem',
+    borderRadius: '0.5rem',
   },
   small: {
     padding: '0.5rem 1rem',
@@ -37,7 +37,7 @@ const ICON_BUTTON_SIZE_STYLES: Record<NonNullable<ButtonProps['size']>, React.CS
   xsmall: {
     padding: '0.3rem',
     fontSize: '0.75rem',
-    borderRadius: '0.25rem',
+    borderRadius: '0.5rem',
   },
   small: {
     padding: '0.5rem',
