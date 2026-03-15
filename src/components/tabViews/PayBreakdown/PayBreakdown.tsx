@@ -92,12 +92,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const postTaxRetirementCount = (budgetData.retirement || []).filter((election) => (election.deductionSource || 'paycheck') === 'paycheck' && election.isPreTax === false && election.enabled !== false && election.employeeContribution > 0).length;
   const postTaxDeductionCount = postTaxBenefitCount + postTaxRetirementCount;
 
-  // Calculate percentages for visual bar
+  // Calculate percentages for flow details
   const grossPay = displayBreakdown.grossPay;
-  const preTaxPct = (displayBreakdown.preTaxDeductions / grossPay) * 100;
-  const taxPct = (displayBreakdown.totalTaxes / grossPay) * 100;
-  const postTaxPct = (displayBreakdown.postTaxDeductions / grossPay) * 100;
-  const netPct = (displayBreakdown.netPay / grossPay) * 100;
+  const netPct = grossPay > 0 ? (displayBreakdown.netPay / grossPay) * 100 : 0;
 
   const startAccountEdit = (accountId: string) => {
     const account = normalizedAccounts.find(acc => acc.id === accountId);
@@ -276,69 +273,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         onClose={() => setShowPaySettingsModal(false)}
       />
 
-      {/* Visual Bar */}
-      <div className="breakdown-bar">
-        <h3>Your Pay Breakdown</h3>
-        <div className="bar-container">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div 
-              className="bar-segment pretax-segment" 
-              style={{ width: `${preTaxPct}%` }}
-              title={`Pre-Tax: ${formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
-            >
-              {preTaxPct > 5 && <span>{preTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div 
-            className="bar-segment tax-segment" 
-            style={{ width: `${taxPct}%` }}
-            title={`Taxes: ${formatWithSymbol(displayBreakdown.totalTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
-          >
-            <span>{taxPct.toFixed(1)}%</span>
-          </div>
-          {displayBreakdown.postTaxDeductions > 0 && (
-            <div 
-              className="bar-segment posttax-segment" 
-              style={{ width: `${postTaxPct}%` }}
-              title={`Post-Tax: ${formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { maximumFractionDigits: 0 })} (${postTaxPct.toFixed(1)}%)`}
-            >
-              {postTaxPct > 5 && <span>{postTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div 
-            className="bar-segment net-segment" 
-            style={{ width: `${netPct}%` }}
-            title={`Net Pay: ${formatWithSymbol(displayBreakdown.netPay, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
-          >
-            <span>{netPct.toFixed(1)}%</span>
-          </div>
+      {/* Paycheck Flow Details */}
+      <div className="flow-breakdown">
+        <div className="flow-breakdown-header">
+          <h3>Paycheck Flow Details</h3>
         </div>
-        <div className="bar-labels">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div className="bar-label pretax-label">
-              <span className="label-dot pretax-dot"></span>
-              Pre-Tax Deductions
-            </div>
-          )}
-          <div className="bar-label tax-label">
-            <span className="label-dot tax-dot"></span>
-            Taxes
-          </div>
-          {displayBreakdown.postTaxDeductions > 0 && (
-            <div className="bar-label posttax-label">
-              <span className="label-dot posttax-dot"></span>
-              Post-Tax Deductions
-            </div>
-          )}
-          <div className="bar-label net-label">
-            <span className="label-dot net-dot"></span>
-            Take Home
-          </div>
-        </div>
-      </div>
 
-      {/* Visual Flow */}
-      <div className="visual-flow">
+        <div className="visual-flow">
         <div className="flow-stage">
           <div className="stage-box gross-box">
             <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
@@ -412,6 +353,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
           </div>
+        </div>
         </div>
       </div>
 

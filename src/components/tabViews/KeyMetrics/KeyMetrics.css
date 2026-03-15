@@ -178,57 +178,171 @@
   font-size: 1.2rem;
 }
 
-.flow-visual {
+.km-breakdown-bar {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  margin-bottom: 1.25rem;
+}
+
+.km-breakdown-bar h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+}
+
+.km-bar-container {
+  display: flex;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color-light);
+}
+
+.km-bar-segment {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.flow-segment {
-  padding: 1rem;
-  border-radius: 8px;
+  justify-content: center;
   color: white;
-  font-weight: 600;
-  text-align: center;
-  min-width: 100px;
-  transition: transform 0.2s;
+  font-weight: 700;
+  transition: opacity 0.2s;
+  min-width: 0;
 }
 
-.flow-segment:hover {
-  transform: scale(1.05);
+.km-bar-segment:hover {
+  opacity: 0.85;
   cursor: help;
 }
 
-.flow-segment span {
-  font-size: 0.9rem;
-  display: block;
+.km-bar-segment span {
+  font-size: 0.85rem;
 }
 
-.income-segment {
+.km-pretax-segment {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--warning-color) 85%, var(--bg-primary)), var(--warning-color));
+}
+
+.km-tax-segment {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--error-color) 85%, var(--bg-primary)), var(--error-color));
+}
+
+.km-posttax-segment {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 85%, var(--bg-primary)), var(--accent-primary));
+}
+
+.km-net-segment {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--info-color) 85%, var(--bg-primary)), var(--info-color));
+}
+
+.km-bar-labels {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.km-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.km-label-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.km-pretax-dot {
+  background: var(--warning-color);
+}
+
+.km-tax-dot {
+  background: var(--error-color);
+}
+
+.km-posttax-dot {
+  background: var(--accent-primary);
+}
+
+.km-net-dot {
+  background: var(--info-color);
+}
+
+.km-flow-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.km-flow-summary-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.km-flow-summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.km-flow-summary-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.km-flow-summary-value {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.km-flow-summary-percent {
+  color: var(--text-tertiary);
+}
+
+.km-flow-track {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.km-flow-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.km-flow-fill-income {
   background: linear-gradient(135deg, var(--success-color), #059669);
 }
 
-.taxes-segment {
+.km-flow-fill-taxes {
   background: linear-gradient(135deg, var(--error-color), var(--alert-error-text));
 }
 
-.net-segment {
+.km-flow-fill-net {
   background: linear-gradient(135deg, var(--info-color), var(--info-color-dark));
 }
 
-.bills-segment {
+.km-flow-fill-bills {
   background: linear-gradient(135deg, var(--warning-color), var(--alert-warning-text));
 }
 
-.remaining-segment {
+.km-flow-fill-remaining {
   background: linear-gradient(135deg, var(--violet-color), var(--accent-secondary));
 }
 
-.flow-arrow {
-  color: var(--text-tertiary);
-  font-size: 1.5rem;
-  font-weight: bold;
+.km-flow-fill-shortfall {
+  background: linear-gradient(135deg, var(--error-color), var(--alert-error-text));
 }
 
 @media (max-width: 768px) {
@@ -236,16 +350,23 @@
     grid-template-columns: 1fr;
   }
 
-  .flow-visual {
-    flex-direction: column;
-    align-items: stretch;
+  .km-breakdown-bar,
+  .summary-bar {
+    padding: 1.25rem;
   }
 
-  .flow-segment {
+  .km-bar-container {
+    height: auto;
+    min-height: 40px;
+  }
+
+  .km-bar-segment {
     width: 100% !important;
   }
 
-  .flow-arrow {
-    transform: rotate(90deg);
+  .km-flow-summary-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
   }
 }

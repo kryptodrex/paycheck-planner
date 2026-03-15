@@ -1,7 +1,7 @@
 import React from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
-import { calculateAnnualizedPaySummary } from '../../../services/budgetCalculations';
-import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
+import { calculateAnnualizedPayBreakdown, calculateAnnualizedPaySummary } from '../../../services/budgetCalculations';
+import { formatWithSymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { convertBillToYearly } from '../../../utils/billFrequency';
@@ -89,6 +89,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
     monthlyNet,
     monthlyTaxes,
   } = calculateAnnualizedPaySummary(breakdown, paychecksPerYear);
+  const annualizedBreakdown = calculateAnnualizedPayBreakdown(breakdown, paychecksPerYear);
 
   // Calculate total bills (annualized)
   const annualBills = roundUpToCent(budgetData.bills.reduce((sum, bill) => {
@@ -120,6 +121,54 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   const savingsRate = annualGross > 0 ? (annualSavings / annualGross) * 100 : 0;
   const effectiveTaxRate = annualGross > 0 ? (annualTaxes / annualGross) * 100 : 0;
   const remainingShareOfNet = annualNet > 0 ? (annualRemaining / annualNet) * 100 : 0;
+  const annualPreTaxDeductions = annualizedBreakdown.preTaxDeductions;
+  const annualPostTaxDeductions = annualizedBreakdown.postTaxDeductions;
+
+  const toPercentOfGross = (amount: number) => (annualGross > 0 ? (amount / annualGross) * 100 : 0);
+  const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
+
+  const preTaxPct = toPercentOfGross(annualPreTaxDeductions);
+  const taxPct = toPercentOfGross(annualTaxes);
+  const postTaxPct = toPercentOfGross(annualPostTaxDeductions);
+  const netPct = toPercentOfGross(annualNet);
+
+  const flowRows = [
+    {
+      key: 'gross',
+      label: 'Gross Income',
+      className: 'km-flow-fill-income',
+      amount: annualGross,
+      percentage: 100,
+    },
+    {
+      key: 'taxes',
+      label: 'Taxes',
+      className: 'km-flow-fill-taxes',
+      amount: annualTaxes,
+      percentage: toPercentOfGross(annualTaxes),
+    },
+    {
+      key: 'net',
+      label: 'Take Home Pay',
+      className: 'km-flow-fill-net',
+      amount: annualNet,
+      percentage: toPercentOfGross(annualNet),
+    },
+    {
+      key: 'bills',
+      label: 'Bills',
+      className: 'km-flow-fill-bills',
+      amount: annualBills,
+      percentage: toPercentOfGross(annualBills),
+    },
+    {
+      key: 'remaining',
+      label: annualRemaining >= 0 ? 'Remaining for Flexible Spending' : 'Shortfall vs Bills',
+      className: annualRemaining >= 0 ? 'km-flow-fill-remaining' : 'km-flow-fill-shortfall',
+      amount: annualRemaining,
+      percentage: toPercentOfGross(annualRemaining),
+    },
+  ];
 
   // Get currency from budget settings
   const currency = budgetData.settings.currency || 'USD';
@@ -264,49 +313,99 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         </MetricCard>
       </div>
 
+      <div className="km-breakdown-bar">
+        <h3>Your Pay Breakdown</h3>
+        <div className="km-bar-container">
+          {annualPreTaxDeductions > 0 && (
+            <div
+              className="km-bar-segment km-pretax-segment"
+              style={{ width: `${clampPercent(preTaxPct)}%` }}
+              title={`Pre-Tax: ${formatWithSymbol(annualPreTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
+            >
+              {preTaxPct > 7 && <span>{preTaxPct.toFixed(1)}%</span>}
+            </div>
+          )}
+          <div
+            className="km-bar-segment km-tax-segment"
+            style={{ width: `${clampPercent(taxPct)}%` }}
+            title={`Taxes: ${formatWithSymbol(annualTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
+          >
+            {taxPct > 7 && <span>{taxPct.toFixed(1)}%</span>}
+          </div>
+          {annualPostTaxDeductions > 0 && (
+            <div
+              className="km-bar-segment km-posttax-segment"
+              style={{ width: `${clampPercent(postTaxPct)}%` }}
+              title={`Post-Tax: ${formatWithSymbol(annualPostTaxDeductions, currency, { maximumFractionDigits: 0 })} (${postTaxPct.toFixed(1)}%)`}
+            >
+              {postTaxPct > 7 && <span>{postTaxPct.toFixed(1)}%</span>}
+            </div>
+          )}
+          <div
+            className="km-bar-segment km-net-segment"
+            style={{ width: `${clampPercent(netPct)}%` }}
+            title={`Net Pay: ${formatWithSymbol(annualNet, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
+          >
+            {netPct > 7 && <span>{netPct.toFixed(1)}%</span>}
+          </div>
+        </div>
+        <div className="km-bar-labels">
+          {annualPreTaxDeductions > 0 && (
+            <div className="km-bar-label">
+              <span className="km-label-dot km-pretax-dot"></span>
+              Pre-Tax Deductions
+            </div>
+          )}
+          <div className="km-bar-label">
+            <span className="km-label-dot km-tax-dot"></span>
+            Taxes
+          </div>
+          {annualPostTaxDeductions > 0 && (
+            <div className="km-bar-label">
+              <span className="km-label-dot km-posttax-dot"></span>
+              Post-Tax Deductions
+            </div>
+          )}
+          <div className="km-bar-label">
+            <span className="km-label-dot km-net-dot"></span>
+            Take Home
+          </div>
+        </div>
+      </div>
+
       {/* Summary Bar */}
       <div className="summary-bar">
         <h3>Money Flow Summary</h3>
-        <div className="flow-visual">
-          <div 
-            className="flow-segment income-segment" 
-            style={{ width: '100%' }}
-            title={`Gross Income: ${formatWithSymbol(annualGross, currency, { maximumFractionDigits: 0 })}`}
-          >
-            <span><GlossaryTerm termId="gross-pay">Gross</GlossaryTerm>: {getCurrencySymbol(currency)}{(annualGross / 1000).toFixed(0)}k</span>
-          </div>
-          <div className="flow-arrow">→</div>
-          <div 
-            className="flow-segment taxes-segment" 
-            style={{ width: `${(annualTaxes / annualGross) * 100}%` }}
-            title={`Taxes: ${formatWithSymbol(annualTaxes, currency, { maximumFractionDigits: 0 })}`}
-          >
-            <span><GlossaryTerm termId="withholding">Taxes</GlossaryTerm>: {getCurrencySymbol(currency)}{(annualTaxes / 1000).toFixed(0)}k</span>
-          </div>
-          <div className="flow-arrow">→</div>
-          <div 
-            className="flow-segment net-segment" 
-            style={{ width: `${(annualNet / annualGross) * 100}%` }}
-            title={`Net Pay: ${formatWithSymbol(annualNet, currency, { maximumFractionDigits: 0 })}`}
-          >
-            <span><GlossaryTerm termId="net-pay">Net</GlossaryTerm>: {getCurrencySymbol(currency)}{(annualNet / 1000).toFixed(0)}k</span>
-          </div>
-          <div className="flow-arrow">→</div>
-          <div 
-            className="flow-segment bills-segment" 
-            style={{ width: `${(annualBills / annualGross) * 100}%` }}
-            title={`Bills: ${formatWithSymbol(annualBills, currency, { maximumFractionDigits: 0 })}`}
-          >
-            <span>Bills: {getCurrencySymbol(currency)}{(annualBills / 1000).toFixed(0)}k</span>
-          </div>
-          <div className="flow-arrow">→</div>
-          <div 
-            className="flow-segment remaining-segment" 
-            style={{ width: `${(annualRemaining / annualGross) * 100}%` }}
-            title={`Remaining: ${formatWithSymbol(annualRemaining, currency, { maximumFractionDigits: 0 })}`}
-          >
-            <span>Left: {getCurrencySymbol(currency)}{(annualRemaining / 1000).toFixed(0)}k</span>
-          </div>
+        <div className="km-flow-summary-list">
+          {flowRows.map((row) => {
+            const absolutePercent = Math.abs(row.percentage);
+            const widthPercent = row.key === 'gross' ? 100 : clampPercent(absolutePercent);
+
+            return (
+              <div key={row.key} className="km-flow-summary-row">
+                <div className="km-flow-summary-head">
+                  <span className="km-flow-summary-label">
+                    {row.key === 'gross' && <GlossaryTerm termId="gross-pay">{row.label}</GlossaryTerm>}
+                    {row.key === 'taxes' && <GlossaryTerm termId="withholding">{row.label}</GlossaryTerm>}
+                    {row.key === 'net' && <GlossaryTerm termId="net-pay">{row.label}</GlossaryTerm>}
+                    {row.key !== 'gross' && row.key !== 'taxes' && row.key !== 'net' && row.label}
+                  </span>
+                  <span className="km-flow-summary-value">
+                    {formatWithSymbol(row.amount, currency, { maximumFractionDigits: 0 })}
+                    {row.key !== 'gross' && annualGross > 0 && (
+                      <span className="km-flow-summary-percent"> ({row.percentage.toFixed(1)}%)</span>
+                    )}
+                  </span>
+                </div>
+                <div className="km-flow-track" aria-hidden="true">
+                  <div
+                    className={`km-flow-fill ${row.className}`}
+                    style={{ width: `${widthPercent}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
