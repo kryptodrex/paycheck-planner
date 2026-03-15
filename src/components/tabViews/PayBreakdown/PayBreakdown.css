@@ -32,7 +32,6 @@
 
 .flow-stage {
   display: grid;
-  grid-template-columns: 1fr auto;
   align-items: center;
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border-color-light);
@@ -449,7 +448,8 @@
   padding: 0.75rem 0.75rem 0.75rem 2.5rem;
   background: var(--bg-primary);
   border-top: 1px dashed var(--border-color);
-  display: block;
+  display: flex;
+  gap: 1rem;
 }
 
 /* Bill Category Styles */
@@ -552,7 +552,7 @@
   color: var(--alert-warning-text);
 }
 
-.paybreakdown-account-edit-actions {
+.allocation-edit-actions {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
@@ -614,6 +614,7 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+  flex-grow: 1;
 }
 
 .account-allocations .allocation-secondary-btn:hover:not(:disabled) {
@@ -819,12 +820,12 @@
     gap: 0.5rem;
   }
 
-  .paybreakdown-account-edit-actions {
+  .allocation-edit-actions {
     flex-direction: column;
     width: 100%;
   }
 
-  .paybreakdown-account-edit-actions > button {
+  .allocation-edit-actions > button {
     width: 100%;
   }
 

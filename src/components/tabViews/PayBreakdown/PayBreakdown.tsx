@@ -273,10 +273,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         onClose={() => setShowPaySettingsModal(false)}
       />
 
-      {/* Paycheck Flow Details */}
+      {/* Gross to Net Table */}
       <div className="flow-breakdown">
         <div className="flow-breakdown-header">
-          <h3>Paycheck Flow Details</h3>
+          <h3>Gross to Net Breakdown</h3>
         </div>
 
         <div className="visual-flow">
@@ -386,12 +386,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                     </span>
                     {!isEditing ? (
                       <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
-                    ) : (
-                      <div className="paybreakdown-account-edit-actions">
-                        <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
-                        <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>
-                      </div>
-                    )
+                    ) : null
                     }
                     <span className="waterfall-amount">{formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
@@ -472,7 +467,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       ))}
 
                       <div className="waterfall-row waterfall-category-row category-actions-row">
-                        <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
+                        <Button style={{ flexGrow: 1 }} className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
+                        <div className="allocation-edit-actions">
+                          <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
+                          <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>
+                        </div>
                       </div>
 
                       {validationMessages.has(displayAccount.id) && (
