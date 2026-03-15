@@ -2,13 +2,6 @@
  * Utility functions for money calculations
  */
 
-function getUserLocale(): string | undefined {
-  if (typeof navigator !== 'undefined' && navigator.language) {
-    return navigator.language;
-  }
-  return undefined;
-}
-
 /**
  * Round up to the nearest cent (0.01).
  *
@@ -57,7 +50,7 @@ export function sumAndRound(...amounts: number[]): number {
  * - 100 -> "100.00"
  */
 export function formatNumberDisplay(amount: number, decimals: number = 2, locale?: string): string {
-  return amount.toLocaleString(locale || getUserLocale(), {
+  return amount.toLocaleString(locale || 'en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });

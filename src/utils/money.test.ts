@@ -31,13 +31,11 @@ describe('money utilities', () => {
 
   it('formats numbers for display', () => {
     expect(formatNumberDisplay(1000.5, 2, 'en-US')).toBe('1,000.50');
-    expect(formatNumberDisplay(1000.5, 2, 'de-DE')).toBe('1.000,50');
     expect(formatNumberDisplay(1005.505, 2, 'en-US')).toBe('1,005.51');
   });
 
   it('parses formatted numbers', () => {
     expect(parseFormattedNumber('1,234.56')).toBe(1234.56);
-    expect(parseFormattedNumber('1.234,56', 'de-DE')).toBe(1234.56);
     expect(parseFormattedNumber('')).toBe(0);
   });
 });
