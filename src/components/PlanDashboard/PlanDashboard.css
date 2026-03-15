@@ -104,7 +104,7 @@
 .dashboard-header {
   background: var(--header-gradient);
   color: white;
-  padding: 1rem 1.5rem;
+  padding: 2rem 1.5rem 2rem 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -124,7 +124,7 @@
 .dashboard-footer {
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.5rem 0.75rem 1.25rem;
   color: var(--text-secondary);
   font-size: 0.8rem;
   flex-shrink: 0;

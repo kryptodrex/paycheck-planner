@@ -16,7 +16,6 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  padding-top: 35px;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
@@ -73,9 +72,8 @@ html, body {
 .drag-bar {
   height: 28px;
   -webkit-app-region: drag;
-  /* background: var(--bg-secondary); */
-  background: none;
-  opacity: 0.01; /* Make it invisible but still draggable */
+  background: transparent;
+  opacity: 1;
   position: fixed;
   top: 0;
   left: 0;
