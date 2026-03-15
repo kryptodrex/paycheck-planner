@@ -173,6 +173,9 @@
   font-size: 1.1rem;
   color: var(--text-primary);
   word-break: break-word;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .account-type {
@@ -316,6 +319,17 @@
   gap: 0.5rem;
   flex-shrink: 0;
   align-items: center;
+}
+
+.account-actions .account-item-btn-delete {
+  color: var(--error-color);
+  border-color: var(--error-color);
+}
+
+.account-actions .account-item-btn-delete:hover:not(:disabled) {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background: color-mix(in srgb, var(--error-color) 12%, var(--bg-secondary));
 }
 
 .account-edit-actions {

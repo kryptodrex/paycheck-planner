@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { Account } from '../../../../types/accounts';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../../utils/accountDefaults';
 import { Button, InfoBox } from '../../';
@@ -38,6 +38,8 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
   const [newAccountType, setNewAccountType] = useState<Account['type']>('checking');
   const [newAccountIcon, setNewAccountIcon] = useState(getDefaultAccountIcon('checking'));
   const [animatingIndices, setAnimatingIndices] = useState<{ from: number; to: number } | null>(null);
+  const addAccountSectionRef = useRef<HTMLDivElement | null>(null);
+  const addAccountNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleStartEdit = (account: Account) => {
     setEditingId(account.id);
@@ -109,82 +111,30 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
     }, 300); // Match this with CSS animation duration
   };
 
+  const handleToggleAddAccountForm = () => {
+    const willShow = !showAddAccountForm;
+    setShowAddAccountForm(willShow);
+
+    if (!willShow) return;
+
+    window.requestAnimationFrame(() => {
+      addAccountSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      addAccountNameInputRef.current?.focus();
+    });
+  };
+
   return (
     <div className="accounts-editor">
-      {showToggleButton && (
-        <Button
-          variant="primary"
-          className="add-account-toggle-btn"
-          onClick={() => setShowAddAccountForm((prev) => !prev)}
-        >
-          {showAddAccountForm ? 'Hide Add Account Options' : '+ Add New Account'}
-        </Button>
-      )}
-
-      {showAddAccountForm && (
-        <div className="add-account-section">
-          {showToggleButton && <h3>Add New Account</h3>}
-          <div className="add-account-form">
-            <div className="add-account-row">
-              <div className="add-account-field add-account-icon-field">
-                <label className="add-account-label">Icon</label>
-                <input
-                  type="text"
-                  className="account-icon-input"
-                  placeholder="💰"
-                  value={newAccountIcon}
-                  onChange={(e) => setNewAccountIcon(e.target.value)}
-                  maxLength={2}
-                  title="Icon (emoji)"
-                />
-              </div>
-              <div className="add-account-field add-account-name-field">
-                <label className="add-account-label">Account Name</label>
-                <input
-                  type="text"
-                  className="account-name-input"
-                  placeholder="e.g., Emergency Fund, Checking"
-                  value={newAccountName}
-                  onChange={(e) => setNewAccountName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddAccount();
-                    }
-                  }}
-                />
-              </div>
-              <div className="add-account-field add-account-type-field">
-                <label className="add-account-label">Type</label>
-                <select
-                  className="account-type-select"
-                  value={newAccountType}
-                  onChange={(e) => {
-                    const newType = e.target.value as Account['type'];
-                    setNewAccountType(newType);
-                    setNewAccountIcon(getDefaultAccountIcon(newType));
-                  }}
-                >
-                  <option value="checking">Checking</option>
-                  <option value="savings">Savings</option>
-                  <option value="investment">Investment</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-            </div>
-            <Button
-              variant="primary"
-              onClick={handleAddAccount}
-              disabled={!newAccountName.trim()}
-            >
-              Add Account
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="accounts-list">
         <h3>{listLabel}</h3>
         {listSubtitle && <p className="accounts-list-subtitle">{listSubtitle}</p>}
+        
+        {infoMessage && (
+          <InfoBox>
+            <p>{infoMessage}</p>
+          </InfoBox>
+        )}
+
         {accounts.map((account, index) => {
           const isMovingUp = animatingIndices?.from === index && animatingIndices?.to === index - 1;
           const isMovingDown = animatingIndices?.from === index && animatingIndices?.to === index + 1;
@@ -296,16 +246,17 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                       )}
                     </>
                   )}
-                  <Button variant="icon" onClick={() => handleStartEdit(account)} title="Edit account">
-                    ✎
+                  <Button variant="utility" onClick={() => handleStartEdit(account)} title="Edit account">
+                    Edit
                   </Button>
                   <Button
-                    variant="icon"
+                    variant="utility"
+                    className="account-item-btn-delete"
                     onClick={() => handleDeleteAccount(account.id)}
                     title="Delete account"
                     disabled={accounts.length <= minAccounts}
                   >
-                    🗑
+                    Delete
                   </Button>
                 </div>
               )}
@@ -314,10 +265,76 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
         })}
       </div>
 
-      {infoMessage && (
-        <InfoBox>
-          <p>{infoMessage}</p>
-        </InfoBox>
+      {showToggleButton && (
+        <Button
+          variant="primary"
+          className="add-account-toggle-btn"
+          onClick={handleToggleAddAccountForm}
+        >
+          {showAddAccountForm ? 'Hide Add Account Options' : 'Add New Account'}
+        </Button>
+      )}
+
+      {showAddAccountForm && (
+        <div ref={addAccountSectionRef} className="add-account-section">
+          {showToggleButton && <h3>Add New Account</h3>}
+          <div className="add-account-form">
+            <div className="add-account-row">
+              <div className="add-account-field add-account-icon-field">
+                <label className="add-account-label">Icon</label>
+                <input
+                  type="text"
+                  className="account-icon-input"
+                  placeholder="💰"
+                  value={newAccountIcon}
+                  onChange={(e) => setNewAccountIcon(e.target.value)}
+                  maxLength={2}
+                  title="Icon (emoji)"
+                />
+              </div>
+              <div className="add-account-field add-account-name-field">
+                <label className="add-account-label">Account Name</label>
+                <input
+                  ref={addAccountNameInputRef}
+                  type="text"
+                  className="account-name-input"
+                  placeholder="e.g., Emergency Fund, Checking"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddAccount();
+                    }
+                  }}
+                />
+              </div>
+              <div className="add-account-field add-account-type-field">
+                <label className="add-account-label">Type</label>
+                <select
+                  className="account-type-select"
+                  value={newAccountType}
+                  onChange={(e) => {
+                    const newType = e.target.value as Account['type'];
+                    setNewAccountType(newType);
+                    setNewAccountIcon(getDefaultAccountIcon(newType));
+                  }}
+                >
+                  <option value="checking">Checking</option>
+                  <option value="savings">Savings</option>
+                  <option value="investment">Investment</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+            <Button
+              variant="primary"
+              onClick={handleAddAccount}
+              disabled={!newAccountName.trim()}
+            >
+              Add Account
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

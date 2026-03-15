@@ -81,7 +81,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [accounts, setAccounts] = useState<Account[]>([
     {
       id: crypto.randomUUID(),
-      name: 'My Checking',
+      name: 'Checking',
       type: 'checking',
       color: getDefaultAccountColor('checking'),
       icon: getDefaultAccountIcon('checking'),
@@ -623,7 +623,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             <div className="wizard-step">
               <h2>Where does your money go?</h2>
               <p className="step-description">
-                Set up your accounts where you want to allocate your paychecks. We've created a default checking account to get you started.
+                Set up the accounts where you want to allocate your paychecks. We've created a default checking account to get you started.
               </p>
 
               <AccountsEditor
@@ -631,9 +631,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 onAdd={handleAddAccount}
                 onUpdate={handleUpdateAccount}
                 onDelete={handleDeleteAccount}
-                showToggleButton={false}
+                showToggleButton
                 listLabel="Your Accounts"
-                listSubtitle="We've created a default checking account for you. Click the edit icon to rename it or change its type."
                 infoMessage="You can always add, remove, or rename accounts later from Edit → Accounts."
                 minAccounts={1}
               />
