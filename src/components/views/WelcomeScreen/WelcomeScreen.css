@@ -7,7 +7,7 @@
   background: var(--alert-warning-bg);
   border: 2px solid var(--alert-warning-border);
   border-radius: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--surface-overlay-subtle);
   width: 100%;
   max-width: 500px;
 }

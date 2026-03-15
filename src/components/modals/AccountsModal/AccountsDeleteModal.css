@@ -1,0 +1,53 @@
+.account-delete-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.account-delete-content p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.account-delete-summary {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.account-delete-footer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 1.25rem;
+}
+
+.account-delete-footer-main {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.account-delete-footer-danger {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(239, 68, 68, 0.6);
+}
+
+@media (max-width: 600px) {
+  .account-delete-footer-main {
+    flex-direction: column-reverse;
+  }
+
+  .account-delete-footer-danger {
+    justify-content: stretch;
+  }
+
+  .account-delete-danger-btn {
+    width: 100%;
+  }
+}

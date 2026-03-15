@@ -449,10 +449,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       {fundingItem.account.name}
                     </span>
                     {!isEditing ? (
-                      <Button variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
+                      <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
                     ) : (
                       <div className="paybreakdown-account-edit-actions">
-                        <Button variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
+                        <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
                         <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>
                       </div>
                     )
@@ -529,14 +529,14 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                   });
                                 }}
                               />
-                              <Button variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">✕</Button>
+                              <Button className="category-remove-btn" variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">✕</Button>
                             </>
                           )}
                         </div>
                       ))}
 
                       <div className="waterfall-row waterfall-category-row category-actions-row">
-                        <Button variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
+                        <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
                       </div>
 
                       {validationMessages.has(displayAccount.id) && (

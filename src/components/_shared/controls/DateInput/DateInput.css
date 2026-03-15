@@ -55,10 +55,6 @@
   box-shadow: var(--focus-ring-accent);
 }
 
-.date-input.field-error {
-  border-color: var(--error-color) !important;
-}
-
 .date-input-select {
   flex: 1;
   min-width: 0;
