@@ -118,6 +118,35 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     return totalPerYear / paychecksPerYear;
   };
 
+  const getRetirementContributionPreview = (election: RetirementElection) => {
+    if (grossPayPerPaycheck === 0) {
+      return { employeeAmount: 0, employerAmount: 0 };
+    }
+
+    const employeeAmountPerPaycheck = election.employeeContributionIsPercentage
+      ? (grossPayPerPaycheck * election.employeeContribution) / 100
+      : election.employeeContribution;
+
+    let employerAmountPerPaycheck = 0;
+    if (election.hasEmployerMatch) {
+      const employeePercentage = election.employeeContributionIsPercentage
+        ? election.employeeContribution
+        : (employeeAmountPerPaycheck / grossPayPerPaycheck) * 100;
+
+      if (election.employerMatchCapIsPercentage) {
+        const matchPercentage = Math.min(employeePercentage, election.employerMatchCap);
+        employerAmountPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
+      } else {
+        employerAmountPerPaycheck = Math.min(employeeAmountPerPaycheck, election.employerMatchCap);
+      }
+    }
+
+    return {
+      employeeAmount: employeeAmountPerPaycheck,
+      employerAmount: employerAmountPerPaycheck,
+    };
+  };
+
   const savingsContributions = budgetData.savingsContributions || [];
 
   const sortedSavings = [...savingsContributions].sort((a, b) => {
@@ -504,39 +533,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               const isEnabled = item.enabled !== false;
 
               return (
-                <SectionItemCard key={item.id} className={`savings-item ${isEnabled ? '' : 'savings-item-disabled'}`}>
-                  <div className="savings-info">
-                    <h4>{item.name}</h4>
-                    <div className="savings-meta">
+                <SectionItemCard
+                  key={item.id}
+                  title={item.name}
+                  subtitle={`Saved ${formatBillFrequency(item.frequency)}: ${formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}`}
+                  amount={formatWithSymbol(displayAmount, currency, { minimumFractionDigits: 2 })}
+                  amountLabel={getDisplayModeLabel(displayMode)}
+                  badges={
+                    <>
                       <PillBadge variant={item.type === 'investment' ? 'accent' : 'info'}>
                         {item.type === 'investment' ? 'Investment' : 'Savings'}
                       </PillBadge>
                       <PillBadge variant="neutral">From {accountName}</PillBadge>
-                    </div>
-                    <div className="savings-frequency">
-                      Saved {formatBillFrequency(item.frequency)}: {formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}
-                    </div>
-                    {item.notes && <div className="savings-notes">{item.notes}</div>}
-                  </div>
-                  <div className="savings-amount">
-                    <div className="amount-display">
-                      <span className="amount-label">Per Paycheck:</span>
-                      <span className="amount">{formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    {displayMode !== 'paycheck' && (
-                      <div className="amount-display">
-                        <span className="amount-label">{getDisplayModeLabel(displayMode)}:</span>
-                        <span className="amount">{formatWithSymbol(displayAmount, currency, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="savings-actions">
-                    <Button variant="icon" onClick={() => handleToggleSavingsEnabled(item)} title={isEnabled ? 'Disable contribution' : 'Enable contribution'}>
-                      {isEnabled ? '⏸️' : '▶️'}
-                    </Button>
-                    <Button variant="icon" onClick={() => handleEditSavings(item)} title="Edit">✏️</Button>
-                    <Button variant="icon" onClick={() => handleDeleteSavings(item.id)} title="Delete">🗑️</Button>
-                  </div>
+                    </>
+                  }
+                  isPaused={!isEnabled}
+                  onPauseToggle={() => handleToggleSavingsEnabled(item)}
+                  onEdit={() => handleEditSavings(item)}
+                  onDelete={() => handleDeleteSavings(item.id)}
+                >
+                  {item.notes && <div className="savings-notes">{item.notes}</div>}
                 </SectionItemCard>
               );
             })}
@@ -570,7 +586,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         ) : (
           <div className="retirement-list">
             {sortedRetirement.map((retirement) => {
-              const { employeeAmount: employeePerPaycheck, employerAmount } = calculateRetirementContributions(retirement);
+              const { employeeAmount: employeePerPaycheck, employerAmount } = getRetirementContributionPreview(retirement);
               const totalPerPaycheck = employeePerPaycheck + employerAmount;
               const totalInDisplayMode = toDisplayAmount(totalPerPaycheck, paychecksPerYear, displayMode);
               const isEnabled = retirement.enabled !== false;
@@ -581,52 +597,54 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               const displayLabel = getRetirementPlanDisplayLabel(retirement);
 
               return (
-                <SectionItemCard key={retirement.id} className={`retirement-item ${isEnabled ? '' : 'retirement-item-disabled'}`}>
-                  <div className="retirement-info">
-                    <h4>{displayLabel}</h4>
-                    <div className="savings-meta retirement-meta">
+                <SectionItemCard
+                  key={retirement.id}
+                  title={displayLabel}
+                  subtitle={`${formatWithSymbol(employeePerPaycheck || 0, currency, { minimumFractionDigits: 2 })} per paycheck${retirement.employeeContributionIsPercentage ? ` (${retirement.employeeContribution}%)` : ''}`}
+                  amount={formatWithSymbol(totalInDisplayMode, currency, { minimumFractionDigits: 2 })}
+                  amountLabel={getDisplayModeLabel(displayMode)}
+                  badges={
+                    <>
                       <PillBadge variant={isPreTaxRetirement ? 'success' : 'warning'}>
                         {isPreTaxRetirement ? 'Pre-Tax' : 'Post-Tax'}
                       </PillBadge>
                       <PillBadge variant="neutral">{sourceLabel}</PillBadge>
+                    </>
+                  }
+                  isPaused={!isEnabled}
+                  onPauseToggle={() => handleToggleRetirementEnabled(retirement)}
+                  onEdit={() => handleEditRetirement(retirement)}
+                  onDelete={() => handleDeleteRetirement(retirement.id)}
+                >
+                  <div className="retirement-details">
+                    <div className="detail">
+                      <span className="label"><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm>:</span>
+                      <span className="value">
+                        {formatWithSymbol(employeePerPaycheck || 0, currency, { minimumFractionDigits: 2 })} per paycheck
+                        {retirement.employeeContributionIsPercentage && ` (${retirement.employeeContribution}%)`}
+                      </span>
                     </div>
-                    <div className="retirement-details">
+                    {retirement.hasEmployerMatch && (
                       <div className="detail">
-                        <span className="label"><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm>:</span>
+                        <span className="label"><GlossaryTerm termId="employer-match">Employer Match</GlossaryTerm>:</span>
                         <span className="value">
-                          {formatWithSymbol(employeePerPaycheck || 0, currency, { minimumFractionDigits: 2 })} per paycheck
-                          {retirement.employeeContributionIsPercentage && ` (${retirement.employeeContribution}%)`}
+                          {formatWithSymbol(employerAmount || 0, currency, { minimumFractionDigits: 2 })} per paycheck
+                          {' '}(up to {retirement.employerMatchCapIsPercentage ? `${retirement.employerMatchCap || 0}%` : formatWithSymbol(retirement.employerMatchCap || 0, currency, { minimumFractionDigits: 2 })})
                         </span>
                       </div>
-                      {retirement.hasEmployerMatch && (
-                        <div className="detail">
-                          <span className="label"><GlossaryTerm termId="employer-match">Employer Match</GlossaryTerm>:</span>
-                          <span className="value">
-                            {formatWithSymbol(employerAmount || 0, currency, { minimumFractionDigits: 2 })} per paycheck
-                            (up to {retirement.employerMatchCapIsPercentage ? `${retirement.employerMatchCap || 0}%` : formatWithSymbol(retirement.employerMatchCap || 0, currency, { minimumFractionDigits: 2 })})
-                          </span>
-                        </div>
-                      )}
-                      {displayMode !== 'paycheck' && (
-                        <div className="detail total-detail">
-                          <span className="label">Total {getDisplayModeLabel(displayMode)}:</span>
-                          <span className="value emphasized">{formatWithSymbol(totalInDisplayMode, currency, { minimumFractionDigits: 2 })}</span>
-                        </div>
-                      )}
-                      {retirement.yearlyLimit && (
-                        <div className="detail">
-                          <span className="label"><GlossaryTerm termId="annual-contribution-limit">Yearly Limit</GlossaryTerm>:</span>
-                          <span className="value">{formatWithSymbol(retirement.yearlyLimit, currency, { minimumFractionDigits: 2 })} max per year</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="retirement-actions">
-                    <Button variant="icon" onClick={() => handleToggleRetirementEnabled(retirement)} title={isEnabled ? 'Disable retirement election' : 'Enable retirement election'}>
-                      {isEnabled ? '⏸️' : '▶️'}
-                    </Button>
-                    <Button variant="icon" onClick={() => handleEditRetirement(retirement)} title="Edit">✏️</Button>
-                    <Button variant="icon" onClick={() => handleDeleteRetirement(retirement.id)} title="Delete">🗑️</Button>
+                    )}
+                    {displayMode !== 'paycheck' && (
+                      <div className="detail total-detail">
+                        <span className="label">Total {getDisplayModeLabel(displayMode)}:</span>
+                        <span className="value emphasized">{formatWithSymbol(totalInDisplayMode, currency, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                    {retirement.yearlyLimit && (
+                      <div className="detail">
+                        <span className="label"><GlossaryTerm termId="annual-contribution-limit">Yearly Limit</GlossaryTerm>:</span>
+                        <span className="value">{formatWithSymbol(retirement.yearlyLimit, currency, { minimumFractionDigits: 2 })} max per year</span>
+                      </div>
+                    )}
                   </div>
                 </SectionItemCard>
               );

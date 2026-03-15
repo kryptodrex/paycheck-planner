@@ -48,46 +48,6 @@
   box-shadow: var(--shadow-md);
 }
 
-.loans-manager .loan-item.loan-disabled {
-  opacity: 0.6;
-}
-
-.loans-manager .loan-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 0;
-}
-
-.loans-manager .loan-title h4 {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.6rem;
-}
-
-.loans-manager .loan-amount {
-  text-align: right;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.loans-manager .amount-label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
 .loans-manager .loan-details {
   display: flex;
   flex-direction: column;
@@ -173,22 +133,6 @@
 .loans-manager .notes-label {
   font-weight: 600;
   color: var(--text-primary);
-}
-
-.loans-manager .loan-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border-color-light);
-}
-
-.loans-manager .loan-actions .btn-icon {
-  opacity: 0.7;
-}
-
-.loans-manager .loan-actions .btn-icon:hover:not(:disabled) {
-  opacity: 1;
 }
 
 .loan-schedule-modal {
@@ -346,13 +290,7 @@
   padding-top: 0.5rem;
 }
 
-.loans-manager .loan-frequency {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
 .loans-manager .loan-breakdown {
-  margin: 1rem 0;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-color-light);
   display: flex;
@@ -385,24 +323,8 @@
 }
 
 @media (max-width: 768px) {
-  .loans-manager .loan-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.65rem;
-  }
-
-  .loans-manager .loan-amount {
-    align-items: flex-start;
-    text-align: left;
-  }
-
   .loans-manager .loan-stats {
     grid-template-columns: 1fr;
-  }
-
-  .loans-manager .loan-actions {
-    flex-wrap: wrap;
-    justify-content: flex-start;
   }
 
   .loans-manager .loan-term-input-row {

@@ -1,4 +1,5 @@
 .section-item-card {
+  position: relative;
   background: var(--bg-secondary);
   border: 2px solid var(--border-color);
   border-radius: 8px;
@@ -10,4 +11,146 @@
   border-color: var(--accent-primary);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+}
+
+/* Paused / disabled state */
+.section-item-card.item-is-paused {
+  opacity: 0.6;
+}
+
+/* PAUSED stamp overlay */
+.item-card-paused-stamp {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: 8px;
+}
+
+.item-card-paused-stamp span {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: var(--text-tertiary);
+  border: 3px solid var(--text-tertiary);
+  border-radius: 4px;
+  padding: 0.2rem 0.65rem;
+  transform: rotate(-12deg);
+  opacity: 0.65;
+  user-select: none;
+}
+
+/* Header row */
+.item-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.item-card-title-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.item-card-subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.item-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+/* Amount group (right-aligned) */
+.item-card-amount-group {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.item-card-amount {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.item-card-amount-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.1rem;
+}
+
+/* Body slot (extra content: notes, breakdowns, details) */
+.item-card-body {
+  margin-top: 0.75rem;
+}
+
+/* Actions footer */
+.item-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border-color-light);
+}
+
+/* Action button color overrides (applied on top of .btn-utility) */
+.item-card-actions .item-card-btn-pause {
+  color: var(--warning-color);
+  border-color: var(--warning-color);
+}
+
+.item-card-actions .item-card-btn-pause:hover:not(:disabled) {
+  color: var(--warning-color);
+  border-color: var(--warning-color);
+  background: color-mix(in srgb, var(--warning-color) 12%, var(--bg-secondary));
+}
+
+.item-card-actions .item-card-btn-resume {
+  color: var(--success-color);
+  border-color: var(--success-color);
+}
+
+.item-card-actions .item-card-btn-resume:hover:not(:disabled) {
+  color: var(--success-color);
+  border-color: var(--success-color);
+  background: color-mix(in srgb, var(--success-color) 12%, var(--bg-secondary));
+}
+
+.item-card-actions .item-card-btn-delete {
+  color: var(--error-color);
+  border-color: var(--error-color);
+}
+
+.item-card-actions .item-card-btn-delete:hover:not(:disabled) {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background: color-mix(in srgb, var(--error-color) 12%, var(--bg-secondary));
+}
+
+@media (max-width: 600px) {
+  .item-card-header {
+    flex-direction: column;
+  }
+
+  .item-card-amount-group {
+    text-align: left;
+  }
 }

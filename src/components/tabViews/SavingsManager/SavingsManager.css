@@ -58,86 +58,10 @@
   gap: 0.75rem;
 }
 
-.savings-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 1rem;
-  align-items: center;
-}
-
-.savings-item-disabled {
-  opacity: 0.55;
-}
-
-.savings-info h4,
-.retirement-info h4 {
-  margin: 0;
-  font-size: 0.95rem;
-  color: var(--text-primary);
-}
-
-.savings-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.35rem;
-}
-
-.savings-frequency,
-.savings-notes {
-  margin-top: 0.4rem;
-  color: var(--text-secondary);
-  font-size: 0.86rem;
-}
-
 .savings-notes {
   white-space: pre-wrap;
-}
-
-.savings-amount {
-  display: flex;
-  gap: 0.9rem;
-}
-
-.savings-amount .amount-display {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.savings-amount .amount-label {
-  font-size: 0.75rem;
   color: var(--text-secondary);
-}
-
-.savings-amount .amount {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.savings-actions,
-.retirement-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.retirement-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.retirement-item-disabled {
-  opacity: 0.55;
-}
-
-.retirement-info {
-  flex: 1;
-}
-
-.retirement-meta {
-  margin-top: 0.35rem;
+  font-size: 0.86rem;
 }
 
 .retirement-details {
@@ -196,27 +120,6 @@
 }
 
 @media (max-width: 900px) {
-  .savings-item {
-    grid-template-columns: 1fr;
-  }
-
-  .savings-amount {
-    justify-content: flex-start;
-  }
-
-  .savings-amount .amount-display {
-    align-items: flex-start;
-  }
-
-  .retirement-item {
-    flex-direction: column;
-  }
-
-  .retirement-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
   .savings-manager .form-row {
     grid-template-columns: 1fr;
   }

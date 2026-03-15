@@ -432,55 +432,37 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                 const lineItems = loan.paymentBreakdown || [];
 
                                                 return (
-                                                    <SectionItemCard key={loan.id} className={`loan-item ${isLoanEnabled(loan) ? '' : 'loan-disabled'}`}>
-                                                        <div className="loan-header">
-                                                            <div className="loan-title">
-                                                                <h4>
-                                                                    {loan.name}
-                                                                    <PillBadge variant="outline">{LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}</PillBadge>
-                                                                </h4>
-                                                                <div className="loan-frequency">
-                                                                    <span>Paid {formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: {formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="loan-amount">
-                                                                {formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                <span className="amount-label">{getDisplayModeLabel(displayMode)}</span>
-                                                            </div>
-                                                        </div>
-
+                                                    <SectionItemCard
+                                                        key={loan.id}
+                                                        title={loan.name}
+                                                        subtitle={`Paid ${formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: ${formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                        amount={formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        amountLabel={getDisplayModeLabel(displayMode)}
+                                                        badges={
+                                                            <PillBadge variant="outline">
+                                                                {LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}
+                                                            </PillBadge>
+                                                        }
+                                                        isPaused={!isLoanEnabled(loan)}
+                                                        onPauseToggle={() => handleToggleLoanEnabled(loan)}
+                                                        onEdit={() => handleEditLoan(loan)}
+                                                        onDelete={() => handleDeleteLoan(loan.id)}
+                                                    >
                                                         {lineItems.length > 0 && (
                                                             <div className="loan-breakdown">
                                                                 {lineItems
                                                                     .sort((a, b) => b.amount - a.amount)
                                                                     .map((line) => (
-                                                                    <div key={line.id} className="loan-line-items-preview-row">
-                                                                        <span>{line.label}</span>
-                                                                        <span>
-                                                                            {formatWithSymbol(displayAmount(convertBillToMonthly(line.amount, line.frequency)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                        </span>
-                                                                    </div>
-                                                                ))}
+                                                                        <div key={line.id} className="loan-line-items-preview-row">
+                                                                            <span>{line.label}</span>
+                                                                            <span>
+                                                                                {formatWithSymbol(displayAmount(convertBillToMonthly(line.amount, line.frequency)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
                                                             </div>
                                                         )}
-
                                                         {loan.notes && <div className="loan-notes">{loan.notes}</div>}
-
-                                                        <div className="loan-actions">
-                                                            <Button
-                                                                variant="icon"
-                                                                onClick={() => handleToggleLoanEnabled(loan)}
-                                                                title={isLoanEnabled(loan) ? 'Disable loan payment' : 'Enable loan payment'}
-                                                            >
-                                                                {isLoanEnabled(loan) ? '⏸️' : '▶️'}
-                                                            </Button>
-                                                            <Button variant="icon" onClick={() => handleEditLoan(loan)} title="Edit loan payment">
-                                                                ✏️
-                                                            </Button>
-                                                            <Button variant="icon" onClick={() => handleDeleteLoan(loan.id)} title="Delete loan payment">
-                                                                🗑️
-                                                            </Button>
-                                                        </div>
                                                     </SectionItemCard>
                                                 );
                                             })}
