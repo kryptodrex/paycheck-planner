@@ -7,6 +7,7 @@ import { GlossaryTerm } from '../../modals/GlossaryModal';
 import type { TaxLine } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import '../tabViews.shared.css';
+import '../../_shared/payEditorShared.css';
 import './TaxBreakdown.css';
 
 interface TaxBreakdownProps {
