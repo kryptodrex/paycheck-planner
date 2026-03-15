@@ -5,6 +5,7 @@ import { FileStorageService } from '../../../services/fileStorage';
 import type { RecentFile } from '../../../services/fileStorage';
 import { Button, ErrorDialog, FileRelinkModal, FormGroup } from '../../_shared';
 import SettingsModal from '../../modals/SettingsModal';
+import '../views.shared.css';
 import './WelcomeScreen.css';
 
 interface WelcomeScreenProps {
@@ -139,8 +140,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
 
   if (showNewPlanForm) {
     return (
-      <div className="welcome-screen">
-        <div className="welcome-card">
+      <div className="view-screen welcome-screen">
+        <div className="view-screen-card welcome-card">
           <h1>Create New Plan</h1>
           <p className="form-description">Start planning your paychecks for a specific year</p>
           <form onSubmit={handleSubmitNew} className="new-budget-form">
@@ -176,7 +177,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   }
 
   return (
-    <div className="welcome-screen">
+    <div className="view-screen welcome-screen">
       {initialError && !dismissedError && (
         <div className="error-banner">
           <div className="error-content">
@@ -195,7 +196,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
           </div>
         </div>
       )}
-      <div className="welcome-card">
+      <div className="view-screen-card welcome-card">
         <div className="welcome-header">
           <Button
             className="welcome-settings-btn"

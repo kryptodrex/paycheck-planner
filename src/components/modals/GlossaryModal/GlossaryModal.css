@@ -81,7 +81,7 @@
 
 .glossary-category-btn:hover {
   background: var(--glossary-accent-soft);
-  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  border-color: var(--border-accent-soft);
   color: var(--text-primary);
 }
 

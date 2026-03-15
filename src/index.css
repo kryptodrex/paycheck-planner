@@ -26,11 +26,18 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-elevated-shell: 0 20px 60px rgba(0, 0, 0, 0.3);
+  --shadow-accent-soft: 0 2px 8px color-mix(in srgb, var(--accent-primary) 16%, transparent);
+  --shadow-accent-md: 0 4px 12px color-mix(in srgb, var(--accent-primary) 24%, transparent);
   --accent-primary: #667eea;
   --accent-hover: #5568d3;
   --accent-secondary: #764ba2;
+  --surface-accent-subtle: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+  --border-accent-soft: color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
   --tab-drag-indicator: var(--accent-primary);
   --tab-drag-indicator-ring: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+  --focus-ring-accent: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  --focus-ring-accent-soft: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
@@ -68,6 +75,7 @@
   --logo-glow-secondary: #61dafbaa;
   --header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --header-text-secondary: rgba(255, 255, 255, 0.9);
+  --overlay-backdrop: rgba(0, 0, 0, 0.5);
 }
 
 /* Dark theme */
@@ -86,11 +94,18 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-elevated-shell: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-accent-soft: 0 2px 8px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  --shadow-accent-md: 0 4px 12px color-mix(in srgb, var(--accent-primary) 28%, transparent);
   --accent-primary: #a855f7;
   --accent-hover: #9333ea;
   --accent-secondary: #c084fc;
+  --surface-accent-subtle: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary));
+  --border-accent-soft: color-mix(in srgb, var(--accent-primary) 50%, var(--border-color));
   --tab-drag-indicator: var(--accent-primary);
   --tab-drag-indicator-ring: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  --focus-ring-accent: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 28%, transparent);
+  --focus-ring-accent-soft: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 22%, transparent);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
@@ -128,6 +143,7 @@
   --logo-glow-secondary: #06b6d4aa;
   --header-gradient: linear-gradient(135deg, #3d3250 0%, #252038 100%);
   --header-text-secondary: rgba(229, 231, 235, 0.9);
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
 }
 
 body {

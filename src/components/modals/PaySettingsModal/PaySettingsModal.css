@@ -64,9 +64,9 @@
   gap: 0.75rem;
   margin-bottom: 1rem;
   padding: 0.9rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  border: 1px solid var(--border-accent-soft);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+  background: var(--surface-accent-subtle);
 }
 
 .pay-settings-leftover-suggestion-copy {

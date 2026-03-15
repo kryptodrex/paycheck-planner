@@ -1,21 +1,9 @@
 .setup-wizard {
-  height: 100vh;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* background: var(--header-gradient); */
-  background: var(--header-gradient);
-  padding: 1rem;
-  overflow: hidden;
 }
 
 .wizard-container {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 700px;
-  width: 100%;
   overflow: hidden;
 }
 
@@ -65,9 +53,9 @@
   gap: 0.75rem;
   margin-bottom: 1rem;
   padding: 0.9rem 1rem;
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  border: 1px solid var(--border-accent-soft);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+  background: var(--surface-accent-subtle);
 }
 
 .setup-leftover-suggestion-copy {
@@ -172,7 +160,7 @@
 
 .account-item:hover {
   border-color: var(--accent-primary);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--shadow-accent-soft);
 }
 
 .account-info {
@@ -261,7 +249,7 @@
 .form-row input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .form-row select {
@@ -278,7 +266,7 @@
 .form-row select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .flex-grow {
@@ -300,7 +288,7 @@
 .account-name-input:focus {
   outline: none;
   border-color: var(--accent-secondary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 /* Account Details & Editing */
@@ -352,7 +340,7 @@
   border-color: var(--accent-primary);
   padding: 1.25rem;
   flex-wrap: wrap;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--shadow-accent-md);
 }
 
 .account-edit-form {
@@ -383,7 +371,7 @@
 .account-edit-form .account-icon-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-form .account-name-input {
@@ -403,7 +391,7 @@
 .account-edit-form .account-name-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-form .account-type-select {
@@ -422,7 +410,7 @@
 .account-edit-form .account-type-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-actions {
@@ -488,7 +476,7 @@
 .add-account-form .account-icon-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .add-account-form .account-name-input {
@@ -508,7 +496,7 @@
 .add-account-form .account-name-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .add-account-form .account-type-select {
@@ -528,7 +516,7 @@
 .add-account-form .account-type-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 @media (max-width: 768px) {

@@ -1,12 +1,4 @@
 .welcome-screen {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  width: 100%;
-  background: var(--header-gradient);
-  padding: 1rem;
-  overflow: hidden;
   flex-direction: column;
   gap: 1rem;
 }
@@ -66,14 +58,7 @@
 }
 
 .welcome-card {
-  background: var(--bg-primary);
-  border-radius: 1rem;
-  padding: clamp(1rem, 3vw, 2rem);
   max-width: 900px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;
 }
 
@@ -219,14 +204,6 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-  .welcome-screen {
-    padding: 0.75rem;
-  }
-
-  .welcome-card {
-    padding: clamp(1rem, 4vw, 2rem);
-  }
-
   .action-buttons {
     grid-template-columns: 1fr;
   }
@@ -242,14 +219,6 @@
 }
 
 @media (max-width: 480px) {
-  .welcome-screen {
-    padding: 0.5rem;
-  }
-
-  .welcome-card {
-    padding: 1rem;
-  }
-
   .welcome-card h1 {
     font-size: 1.5rem;
   }

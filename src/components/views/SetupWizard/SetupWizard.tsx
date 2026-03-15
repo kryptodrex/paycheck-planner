@@ -8,6 +8,7 @@ import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../../types/payroll';
 import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog } from '../../_shared';
+import '../views.shared.css';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -320,8 +321,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   return (
-    <div className="setup-wizard">
-      <div className="wizard-container">
+    <div className="view-screen setup-wizard">
+      <div className="view-screen-card wizard-container">
         <div className="wizard-header">
           <h1>Setup Your Paycheck Plan</h1>
           <ProgressBar

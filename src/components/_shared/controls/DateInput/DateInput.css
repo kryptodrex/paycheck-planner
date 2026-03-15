@@ -52,7 +52,7 @@
 
 .date-input:focus-within {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  box-shadow: var(--focus-ring-accent);
 }
 
 .date-input.field-error {
@@ -100,7 +100,7 @@
 }
 
 .date-input-trigger:hover {
-  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+  background: var(--surface-accent-subtle);
   color: var(--accent-primary);
 }
 
