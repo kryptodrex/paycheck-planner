@@ -86,10 +86,10 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
   if (!migrated.taxSettings) {
     migrated.taxSettings = {
       taxLines: [
-        { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0 },
-        { id: crypto.randomUUID(), label: 'State Tax', rate: 0 },
-        { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2 },
-        { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45 },
+        { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: 0,
     };
@@ -104,12 +104,21 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
     };
     migrated.taxSettings = {
       taxLines: [
-        { id: crypto.randomUUID(), label: 'Federal Tax', rate: old.federalTaxRate ?? 0 },
-        { id: crypto.randomUUID(), label: 'State Tax', rate: old.stateTaxRate ?? 0 },
-        { id: crypto.randomUUID(), label: 'Social Security', rate: old.socialSecurityRate ?? 6.2 },
-        { id: crypto.randomUUID(), label: 'Medicare', rate: old.medicareRate ?? 1.45 },
+        { id: crypto.randomUUID(), label: 'Federal Tax', rate: old.federalTaxRate ?? 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'State Tax', rate: old.stateTaxRate ?? 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Social Security', rate: old.socialSecurityRate ?? 6.2, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Medicare', rate: old.medicareRate ?? 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: old.additionalWithholding ?? 0,
+    };
+  } else {
+    migrated.taxSettings = {
+      ...migrated.taxSettings,
+      taxLines: (migrated.taxSettings.taxLines || []).map((line) => ({
+        ...line,
+        amount: typeof line.amount === 'number' ? line.amount : 0,
+        calculationType: line.calculationType === 'fixed' ? 'fixed' : 'percentage',
+      })),
     };
   }
 
@@ -1121,10 +1130,10 @@ export class FileStorageService {
       preTaxDeductions: [],
       taxSettings: {
         taxLines: [
-          { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0 },
-          { id: crypto.randomUUID(), label: 'State Tax', rate: 0 },
-          { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2 },
-          { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45 },
+          { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+          { id: crypto.randomUUID(), label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+          { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2, amount: 0, calculationType: 'percentage' },
+          { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
         ],
         additionalWithholding: 0,
       },

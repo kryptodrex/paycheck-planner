@@ -5,9 +5,15 @@ import { getCurrencySymbol, CURRENCIES } from '../../../utils/currency';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
+import {
+  type EditableTaxLineValues,
+  syncEditableTaxLineValues,
+  toStoredTaxLine,
+  validateEditableTaxLineValues,
+} from '../../../utils/taxLines';
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../../types/payroll';
-import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog } from '../../_shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor } from '../../_shared';
 import '../views.shared.css';
 import '../../_shared/payEditorShared.css';
 import './SetupWizard.css';
@@ -17,26 +23,19 @@ interface SetupWizardProps {
   onCancel?: () => void;
 }
 
-interface EditableTaxLine {
-  id: string;
-  label: string;
-  rate: string;
-  error?: string;
-}
-
-const getDefaultTaxLinesForCurrency = (currencyCode: string): EditableTaxLine[] => {
+const getDefaultTaxLinesForCurrency = (currencyCode: string): EditableTaxLineValues[] => {
   if (currencyCode === 'USD') {
     return [
-      { id: crypto.randomUUID(), label: 'Federal Tax', rate: '12' },
-      { id: crypto.randomUUID(), label: 'State Tax', rate: '5' },
-      { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2' },
-      { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45' },
+      { id: crypto.randomUUID(), label: 'Federal Tax', rate: '12', amount: '0.00', taxableIncome: '0.00', calculationType: 'percentage' },
+      { id: crypto.randomUUID(), label: 'State Tax', rate: '5', amount: '0.00', taxableIncome: '0.00', calculationType: 'percentage' },
+      { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2', amount: '0.00', taxableIncome: '0.00', calculationType: 'percentage' },
+      { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45', amount: '0.00', taxableIncome: '0.00', calculationType: 'percentage' },
     ];
   }
 
   // Non-USD plans start with neutral labels and no assumed rates.
   return [
-    { id: crypto.randomUUID(), label: 'Income Tax', rate: '0' },
+    { id: crypto.randomUUID(), label: 'Income Tax', rate: '0', amount: '0.00', taxableIncome: '0.00', calculationType: 'percentage' },
   ];
 };
 
@@ -71,7 +70,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [payFrequency, setPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
   const [minLeftover, setMinLeftover] = useState('0');
 
-  const [taxLines, setTaxLines] = useState<EditableTaxLine[]>(() => getDefaultTaxLinesForCurrency(budgetData?.settings?.currency || 'USD'));
+  const [taxLines, setTaxLines] = useState<EditableTaxLineValues[]>(() => getDefaultTaxLinesForCurrency(budgetData?.settings?.currency || 'USD'));
   const [hasEditedTaxLines, setHasEditedTaxLines] = useState(false);
   const [taxRatesAutoEstimated, setTaxRatesAutoEstimated] = useState(false);
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
@@ -128,16 +127,11 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
     let hasTaxErrors = false;
     const validatedTaxLines = taxLines.map((line) => {
-      const parsedRate = parseFloat(line.rate);
-      if (line.label.trim() === '') {
+      const nextLine = validateEditableTaxLineValues(line);
+      if (nextLine.error) {
         hasTaxErrors = true;
-        return { ...line, error: 'Label is required.' };
       }
-      if (!Number.isFinite(parsedRate) || parsedRate < 0 || parsedRate > 100) {
-        hasTaxErrors = true;
-        return { ...line, error: 'Rate must be between 0 and 100.' };
-      }
-      return { ...line, error: undefined };
+      return nextLine;
     });
 
     const parsedWithholding = parseFloat(additionalWithholding);
@@ -186,11 +180,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
     // Save tax settings
     const taxSettings: TaxSettings = {
-      taxLines: validatedTaxLines.map((line) => ({
-        id: line.id,
-        label: line.label.trim(),
-        rate: parseFloat(line.rate),
-      })),
+      taxLines: validatedTaxLines.map((line) => toStoredTaxLine(line, estimateGrossPerPaycheck())),
       additionalWithholding: parsedWithholding,
     };
     updateTaxSettings(taxSettings);
@@ -221,18 +211,45 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     setAccounts((prev) => prev.filter((acc) => acc.id !== id));
   };
 
-  const handleTaxLineChange = (id: string, field: 'label' | 'rate', value: string) => {
+  const handleTaxLineChange = (id: string, field: 'label' | 'rate' | 'amount' | 'taxableIncome' | 'calculationType', value: string) => {
     setHasEditedTaxLines(true);
     setTaxLines((prev) => prev.map((line) => (
-      line.id === id ? { ...line, [field]: value, error: undefined } : line
+      line.id === id ? syncEditableTaxLineValues(line, field, value, estimateGrossPerPaycheck()) : line
     )));
+  };
+
+  const handleTaxLineBlur = (id: string, field: 'rate' | 'amount' | 'taxableIncome') => {
+    setTaxLines((prev) => prev.map((line) => {
+      if (line.id !== id) return line;
+
+      if (field === 'taxableIncome') {
+        const parsedTaxableIncome = Math.max(0, parseFloat(line.taxableIncome) || 0);
+        return syncEditableTaxLineValues(line, 'taxableIncome', parsedTaxableIncome.toFixed(2), estimateGrossPerPaycheck());
+      }
+
+      if (field === 'amount') {
+        const parsedAmount = Math.max(0, parseFloat(line.amount) || 0);
+        return syncEditableTaxLineValues(line, 'amount', parsedAmount.toFixed(2), estimateGrossPerPaycheck());
+      }
+
+      const parsedRate = Math.max(0, parseFloat(line.rate) || 0);
+      return syncEditableTaxLineValues(line, 'rate', parsedRate.toFixed(2), estimateGrossPerPaycheck());
+    }));
   };
 
   const handleAddTaxLine = () => {
     setHasEditedTaxLines(true);
+    const estimatedTaxableIncome = estimateGrossPerPaycheck();
     setTaxLines((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), label: '', rate: '0' },
+      {
+        id: crypto.randomUUID(),
+        label: '',
+        rate: '0',
+        amount: '0.00',
+        taxableIncome: estimatedTaxableIncome.toFixed(2),
+        calculationType: 'percentage',
+      },
     ]);
   };
 
@@ -245,7 +262,10 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     setCurrency(value);
 
     if (!hasEditedTaxLines) {
-      setTaxLines(getDefaultTaxLinesForCurrency(value));
+      const estimatedTaxableIncome = estimateGrossPerPaycheck();
+      setTaxLines(getDefaultTaxLinesForCurrency(value).map((line) => (
+        syncEditableTaxLineValues(line, 'taxableIncome', estimatedTaxableIncome.toFixed(2), estimatedTaxableIncome)
+      )));
       setTaxRatesAutoEstimated(value !== 'USD');
     }
   };
@@ -276,31 +296,33 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     return 7;
   };
 
-  const applyEstimatedTaxRates = (lines: EditableTaxLine[]) => {
+  const applyEstimatedTaxRates = (lines: EditableTaxLineValues[]) => {
     const annualGross = getEstimatedAnnualGross();
     const federalRate = estimateFederalRate(annualGross);
     const stateRate = estimateStateRate(annualGross);
+    const grossPerPaycheck = estimateGrossPerPaycheck();
 
     return lines.map((line) => {
+      const lineWithTaxableIncome = syncEditableTaxLineValues(line, 'taxableIncome', grossPerPaycheck.toFixed(2), grossPerPaycheck);
       const normalizedLabel = line.label.trim().toLowerCase();
 
       if (normalizedLabel === 'federal tax') {
-        return { ...line, rate: String(federalRate), error: undefined };
+        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', String(federalRate), grossPerPaycheck);
       }
 
       if (normalizedLabel === 'state tax') {
-        return { ...line, rate: String(stateRate), error: undefined };
+        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', String(stateRate), grossPerPaycheck);
       }
 
       if (normalizedLabel === 'social security') {
-        return { ...line, rate: '6.2', error: undefined };
+        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', '6.2', grossPerPaycheck);
       }
 
       if (normalizedLabel === 'medicare') {
-        return { ...line, rate: '1.45', error: undefined };
+        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', '1.45', grossPerPaycheck);
       }
 
-      return line;
+      return lineWithTaxableIncome;
     });
   };
 
@@ -552,50 +574,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 )}
               </InfoBox>
 
-              <div className="tax-lines-editor">
-                <div className="tax-lines-header">
-                  <span className="col-label">Name</span>
-                  <span className="col-rate">Rate (%)</span>
-                  <span className="col-actions" />
-                </div>
-
-                {taxLines.map((line) => (
-                  <div key={line.id} className="tax-line-row">
-                    <div className="tax-line-fields">
-                      <input
-                        className={`tax-line-label-input${line.error === 'Label is required.' ? ' field-error' : ''}`}
-                        type="text"
-                        placeholder="e.g. Federal Tax"
-                        value={line.label}
-                        onChange={(e) => handleTaxLineChange(line.id, 'label', e.target.value)}
-                      />
-                      <InputWithPrefix
-                        suffix="%"
-                        className={line.error && line.error !== 'Label is required.' ? 'field-error' : ''}
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={line.rate}
-                        onChange={(e) => handleTaxLineChange(line.id, 'rate', e.target.value)}
-                      />
-                      <Button
-                        variant="remove"
-                        type="button"
-                        title="Remove tax line"
-                        onClick={() => handleRemoveTaxLine(line.id)}
-                      >
-                        ✕
-                      </Button>
-                    </div>
-                    {line.error && <div className="tax-line-error">{line.error}</div>}
-                  </div>
-                ))}
-
-                <Button variant="secondary" onClick={handleAddTaxLine}>
-                  + Add Tax Line
-                </Button>
-              </div>
+              <TaxLinesEditor
+                lines={taxLines}
+                currency={currency}
+                onLineChange={handleTaxLineChange}
+                onLineBlur={handleTaxLineBlur}
+                onAddLine={handleAddTaxLine}
+                onRemoveLine={handleRemoveTaxLine}
+              />
 
               <FormGroup 
                 label="Additional Withholding (per paycheck)" 

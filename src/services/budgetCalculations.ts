@@ -3,6 +3,7 @@ import type { PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
 import { roundUpToCent } from '../utils/money';
 import { getPaychecksPerYear } from '../utils/payPeriod';
+import { calculateTaxLineAmount } from '../utils/taxLines';
 
 type BudgetCalculationInput = Pick<
   BudgetData,
@@ -95,7 +96,7 @@ export function calculatePaycheckBreakdown(input?: BudgetCalculationInput | null
   const taxLineAmounts: TaxLineAmount[] = (input.taxSettings.taxLines || []).map((line) => ({
     id: line.id,
     label: line.label,
-    amount: roundUpToCent((taxableIncome * line.rate) / 100),
+    amount: calculateTaxLineAmount(taxableIncome, line),
   }));
 
   const additionalWithholding = roundUpToCent(input.taxSettings.additionalWithholding || 0);

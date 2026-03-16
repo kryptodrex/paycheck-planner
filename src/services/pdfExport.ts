@@ -5,6 +5,7 @@ import type { BudgetData } from '../types/budget';
 import { calculatePaycheckBreakdown } from './budgetCalculations';
 import { formatWithSymbol } from '../utils/currency';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';
+import { getTaxLineCalculationType } from '../utils/taxLines';
 
 type JsPdfWithAutoTable = jsPDF & {
   lastAutoTable?: {
@@ -81,7 +82,9 @@ export async function exportToPDF(
   const preTaxDeductions = breakdown.preTaxDeductions;
   const taxLineAmounts = (budgetData.taxSettings.taxLines || []).map((line, index) => ({
     label: line.label,
-    rate: line.rate,
+    rateLabel: getTaxLineCalculationType(line) === 'fixed'
+      ? `${formatWithSymbol(line.amount || 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} fixed`
+      : `${line.rate}%`,
     amount: breakdown.taxLineAmounts[index]?.amount ?? 0,
   }));
   const additionalWithholding = breakdown.additionalWithholding;
@@ -174,7 +177,7 @@ export async function exportToPDF(
     yPosition += 10;
 
     const taxData = [
-      ...taxLineAmounts.map(l => [l.label, `${l.rate}%`, formatWithSymbol(l.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
+        ...taxLineAmounts.map(l => [l.label, l.rateLabel, formatWithSymbol(l.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
       ['Additional Withholding', '-', formatWithSymbol(additionalWithholding, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
     ];
 

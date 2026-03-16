@@ -115,6 +115,17 @@ describe('FileStorageService', () => {
     expect(serialized).not.toContain('encryptionKey');
   });
 
+  it('creates default tax lines with percentage mode metadata', () => {
+    const budget = FileStorageService.createEmptyBudget(2026, 'USD');
+
+    expect(budget.taxSettings.taxLines).toEqual([
+      { id: 'uuid-mock', label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'Social Security', rate: 6.2, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
+    ]);
+  });
+
   it('returns known plan IDs from path mappings', () => {
     localStorage.setItem(STORAGE_KEYS.fileToPlanMapping, JSON.stringify({
       '/plans/a.ppb': 'plan-a',

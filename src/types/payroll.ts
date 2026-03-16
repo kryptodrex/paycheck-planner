@@ -21,10 +21,15 @@ export interface Deduction {
   isPercentage: boolean;
 }
 
+export type TaxLineCalculationType = 'percentage' | 'fixed';
+
 export interface TaxLine {
   id: string;
   label: string;
   rate: number;
+  amount?: number;
+  taxableIncome?: number;
+  calculationType?: TaxLineCalculationType;
 }
 
 export interface TaxSettings {
