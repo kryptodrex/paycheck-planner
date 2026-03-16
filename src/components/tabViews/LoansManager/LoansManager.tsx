@@ -10,7 +10,7 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector, AmountBreakdown } from '../../_shared';
 import '../tabViews.shared.css';
 import './LoansManager.css';
 
@@ -462,18 +462,18 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                         onDelete={() => handleDeleteLoan(loan.id)}
                                                     >
                                                         {lineItems.length > 0 && (
-                                                            <div className="loan-breakdown">
-                                                                {lineItems
+                                                            <AmountBreakdown
+                                                                items={lineItems
                                                                     .sort((a, b) => b.amount - a.amount)
-                                                                    .map((line) => (
-                                                                        <div key={line.id} className="loan-line-items-preview-row">
-                                                                            <span>{line.label}</span>
-                                                                            <span>
-                                                                                {formatWithSymbol(displayAmount(convertBillToMonthly(line.amount, line.frequency)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                            </span>
-                                                                        </div>
-                                                                    ))}
-                                                            </div>
+                                                                    .map((item) => ({
+                                                                        id: item.id,
+                                                                        label: item.label,
+                                                                        amount: displayAmount(convertBillToMonthly(item.amount, item.frequency))
+                                                                    }))
+                                                                }
+                                                                formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                className="deduction-breakdown"
+                                                            />
                                                         )}
                                                         {loan.notes && <div className="loan-notes">{loan.notes}</div>}
                                                     </SectionItemCard>
