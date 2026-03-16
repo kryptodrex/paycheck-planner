@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
+import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
@@ -11,8 +12,12 @@ import type { Bill, Loan, SavingsContribution } from '../../../types/obligations
 import type { Benefit, RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import { fromDisplayAmount, toDisplayAmount } from '../../../utils/displayAmounts';
-import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../../_shared';
+import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
+import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
+import { Alert, Button, ConfirmDialog, InputWithPrefix, ViewModeSelector, PageHeader, AmountBreakdown, Toast } from '../../_shared';
 import PaySettingsModal from '../../modals/PaySettingsModal';
+import ReallocationReviewModal from '../../modals/ReallocationReviewModal/ReallocationReviewModal';
+import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../modals/ReallocationSummaryModal/ReallocationSummaryModal';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './PayBreakdown.css';
@@ -20,6 +25,7 @@ import './PayBreakdown.css';
 type AllocationCategory = {
   id: string;
   name: string;
+  notes?: string;
   amount: number;
   isBill?: boolean;        // If true, this is an auto-calculated sum of bills for this account
   billCount?: number;      // Number of bills in this category (if isBill is true)
@@ -48,6 +54,15 @@ type ValidationMessage = {
   message: string;
 };
 
+type ReallocationUndoSnapshot = {
+  accounts: Account[];
+  bills: Bill[];
+  benefits: Benefit[];
+  savingsContributions: SavingsContribution[];
+  retirement: RetirementElection[];
+};
+
+
 const isAutoCategory = (category: AllocationCategory): boolean => {
   return Boolean(category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings);
 };
@@ -72,11 +87,23 @@ interface PayBreakdownProps {
 
 const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeChange, onNavigateToBills, onNavigateToSavings, onNavigateToRetirement, onNavigateToLoans }) => {
   const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
+  const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const [editingAccountIds, setEditingAccountIds] = useState<Set<string>>(new Set());
   const [draftAccounts, setDraftAccounts] = useState<Map<string, AllocationAccount>>(new Map());
   const [validationMessages, setValidationMessages] = useState<Map<string, ValidationMessage>>(new Map());
   const [showPaySettingsModal, setShowPaySettingsModal] = useState(false);
   const [inputValues, setInputValues] = useState<Map<string, number>>(new Map()); // Local input values to prevent conversion flicker
+  const [showReallocationModal, setShowReallocationModal] = useState(false);
+  const [selectedReallocationIds, setSelectedReallocationIds] = useState<string[]>([]);
+  const [showReallocationSummaryModal, setShowReallocationSummaryModal] = useState(false);
+  const [reallocationSummaryItems, setReallocationSummaryItems] = useState<ReallocationSummaryItem[]>([]);
+  const [selectedReallocationSummaryIds, setSelectedReallocationSummaryIds] = useState<string[]>([]);
+  const [reallocationUndoSnapshot, setReallocationUndoSnapshot] = useState<ReallocationUndoSnapshot | null>(null);
+  
+  const [reallocationToastMessage, setReallocationToastMessage] = useState<string | null>(null);
+  // Track if balance has gone negative to prompt for reallocation
+  const previousLeftoverRef = useRef<number | null>(null);
+  const negativeBalancePromptedRef = useRef(false);
 
   if (!budgetData) return null;
 
@@ -94,20 +121,292 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   );
   const allocationPlan = calculateAllocationPlan(normalizedAccounts, paycheckBreakdown.netPay);
   const leftoverPerPaycheck = allocationPlan.remaining;
+  const grossPayPerPaycheck = paycheckBreakdown.grossPay;
+  const targetLeftoverPerPaycheck = budgetData.paySettings.minLeftover || 0;
+
+  const customAllocations = buildCustomAllocationItems(budgetData.accounts);
+
+  const reallocationPlan = createReallocationPlan({
+    targetRemainingPerPaycheck: targetLeftoverPerPaycheck,
+    currentRemainingPerPaycheck: leftoverPerPaycheck,
+    grossPayPerPaycheck,
+    paychecksPerYear,
+    paySettings: budgetData.paySettings,
+    preTaxDeductions: budgetData.preTaxDeductions || [],
+    bills: budgetData.bills || [],
+    benefits: budgetData.benefits || [],
+    taxSettings: budgetData.taxSettings,
+    savingsContributions: budgetData.savingsContributions || [],
+    retirementElections: budgetData.retirement || [],
+    accounts: budgetData.accounts,
+    customAllocations,
+  });
+
+  const selectedReallocationProposals = reallocationPlan.proposals.filter((proposal) =>
+    selectedReallocationIds.includes(proposal.sourceId),
+  );
+  const selectedFreedPerPaycheck = roundToCent(
+    selectedReallocationProposals.reduce(
+      (sum, proposal) => sum + proposal.freedPerPaycheckAmount,
+      0,
+    ),
+  );
+  const selectedProjectedRemaining = roundToCent(
+    leftoverPerPaycheck + selectedFreedPerPaycheck,
+  );
+  const selectedFullyResolved = selectedProjectedRemaining >= targetLeftoverPerPaycheck;
 
   const displayBreakdown = calculateDisplayPayBreakdown(annualBreakdown, displayMode, paychecksPerYear);
 
-  const preTaxDeductionCount = (budgetData.preTaxDeductions || []).filter((deduction) => deduction.amount > 0).length;
-  const preTaxBenefitCount = (budgetData.benefits || []).filter((benefit) => (benefit.deductionSource || 'paycheck') === 'paycheck' && !benefit.isTaxable && benefit.amount > 0).length;
-  const retirementContributionCount = (budgetData.retirement || []).filter((election) => election.enabled !== false && election.employeeContribution > 0).length;
-  const totalPreTaxItemCount = preTaxDeductionCount + preTaxBenefitCount + retirementContributionCount;
-  const postTaxBenefitCount = (budgetData.benefits || []).filter((benefit) => (benefit.deductionSource || 'paycheck') === 'paycheck' && benefit.isTaxable && benefit.amount > 0).length;
-  const postTaxRetirementCount = (budgetData.retirement || []).filter((election) => (election.deductionSource || 'paycheck') === 'paycheck' && election.isPreTax === false && election.enabled !== false && election.employeeContribution > 0).length;
-  const postTaxDeductionCount = postTaxBenefitCount + postTaxRetirementCount;
+  // Pre-tax and post-tax deduction line items for display in the Gross-to-Net flow
+  const preTaxLineItems = buildPreTaxLineItems(
+    budgetData.preTaxDeductions || [],
+    budgetData.benefits || [],
+    budgetData.retirement || [],
+    grossPayPerPaycheck,
+  );
+  const postTaxLineItems = buildPostTaxLineItems(
+    budgetData.benefits || [],
+    budgetData.retirement || [],
+    grossPayPerPaycheck,
+  );
 
   // Calculate percentages for flow details
   const grossPay = displayBreakdown.grossPay;
   const netPct = grossPay > 0 ? (displayBreakdown.netPay / grossPay) * 100 : 0;
+
+  const openReallocationModal = () => {
+    setSelectedReallocationIds(reallocationPlan.proposals.map((proposal) => proposal.sourceId));
+    setShowReallocationModal(true);
+  };
+
+  const closeReallocationModal = () => {
+    setShowReallocationModal(false);
+  };
+
+  const getReallocationChangeId = (proposal: ReallocationProposal): string => `${proposal.sourceType}:${proposal.sourceId}`;
+
+  const getSourceTypeLabel = (sourceType: ReallocationProposal['sourceType']): string => {
+    switch (sourceType) {
+      case 'bill':
+        return 'Bill';
+      case 'deduction':
+        return 'Deduction';
+      case 'custom-allocation':
+        return 'Custom Allocation';
+      case 'savings':
+        return 'Savings';
+      case 'investment':
+        return 'Investment';
+      case 'retirement':
+        return 'Retirement';
+      default:
+        return 'Source';
+    }
+  };
+
+  const getActionLabel = (action: ReallocationProposal['action']): string => {
+    switch (action) {
+      case 'pause':
+        return 'Paused';
+      case 'zero':
+        return 'Zeroed';
+      default:
+        return 'Reduced';
+    }
+  };
+
+  const cloneAccountsForSnapshot = (accounts: Account[]): Account[] =>
+    accounts.map((account) => ({
+      ...account,
+      allocationCategories: (account.allocationCategories || []).map((category) => ({ ...category })),
+    }));
+
+  const cloneBillsForSnapshot = (bills: Bill[]): Bill[] => bills.map((bill) => ({ ...bill }));
+  const cloneBenefitsForSnapshot = (benefits: Benefit[]): Benefit[] => benefits.map((benefit) => ({ ...benefit }));
+  const cloneSavingsForSnapshot = (items: SavingsContribution[]): SavingsContribution[] => items.map((item) => ({ ...item }));
+  const cloneRetirementForSnapshot = (items: RetirementElection[]): RetirementElection[] => items.map((item) => ({ ...item }));
+
+  const handleApplyReallocation = () => {
+    const beforeSnapshot: ReallocationUndoSnapshot = {
+      accounts: cloneAccountsForSnapshot(budgetData.accounts),
+      bills: cloneBillsForSnapshot(budgetData.bills || []),
+      benefits: cloneBenefitsForSnapshot(budgetData.benefits || []),
+      savingsContributions: cloneSavingsForSnapshot(budgetData.savingsContributions || []),
+      retirement: cloneRetirementForSnapshot(budgetData.retirement || []),
+    };
+
+    const filteredPlan = {
+      ...reallocationPlan,
+      proposals: selectedReallocationProposals,
+      totalFreedPerPaycheck: selectedFreedPerPaycheck,
+      projectedRemainingPerPaycheck: selectedProjectedRemaining,
+      fullyResolved: selectedFullyResolved,
+    };
+
+    const applied = applyReallocationPlan(
+      {
+        targetRemainingPerPaycheck: targetLeftoverPerPaycheck,
+        currentRemainingPerPaycheck: leftoverPerPaycheck,
+        grossPayPerPaycheck,
+        paychecksPerYear,
+        paySettings: budgetData.paySettings,
+        preTaxDeductions: budgetData.preTaxDeductions || [],
+        bills: budgetData.bills || [],
+        benefits: budgetData.benefits || [],
+        taxSettings: budgetData.taxSettings,
+        savingsContributions: budgetData.savingsContributions || [],
+        retirementElections: budgetData.retirement || [],
+        accounts: budgetData.accounts,
+        customAllocations,
+      },
+      filteredPlan,
+    );
+
+    const customProposalById = new Map(
+      filteredPlan.proposals
+        .filter((proposal) => proposal.sourceType === 'custom-allocation')
+        .map((proposal) => [proposal.sourceId, proposal]),
+    );
+
+    const accountsWithReallocationNotes = applied.accounts.map((account) => ({
+      ...account,
+      allocationCategories: (account.allocationCategories || []).map((category) => {
+        const proposal = customProposalById.get(`${account.id}:${category.id}`);
+        if (!proposal) return category;
+
+        const existingNotes = (category.notes || '').trim();
+        const userNotesWithoutPreviousAmount = existingNotes
+          .split('\n')
+          .filter((line) => !line.startsWith('Previous amount before reallocation:'))
+          .join('\n')
+          .trim();
+        const wasAmount = formatWithSymbol(
+          proposal.currentPerPaycheckAmount,
+          currency,
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+        );
+        const previousAmountNote = `Previous amount before reallocation was ${wasAmount} ${payFrequencyLabel.toLowerCase()}`;
+
+        return {
+          ...category,
+          notes: userNotesWithoutPreviousAmount
+            ? `${userNotesWithoutPreviousAmount}\n${previousAmountNote}`
+            : previousAmountNote,
+        };
+      }),
+    }));
+
+    updateBudgetData({
+      accounts: accountsWithReallocationNotes,
+      bills: applied.bills,
+      benefits: applied.benefits,
+      savingsContributions: applied.savingsContributions,
+      retirement: applied.retirementElections,
+    });
+
+    const summaryItems: ReallocationSummaryItem[] = filteredPlan.proposals.map((proposal) => ({
+      id: getReallocationChangeId(proposal),
+      label: proposal.label,
+      sourceTypeLabel: getSourceTypeLabel(proposal.sourceType),
+      actionLabel: getActionLabel(proposal.action),
+      beforeLabel: `Before: ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payFrequencyLabel.toLowerCase()}`,
+      afterLabel: `After: ${formatWithSymbol(toDisplayAmount(proposal.proposedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payFrequencyLabel.toLowerCase()}`,
+      deltaLabel: `+${formatWithSymbol(toDisplayAmount(proposal.freedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    }));
+
+    setReallocationUndoSnapshot(beforeSnapshot);
+    setReallocationSummaryItems(summaryItems);
+    setSelectedReallocationSummaryIds(summaryItems.map((item) => item.id));
+    setShowReallocationSummaryModal(true);
+
+    const toastMsg = filteredPlan.fullyResolved
+      ? `Applied ${filteredPlan.proposals.length} change${filteredPlan.proposals.length === 1 ? '' : 's'}! You are back on track.`
+      : `Applied ${filteredPlan.proposals.length} change${filteredPlan.proposals.length === 1 ? '' : 's'}. Improved but still below target!`;
+    setReallocationToastMessage(toastMsg);
+    
+    setShowReallocationModal(false);
+  };
+
+  const handleUndoReallocationChanges = (idsToUndo: string[]) => {
+    if (!reallocationUndoSnapshot || !budgetData) return;
+    if (idsToUndo.length === 0) return;
+
+    const undoSet = new Set(idsToUndo);
+    const getIdForType = (sourceType: string, sourceId: string) => `${sourceType}:${sourceId}`;
+
+    const billBeforeById = new Map(reallocationUndoSnapshot.bills.map((bill) => [bill.id, bill]));
+    const benefitBeforeById = new Map(reallocationUndoSnapshot.benefits.map((benefit) => [benefit.id, benefit]));
+    const savingsBeforeById = new Map(reallocationUndoSnapshot.savingsContributions.map((item) => [item.id, item]));
+    const retirementBeforeById = new Map(reallocationUndoSnapshot.retirement.map((item) => [item.id, item]));
+    const accountBeforeById = new Map(reallocationUndoSnapshot.accounts.map((account) => [account.id, account]));
+
+    const nextBills = (budgetData.bills || []).map((bill) => {
+      if (!undoSet.has(getIdForType('bill', bill.id))) return bill;
+      return billBeforeById.get(bill.id) || bill;
+    });
+
+    const nextBenefits = (budgetData.benefits || []).map((benefit) => {
+      if (!undoSet.has(getIdForType('deduction', benefit.id))) return benefit;
+      return benefitBeforeById.get(benefit.id) || benefit;
+    });
+
+    const nextSavings = (budgetData.savingsContributions || []).map((item) => {
+      const key = getIdForType(item.type, item.id);
+      if (!undoSet.has(key)) return item;
+      return savingsBeforeById.get(item.id) || item;
+    });
+
+    const nextRetirement = (budgetData.retirement || []).map((item) => {
+      if (!undoSet.has(getIdForType('retirement', item.id))) return item;
+      return retirementBeforeById.get(item.id) || item;
+    });
+
+    const nextAccounts = budgetData.accounts.map((account) => {
+      const beforeAccount = accountBeforeById.get(account.id);
+      if (!beforeAccount) return account;
+
+      const beforeCategoryById = new Map((beforeAccount.allocationCategories || []).map((category) => [category.id, category]));
+      return {
+        ...account,
+        allocationCategories: (account.allocationCategories || []).map((category) => {
+          if (!undoSet.has(getIdForType('custom-allocation', `${account.id}:${category.id}`))) {
+            return category;
+          }
+          return beforeCategoryById.get(category.id) || category;
+        }),
+      };
+    });
+
+    updateBudgetData({
+      accounts: nextAccounts,
+      bills: nextBills,
+      benefits: nextBenefits,
+      savingsContributions: nextSavings,
+      retirement: nextRetirement,
+    });
+
+    const remainingSummaryItems = reallocationSummaryItems.filter((item) => !undoSet.has(item.id));
+    setReallocationSummaryItems(remainingSummaryItems);
+    setSelectedReallocationSummaryIds(remainingSummaryItems.map((item) => item.id));
+
+    if (remainingSummaryItems.length === 0) {
+      setShowReallocationSummaryModal(false);
+      setReallocationUndoSnapshot(null);
+    }
+
+    setReallocationToastMessage(
+      `Undid ${idsToUndo.length} change${idsToUndo.length === 1 ? '' : 's'}.`,
+    );
+  };
+
+  const handleUndoSelectedReallocationChanges = () => {
+    handleUndoReallocationChanges(selectedReallocationSummaryIds);
+  };
+
+  const handleUndoAllReallocationChanges = () => {
+    handleUndoReallocationChanges(reallocationSummaryItems.map((item) => item.id));
+  };
 
   const startAccountEdit = (accountId: string) => {
     const account = normalizedAccounts.find(acc => acc.id === accountId);
@@ -152,6 +451,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       .map((category) => ({
         ...category,
         name: category.name.trim(),
+        notes: category.notes?.trim() || undefined,
         amount: Number.isFinite(category.amount)
           ? Math.round(Math.max(0, category.amount) * 1_000_000_000_000) / 1_000_000_000_000
           : 0,
@@ -216,6 +516,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
           {
             id: crypto.randomUUID(),
             name: '',
+            notes: '',
             amount: 0,
           },
         ],
@@ -281,6 +582,36 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     }
   };
 
+  // Detect when balance transitions to negative and offer reallocation
+  // Store previous negative state in a ref to detect transitions
+  const handleNegativeBalanceCheck = () => {
+    const isCurrentlyNegative = leftoverPerPaycheck < 0;
+    const wasNegative = previousLeftoverRef.current !== null && previousLeftoverRef.current < 0;
+    
+    // If balance just went negative (transition from non-negative to negative)
+    if (isCurrentlyNegative && !wasNegative && !negativeBalancePromptedRef.current && reallocationPlan.proposals.length > 0) {
+      negativeBalancePromptedRef.current = true;
+      openConfirmDialog({
+        title: 'Negative Balance Detected',
+        message: `Your remaining balance has gone negative. Would you like to review the automated reallocation plan to fix this?`,
+        confirmLabel: 'Review Plan',
+        cancelLabel: 'Dismiss',
+        confirmVariant: 'primary',
+        onConfirm: openReallocationModal,
+      });
+    }
+    
+    // Reset the prompt flag when balance goes back to non-negative
+    if (!isCurrentlyNegative && wasNegative) {
+      negativeBalancePromptedRef.current = false;
+    }
+    
+    previousLeftoverRef.current = leftoverPerPaycheck;
+  };
+  
+  // Call the check function during render
+  handleNegativeBalanceCheck();
+
   return (
     <div className="tab-view pay-breakdown">
       <PageHeader
@@ -331,10 +662,18 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
           <div className="flow-stage">
             <div className="stage-box deduction-box">
               <h3><GlossaryTerm termId="pre-tax-deduction">Pre-Tax Deductions</GlossaryTerm></h3>
+              <AmountBreakdown
+                items={preTaxLineItems.map(item => ({
+                  id: item.id,
+                  label: item.label,
+                  amount: toDisplayAmount(item.amount, paychecksPerYear, displayMode),
+                }))}
+                negative
+                rowLineLocation="bottom"
+                formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                className="deduction-breakdown"
+              />
               <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-              <div className="stage-detail">
-                {totalPreTaxItemCount} deduction(s)
-              </div>
             </div>
           </div>
         )}
@@ -373,10 +712,18 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
           <div className="flow-stage">
             <div className="stage-box postax-box">
               <h3><GlossaryTerm termId="post-tax-deduction">Post-Tax Deductions</GlossaryTerm></h3>
+              <AmountBreakdown
+                items={postTaxLineItems.map(item => ({
+                  id: item.id,
+                  label: item.label,
+                  amount: toDisplayAmount(item.amount, paychecksPerYear, displayMode),
+                }))}
+                negative
+                formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                rowLineLocation="bottom"
+                className="deduction-breakdown"
+              />
               <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-              <div className="stage-detail">
-                {postTaxDeductionCount} deduction(s)
-              </div>
             </div>
           </div>
         )}
@@ -399,10 +746,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
           </div>
           
           <div className="waterfall-table">
-            <div className="waterfall-row waterfall-header-row">
+            {/* <div className="waterfall-row waterfall-header-row">
               <span className="waterfall-label">Net Pay</span>
               <span className="waterfall-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
+            </div> */}
 
             {allocationPlan.accountFunding.map((fundingItem) => {
               const accountAmount = toDisplayAmount(fundingItem.totalAmount, paychecksPerYear, displayMode);
@@ -416,7 +763,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                   <div className="waterfall-row waterfall-account-row">
                     <span className="waterfall-label">
                       <span className="account-icon-small">{fundingItem.account.icon || getDefaultAccountIcon(fundingItem.account.type)}</span>
-                      {fundingItem.account.name}
+                      Amount from {fundingItem.account.name}
                     </span>
                     {!isEditing ? (
                       <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
@@ -461,13 +808,22 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                             </>
                           ) : (
                             <>
-                              <input
-                                type="text"
-                                value={category.name}
-                                onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
-                                placeholder="Item name"
-                                className="category-name-input"
-                              />
+                              <div className="category-fields-stack">
+                                <input
+                                  type="text"
+                                  value={category.name}
+                                  onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
+                                  placeholder="Item name"
+                                  className="category-name-input"
+                                />
+                                <input
+                                  type="text"
+                                  value={category.notes || ''}
+                                  onChange={(e) => updateCategory(displayAccount.id, category.id, { notes: e.target.value })}
+                                  placeholder="Optional note"
+                                  className="category-note-input"
+                                />
+                              </div>
                               <InputWithPrefix
                                 prefix={getCurrencySymbol(currency)}
                                 type="number"
@@ -525,9 +881,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                             <span className="category-name-text">{category.name}</span>
                           </button>
                         ) : (
-                          <span className="waterfall-label category-label category-name-static">
-                            {category.name}
-                          </span>
+                          <div className="waterfall-label category-label category-name-static">
+                            <span className="category-name-text">{category.name}</span>
+                            {category.notes && (
+                              <div>
+                                <span className="category-note-text">Notes: </span>
+                                <span className="category-note-text">{category.notes}</span>
+                              </div>
+                            )}
+                          </div>
                         )}
                         <span className="waterfall-amount">
                           {category.amount === 0 ? '-' : formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -540,27 +902,102 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               );
             })}
 
-            <div className={`waterfall-row waterfall-footer-row ${leftoverPerPaycheck < 0 ? 'negative-remaining' : ''}`}>
+            <div className={`waterfall-row waterfall-footer-row ${leftoverPerPaycheck < 0 ? 'negative-remaining' : (leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) ? 'warning-remaining' : 'positive-remaining')}`}>
               <span className="waterfall-label"><GlossaryTerm termId="residual-amount">All that remains</GlossaryTerm> for spending</span>
-              <span className={`waterfall-amount ${leftoverPerPaycheck < 0 ? 'negative-remaining' : ''}`}>{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className={`waterfall-amount ${leftoverPerPaycheck < 0 ? 'negative-remaining' : (leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) ? 'warning-remaining' : 'positive-remaining')}`}>{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {leftoverPerPaycheck < 0 && (
               <div className="waterfall-alert-row">
                 <Alert type="error">
-                  Your allocations exceed net pay by {formatWithSymbol(toDisplayAmount(Math.abs(leftoverPerPaycheck), paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}. Reduce allocations to avoid a negative balance.
+                  <div className="reallocation-alert-content">
+                    <span>
+                      Your allocations exceed net pay by {formatWithSymbol(toDisplayAmount(Math.abs(leftoverPerPaycheck), paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}.
+                    </span>
+                    {reallocationPlan.proposals.length > 0 ? (
+                      <Button variant="secondary" size="small" onClick={openReallocationModal}>
+                        Review Reallocation Plan
+                      </Button>
+                    ) : (
+                      <span className="reallocation-alert-note">
+                        No eligible reallocation sources are available yet. Discretionary bills/deductions and custom allocations are checked first, then savings and retirement.
+                      </span>
+                    )}
+                  </div>
                 </Alert>
               </div>
             )}
             {leftoverPerPaycheck >= 0 && leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
               <div className="waterfall-alert-row">
                 <Alert type="warning">
-                  You are {formatWithSymbol(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(budgetData.paySettings.minLeftover || 0, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}
+                  <div className="reallocation-alert-content">
+                    <span>
+                      You are {formatWithSymbol(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(budgetData.paySettings.minLeftover || 0, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}.
+                    </span>
+                    {reallocationPlan.proposals.length > 0 ? (
+                      <Button variant="secondary" size="small" onClick={openReallocationModal}>
+                        Review Reallocation Plan
+                      </Button>
+                    ) : (
+                      <span className="reallocation-alert-note">
+                        No eligible reallocation sources are available yet. Discretionary bills/deductions and custom allocations are checked first, then savings and retirement.
+                      </span>
+                    )}
+                  </div>
                 </Alert>
               </div>
             )}
           </div>
         </div>
       )}
+
+      <ReallocationReviewModal
+        isOpen={showReallocationModal}
+        onClose={closeReallocationModal}
+        onApply={handleApplyReallocation}
+        proposals={reallocationPlan.proposals}
+        selectedIds={selectedReallocationIds}
+        onSelectedIdsChange={setSelectedReallocationIds}
+        selectedFullyResolved={selectedFullyResolved}
+        selectedProjectedRemaining={selectedProjectedRemaining}
+        selectedFreedPerPaycheck={selectedFreedPerPaycheck}
+        leftoverPerPaycheck={leftoverPerPaycheck}
+        targetLeftoverPerPaycheck={targetLeftoverPerPaycheck}
+        currency={currency}
+        paychecksPerYear={paychecksPerYear}
+        displayMode={displayMode}
+        payFrequencyLabel={payFrequencyLabel}
+        accounts={budgetData.accounts}
+        bills={budgetData.bills || []}
+        benefits={budgetData.benefits || []}
+      />
+
+      <ReallocationSummaryModal
+        isOpen={showReallocationSummaryModal}
+        onClose={() => setShowReallocationSummaryModal(false)}
+        items={reallocationSummaryItems}
+        selectedIds={selectedReallocationSummaryIds}
+        onSelectedIdsChange={setSelectedReallocationSummaryIds}
+        onUndoSelected={handleUndoSelectedReallocationChanges}
+        onUndoAll={handleUndoAllReallocationChanges}
+      />
+
+      <Toast
+        message={reallocationToastMessage}
+        type={reallocationToastMessage?.includes('Remaining now reaches target') ? 'success' : 'warning'}
+        duration={3000}
+        onDismiss={() => setReallocationToastMessage(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmCurrentDialog}
+        title={confirmDialog?.title || 'Confirm'}
+        message={confirmDialog?.message || ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={confirmDialog?.cancelLabel}
+        confirmVariant={confirmDialog?.confirmVariant}
+      />
     </div>
   );
 };
@@ -572,6 +1009,27 @@ function calculateBillPerPaycheck(bill: Bill, payFrequency: string): number {
   // Calculate average per paycheck: (total per year) / (paychecks per year)
   const totalPerYear = bill.amount * billsPerYear;
   return roundUpToCent(totalPerYear / paychecksPerYear);
+}
+
+function isAutoCategoryId(categoryId: string): boolean {
+  return categoryId.startsWith('__bills_')
+    || categoryId.startsWith('__benefits_')
+    || categoryId.startsWith('__retirement_')
+    || categoryId.startsWith('__loans_')
+    || categoryId.startsWith('__savings_');
+}
+
+function buildCustomAllocationItems(accounts: Account[]) {
+  return accounts.flatMap((account) =>
+    (account.allocationCategories || [])
+      .filter((category) => !isAutoCategoryId(category.id) && (category.amount || 0) > 0)
+      .map((category) => ({
+        accountId: account.id,
+        categoryId: category.id,
+        name: category.name,
+        amount: category.amount,
+      })),
+  );
 }
 
 function normalizeAccounts(
@@ -605,6 +1063,7 @@ function normalizeAccounts(
       .map((category) => ({
         id: category.id,
         name: category.name,
+        notes: category.notes,
         amount: category.amount,
         isBill: false,
         isBenefit: false,
@@ -744,6 +1203,7 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
     const categories = account.allocationCategories.map((category) => ({
       id: category.id,
       name: category.name,
+      notes: category.notes,
       amount: Math.max(0, category.amount || 0),
       isBill: category.isBill,
       billCount: category.billCount,

@@ -1,0 +1,90 @@
+.shared-checkbox-group {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.shared-checkbox-group.column {
+  flex-direction: column;
+}
+
+.shared-checkbox-group.column .shared-checkbox-option {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.shared-checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-primary);
+}
+
+.shared-checkbox-group.row .shared-checkbox-option {
+  flex: 1;
+}
+
+.shared-checkbox-option:hover {
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
+}
+
+.shared-checkbox-option input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+}
+
+.shared-checkbox-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex-grow: 1;
+}
+
+.shared-checkbox-label {
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.shared-checkbox-description {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.35;
+  margin-top: 0.15rem;
+}
+
+.shared-checkbox-option input[type="checkbox"]:checked + .shared-checkbox-content .shared-checkbox-label {
+  font-weight: 600;
+}
+
+.shared-checkbox-option:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: var(--focus-ring-accent);
+}
+
+.shared-checkbox-option:has(input[type="checkbox"]:checked) {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-primary));
+}
+
+.shared-checkbox-option.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .shared-checkbox-group.row {
+    flex-direction: column;
+  }
+}

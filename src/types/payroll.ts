@@ -37,6 +37,7 @@ export interface Benefit {
   name: string;
   amount: number;
   enabled?: boolean;
+  discretionary?: boolean;
   isTaxable: boolean;
   isPercentage?: boolean;
   deductionSource?: 'paycheck' | 'account';
