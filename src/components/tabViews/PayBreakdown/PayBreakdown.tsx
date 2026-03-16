@@ -299,8 +299,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       label: proposal.label,
       sourceTypeLabel: getSourceTypeLabel(proposal.sourceType),
       actionLabel: getActionLabel(proposal.action),
-      beforeLabel: `Before: ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payFrequencyLabel.toLowerCase()}`,
-      afterLabel: `After: ${formatWithSymbol(toDisplayAmount(proposal.proposedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payFrequencyLabel.toLowerCase()}`,
+      beforeLabel: `Before: ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${getDisplayModeLabel(displayMode).toLowerCase()}`,
+      afterLabel: `After: ${formatWithSymbol(toDisplayAmount(proposal.proposedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${getDisplayModeLabel(displayMode).toLowerCase()}`,
       deltaLabel: `+${formatWithSymbol(toDisplayAmount(proposal.freedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     }));
 
@@ -1012,7 +1012,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         currency={currency}
         paychecksPerYear={paychecksPerYear}
         displayMode={displayMode}
-        payFrequencyLabel={payFrequencyLabel}
         accounts={budgetData.accounts}
         bills={budgetData.bills || []}
         benefits={budgetData.benefits || []}

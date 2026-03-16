@@ -6,6 +6,7 @@ import type { ReallocationProposal } from '../../../services/reallocationPlanner
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol } from '../../../utils/currency';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
+import { getDisplayModeLabel } from '../../../utils/payPeriod';
 import { Alert, Button, CheckboxGroup, Modal, PillBadge } from '../../_shared';
 
 interface ReallocationReviewModalProps {
@@ -23,7 +24,6 @@ interface ReallocationReviewModalProps {
   currency: string;
   paychecksPerYear: number;
   displayMode: ViewMode;
-  payFrequencyLabel: string;
   accounts: Account[];
   bills: Bill[];
   benefits: Benefit[];
@@ -44,11 +44,12 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
   currency,
   paychecksPerYear,
   displayMode,
-  payFrequencyLabel,
   accounts,
   bills,
   benefits,
 }) => {
+  const displayModeLabel = getDisplayModeLabel(displayMode);
+
   const getSourceBadge = (sourceType: ReallocationProposal['sourceType']): { label: string; variant: 'accent' | 'info' | 'warning' | 'neutral' } => {
     switch (sourceType) {
       case 'bill':
@@ -119,10 +120,10 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
         </div>
       ),
       description: proposal.action === 'pause'
-        ? `Pause this item (currently ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payFrequencyLabel.toLowerCase()}).`
+        ? `Pause this item (currently ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${displayModeLabel.toLowerCase()}).`
         : proposal.action === 'zero'
-          ? `Set this item to ${formatWithSymbol(0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (currently ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payFrequencyLabel.toLowerCase()}).`
-          : `Reduce from ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to ${formatWithSymbol(toDisplayAmount(proposal.proposedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payFrequencyLabel.toLowerCase()}.`,
+          ? `Set this item to ${formatWithSymbol(0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (currently ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${displayModeLabel.toLowerCase()}).`
+          : `Reduce from ${formatWithSymbol(toDisplayAmount(proposal.currentPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} to ${formatWithSymbol(toDisplayAmount(proposal.proposedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${displayModeLabel.toLowerCase()}.`,
     };
   });
 
