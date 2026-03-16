@@ -18,6 +18,7 @@ export { default as AccountsEditor } from './workflows/AccountsEditor';
 export { default as EncryptionConfigPanel } from './workflows/EncryptionConfigPanel';
 export { default as ViewModeSelector } from './layout/ViewModeSelector';
 export { default as PageHeader } from './layout/PageHeader';
+export { default as Banner } from './layout/Banner';
 export { default as ProgressBar } from './feedback/ProgressBar';
 export { default as FileRelinkModal } from './workflows/FileRelinkModal';
 export { default as ConfirmDialog } from './feedback/ConfirmDialog';

@@ -10,7 +10,7 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector } from '../../_shared';
 import '../tabViews.shared.css';
 import './LoansManager.css';
 
@@ -352,6 +352,14 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
 
     const displayAmount = (monthlyAmount: number): number => monthlyToDisplayAmount(monthlyAmount, paychecksPerYear, displayMode);
+    const allAccountsLoansTotalMonthly = roundToCent(
+        loansList.reduce((sum, loan) => {
+            if (!isLoanEnabled(loan)) {
+                return sum;
+            }
+            return sum + loan.monthlyPayment;
+        }, 0),
+    );
 
     return (
         <div className="tab-view loans-manager">
@@ -372,6 +380,11 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                         </Button>
                     </>
                 }
+            />
+
+            <Banner
+                label={`Total ${getDisplayModeLabel(displayMode)} Across All Accounts`}
+                value={formatWithSymbol(displayAmount(allAccountsLoansTotalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             />
 
             <div className="loans-content">

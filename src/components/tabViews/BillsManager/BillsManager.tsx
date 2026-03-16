@@ -12,7 +12,7 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import '../tabViews.shared.css';
 import './BillsManager.css';
 
@@ -143,6 +143,10 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     accountBills: row.items,
     accountBenefits: accountBenefitsByAccount[row.account.id] || [],
   }));
+
+  const allAccountsBillsTotalMonthly = roundUpToCent(
+    paycheckBenefitsTotalMonthly + accountRows.reduce((sum, row) => sum + row.totalMonthly, 0),
+  );
 
   const hasAnyItems = budgetData.bills.length > 0 || budgetData.benefits.length > 0;
 
@@ -312,6 +316,11 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
           </>
         }
+      />
+
+      <Banner
+        label={`Total ${getDisplayModeLabel(displayMode)} Across All Accounts`}
+        value={formatWithSymbol(displayAmount(allAccountsBillsTotalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       />
 
       {budgetData.accounts.length === 0 ? (

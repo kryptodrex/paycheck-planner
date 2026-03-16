@@ -13,7 +13,7 @@ import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -178,6 +178,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     const { employeeAmount: employeePerPaycheck, employerAmount } = calculateRetirementContributions(election);
     return sum + employeePerPaycheck + employerAmount;
   }, 0);
+
+  const totalSavingsAndRetirementPerPaycheck = roundToCent(
+    savingsTotalPerPaycheck + retirementTotalPerPaycheck,
+  );
 
   const handleAddSavings = () => {
     setEditingSavings(null);
@@ -500,6 +504,11 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             reserveHintSpace
           />
         )}
+      />
+
+      <Banner
+        label={`Total ${getDisplayModeLabel(displayMode)} Across All Accounts`}
+        value={formatWithSymbol(toDisplayAmount(totalSavingsAndRetirementPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       />
 
       <div className="savings-section">
