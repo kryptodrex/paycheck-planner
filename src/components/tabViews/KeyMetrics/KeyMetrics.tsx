@@ -5,6 +5,7 @@ import { formatWithSymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { convertBillToYearly } from '../../../utils/billFrequency';
+import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { buildKeyMetricsSegments } from '../../../utils/keyMetricsSegments';
 import type { KeyMetricsBreakdownView } from '../../../types/settings';
 import { PageHeader, ViewModeSelector } from '../../_shared';
@@ -96,19 +97,20 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   } = calculateAnnualizedPaySummary(breakdown, paychecksPerYear);
   const annualizedBreakdown = calculateAnnualizedPayBreakdown(breakdown, paychecksPerYear);
 
-  // Calculate total bills (annualized)
-  const annualBills = roundUpToCent(budgetData.bills.reduce((sum, bill) => {
-    return sum + convertBillToYearly(bill.amount, bill.frequency);
-  }, 0));
+  // Calculate total bills (annualized) — only enabled/active bills
+  const annualBills = roundUpToCent(budgetData.bills
+    .filter(bill => bill.enabled !== false)
+    .reduce((sum, bill) => {
+      return sum + convertBillToYearly(bill.amount, bill.frequency);
+    }, 0));
 
   // Calculate monthly averages
   const monthlyBills = roundUpToCent(annualBills / 12);
 
-  // Calculate remaining/free money
+  // Calculate remaining/free money (before savings; used for bar sub-component math)
   const annualRemaining = roundUpToCent(annualNet - annualBills);
-  const monthlyRemaining = roundUpToCent(annualRemaining / 12);
 
-  // Calculate savings rate (savings-account allocations + retirement contributions)
+  // Calculate savings rate from savings accounts, savings contributions, and retirement elections.
   const savingsAccounts = budgetData.accounts.filter(a => a.type === 'savings');
   const annualSavingsFromAccounts = roundUpToCent(savingsAccounts.reduce((sum, account) => {
     // Use category-based allocations
@@ -117,17 +119,45 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
     return sum + (accountTotal * paychecksPerYear);
   }, 0));
 
-  const annualSavingsFromRetirement = roundUpToCent((budgetData.retirement || []).reduce((sum, election) => {
+  const annualSavingsFromContributions = roundUpToCent((budgetData.savingsContributions || []).reduce((sum, contribution) => {
+    if (contribution.enabled === false) return sum;
+    return sum + (contribution.amount * getSavingsFrequencyOccurrencesPerYear(contribution.frequency));
+  }, 0));
+
+  const annualPaycheckRetirementPreTax = roundUpToCent((budgetData.retirement || []).reduce((sum, election) => {
+    if (election.enabled === false) return sum;
+    if ((election.deductionSource || 'paycheck') !== 'paycheck') return sum;
+    if (election.isPreTax === false) return sum;
     const { employeeAmount } = calculateRetirementContributions(election);
     return sum + (employeeAmount * paychecksPerYear);
   }, 0));
 
-  const annualSavings = roundUpToCent(annualSavingsFromAccounts + annualSavingsFromRetirement);
+  const annualPaycheckRetirementPostTax = roundUpToCent((budgetData.retirement || []).reduce((sum, election) => {
+    if (election.enabled === false) return sum;
+    if ((election.deductionSource || 'paycheck') !== 'paycheck') return sum;
+    if (election.isPreTax !== false) return sum;
+    const { employeeAmount } = calculateRetirementContributions(election);
+    return sum + (employeeAmount * paychecksPerYear);
+  }, 0));
+
+  const annualAccountRetirementSavings = roundUpToCent((budgetData.retirement || []).reduce((sum, election) => {
+    if (election.enabled === false) return sum;
+    if ((election.deductionSource || 'paycheck') !== 'account') return sum;
+    const { employeeAmount } = calculateRetirementContributions(election);
+    return sum + (employeeAmount * paychecksPerYear);
+  }, 0));
+
+  const annualSavings = roundUpToCent(
+    annualSavingsFromAccounts
+    + annualSavingsFromContributions
+    + annualPaycheckRetirementPreTax
+    + annualPaycheckRetirementPostTax
+    + annualAccountRetirementSavings,
+  );
   const savingsRate = annualGross > 0 ? (annualSavings / annualGross) * 100 : 0;
   const effectiveTaxRate = annualGross > 0 ? (annualTaxes / annualGross) * 100 : 0;
-  const remainingShareOfNet = annualNet > 0 ? (annualRemaining / annualNet) * 100 : 0;
-  const annualPreTaxDeductions = annualizedBreakdown.preTaxDeductions;
-  const annualPostTaxDeductions = annualizedBreakdown.postTaxDeductions;
+  const annualPreTaxDeductions = roundUpToCent(Math.max(annualizedBreakdown.preTaxDeductions - annualPaycheckRetirementPreTax, 0));
+  const annualPostTaxDeductions = roundUpToCent(Math.max(annualizedBreakdown.postTaxDeductions - annualPaycheckRetirementPostTax, 0));
 
   const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
@@ -165,6 +195,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   };
 
   const pieColorByKey: Record<string, string> = {
+    billsAndDeductions: '#f97316',
     pretax: 'var(--warning-color)',
     taxes: 'var(--error-color)',
     posttax: '#f43f5e',
@@ -175,6 +206,11 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   };
 
   const pieTotal = barSegments.reduce((sum, segment) => sum + segment.amount, 0);
+  const stackedTotalPercent = barSegments.reduce((sum, segment) => sum + Math.max(segment.pct, 0), 0);
+  const getStackedWidthPercent = (pct: number): number => {
+    if (stackedTotalPercent <= 0) return 0;
+    return clampPercent((Math.max(pct, 0) / stackedTotalPercent) * 100);
+  };
   const PIE_RADIUS = 38;
   const PIE_CIRCUMFERENCE = 2 * Math.PI * PIE_RADIUS;
   const PIE_GAP = 1.6;
@@ -331,15 +367,15 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         >
             <div className="metric-primary">
               <span className="label">Yearly</span>
-              <span className="value">{formatWithSymbol(annualRemaining, currency, { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualFlexibleRemaining, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">Monthly</span>
-              <span className="value">{formatWithSymbol(monthlyRemaining, currency, { maximumFractionDigits: 0 })}</span>
+              <span className="value">{formatWithSymbol(annualFlexibleRemaining / 12, currency, { maximumFractionDigits: 0 })}</span>
             </div>
             <div className="metric-secondary">
               <span className="label">% of Net</span>
-              <span className="value">{remainingShareOfNet.toFixed(1)}%</span>
+              <span className="value">{(annualNet > 0 ? (annualFlexibleRemaining / annualNet) * 100 : 0).toFixed(1)}%</span>
             </div>
         </MetricCard>
       </div>
@@ -399,19 +435,22 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         {breakdownView === 'stacked' && (
           <>
             <div className="km-bar-container">
-              {barSegments.map((segment) => (
-                <div
-                  key={segment.key}
-                  className={`km-bar-segment ${segment.segmentClass}`}
-                  style={{
-                    width: `${clampPercent(segment.pct)}%`,
-                    minWidth: segment.amount > 0 ? `${MIN_VISIBLE_STACKED_BAR_PX}px` : undefined,
-                  }}
-                  title={`${segment.label}: ${formatWithSymbol(segment.amount, currency, { maximumFractionDigits: 0 })} (${segment.pct.toFixed(1)}%)`}
-                >
-                  {segment.pct > 7 && <span>{segment.pct.toFixed(1)}%</span>}
-                </div>
-              ))}
+              {barSegments.map((segment) => {
+                const stackedWidthPercent = getStackedWidthPercent(segment.pct);
+                return (
+                  <div
+                    key={segment.key}
+                    className={`km-bar-segment ${segment.segmentClass}`}
+                    style={{
+                      width: `${stackedWidthPercent}%`,
+                      minWidth: segment.amount > 0 ? `${MIN_VISIBLE_STACKED_BAR_PX}px` : undefined,
+                    }}
+                    title={`${segment.label}: ${formatWithSymbol(segment.amount, currency, { maximumFractionDigits: 0 })} (${segment.pct.toFixed(1)}%)`}
+                  >
+                    {stackedWidthPercent > 7 && <span>{segment.pct.toFixed(1)}%</span>}
+                  </div>
+                );
+              })}
             </div>
             <div className="km-bar-labels">
               {barSegments.map((segment) => (

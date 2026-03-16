@@ -34,7 +34,7 @@ export interface KeyMetricsSegmentsResult {
   flowRows: KeyMetricsSummaryRow[];
 }
 
-type SegmentKey = 'pretax' | 'taxes' | 'posttax' | 'bills' | 'savings' | 'remaining' | 'shortfall';
+type SegmentKey = 'billsAndDeductions' | 'taxes' | 'savings' | 'remaining' | 'shortfall';
 
 type SegmentMeta = {
   label: string;
@@ -45,11 +45,11 @@ type SegmentMeta = {
 };
 
 const SEGMENT_META: Record<SegmentKey, SegmentMeta> = {
-  pretax: {
-    label: 'Pre-Tax Deductions',
-    segmentClass: 'km-pretax-segment',
-    dotClass: 'km-pretax-dot',
-    fillClass: 'km-flow-fill-pretax',
+  billsAndDeductions: {
+    label: 'Bills & Deductions',
+    segmentClass: 'km-bills-segment',
+    dotClass: 'km-bills-dot',
+    fillClass: 'km-flow-fill-bills',
   },
   taxes: {
     label: 'Taxes',
@@ -57,18 +57,6 @@ const SEGMENT_META: Record<SegmentKey, SegmentMeta> = {
     dotClass: 'km-tax-dot',
     fillClass: 'km-flow-fill-taxes',
     glossaryTermId: 'withholding',
-  },
-  posttax: {
-    label: 'Post-Tax Deductions',
-    segmentClass: 'km-posttax-segment',
-    dotClass: 'km-posttax-dot',
-    fillClass: 'km-flow-fill-posttax',
-  },
-  bills: {
-    label: 'Bills',
-    segmentClass: 'km-bills-segment',
-    dotClass: 'km-bills-dot',
-    fillClass: 'km-flow-fill-bills',
   },
   savings: {
     label: 'Savings & Investments',
@@ -123,11 +111,11 @@ export function buildKeyMetricsSegments(input: KeyMetricsSegmentsInput): KeyMetr
     return (amount / annualGross) * 100;
   };
 
+  const annualBillsAndDeductions = annualPreTaxDeductions + annualPostTaxDeductions + annualBillsCoveredByNet;
+
   const barSegments = [
-    buildSegment('pretax', annualPreTaxDeductions, toPercentOfGross),
+    buildSegment('billsAndDeductions', annualBillsAndDeductions, toPercentOfGross),
     buildSegment('taxes', annualTaxes, toPercentOfGross),
-    buildSegment('posttax', annualPostTaxDeductions, toPercentOfGross),
-    buildSegment('bills', annualBillsCoveredByNet, toPercentOfGross),
     buildSegment('savings', annualSavingsInBar, toPercentOfGross),
     buildSegment('remaining', annualFlexibleRemaining, toPercentOfGross),
     buildSegment('shortfall', annualShortfall, toPercentOfGross),

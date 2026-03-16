@@ -15,10 +15,8 @@ describe('buildKeyMetricsSegments', () => {
     });
 
     expect(barSegments.map((s) => s.key)).toEqual([
-      'pretax',
+      'billsAndDeductions',
       'taxes',
-      'posttax',
-      'bills',
       'savings',
       'remaining',
     ]);
@@ -39,7 +37,7 @@ describe('buildKeyMetricsSegments', () => {
       annualShortfall: 1200,
     });
 
-    expect(barSegments.map((s) => s.key)).toEqual(['taxes', 'bills', 'shortfall']);
+    expect(barSegments.map((s) => s.key)).toEqual(['billsAndDeductions', 'taxes', 'shortfall']);
     expect(barSegments.find((s) => s.key === 'shortfall')?.pct).toBeCloseTo(2.4);
   });
 
