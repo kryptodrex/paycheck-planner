@@ -264,49 +264,15 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     updateSavingsContribution(item.id, { enabled: item.enabled === false });
   };
 
-  const calculateYearlyRetirementContribution = (
-    employeeContribAmount: number,
-    isPercentage: boolean,
-    hasEmployerMatch: boolean,
-    employerCapAmount: number,
-    employerCapIsPercentage: boolean
-  ): number => {
-    let employeePerPaycheck = 0;
-    if (isPercentage) {
-      employeePerPaycheck = (grossPayPerPaycheck * employeeContribAmount) / 100;
-    } else {
-      employeePerPaycheck = employeeContribAmount;
-    }
-
-    let employerPerPaycheck = 0;
-    if (hasEmployerMatch) {
-      const employeePercentage = (employeePerPaycheck / grossPayPerPaycheck) * 100;
-      if (employerCapIsPercentage) {
-        const matchPercentage = Math.min(employeePercentage, employerCapAmount);
-        employerPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
-      } else {
-        employerPerPaycheck = Math.min(employeePerPaycheck, employerCapAmount);
-      }
-    }
-
-    return (employeePerPaycheck + employerPerPaycheck) * paychecksPerYear;
-  };
-
   const checkYearlyLimitExceeded = (
     limit: number,
     employeeContribAmount: number,
     isPercentage: boolean,
-    hasEmployerMatch: boolean,
-    employerCapAmount: number,
-    employerCapIsPercentage: boolean
   ): { exceeded: boolean; total: number; overage: number } => {
-    const total = calculateYearlyRetirementContribution(
-      employeeContribAmount,
-      isPercentage,
-      hasEmployerMatch,
-      employerCapAmount,
-      employerCapIsPercentage
-    );
+    const employeePerPaycheck = isPercentage
+      ? (grossPayPerPaycheck * employeeContribAmount) / 100
+      : employeeContribAmount;
+    const total = employeePerPaycheck * paychecksPerYear;
     return {
       exceeded: total > limit,
       total,
@@ -321,43 +287,14 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     }
 
     const yearlyLimitAmount = parseFloat(yearlyLimit);
+    const employeePerPaycheck = yearlyLimitAmount / paychecksPerYear;
 
-    if (employerMatchOption === 'has-match') {
-      const employerCapAmount = parseFloat(employerMatchCap) || 0;
-      let employeePerPaycheck = yearlyLimitAmount / paychecksPerYear * 0.9;
-
-      for (let i = 0; i < 10; i += 1) {
-        const employeePercentage = (employeePerPaycheck / grossPayPerPaycheck) * 100;
-        let employerPerPaycheck = 0;
-        if (employerMatchCapIsPercentage) {
-          const matchPercentage = Math.min(employeePercentage, employerCapAmount);
-          employerPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
-        } else {
-          employerPerPaycheck = Math.min(employeePerPaycheck, employerCapAmount);
-        }
-
-        const totalYearly = (employeePerPaycheck + employerPerPaycheck) * paychecksPerYear;
-        if (Math.abs(totalYearly - yearlyLimitAmount) < 0.01) {
-          if (employeeIsPercentage) {
-            setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
-          } else {
-            setEmployeeAmount(employeePerPaycheck.toFixed(2));
-          }
-          setRetirementFormMessage(null);
-          return;
-        }
-
-        employeePerPaycheck = employeePerPaycheck * (yearlyLimitAmount / totalYearly);
-      }
+    if (employeeIsPercentage) {
+      setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
     } else {
-      const employeePerPaycheck = yearlyLimitAmount / paychecksPerYear;
-      if (employeeIsPercentage) {
-        setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
-      } else {
-        setEmployeeAmount(employeePerPaycheck.toFixed(2));
-      }
-      setRetirementFormMessage(null);
+      setEmployeeAmount(employeePerPaycheck.toFixed(2));
     }
+    setRetirementFormMessage(null);
   };
 
   const handleAddRetirement = () => {
@@ -435,9 +372,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         parsedYearlyLimit,
         parsedEmployeeContribution,
         employeeIsPercentage,
-        hasEmployerMatch,
-        parsedMatchCap || 0,
-        employerMatchCapIsPercentage
       );
 
       if (limitCheck.exceeded) {
