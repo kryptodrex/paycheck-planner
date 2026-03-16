@@ -46,7 +46,12 @@ jobs:
             if [ -f RELEASE_NOTES.md ]; then
               echo "### 🆕 What's New"
               echo ""
-              cat RELEASE_NOTES.md
+              NOTES_CONTENT="$(awk 'BEGIN{emit=0} /^---[[:space:]]*$/{emit=1; next} emit {print}' RELEASE_NOTES.md)"
+              if [ -n "$NOTES_CONTENT" ]; then
+                printf '%s\n' "$NOTES_CONTENT"
+              else
+                cat RELEASE_NOTES.md
+              fi
             else
               echo "### 🆕 What's New"
               echo ""

@@ -3,6 +3,7 @@
 import React from 'react';
 import { useAppDialogs, useEncryptionSetupFlow } from '../../../hooks';
 import { Button, EncryptionConfigPanel, ErrorDialog } from '../../_shared';
+import '../views.shared.css';
 import './EncryptionSetup.css';
 
 interface EncryptionSetupProps {
@@ -46,8 +47,8 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
 
   // Reusable encryption config UI (used by SetupWizard too)
   return (
-    <div className="encryption-setup">
-      <div className="setup-card">
+    <div className="view-screen encryption-setup">
+      <div className="view-screen-card setup-card">
         <h1>{encryptionEnabled ? '🔐 Encryption Key Setup' : '🔐 Security Setup'}</h1>
         <p className="subtitle">
           {encryptionEnabled ? 'This key will be used to encrypt and decrypt your budget files' : 'Choose how you want to protect your budget files'}

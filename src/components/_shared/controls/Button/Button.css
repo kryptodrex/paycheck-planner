@@ -36,13 +36,14 @@
 
 /* Primary button */
 .btn-primary {
-  background: var(--bg-primary);
-  color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-primary) 38%, transparent);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -51,15 +52,16 @@
 
 /* Secondary button */
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: white;
+  background: var(--border-color);
+  border-color: var(--border-color-hover, var(--accent-primary));
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .btn-secondary:active:not(:disabled) {

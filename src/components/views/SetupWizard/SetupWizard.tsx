@@ -8,6 +8,8 @@ import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../../types/payroll';
 import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog } from '../../_shared';
+import '../views.shared.css';
+import '../../_shared/payEditorShared.css';
 import './SetupWizard.css';
 
 interface SetupWizardProps {
@@ -21,6 +23,22 @@ interface EditableTaxLine {
   rate: string;
   error?: string;
 }
+
+const getDefaultTaxLinesForCurrency = (currencyCode: string): EditableTaxLine[] => {
+  if (currencyCode === 'USD') {
+    return [
+      { id: crypto.randomUUID(), label: 'Federal Tax', rate: '12' },
+      { id: crypto.randomUUID(), label: 'State Tax', rate: '5' },
+      { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2' },
+      { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45' },
+    ];
+  }
+
+  // Non-USD plans start with neutral labels and no assumed rates.
+  return [
+    { id: crypto.randomUUID(), label: 'Income Tax', rate: '0' },
+  ];
+};
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData } = useBudget();
@@ -53,12 +71,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [payFrequency, setPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
   const [minLeftover, setMinLeftover] = useState('0');
 
-  const [taxLines, setTaxLines] = useState<EditableTaxLine[]>([
-    { id: crypto.randomUUID(), label: 'Federal Tax', rate: '12' },
-    { id: crypto.randomUUID(), label: 'State Tax', rate: '5' },
-    { id: crypto.randomUUID(), label: 'Social Security', rate: '6.2' },
-    { id: crypto.randomUUID(), label: 'Medicare', rate: '1.45' },
-  ]);
+  const [taxLines, setTaxLines] = useState<EditableTaxLine[]>(() => getDefaultTaxLinesForCurrency(budgetData?.settings?.currency || 'USD'));
+  const [hasEditedTaxLines, setHasEditedTaxLines] = useState(false);
   const [taxRatesAutoEstimated, setTaxRatesAutoEstimated] = useState(false);
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
   const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
@@ -67,7 +81,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [accounts, setAccounts] = useState<Account[]>([
     {
       id: crypto.randomUUID(),
-      name: 'My Checking',
+      name: 'Checking',
       type: 'checking',
       color: getDefaultAccountColor('checking'),
       icon: getDefaultAccountIcon('checking'),
@@ -75,7 +89,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   ]);
 
   const handleNext = () => {
-    if (step === 3 && !taxRatesAutoEstimated) {
+    if (step === 3 && currency === 'USD' && !taxRatesAutoEstimated) {
       setTaxLines((prev) => applyEstimatedTaxRates(prev));
       setTaxRatesAutoEstimated(true);
     }
@@ -208,12 +222,14 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   const handleTaxLineChange = (id: string, field: 'label' | 'rate', value: string) => {
+    setHasEditedTaxLines(true);
     setTaxLines((prev) => prev.map((line) => (
       line.id === id ? { ...line, [field]: value, error: undefined } : line
     )));
   };
 
   const handleAddTaxLine = () => {
+    setHasEditedTaxLines(true);
     setTaxLines((prev) => [
       ...prev,
       { id: crypto.randomUUID(), label: '', rate: '0' },
@@ -221,7 +237,17 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   const handleRemoveTaxLine = (id: string) => {
+    setHasEditedTaxLines(true);
     setTaxLines((prev) => prev.filter((line) => line.id !== id));
+  };
+
+  const handleCurrencyChange = (value: string) => {
+    setCurrency(value);
+
+    if (!hasEditedTaxLines) {
+      setTaxLines(getDefaultTaxLinesForCurrency(value));
+      setTaxRatesAutoEstimated(value !== 'USD');
+    }
   };
 
   const getEstimatedAnnualGross = () => {
@@ -320,9 +346,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   };
 
   return (
-    <div className="setup-wizard">
-      <div className="wizard-container">
-        <div className="wizard-header">
+    <div className="view-screen setup-wizard">
+      <div className="view-screen-card wizard-container">
+        <div className="wizard-header app-drag-region">
           <h1>Setup Your Paycheck Plan</h1>
           <ProgressBar
             percentage={(step / totalSteps) * 100}
@@ -342,7 +368,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               <FormGroup label="Currency" helperText="Choose your local currency for this plan">
                 <select
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
                   className="currency-select"
                 >
                   {CURRENCIES.map(curr => (
@@ -485,9 +511,9 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 />
               </FormGroup>
 
-              {formattedSuggestedLeftover && (
-                <div className="setup-leftover-suggestion">
-                  <div className="setup-leftover-suggestion-copy">
+              {formattedSuggestedLeftover && parseInt(formattedSuggestedLeftover.replace(/[^0-9]/g, ''), 10) > parseInt(minLeftover || '0', 10) && (
+                <div className="leftover-suggestion">
+                  <div className="leftover-suggestion-copy">
                     <strong>Suggested leftover: {formattedSuggestedLeftover} per paycheck</strong>
                     <span>
                       Based on your pay details, this is about 20% of estimated gross pay to leave room for variable spending.
@@ -514,22 +540,30 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               </p>
 
               <InfoBox>
-                <strong>Starter estimates loaded:</strong> These tax percentages were prefilled from the pay amount you entered.
-                Review and adjust them if your actual withholding differs.
+                {currency === 'USD' ? (
+                  <>
+                    <strong>Starter estimates loaded:</strong> These tax percentages were prefilled from the pay amount you entered.
+                    Review and adjust them if your actual withholding differs.
+                  </>
+                ) : (
+                  <>
+                    <strong>No country-specific defaults loaded:</strong> Non-USD plans start with neutral tax lines so you can enter rates that match your local tax rules.
+                  </>
+                )}
               </InfoBox>
 
-              <div className="setup-tax-lines-editor">
-                <div className="setup-tax-lines-header">
-                  <span className="setup-col-label">Name</span>
-                  <span className="setup-col-rate">Rate (%)</span>
-                  <span className="setup-col-actions" />
+              <div className="tax-lines-editor">
+                <div className="tax-lines-header">
+                  <span className="col-label">Name</span>
+                  <span className="col-rate">Rate (%)</span>
+                  <span className="col-actions" />
                 </div>
 
                 {taxLines.map((line) => (
-                  <div key={line.id} className="setup-tax-line-row">
-                    <div className="setup-tax-line-fields">
+                  <div key={line.id} className="tax-line-row">
+                    <div className="tax-line-fields">
                       <input
-                        className={`setup-tax-line-label-input${line.error === 'Label is required.' ? ' field-error' : ''}`}
+                        className={`tax-line-label-input${line.error === 'Label is required.' ? ' field-error' : ''}`}
                         type="text"
                         placeholder="e.g. Federal Tax"
                         value={line.label}
@@ -554,7 +588,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                         ✕
                       </Button>
                     </div>
-                    {line.error && <div className="setup-tax-line-error">{line.error}</div>}
+                    {line.error && <div className="tax-line-error">{line.error}</div>}
                   </div>
                 ))}
 
@@ -589,7 +623,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             <div className="wizard-step">
               <h2>Where does your money go?</h2>
               <p className="step-description">
-                Set up your accounts where you want to allocate your paychecks. We've created a default checking account to get you started.
+                Set up the accounts where you want to allocate your paychecks. We've created a default checking account to get you started.
               </p>
 
               <AccountsEditor
@@ -597,9 +631,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 onAdd={handleAddAccount}
                 onUpdate={handleUpdateAccount}
                 onDelete={handleDeleteAccount}
-                showToggleButton={false}
+                showToggleButton
                 listLabel="Your Accounts"
-                listSubtitle="We've created a default checking account for you. Click the edit icon to rename it or change its type."
                 infoMessage="You can always add, remove, or rename accounts later from Edit → Accounts."
                 minAccounts={1}
               />

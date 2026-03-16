@@ -67,6 +67,9 @@ export function calculatePaycheckBreakdown(input?: BudgetCalculationInput | null
   }, 0);
 
   benefits.forEach((benefit) => {
+    if (benefit.enabled === false) {
+      return;
+    }
     if ((benefit.deductionSource || 'paycheck') !== 'paycheck' || benefit.isTaxable) {
       return;
     }
@@ -103,6 +106,9 @@ export function calculatePaycheckBreakdown(input?: BudgetCalculationInput | null
   let netPayBeforePostTax = roundUpToCent(taxableIncome - totalTaxes);
 
   benefits.forEach((benefit) => {
+    if (benefit.enabled === false) {
+      return;
+    }
     if ((benefit.deductionSource || 'paycheck') !== 'paycheck' || !benefit.isTaxable) {
       return;
     }

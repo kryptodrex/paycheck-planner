@@ -238,7 +238,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       </div>
 
       <div className="settings-section settings-danger-zone">
-        <h3>App Memory Wipe</h3>
+        <h3>Reset App Settings</h3>
         <p className="settings-danger-copy">
           Remove this app&apos;s local preferences, recent files, and in-memory plan session. <b>Budget files themselves as well as keychain links are not deleted.</b>
         </p>
@@ -249,13 +249,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             isLoading={importing}
             loadingText="Importing…"
           >
-            Import app data
+            Import App Settings
           </Button>
           <Button
             variant="danger"
             onClick={() => setShowResetConfirm(true)}
           >
-            Reset App Memory
+            Reset App Settings
           </Button>
         </div>
       </div>

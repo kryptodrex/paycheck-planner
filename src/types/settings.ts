@@ -1,5 +1,7 @@
 import type { TabConfig, TabDisplayMode, TabPosition } from './tabs';
 
+export type KeyMetricsBreakdownView = 'flow' | 'stacked' | 'pie';
+
 export interface BudgetSettings {
   currency: string;
   locale: string;
@@ -17,6 +19,7 @@ export interface BudgetSettings {
     y: number;
   };
   activeTab?: string;
+  keyMetricsBreakdownView?: KeyMetricsBreakdownView;
 }
 
 export interface AppSettings {

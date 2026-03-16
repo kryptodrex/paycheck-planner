@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, RadioGroup, Button } from '../../';
+import { Alert, RadioGroup, Button, InfoBox } from '../../';
 import '../../sharedPathDisplay.css';
 import './EncryptionConfigPanel.css';
 
@@ -69,9 +69,9 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                     </div>
                 </div>
 
-                <p className="encryption-note">
-                    💡 You can always change your encryption setting later.
-                </p>
+                <InfoBox>
+                    You can always change your encryption setting later.
+                </InfoBox>
             </div>
         );
     }
@@ -98,7 +98,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                 options={[
                     {
                         value: 'generated',
-                        label: 'Use Generated Key (Recommended)',
+                        label: 'Use Auto-Generated Key (Recommended)',
                         description: 'Auto-generate a strong key and store it securely in your keychain.',
                     },
                     {

@@ -81,7 +81,7 @@
 
 .glossary-category-btn:hover {
   background: var(--glossary-accent-soft);
-  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  border-color: var(--border-accent-soft);
   color: var(--text-primary);
 }
 
@@ -183,12 +183,8 @@
 
 .glossary-badge {
   border: 1px solid color-mix(in srgb, var(--accent-primary) 35%, var(--border-color));
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.75rem;
   color: color-mix(in srgb, var(--text-primary) 76%, var(--accent-primary) 24%);
   background: color-mix(in srgb, var(--accent-primary) 15%, var(--bg-primary));
-  white-space: nowrap;
 }
 
 .glossary-short {
