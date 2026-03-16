@@ -1,7 +1,6 @@
 export interface AccountAllocationCategory {
   id: string;
   name: string;
-  notes?: string;
   amount: number;
   isBill?: boolean;
   billCount?: number;

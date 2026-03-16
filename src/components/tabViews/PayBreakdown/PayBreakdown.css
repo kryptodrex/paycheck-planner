@@ -475,13 +475,6 @@
   min-width: 0;
 }
 
-.category-note-text {
-  font-size: 0.8rem;
-  color: var(--text-tertiary);
-  white-space: normal;
-  line-height: 1.25;
-}
-
 .category-button:hover {
   background: var(--bg-tertiary);
   border-color: var(--border-color);
@@ -522,29 +515,6 @@
   line-height: 1.5;
   height: 38px;
   box-sizing: border-box;
-}
-
-.category-fields-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.category-note-input {
-  width: 100%;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  line-height: 1.3;
-  box-sizing: border-box;
-}
-
-.category-note-input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
 }
 
 .category-name-input:focus {

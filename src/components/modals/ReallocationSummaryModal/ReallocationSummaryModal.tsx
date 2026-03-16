@@ -14,6 +14,7 @@ export interface ReallocationSummaryItem {
 interface ReallocationSummaryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onDone: () => void;
   items: ReallocationSummaryItem[];
   selectedIds: string[];
   onSelectedIdsChange: (ids: string[]) => void;
@@ -24,6 +25,7 @@ interface ReallocationSummaryModalProps {
 const ReallocationSummaryModal: React.FC<ReallocationSummaryModalProps> = ({
   isOpen,
   onClose,
+  onDone,
   items,
   selectedIds,
   onSelectedIdsChange,
@@ -55,9 +57,6 @@ const ReallocationSummaryModal: React.FC<ReallocationSummaryModalProps> = ({
       header="Reallocation Summary"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
           <Button
             variant="secondary"
             onClick={onUndoSelected}
@@ -71,6 +70,9 @@ const ReallocationSummaryModal: React.FC<ReallocationSummaryModalProps> = ({
             disabled={items.length === 0}
           >
             Undo All
+          </Button>
+          <Button variant="primary" onClick={onDone}>
+            Done
           </Button>
         </>
       }

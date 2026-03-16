@@ -25,7 +25,6 @@ import './PayBreakdown.css';
 type AllocationCategory = {
   id: string;
   name: string;
-  notes?: string;
   amount: number;
   isBill?: boolean;        // If true, this is an auto-calculated sum of bills for this account
   billCount?: number;      // Number of bills in this category (if isBill is true)
@@ -60,6 +59,11 @@ type ReallocationUndoSnapshot = {
   benefits: Benefit[];
   savingsContributions: SavingsContribution[];
   retirement: RetirementElection[];
+};
+
+type ReallocationSummaryMeta = {
+  appliedCount: number;
+  appliedResolved: boolean;
 };
 
 
@@ -99,11 +103,16 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const [reallocationSummaryItems, setReallocationSummaryItems] = useState<ReallocationSummaryItem[]>([]);
   const [selectedReallocationSummaryIds, setSelectedReallocationSummaryIds] = useState<string[]>([]);
   const [reallocationUndoSnapshot, setReallocationUndoSnapshot] = useState<ReallocationUndoSnapshot | null>(null);
+  const [reallocationSummaryMeta, setReallocationSummaryMeta] = useState<ReallocationSummaryMeta | null>(null);
+  const [lastUndoCount, setLastUndoCount] = useState(0);
   
   const [reallocationToastMessage, setReallocationToastMessage] = useState<string | null>(null);
+  const [reallocationToastType, setReallocationToastType] = useState<'success' | 'warning' | 'error'>('success');
+  const [reallocationToastKey, setReallocationToastKey] = useState(0);
   // Track if balance has gone negative to prompt for reallocation
   const previousLeftoverRef = useRef<number | null>(null);
   const negativeBalancePromptedRef = useRef(false);
+  const suppressNextNegativeBalancePromptRef = useRef(false);
 
   if (!budgetData) return null;
 
@@ -182,6 +191,20 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
   const closeReallocationModal = () => {
     setShowReallocationModal(false);
+  };
+
+  const dismissReallocationFlowAfterUndo = (toastMessage: string) => {
+    suppressNextNegativeBalancePromptRef.current = true;
+    negativeBalancePromptedRef.current = true;
+    setReallocationToastType('warning');
+    setReallocationToastMessage(toastMessage);
+    setReallocationToastKey((current) => current + 1);
+    setShowReallocationSummaryModal(false);
+    setReallocationSummaryItems([]);
+    setSelectedReallocationSummaryIds([]);
+    setReallocationUndoSnapshot(null);
+    setReallocationSummaryMeta(null);
+    setLastUndoCount(0);
   };
 
   const getReallocationChangeId = (proposal: ReallocationProposal): string => `${proposal.sourceType}:${proposal.sourceId}`;
@@ -263,42 +286,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       filteredPlan,
     );
 
-    const customProposalById = new Map(
-      filteredPlan.proposals
-        .filter((proposal) => proposal.sourceType === 'custom-allocation')
-        .map((proposal) => [proposal.sourceId, proposal]),
-    );
-
-    const accountsWithReallocationNotes = applied.accounts.map((account) => ({
-      ...account,
-      allocationCategories: (account.allocationCategories || []).map((category) => {
-        const proposal = customProposalById.get(`${account.id}:${category.id}`);
-        if (!proposal) return category;
-
-        const existingNotes = (category.notes || '').trim();
-        const userNotesWithoutPreviousAmount = existingNotes
-          .split('\n')
-          .filter((line) => !line.startsWith('Previous amount before reallocation:'))
-          .join('\n')
-          .trim();
-        const wasAmount = formatWithSymbol(
-          proposal.currentPerPaycheckAmount,
-          currency,
-          { minimumFractionDigits: 2, maximumFractionDigits: 2 },
-        );
-        const previousAmountNote = `Previous amount before reallocation was ${wasAmount} ${payFrequencyLabel.toLowerCase()}`;
-
-        return {
-          ...category,
-          notes: userNotesWithoutPreviousAmount
-            ? `${userNotesWithoutPreviousAmount}\n${previousAmountNote}`
-            : previousAmountNote,
-        };
-      }),
-    }));
-
     updateBudgetData({
-      accounts: accountsWithReallocationNotes,
+      accounts: applied.accounts,
       bills: applied.bills,
       benefits: applied.benefits,
       savingsContributions: applied.savingsContributions,
@@ -315,22 +304,84 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       deltaLabel: `+${formatWithSymbol(toDisplayAmount(proposal.freedPerPaycheckAmount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
     }));
 
+    const resolutionEpsilon = 0.01;
+    const resolvedAfterRounding = roundToCent(filteredPlan.projectedRemainingPerPaycheck) + resolutionEpsilon
+      >= roundToCent(targetLeftoverPerPaycheck);
+
     setReallocationUndoSnapshot(beforeSnapshot);
     setReallocationSummaryItems(summaryItems);
     setSelectedReallocationSummaryIds(summaryItems.map((item) => item.id));
+    setReallocationSummaryMeta({
+      appliedCount: summaryItems.length,
+      appliedResolved: resolvedAfterRounding,
+    });
     setShowReallocationSummaryModal(true);
 
-    const toastMsg = filteredPlan.fullyResolved
-      ? `Applied ${filteredPlan.proposals.length} change${filteredPlan.proposals.length === 1 ? '' : 's'}! You are back on track.`
-      : `Applied ${filteredPlan.proposals.length} change${filteredPlan.proposals.length === 1 ? '' : 's'}. Improved but still below target!`;
-    setReallocationToastMessage(toastMsg);
     
     setShowReallocationModal(false);
+  };
+
+  const handleDismissReallocationSummary = (
+    dismissSource: 'done' | 'close',
+    summaryCountsOverride?: { appliedCount?: number; remainingCount?: number },
+  ) => {
+    const appliedCount = summaryCountsOverride?.appliedCount ?? reallocationSummaryMeta?.appliedCount ?? 0;
+    const remainingCount = summaryCountsOverride?.remainingCount ?? reallocationSummaryItems.length;
+    const undoneCount = Math.max(0, appliedCount - remainingCount);
+    const resolutionEpsilon = 0.01;
+    const currentlyResolved = roundToCent(leftoverPerPaycheck) + resolutionEpsilon >= roundToCent(targetLeftoverPerPaycheck);
+
+    if (appliedCount > 0) {
+      let nextToastMessage: string | null = null;
+      let nextToastType: 'success' | 'warning' | 'error' = 'success';
+
+      if (undoneCount === 0) {
+        if (dismissSource === 'done') {
+          nextToastMessage = currentlyResolved
+            ? `Reallocation complete. Applied ${appliedCount} change${appliedCount === 1 ? '' : 's'}.`
+            : `Applied ${appliedCount} change${appliedCount === 1 ? '' : 's'}. Remaining is still below target.`;
+        } else {
+          nextToastMessage = currentlyResolved
+            ? `Applied ${appliedCount} change${appliedCount === 1 ? '' : 's'}.`
+            : `Applied ${appliedCount} change${appliedCount === 1 ? '' : 's'}. Remaining is still below target.`;
+        }
+        nextToastType = currentlyResolved ? 'success' : 'warning';
+      } else if (remainingCount === 0) {
+        nextToastMessage = 'All changes reverted.';
+        nextToastType = 'warning';
+      } else {
+        const revertedCount = lastUndoCount > 0 ? lastUndoCount : undoneCount;
+        nextToastMessage = `${revertedCount} selected change(s) reverted.`;
+        nextToastType = 'warning';
+      }
+
+      if (nextToastMessage) {
+        setReallocationToastType(nextToastType);
+        setReallocationToastMessage(nextToastMessage);
+        setReallocationToastKey((current) => current + 1);
+      }
+    }
+
+    setShowReallocationSummaryModal(false);
+    setReallocationSummaryItems([]);
+    setSelectedReallocationSummaryIds([]);
+    setReallocationUndoSnapshot(null);
+    setReallocationSummaryMeta(null);
+    setLastUndoCount(0);
+  };
+
+  const handleCompleteReallocationSummary = () => {
+    handleDismissReallocationSummary('done');
+  };
+
+  const handleCloseReallocationSummary = () => {
+    handleDismissReallocationSummary('close');
   };
 
   const handleUndoReallocationChanges = (idsToUndo: string[]) => {
     if (!reallocationUndoSnapshot || !budgetData) return;
     if (idsToUndo.length === 0) return;
+    setLastUndoCount(idsToUndo.length);
 
     const undoSet = new Set(idsToUndo);
     const getIdForType = (sourceType: string, sourceId: string) => `${sourceType}:${sourceId}`;
@@ -387,16 +438,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     });
 
     const remainingSummaryItems = reallocationSummaryItems.filter((item) => !undoSet.has(item.id));
-    setReallocationSummaryItems(remainingSummaryItems);
-    setSelectedReallocationSummaryIds(remainingSummaryItems.map((item) => item.id));
-
-    if (remainingSummaryItems.length === 0) {
-      setShowReallocationSummaryModal(false);
-      setReallocationUndoSnapshot(null);
-    }
-
-    setReallocationToastMessage(
-      `Undid ${idsToUndo.length} change${idsToUndo.length === 1 ? '' : 's'}.`,
+    const undidAllChanges = remainingSummaryItems.length === 0;
+    dismissReallocationFlowAfterUndo(
+      undidAllChanges
+        ? 'All changes reverted.'
+        : `${idsToUndo.length} selected change(s) reverted.`,
     );
   };
 
@@ -451,7 +497,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       .map((category) => ({
         ...category,
         name: category.name.trim(),
-        notes: category.notes?.trim() || undefined,
         amount: Number.isFinite(category.amount)
           ? Math.round(Math.max(0, category.amount) * 1_000_000_000_000) / 1_000_000_000_000
           : 0,
@@ -516,7 +561,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
           {
             id: crypto.randomUUID(),
             name: '',
-            notes: '',
             amount: 0,
           },
         ],
@@ -587,6 +631,24 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const handleNegativeBalanceCheck = () => {
     const isCurrentlyNegative = leftoverPerPaycheck < 0;
     const wasNegative = previousLeftoverRef.current !== null && previousLeftoverRef.current < 0;
+
+    if (suppressNextNegativeBalancePromptRef.current) {
+      if (!isCurrentlyNegative) {
+        suppressNextNegativeBalancePromptRef.current = false;
+        negativeBalancePromptedRef.current = false;
+      }
+      previousLeftoverRef.current = leftoverPerPaycheck;
+      return;
+    }
+
+    // Suppress prompt churn while the reallocation flow is active (review/summary).
+    if (showReallocationModal || showReallocationSummaryModal) {
+      if (!isCurrentlyNegative && wasNegative) {
+        negativeBalancePromptedRef.current = false;
+      }
+      previousLeftoverRef.current = leftoverPerPaycheck;
+      return;
+    }
     
     // If balance just went negative (transition from non-negative to negative)
     if (isCurrentlyNegative && !wasNegative && !negativeBalancePromptedRef.current && reallocationPlan.proposals.length > 0) {
@@ -808,22 +870,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                             </>
                           ) : (
                             <>
-                              <div className="category-fields-stack">
-                                <input
-                                  type="text"
-                                  value={category.name}
-                                  onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
-                                  placeholder="Item name"
-                                  className="category-name-input"
-                                />
-                                <input
-                                  type="text"
-                                  value={category.notes || ''}
-                                  onChange={(e) => updateCategory(displayAccount.id, category.id, { notes: e.target.value })}
-                                  placeholder="Optional note"
-                                  className="category-note-input"
-                                />
-                              </div>
+                              <input
+                                type="text"
+                                value={category.name}
+                                onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
+                                placeholder="Item name"
+                                className="category-name-input"
+                              />
                               <InputWithPrefix
                                 prefix={getCurrencySymbol(currency)}
                                 type="number"
@@ -883,12 +936,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                         ) : (
                           <div className="waterfall-label category-label category-name-static">
                             <span className="category-name-text">{category.name}</span>
-                            {category.notes && (
-                              <div>
-                                <span className="category-note-text">Notes: </span>
-                                <span className="category-note-text">{category.notes}</span>
-                              </div>
-                            )}
                           </div>
                         )}
                         <span className="waterfall-amount">
@@ -973,7 +1020,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
       <ReallocationSummaryModal
         isOpen={showReallocationSummaryModal}
-        onClose={() => setShowReallocationSummaryModal(false)}
+        onClose={handleCloseReallocationSummary}
+        onDone={handleCompleteReallocationSummary}
         items={reallocationSummaryItems}
         selectedIds={selectedReallocationSummaryIds}
         onSelectedIdsChange={setSelectedReallocationSummaryIds}
@@ -982,8 +1030,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       />
 
       <Toast
+        key={reallocationToastKey}
         message={reallocationToastMessage}
-        type={reallocationToastMessage?.includes('Remaining now reaches target') ? 'success' : 'warning'}
+        type={reallocationToastType}
         duration={3000}
         onDismiss={() => setReallocationToastMessage(null)}
       />
@@ -1063,7 +1112,6 @@ function normalizeAccounts(
       .map((category) => ({
         id: category.id,
         name: category.name,
-        notes: category.notes,
         amount: category.amount,
         isBill: false,
         isBenefit: false,
@@ -1203,7 +1251,6 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
     const categories = account.allocationCategories.map((category) => ({
       id: category.id,
       name: category.name,
-      notes: category.notes,
       amount: Math.max(0, category.amount || 0),
       isBill: category.isBill,
       billCount: category.billCount,
