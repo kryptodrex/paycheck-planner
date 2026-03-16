@@ -5,7 +5,9 @@ import { formatWithSymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { convertBillToYearly } from '../../../utils/billFrequency';
-import { PageHeader } from '../../_shared';
+import { buildKeyMetricsSegments } from '../../../utils/keyMetricsSegments';
+import type { KeyMetricsBreakdownView } from '../../../types/settings';
+import { PageHeader, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './KeyMetrics.css';
@@ -26,6 +28,8 @@ interface MetricCardProps {
   onClick?: () => void;
   children: React.ReactNode;
 }
+
+type BreakdownView = 'bars' | 'stacked' | 'pie';
 
 const MetricCard: React.FC<MetricCardProps> = ({ className, icon, title, ariaLabel, onClick, children }) => {
   const isInteractive = Boolean(onClick);
@@ -73,7 +77,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   onNavigateToBills,
   onNavigateToRemaining,
 }) => {
-  const { budgetData, calculatePaycheckBreakdown, calculateRetirementContributions } = useBudget();
+  const { budgetData, calculatePaycheckBreakdown, calculateRetirementContributions, updateBudgetSettings } = useBudget();
+  const [hoveredPieKey, setHoveredPieKey] = React.useState<string | null>(null);
 
   if (!budgetData) return null;
 
@@ -124,51 +129,77 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   const annualPreTaxDeductions = annualizedBreakdown.preTaxDeductions;
   const annualPostTaxDeductions = annualizedBreakdown.postTaxDeductions;
 
-  const toPercentOfGross = (amount: number) => (annualGross > 0 ? (amount / annualGross) * 100 : 0);
   const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
-  const preTaxPct = toPercentOfGross(annualPreTaxDeductions);
-  const taxPct = toPercentOfGross(annualTaxes);
-  const postTaxPct = toPercentOfGross(annualPostTaxDeductions);
-  const netPct = toPercentOfGross(annualNet);
+  // Break net into its real sub-components so every dollar of gross is accounted for in the bar.
+  const annualBillsCoveredByNet = roundUpToCent(Math.min(Math.max(annualBills, 0), Math.max(annualNet, 0)));
+  const annualRemainingPositive = roundUpToCent(Math.max(annualRemaining, 0));
+  const annualShortfall = roundUpToCent(Math.max(-annualRemaining, 0));
+  const annualSavingsInBar = roundUpToCent(Math.min(annualSavings, annualRemainingPositive));
+  const annualFlexibleRemaining = roundUpToCent(Math.max(annualRemainingPositive - annualSavingsInBar, 0));
 
-  const flowRows = [
-    {
-      key: 'gross',
-      label: 'Gross Income',
-      className: 'km-flow-fill-income',
-      amount: annualGross,
-      percentage: 100,
-    },
-    {
-      key: 'taxes',
-      label: 'Taxes',
-      className: 'km-flow-fill-taxes',
-      amount: annualTaxes,
-      percentage: toPercentOfGross(annualTaxes),
-    },
-    {
-      key: 'net',
-      label: 'Take Home Pay',
-      className: 'km-flow-fill-net',
-      amount: annualNet,
-      percentage: toPercentOfGross(annualNet),
-    },
-    {
-      key: 'bills',
-      label: 'Bills',
-      className: 'km-flow-fill-bills',
-      amount: annualBills,
-      percentage: toPercentOfGross(annualBills),
-    },
-    {
-      key: 'remaining',
-      label: annualRemaining >= 0 ? 'Remaining for Flexible Spending' : 'Shortfall vs Bills',
-      className: annualRemaining >= 0 ? 'km-flow-fill-remaining' : 'km-flow-fill-shortfall',
-      amount: annualRemaining,
-      percentage: toPercentOfGross(annualRemaining),
-    },
-  ];
+  // Ensure tiny non-zero amounts are still visibly represented in UI bars.
+  const MIN_VISIBLE_STACKED_BAR_PX = 4;
+  const MIN_VISIBLE_SUMMARY_PERCENT = 0.8;
+  const MIN_VISIBLE_SUMMARY_BAR_PX = 4;
+
+  const { barSegments, flowRows } = buildKeyMetricsSegments({
+    annualGross,
+    annualTaxes,
+    annualPreTaxDeductions,
+    annualPostTaxDeductions,
+    annualBillsCoveredByNet,
+    annualSavingsInBar,
+    annualFlexibleRemaining,
+    annualShortfall,
+  });
+
+  const breakdownView: BreakdownView = (budgetData.settings.keyMetricsBreakdownView as BreakdownView) || 'bars';
+
+  const handleBreakdownViewChange = (nextView: BreakdownView) => {
+    if (nextView === breakdownView) return;
+    updateBudgetSettings({
+      ...budgetData.settings,
+      keyMetricsBreakdownView: nextView as KeyMetricsBreakdownView,
+    });
+  };
+
+  const pieColorByKey: Record<string, string> = {
+    pretax: 'var(--warning-color)',
+    taxes: 'var(--error-color)',
+    posttax: '#f43f5e',
+    bills: '#f97316',
+    savings: 'var(--cyan-color)',
+    remaining: 'var(--violet-color)',
+    shortfall: '#991b1b',
+  };
+
+  const pieTotal = barSegments.reduce((sum, segment) => sum + segment.amount, 0);
+  const PIE_RADIUS = 38;
+  const PIE_CIRCUMFERENCE = 2 * Math.PI * PIE_RADIUS;
+  const PIE_GAP = 1.6;
+  const PIE_MIN_DASH = 2;
+
+  let pieProgress = 0;
+  const pieStrokeSegments = pieTotal > 0
+    ? barSegments.map((segment) => {
+      const fraction = segment.amount / pieTotal;
+      const rawDash = fraction * PIE_CIRCUMFERENCE;
+      const dash = Math.min(PIE_CIRCUMFERENCE, Math.max(PIE_MIN_DASH, rawDash - PIE_GAP));
+      const dashOffset = -((pieProgress / pieTotal) * PIE_CIRCUMFERENCE);
+      pieProgress += segment.amount;
+
+      return {
+        key: segment.key,
+        label: segment.label,
+        amount: segment.amount,
+        pct: segment.pct,
+        color: pieColorByKey[segment.key] || 'var(--accent-primary)',
+        dash,
+        dashOffset,
+      };
+    })
+    : [];
 
   // Get currency from budget settings
   const currency = budgetData.settings.currency || 'USD';
@@ -313,100 +344,135 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         </MetricCard>
       </div>
 
-      <div className="km-breakdown-bar">
-        <h3>Your Pay Breakdown</h3>
-        <div className="km-bar-container">
-          {annualPreTaxDeductions > 0 && (
-            <div
-              className="km-bar-segment km-pretax-segment"
-              style={{ width: `${clampPercent(preTaxPct)}%` }}
-              title={`Pre-Tax: ${formatWithSymbol(annualPreTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
-            >
-              {preTaxPct > 7 && <span>{preTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div
-            className="km-bar-segment km-tax-segment"
-            style={{ width: `${clampPercent(taxPct)}%` }}
-            title={`Taxes: ${formatWithSymbol(annualTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
-          >
-            {taxPct > 7 && <span>{taxPct.toFixed(1)}%</span>}
-          </div>
-          {annualPostTaxDeductions > 0 && (
-            <div
-              className="km-bar-segment km-posttax-segment"
-              style={{ width: `${clampPercent(postTaxPct)}%` }}
-              title={`Post-Tax: ${formatWithSymbol(annualPostTaxDeductions, currency, { maximumFractionDigits: 0 })} (${postTaxPct.toFixed(1)}%)`}
-            >
-              {postTaxPct > 7 && <span>{postTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div
-            className="km-bar-segment km-net-segment"
-            style={{ width: `${clampPercent(netPct)}%` }}
-            title={`Net Pay: ${formatWithSymbol(annualNet, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
-          >
-            {netPct > 7 && <span>{netPct.toFixed(1)}%</span>}
-          </div>
-        </div>
-        <div className="km-bar-labels">
-          {annualPreTaxDeductions > 0 && (
-            <div className="km-bar-label">
-              <span className="km-label-dot km-pretax-dot"></span>
-              Pre-Tax Deductions
-            </div>
-          )}
-          <div className="km-bar-label">
-            <span className="km-label-dot km-tax-dot"></span>
-            Taxes
-          </div>
-          {annualPostTaxDeductions > 0 && (
-            <div className="km-bar-label">
-              <span className="km-label-dot km-posttax-dot"></span>
-              Post-Tax Deductions
-            </div>
-          )}
-          <div className="km-bar-label">
-            <span className="km-label-dot km-net-dot"></span>
-            Take Home
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Bar */}
       <div className="summary-bar">
-        <h3>Money Flow Summary</h3>
-        <div className="km-flow-summary-list">
-          {flowRows.map((row) => {
-            const absolutePercent = Math.abs(row.percentage);
-            const widthPercent = row.key === 'gross' ? 100 : clampPercent(absolutePercent);
-
-            return (
-              <div key={row.key} className="km-flow-summary-row">
-                <div className="km-flow-summary-head">
-                  <span className="km-flow-summary-label">
-                    {row.key === 'gross' && <GlossaryTerm termId="gross-pay">{row.label}</GlossaryTerm>}
-                    {row.key === 'taxes' && <GlossaryTerm termId="withholding">{row.label}</GlossaryTerm>}
-                    {row.key === 'net' && <GlossaryTerm termId="net-pay">{row.label}</GlossaryTerm>}
-                    {row.key !== 'gross' && row.key !== 'taxes' && row.key !== 'net' && row.label}
-                  </span>
-                  <span className="km-flow-summary-value">
-                    {formatWithSymbol(row.amount, currency, { maximumFractionDigits: 0 })}
-                    {row.key !== 'gross' && annualGross > 0 && (
-                      <span className="km-flow-summary-percent"> ({row.percentage.toFixed(1)}%)</span>
-                    )}
-                  </span>
-                </div>
-                <div className="km-flow-track" aria-hidden="true">
-                  <div
-                    className={`km-flow-fill ${row.className}`}
-                    style={{ width: `${widthPercent}%` }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="km-breakdown-header">
+          <h3>Your Yearly Pay Breakdown</h3>
+          <ViewModeSelector
+            mode={breakdownView}
+            onChange={(mode) => handleBreakdownViewChange(mode as BreakdownView)}
+            options={[
+              { value: 'bars', label: 'Bars' },
+              { value: 'stacked', label: 'Stacked' },
+              { value: 'pie', label: 'Pie' },
+            ]}
+          />
         </div>
+
+        {breakdownView === 'bars' && (
+          <div className="km-flow-summary-list">
+            {flowRows.map((row) => {
+              const absolutePercent = Math.abs(row.percentage);
+              const widthPercent = row.key === 'gross'
+                ? 100
+                : row.amount > 0
+                  ? Math.max(clampPercent(absolutePercent), MIN_VISIBLE_SUMMARY_PERCENT)
+                  : 0;
+
+              return (
+                <div key={row.key} className="km-flow-summary-row">
+                  <div className="km-flow-summary-head">
+                    <span className="km-flow-summary-label">
+                      {row.glossaryTermId ? <GlossaryTerm termId={row.glossaryTermId}>{row.label}</GlossaryTerm> : row.label}
+                    </span>
+                    <span className="km-flow-summary-value">
+                      {formatWithSymbol(row.amount, currency, { maximumFractionDigits: 0 })}
+                      {row.key !== 'gross' && annualGross > 0 && (
+                        <span className="km-flow-summary-percent"> ({row.percentage.toFixed(1)}%)</span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="km-flow-track" aria-hidden="true">
+                    <div
+                      className={`km-flow-fill ${row.fillClass}`}
+                      style={{
+                        width: `${widthPercent}%`,
+                        minWidth: row.key !== 'gross' && row.amount > 0 ? `${MIN_VISIBLE_SUMMARY_BAR_PX}px` : undefined,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {breakdownView === 'stacked' && (
+          <>
+            <div className="km-bar-container">
+              {barSegments.map((segment) => (
+                <div
+                  key={segment.key}
+                  className={`km-bar-segment ${segment.segmentClass}`}
+                  style={{
+                    width: `${clampPercent(segment.pct)}%`,
+                    minWidth: segment.amount > 0 ? `${MIN_VISIBLE_STACKED_BAR_PX}px` : undefined,
+                  }}
+                  title={`${segment.label}: ${formatWithSymbol(segment.amount, currency, { maximumFractionDigits: 0 })} (${segment.pct.toFixed(1)}%)`}
+                >
+                  {segment.pct > 7 && <span>{segment.pct.toFixed(1)}%</span>}
+                </div>
+              ))}
+            </div>
+            <div className="km-bar-labels">
+              {barSegments.map((segment) => (
+                <div key={`legend-${segment.key}`} className="km-bar-label">
+                  <span className={`km-label-dot ${segment.dotClass}`}></span>
+                  {segment.label}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {breakdownView === 'pie' && (
+          <div className="km-pie-view">
+            <div
+              className="km-pie-chart"
+              role="img"
+              aria-label="Pay breakdown pie chart"
+              onMouseLeave={() => setHoveredPieKey(null)}
+            >
+              <svg className="km-pie-svg" viewBox="0 0 100 100" aria-hidden="true">
+                <circle className="km-pie-ring-base" cx="50" cy="50" r={PIE_RADIUS} />
+                {pieStrokeSegments.map((slice) => (
+                  <circle
+                    key={slice.key}
+                    className={`km-pie-segment ${hoveredPieKey && hoveredPieKey !== slice.key ? 'is-dimmed' : ''} ${hoveredPieKey === slice.key ? 'is-active' : ''}`}
+                    cx="50"
+                    cy="50"
+                    r={PIE_RADIUS}
+                    stroke={slice.color}
+                    strokeDasharray={`${slice.dash} ${PIE_CIRCUMFERENCE - slice.dash}`}
+                    strokeDashoffset={slice.dashOffset}
+                    onMouseEnter={() => setHoveredPieKey(slice.key)}
+                    onFocus={() => setHoveredPieKey(slice.key)}
+                    onBlur={() => setHoveredPieKey(null)}
+                  />
+                ))}
+              </svg>
+              <div className="km-pie-center">
+                <span>Gross Pay</span>
+                <strong>{formatWithSymbol(pieTotal, currency, { maximumFractionDigits: 0 })}</strong>
+              </div>
+            </div>
+            <div className="km-pie-legend">
+              {barSegments.map((segment) => (
+                <div
+                  key={`pie-${segment.key}`}
+                  className={`km-pie-legend-item ${hoveredPieKey && hoveredPieKey !== segment.key ? 'is-dimmed' : ''} ${hoveredPieKey === segment.key ? 'is-active' : ''}`}
+                  onMouseEnter={() => setHoveredPieKey(segment.key)}
+                  onMouseLeave={() => setHoveredPieKey(null)}
+                >
+                  <span className={`km-label-dot ${segment.dotClass}`}></span>
+                  <span className="km-pie-legend-label">{segment.label}</span>
+                  <span className="km-pie-legend-value">
+                    {formatWithSymbol(segment.amount, currency, { maximumFractionDigits: 0 })} ({segment.pct.toFixed(1)}%)
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
