@@ -4,12 +4,13 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--overlay-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
   padding: 1rem;
+  -webkit-app-region: no-drag;
 }
 
 .modal-content {
@@ -17,11 +18,12 @@
   border-radius: 12px;
   max-width: 500px;
   width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-elevated-shell);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  -webkit-app-region: no-drag;
 }
 
 .modal-content h3 {
@@ -74,6 +76,17 @@
   border-top: 1px solid var(--border-color);
   background: var(--bg-primary);
   flex-shrink: 0;
+}
+
+/* Keep close button color consistent in both themes — avoid stark black-on-white in light mode */
+.modal-header .btn.btn-icon {
+  color: var(--text-secondary);
+}
+
+.modal-header .btn.btn-icon:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+  transform: scale(1);
 }
 
 @media (max-width: 600px) {

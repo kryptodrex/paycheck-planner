@@ -39,10 +39,6 @@
   overflow: hidden;
 }
 
-.feedback-editor-shell.field-error {
-  border-color: var(--error-color);
-}
-
 .feedback-editor-toolbar {
   display: flex;
   gap: 0.35rem;

@@ -1,26 +1,37 @@
-.pay-breakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.flow-breakdown {
+  background: var(--bg-primary);
+  border-radius: 12px;
   padding: 1.5rem;
-  overflow-y: auto;
-  height: 100%;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+.flow-breakdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.flow-breakdown-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
 }
 
 .visual-flow {
-  background: var(--bg-primary);
   border-radius: 12px;
   padding: 0;
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   border: 1px solid var(--border-color);
-  /* margin-bottom: 1.25rem; */
   overflow: hidden;
   flex-shrink: 0;
 }
 
 .flow-stage {
   display: grid;
-  grid-template-columns: 1fr auto;
   align-items: center;
   padding: 0.75rem 1.25rem;
   border-bottom: 1px solid var(--border-color-light);
@@ -34,16 +45,6 @@
 
 .flow-stage:nth-child(odd) {
   background: var(--bg-secondary);
-}
-
-.stage-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 0;
-  display: none;
 }
 
 .stage-box {
@@ -82,10 +83,6 @@
   font-size: 0.75rem;
   color: var(--text-tertiary);
   margin: 0;
-}
-
-.stage-arrow {
-  display: none;
 }
 
 .stage-breakdown {
@@ -179,97 +176,6 @@
 
 .net-box .stage-detail {
   color: var(--text-tertiary);
-}
-
-/* Visual Bar */
-.breakdown-bar {
-  background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--border-color);
-  /* margin-bottom: 2rem; */
-}
-
-.breakdown-bar h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1.2rem;
-}
-
-.bar-container {
-  display: flex;
-  height: 60px;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 1rem;
-}
-
-.bar-segment {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-  transition: opacity 0.2s;
-}
-
-.bar-segment:hover {
-  opacity: 0.8;
-  cursor: help;
-}
-
-.pretax-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--warning-color) 85%, var(--bg-primary)), var(--warning-color));
-}
-
-.tax-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--error-color) 85%, var(--bg-primary)), var(--error-color));
-}
-
-.posttax-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 85%, var(--bg-primary)), var(--accent-primary));
-}
-
-.net-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--info-color) 85%, var(--bg-primary)), var(--info-color));
-}
-
-.bar-labels {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
-.bar-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
-.label-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.pretax-dot {
-  background: var(--warning-color);
-}
-
-.tax-dot {
-  background: var(--error-color);
-}
-
-.posttax-dot {
-  background: var(--accent-primary);
-}
-
-.net-dot {
-  background: var(--info-color);
 }
 
 /* Account Allocations */
@@ -382,6 +288,10 @@
   border-bottom: none;
 }
 
+.waterfall-footer-row.negative-remaining {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--error-color) 88%, var(--bg-primary)), var(--error-color));
+}
+
 .waterfall-label {
   display: flex;
   align-items: center;
@@ -390,10 +300,14 @@
 }
 
 .waterfall-amount {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   white-space: nowrap;
   margin-left: 0.75rem;
+}
+
+.waterfall-amount.negative-remaining {
+  color: var(--error-contrast-text, #fff);
 }
 
 .account-icon-small {
@@ -415,9 +329,29 @@
   color: inherit;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.5rem;
   transition: all 0.2s ease;
   font-family: inherit;
+  width: 100%;
+  min-width: 0;
+}
+
+.category-name-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.category-name-static {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .category-button:hover {
@@ -491,12 +425,12 @@
   line-height: 1.5;
 }
 
-.category-edit-row .btn-icon {
+.category-edit-row .category-remove-btn {
   width: 38px;
   height: 38px;
   border: none;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--surface-overlay-subtle);
   color: var(--text-secondary);
   font-size: 1rem;
   line-height: 1;
@@ -507,19 +441,19 @@
   transition: all 0.2s;
 }
 
-.category-edit-row .btn-icon:hover {
-  background: rgba(239, 68, 68, 0.2) !important;
+.category-edit-row .category-remove-btn:hover {
+  background: var(--surface-danger-soft) !important;
   color: var(--error-color) !important;
   transform: scale(1.15);
 }
 
-.category-edit-row .btn-icon:focus {
+.category-edit-row .category-remove-btn:focus {
   outline: none;
 }
 
-.category-edit-row .btn-icon:focus-visible {
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.2) !important;
+.category-edit-row .category-remove-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus-ring-danger-color);
+  background: var(--surface-danger-soft) !important;
   color: var(--error-color) !important;
   outline: none;
 }
@@ -534,7 +468,8 @@
   padding: 0.75rem 0.75rem 0.75rem 2.5rem;
   background: var(--bg-primary);
   border-top: 1px dashed var(--border-color);
-  display: block;
+  display: flex;
+  gap: 1rem;
 }
 
 /* Bill Category Styles */
@@ -570,6 +505,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   min-width: 20px;
   height: 20px;
   padding: 0 0.35rem;
@@ -605,8 +541,8 @@
 /* Dark mode adjustments for bill categories */
 @media (prefers-color-scheme: dark) {
   .bill-amount-display {
-    background: rgba(102, 126, 234, 0.1);
-    border-color: rgba(102, 126, 234, 0.3);
+    background: var(--surface-accent-soft);
+    border-color: var(--border-accent-strong);
   }
 }
 
@@ -637,22 +573,7 @@
   color: var(--alert-warning-text);
 }
 
-/* Dark mode support for validation messages */
-@media (prefers-color-scheme: dark) {
-  .validation-message.validation-error {
-    background: rgba(220, 38, 38, 0.1);
-    border-color: rgba(220, 38, 38, 0.3);
-    color: var(--alert-error-border);
-  }
-
-  .validation-message.validation-warning {
-    background: rgba(217, 119, 6, 0.1);
-    border-color: rgba(217, 119, 6, 0.3);
-    color: var(--alert-warning-border);
-  }
-}
-
-.paybreakdown-account-edit-actions {
+.allocation-edit-actions {
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
@@ -670,8 +591,8 @@
   padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
   color: var(--text-secondary);
-  background: rgba(102, 126, 234, 0.1);
-  border-left: 3px solid rgba(102, 126, 234, 0.5);
+  background: var(--surface-accent-soft);
+  border-left: 3px solid var(--focus-ring-accent-strong-color);
   margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
@@ -710,13 +631,14 @@
   margin: 0 0 1.5rem 0;
 }
 
-.account-allocations .btn-secondary {
+.account-allocations .allocation-secondary-btn {
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+  flex-grow: 1;
 }
 
-.account-allocations .btn-secondary:hover:not(:disabled) {
+.account-allocations .allocation-secondary-btn:hover:not(:disabled) {
   border-color: var(--accent-primary);
   background: var(--bg-primary);
 }
@@ -725,7 +647,7 @@
   min-width: 0;
 }
 
-.category-row .btn-icon {
+.category-row .category-remove-btn {
   width: 34px;
   height: 34px;
   border: 1px solid var(--border-color);
@@ -890,10 +812,6 @@
 }
 
 @media (max-width: 768px) {
-  .pay-breakdown {
-    padding: 1rem;
-  }
-
   .stage-amount {
     font-size: 1.5rem;
   }
@@ -923,12 +841,12 @@
     gap: 0.5rem;
   }
 
-  .paybreakdown-account-edit-actions {
+  .allocation-edit-actions {
     flex-direction: column;
     width: 100%;
   }
 
-  .paybreakdown-account-edit-actions .btn {
+  .allocation-edit-actions > button {
     width: 100%;
   }
 

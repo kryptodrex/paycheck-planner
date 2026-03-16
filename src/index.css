@@ -1,5 +1,6 @@
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Cascadia Mono', 'Menlo', 'Consolas', monospace;
   line-height: 1.5;
   font-weight: 400;
 
@@ -26,11 +27,33 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-elevated-shell: 0 20px 60px rgba(0, 0, 0, 0.3);
+  --shadow-accent-soft: 0 2px 8px color-mix(in srgb, var(--accent-primary) 16%, transparent);
+  --shadow-accent-md: 0 4px 12px color-mix(in srgb, var(--accent-primary) 24%, transparent);
   --accent-primary: #667eea;
   --accent-hover: #5568d3;
   --accent-secondary: #764ba2;
+  --surface-accent-subtle: color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary));
+  --surface-accent-soft: rgba(102, 126, 234, 0.1);
+  --surface-accent-soft-hover: rgba(102, 126, 234, 0.2);
+  --border-accent-soft: color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+  --border-accent-strong: rgba(102, 126, 234, 0.3);
   --tab-drag-indicator: var(--accent-primary);
   --tab-drag-indicator-ring: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+  --focus-ring-accent: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  --focus-ring-accent-soft: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  --focus-ring-accent-strong-color: rgba(102, 126, 234, 0.5);
+  --surface-overlay-subtle: rgba(0, 0, 0, 0.1);
+  --surface-overlay-soft: rgba(0, 0, 0, 0.2);
+  --surface-overlay-elevated: rgba(0, 0, 0, 0.12);
+  --surface-danger-subtle: rgba(239, 68, 68, 0.1);
+  --surface-danger-soft: rgba(239, 68, 68, 0.2);
+  --focus-ring-danger-color: rgba(239, 68, 68, 0.5);
+  --surface-header-tint: rgba(255, 255, 255, 0.2);
+  --surface-header-tint-hover: rgba(255, 255, 255, 0.3);
+  --border-header-soft: rgba(255, 255, 255, 0.45);
+  --text-header-muted: rgba(255, 255, 255, 0.75);
+  --header-divider-tint: color-mix(in srgb, var(--border-color) 70%, rgba(255, 255, 255, 0.35) 30%);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
@@ -68,6 +91,7 @@
   --logo-glow-secondary: #61dafbaa;
   --header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --header-text-secondary: rgba(255, 255, 255, 0.9);
+  --overlay-backdrop: rgba(0, 0, 0, 0.5);
 }
 
 /* Dark theme */
@@ -86,11 +110,33 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-elevated-shell: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-accent-soft: 0 2px 8px color-mix(in srgb, var(--accent-primary) 18%, transparent);
+  --shadow-accent-md: 0 4px 12px color-mix(in srgb, var(--accent-primary) 28%, transparent);
   --accent-primary: #a855f7;
   --accent-hover: #9333ea;
   --accent-secondary: #c084fc;
+  --surface-accent-subtle: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-secondary));
+  --surface-accent-soft: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+  --surface-accent-soft-hover: color-mix(in srgb, var(--accent-primary) 24%, transparent);
+  --border-accent-soft: color-mix(in srgb, var(--accent-primary) 50%, var(--border-color));
+  --border-accent-strong: color-mix(in srgb, var(--accent-primary) 40%, transparent);
   --tab-drag-indicator: var(--accent-primary);
   --tab-drag-indicator-ring: color-mix(in srgb, var(--accent-primary) 30%, transparent);
+  --focus-ring-accent: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 28%, transparent);
+  --focus-ring-accent-soft: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 22%, transparent);
+  --focus-ring-accent-strong-color: color-mix(in srgb, var(--accent-primary) 48%, transparent);
+  --surface-overlay-subtle: rgba(0, 0, 0, 0.2);
+  --surface-overlay-soft: rgba(0, 0, 0, 0.35);
+  --surface-overlay-elevated: rgba(0, 0, 0, 0.3);
+  --surface-danger-subtle: color-mix(in srgb, var(--error-color) 18%, transparent);
+  --surface-danger-soft: color-mix(in srgb, var(--error-color) 30%, transparent);
+  --focus-ring-danger-color: color-mix(in srgb, var(--error-color) 50%, transparent);
+  --surface-header-tint: rgba(255, 255, 255, 0.18);
+  --surface-header-tint-hover: rgba(255, 255, 255, 0.28);
+  --border-header-soft: rgba(255, 255, 255, 0.4);
+  --text-header-muted: rgba(229, 231, 235, 0.85);
+  --header-divider-tint: color-mix(in srgb, var(--border-color) 72%, rgba(255, 255, 255, 0.28) 28%);
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
@@ -128,6 +174,7 @@
   --logo-glow-secondary: #06b6d4aa;
   --header-gradient: linear-gradient(135deg, #3d3250 0%, #252038 100%);
   --header-text-secondary: rgba(229, 231, 235, 0.9);
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
 }
 
 body {

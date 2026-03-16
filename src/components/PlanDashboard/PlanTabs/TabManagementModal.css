@@ -67,7 +67,7 @@
 .tab-badge {
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
-  background: rgba(102, 126, 234, 0.1);
+  background: var(--surface-accent-soft);
   color: var(--accent-primary);
   border-radius: 4px;
   font-weight: 600;
@@ -111,7 +111,7 @@
 }
 
 .tab-action-btn:focus-visible {
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 0 0 2px var(--focus-ring-accent-strong-color);
 }
 
 .tab-action-hide {
@@ -124,7 +124,7 @@
 }
 
 .tab-action-hide:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--surface-danger-subtle);
   border-color: var(--error-color);
   color: var(--alert-error-text);
 }
@@ -148,8 +148,8 @@
   padding: 0 0.65rem;
   font-size: 0.85rem;
   font-weight: 500;
-  background: rgba(102, 126, 234, 0.1);
-  border-color: rgba(102, 126, 234, 0.3);
+  background: var(--surface-accent-soft);
+  border-color: var(--border-accent-strong);
   color: var(--accent-primary);
 }
 

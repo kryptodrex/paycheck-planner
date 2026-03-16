@@ -28,28 +28,3 @@
   border: 1px solid var(--alert-info-border);
   color: var(--alert-info-text);
 }
-
-/* Dark mode support for alerts (follow app theme setting) */
-[data-theme="dark"] .alert-error {
-  background: rgba(220, 38, 38, 0.1);
-  border-color: rgba(220, 38, 38, 0.3);
-  color: var(--alert-error-border);
-}
-
-[data-theme="dark"] .alert-warning {
-  background: rgba(217, 119, 6, 0.1);
-  border-color: rgba(217, 119, 6, 0.3);
-  color: var(--alert-warning-border);
-}
-
-[data-theme="dark"] .alert-success {
-  background: rgba(22, 163, 74, 0.1);
-  border-color: rgba(22, 163, 74, 0.3);
-  color: var(--alert-success-border);
-}
-
-[data-theme="dark"] .alert-info {
-  background: rgba(3, 105, 161, 0.1);
-  border-color: rgba(3, 105, 161, 0.3);
-  color: var(--alert-info-border);
-}

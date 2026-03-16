@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Button } from '../../_shared';
+import { Modal, Button, PillBadge } from '../../_shared';
 import {
   glossaryCategoryLabels,
   glossaryTerms,
@@ -152,7 +152,7 @@ const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, initialT
           <article className="glossary-card" id={`glossary-term-${term.id}`} key={term.id} role="listitem">
             <div className="glossary-card-header">
               <h4>{term.term}</h4>
-              <span className="glossary-badge">{glossaryCategoryLabels[term.category]}</span>
+              <PillBadge className="glossary-badge">{glossaryCategoryLabels[term.category]}</PillBadge>
             </div>
 
             <p className="glossary-short">{term.shortDefinition}</p>

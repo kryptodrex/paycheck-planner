@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { roundUpToCent } from '../../../utils/money';
+import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../../utils/payPeriod';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
@@ -14,6 +14,7 @@ import { fromDisplayAmount, toDisplayAmount } from '../../../utils/displayAmount
 import { Alert, Button, InputWithPrefix, ViewModeSelector, PageHeader } from '../../_shared';
 import PaySettingsModal from '../../modals/PaySettingsModal';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
+import '../tabViews.shared.css';
 import './PayBreakdown.css';
 
 type AllocationCategory = {
@@ -45,6 +46,19 @@ type AccountFunding = {
 type ValidationMessage = {
   type: 'error' | 'warning';
   message: string;
+};
+
+const isAutoCategory = (category: AllocationCategory): boolean => {
+  return Boolean(category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings);
+};
+
+const getCategoryItemCount = (category: AllocationCategory): number | null => {
+  if (category.isBill && category.billCount && category.billCount > 0) return category.billCount;
+  if (category.isBenefit && category.benefitCount && category.benefitCount > 0) return category.benefitCount;
+  if (category.isRetirement && category.retirementCount && category.retirementCount > 0) return category.retirementCount;
+  if (category.isLoan && category.loanCount && category.loanCount > 0) return category.loanCount;
+  if (category.isSavings && category.savingsCount && category.savingsCount > 0) return category.savingsCount;
+  return null;
 };
 
 interface PayBreakdownProps {
@@ -91,12 +105,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const postTaxRetirementCount = (budgetData.retirement || []).filter((election) => (election.deductionSource || 'paycheck') === 'paycheck' && election.isPreTax === false && election.enabled !== false && election.employeeContribution > 0).length;
   const postTaxDeductionCount = postTaxBenefitCount + postTaxRetirementCount;
 
-  // Calculate percentages for visual bar
+  // Calculate percentages for flow details
   const grossPay = displayBreakdown.grossPay;
-  const preTaxPct = (displayBreakdown.preTaxDeductions / grossPay) * 100;
-  const taxPct = (displayBreakdown.totalTaxes / grossPay) * 100;
-  const postTaxPct = (displayBreakdown.postTaxDeductions / grossPay) * 100;
-  const netPct = (displayBreakdown.netPay / grossPay) * 100;
+  const netPct = grossPay > 0 ? (displayBreakdown.netPay / grossPay) * 100 : 0;
 
   const startAccountEdit = (accountId: string) => {
     const account = normalizedAccounts.find(acc => acc.id === accountId);
@@ -249,8 +260,29 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     });
   };
 
+  const navigateToCategorySource = (category: AllocationCategory, accountId: string) => {
+    if (category.isBill || category.isBenefit) {
+      onNavigateToBills?.(accountId);
+      return;
+    }
+
+    if (category.isRetirement) {
+      onNavigateToRetirement?.(accountId);
+      return;
+    }
+
+    if (category.isLoan) {
+      onNavigateToLoans?.(accountId);
+      return;
+    }
+
+    if (category.isSavings) {
+      onNavigateToSavings?.(accountId);
+    }
+  };
+
   return (
-    <div className="pay-breakdown">
+    <div className="tab-view pay-breakdown">
       <PageHeader
         title="Pay Breakdown"
         subtitle="See where your paycheck goes from gross to net"
@@ -275,71 +307,14 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         onClose={() => setShowPaySettingsModal(false)}
       />
 
-      {/* Visual Bar */}
-      <div className="breakdown-bar">
-        <h3>Your Pay Breakdown</h3>
-        <div className="bar-container">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div 
-              className="bar-segment pretax-segment" 
-              style={{ width: `${preTaxPct}%` }}
-              title={`Pre-Tax: ${formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { maximumFractionDigits: 0 })} (${preTaxPct.toFixed(1)}%)`}
-            >
-              {preTaxPct > 5 && <span>{preTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div 
-            className="bar-segment tax-segment" 
-            style={{ width: `${taxPct}%` }}
-            title={`Taxes: ${formatWithSymbol(displayBreakdown.totalTaxes, currency, { maximumFractionDigits: 0 })} (${taxPct.toFixed(1)}%)`}
-          >
-            <span>{taxPct.toFixed(1)}%</span>
-          </div>
-          {displayBreakdown.postTaxDeductions > 0 && (
-            <div 
-              className="bar-segment posttax-segment" 
-              style={{ width: `${postTaxPct}%` }}
-              title={`Post-Tax: ${formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { maximumFractionDigits: 0 })} (${postTaxPct.toFixed(1)}%)`}
-            >
-              {postTaxPct > 5 && <span>{postTaxPct.toFixed(1)}%</span>}
-            </div>
-          )}
-          <div 
-            className="bar-segment net-segment" 
-            style={{ width: `${netPct}%` }}
-            title={`Net Pay: ${formatWithSymbol(displayBreakdown.netPay, currency, { maximumFractionDigits: 0 })} (${netPct.toFixed(1)}%)`}
-          >
-            <span>{netPct.toFixed(1)}%</span>
-          </div>
+      {/* Gross to Net Table */}
+      <div className="flow-breakdown">
+        <div className="flow-breakdown-header">
+          <h3>Gross to Net Breakdown</h3>
         </div>
-        <div className="bar-labels">
-          {displayBreakdown.preTaxDeductions > 0 && (
-            <div className="bar-label pretax-label">
-              <span className="label-dot pretax-dot"></span>
-              Pre-Tax Deductions
-            </div>
-          )}
-          <div className="bar-label tax-label">
-            <span className="label-dot tax-dot"></span>
-            Taxes
-          </div>
-          {displayBreakdown.postTaxDeductions > 0 && (
-            <div className="bar-label posttax-label">
-              <span className="label-dot posttax-dot"></span>
-              Post-Tax Deductions
-            </div>
-          )}
-          <div className="bar-label net-label">
-            <span className="label-dot net-dot"></span>
-            Take Home
-          </div>
-        </div>
-      </div>
 
-      {/* Visual Flow */}
-      <div className="visual-flow">
+        <div className="visual-flow">
         <div className="flow-stage">
-          <div className="stage-label">START</div>
           <div className="stage-box gross-box">
             <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -350,7 +325,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               }
             </div>
           </div>
-          <div className="stage-arrow">↓</div>
         </div>
 
         {displayBreakdown.preTaxDeductions > 0 && (
@@ -362,7 +336,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 {totalPreTaxItemCount} deduction(s)
               </div>
             </div>
-            <div className="stage-arrow">↓</div>
           </div>
         )}
 
@@ -372,7 +345,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">Subject to taxes</div>
           </div>
-          <div className="stage-arrow">↓</div>
         </div>
 
         <div className="flow-stage">
@@ -394,7 +366,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               )}
             </div>
           </div>
-          <div className="stage-arrow">↓</div>
+          
         </div>
 
         {displayBreakdown.postTaxDeductions > 0 && (
@@ -406,17 +378,16 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 {postTaxDeductionCount} deduction(s)
               </div>
             </div>
-            <div className="stage-arrow">↓</div>
           </div>
         )}
 
         <div className="flow-stage">
-          <div className="stage-label">RESULT</div>
           <div className="stage-box net-box">
             <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
           </div>
+        </div>
         </div>
       </div>
 
@@ -448,13 +419,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       {fundingItem.account.name}
                     </span>
                     {!isEditing ? (
-                      <Button variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
-                    ) : (
-                      <div className="paybreakdown-account-edit-actions">
-                        <Button variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
-                        <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>
-                      </div>
-                    )
+                      <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
+                    ) : null
                     }
                     <span className="waterfall-amount">{formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
@@ -471,9 +437,12 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                         </div>
                       )}
 
-                      {[...displayAccount.allocationCategories].sort((a, b) => b.amount - a.amount).map((category) => (
-                        <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? 'bill-category-row' : ''}`}>
-                          {category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? (
+                      {[...displayAccount.allocationCategories].sort((a, b) => b.amount - a.amount).map((category) => {
+                        const categoryItemCount = getCategoryItemCount(category);
+
+                        return (
+                        <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${isAutoCategory(category) ? 'bill-category-row' : ''}`}>
+                          {isAutoCategory(category) ? (
                             <>
                               <input
                                 type="text"
@@ -484,20 +453,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                               />
                               <div className="bill-amount-display">
                                 {formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                {category.isBill && category.billCount && category.billCount > 0 && (
-                                  <span className="bill-count-badge">{category.billCount}</span>
-                                )}
-                                {category.isBenefit && category.benefitCount && category.benefitCount > 0 && (
-                                  <span className="bill-count-badge">{category.benefitCount}</span>
-                                )}
-                                {category.isRetirement && category.retirementCount && category.retirementCount > 0 && (
-                                  <span className="bill-count-badge">{category.retirementCount}</span>
-                                )}
-                                {category.isLoan && category.loanCount && category.loanCount > 0 && (
-                                  <span className="bill-count-badge">{category.loanCount}</span>
-                                )}
-                                {category.isSavings && category.savingsCount && category.savingsCount > 0 && (
-                                  <span className="bill-count-badge">{category.savingsCount}</span>
+                                {categoryItemCount && (
+                                  <span className="bill-count-badge">{categoryItemCount}</span>
                                 )}
                               </div>
                               <div className="category-spacer"></div>
@@ -528,14 +485,19 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                   });
                                 }}
                               />
-                              <Button variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">✕</Button>
+                              <Button className="category-remove-btn" variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">✕</Button>
                             </>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
 
                       <div className="waterfall-row waterfall-category-row category-actions-row">
-                        <Button variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
+                        <Button style={{ flexGrow: 1 }} className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
+                        <div className="allocation-edit-actions">
+                          <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
+                          <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>
+                        </div>
                       </div>
 
                       {validationMessages.has(displayAccount.id) && (
@@ -547,40 +509,23 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       )}
                     </div>
                   ) : (
-                    fundingItem.categories.length > 0 && [...fundingItem.categories].sort((a, b) => b.amount - a.amount).map((category) => (
-                      <div key={category.id} className={`waterfall-row waterfall-category-row ${category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? 'bill-category-view' : ''}`}>
-                        {category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings ? (
+                    fundingItem.categories.length > 0 && [...fundingItem.categories].sort((a, b) => b.amount - a.amount).map((category) => {
+                      const categoryItemCount = getCategoryItemCount(category);
+
+                      return (
+                      <div key={category.id} className={`waterfall-row waterfall-category-row ${isAutoCategory(category) ? 'bill-category-view' : ''}`}>
+                        {isAutoCategory(category) ? (
                           <button
                             className="waterfall-label category-label category-button"
-                            onClick={() => category.isBill
-                              ? onNavigateToBills?.(fundingItem.account.id)
-                              : (category.isBenefit
-                                ? onNavigateToBills?.(fundingItem.account.id)
-                                : (category.isRetirement
-                                  ? onNavigateToRetirement?.(fundingItem.account.id)
-                                  : (category.isLoan
-                                    ? onNavigateToLoans?.(fundingItem.account.id)
-                                    : onNavigateToSavings?.(fundingItem.account.id))))}
+                            onClick={() => navigateToCategorySource(category, fundingItem.account.id)}
                           >
-                            {category.name}
-                            {category.isBill && category.billCount && category.billCount > 0 && (
-                              <span className="bill-count-badge">{category.billCount}</span>
+                            {categoryItemCount && (
+                              <span className="bill-count-badge">{categoryItemCount}</span>
                             )}
-                            {category.isBenefit && category.benefitCount && category.benefitCount > 0 && (
-                              <span className="bill-count-badge">{category.benefitCount}</span>
-                            )}
-                            {category.isRetirement && category.retirementCount && category.retirementCount > 0 && (
-                              <span className="bill-count-badge">{category.retirementCount}</span>
-                            )}
-                            {category.isLoan && category.loanCount && category.loanCount > 0 && (
-                              <span className="bill-count-badge">{category.loanCount}</span>
-                            )}
-                            {category.isSavings && category.savingsCount && category.savingsCount > 0 && (
-                              <span className="bill-count-badge">{category.savingsCount}</span>
-                            )}
+                            <span className="category-name-text">{category.name}</span>
                           </button>
                         ) : (
-                          <span className="waterfall-label category-label">
+                          <span className="waterfall-label category-label category-name-static">
                             {category.name}
                           </span>
                         )}
@@ -588,17 +533,25 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                           {category.amount === 0 ? '-' : formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </React.Fragment>
               );
             })}
 
-            <div className="waterfall-row waterfall-footer-row">
+            <div className={`waterfall-row waterfall-footer-row ${leftoverPerPaycheck < 0 ? 'negative-remaining' : ''}`}>
               <span className="waterfall-label"><GlossaryTerm termId="residual-amount">All that remains</GlossaryTerm> for spending</span>
-              <span className="waterfall-amount">{formatWithSymbol(Math.max(0, toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className={`waterfall-amount ${leftoverPerPaycheck < 0 ? 'negative-remaining' : ''}`}>{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            {leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
+            {leftoverPerPaycheck < 0 && (
+              <div className="waterfall-alert-row">
+                <Alert type="error">
+                  Your allocations exceed net pay by {formatWithSymbol(toDisplayAmount(Math.abs(leftoverPerPaycheck), paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}. Reduce allocations to avoid a negative balance.
+                </Alert>
+              </div>
+            )}
+            {leftoverPerPaycheck >= 0 && leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
               <div className="waterfall-alert-row">
                 <Alert type="warning">
                   You are {formatWithSymbol(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(budgetData.paySettings.minLeftover || 0, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}
@@ -664,7 +617,7 @@ function normalizeAccounts(
 
     // Get account-sourced benefits for this account and calculate total
     const accountBenefits = benefits.filter(
-      benefit => benefit.deductionSource === 'account' && benefit.sourceAccountId === account.id
+      benefit => benefit.enabled !== false && benefit.deductionSource === 'account' && benefit.sourceAccountId === account.id
     );
 
     // Get account-sourced retirement contributions for this account and calculate total
@@ -713,8 +666,8 @@ function normalizeAccounts(
     if (accountRetirement.length > 0) {
       const retirementTotal = accountRetirement.reduce((sum, election) => {
         const amountPerPaycheck = election.employeeContributionIsPercentage
-          ? roundUpToCent((grossPayPerPaycheck * election.employeeContribution) / 100)
-          : roundUpToCent(election.employeeContribution);
+          ? roundToCent((grossPayPerPaycheck * election.employeeContribution) / 100)
+          : roundToCent(election.employeeContribution);
         return sum + amountPerPaycheck;
       }, 0);
 
@@ -814,7 +767,7 @@ function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number):
   });
 
   const totalAllocated = accountFunding.reduce((sum, item) => sum + item.totalAmount, 0);
-  const remaining = Math.max(0, netPay - totalAllocated);
+  const remaining = netPay - totalAllocated;
 
   return {
     accountFunding,

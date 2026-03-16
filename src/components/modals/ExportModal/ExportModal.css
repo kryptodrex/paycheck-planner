@@ -45,13 +45,9 @@
 
 .export-error {
   padding: 12px;
-  background-color: var(--error-bg, #fee);
-  border: 1px solid var(--error-border, #fcc);
+  background-color: var(--alert-error-bg);
+  border: 1px solid var(--alert-error-border);
   border-radius: 6px;
-  color: var(--error-text, #c00);
+  color: var(--alert-error-text);
   font-size: 14px;
-}
-
-.field-error {
-  border-color: var(--error-border, #fcc) !important;
 }

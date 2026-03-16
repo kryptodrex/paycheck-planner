@@ -32,7 +32,7 @@ import type {
 import { FileStorageService } from '../services/fileStorage';
 import { calculatePaycheckBreakdown as calculateBudgetPaycheckBreakdown, getEmptyPaycheckBreakdown } from '../services/budgetCalculations';
 import { KeychainService } from '../services/keychainService';
-import { roundUpToCent } from '../utils/money';
+import { roundToCent, roundUpToCent } from '../utils/money';
 import { getPlanNameFromPath } from '../utils/filePath';
 import { getPaychecksPerYear } from '../utils/payPeriod';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
@@ -737,6 +737,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           ...prev.benefits,
           {
             ...benefit,
+            enabled: benefit.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],
@@ -919,9 +920,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     // Calculate employee contribution
     let employeeAmount = 0;
     if (election.employeeContributionIsPercentage) {
-      employeeAmount = roundUpToCent((grossPay * election.employeeContribution) / 100);
+      employeeAmount = roundToCent((grossPay * election.employeeContribution) / 100);
     } else {
-      employeeAmount = roundUpToCent(election.employeeContribution);
+      employeeAmount = roundToCent(election.employeeContribution);
     }
 
     // Calculate employer match (if enabled)
@@ -935,10 +936,10 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       if (election.employerMatchCapIsPercentage) {
         // Cap is a percentage - employer matches up to that percentage
         const matchPercentage = Math.min(employeePercentage, election.employerMatchCap);
-        employerAmount = roundUpToCent((grossPay * matchPercentage) / 100);
+        employerAmount = roundToCent((grossPay * matchPercentage) / 100);
       } else {
         // Cap is a dollar amount - employer matches up to that amount
-        employerAmount = Math.min(employeeAmount, roundUpToCent(election.employerMatchCap));
+        employerAmount = Math.min(employeeAmount, roundToCent(election.employerMatchCap));
       }
     }
 

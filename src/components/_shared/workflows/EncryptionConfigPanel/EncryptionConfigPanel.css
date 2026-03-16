@@ -17,7 +17,7 @@
 
 .encryption-config-panel .encryption-option-card:hover {
   border-color: var(--accent-primary);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--shadow-accent-md);
 }
 
 .encryption-config-panel .encryption-option-card:focus-visible {
@@ -94,7 +94,7 @@
 .encryption-config-panel .encryption-key-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .encryption-config-panel .encryption-help-text {

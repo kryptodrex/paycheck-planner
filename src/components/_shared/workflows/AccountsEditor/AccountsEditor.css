@@ -128,7 +128,7 @@
 
 .account-item:hover {
   border-color: var(--accent-primary);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--shadow-accent-soft);
 }
 
 .account-item:has(.account-edit-form) {
@@ -136,7 +136,7 @@
   border-color: var(--accent-primary);
   padding: 1.25rem;
   flex-wrap: wrap;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--shadow-accent-md);
 }
 
 .account-details {
@@ -173,6 +173,9 @@
   font-size: 1.1rem;
   color: var(--text-primary);
   word-break: break-word;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .account-type {
@@ -209,7 +212,7 @@
 .account-edit-form .account-icon-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-form .account-name-input {
@@ -228,7 +231,7 @@
 .account-edit-form .account-name-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-edit-form .account-type-select {
@@ -246,7 +249,7 @@
 .account-edit-form .account-type-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 /* Add Account Form Inputs */
@@ -268,7 +271,7 @@
 .add-account-form .account-icon-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .add-account-form .account-name-input {
@@ -288,7 +291,7 @@
 .add-account-form .account-name-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .add-account-form .account-type-select {
@@ -308,7 +311,7 @@
 .add-account-form .account-type-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: var(--focus-ring-accent-soft);
 }
 
 .account-actions {
@@ -316,6 +319,17 @@
   gap: 0.5rem;
   flex-shrink: 0;
   align-items: center;
+}
+
+.account-actions .account-item-btn-delete {
+  color: var(--error-color);
+  border-color: var(--error-color);
+}
+
+.account-actions .account-item-btn-delete:hover:not(:disabled) {
+  color: var(--error-color);
+  border-color: var(--error-color);
+  background: color-mix(in srgb, var(--error-color) 12%, var(--bg-secondary));
 }
 
 .account-edit-actions {
