@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import type { BudgetData } from '../types/budget';
 import { calculatePaycheckBreakdown } from './budgetCalculations';
 import { formatWithSymbol } from '../utils/currency';
+import { getPaychecksPerYear } from '../utils/payPeriod';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';
 import { getTaxLineCalculationType } from '../utils/taxLines';
 
@@ -157,7 +158,8 @@ export async function exportToPDF(
     ];
 
     if (budgetData.paySettings.payType === 'hourly') {
-      payData.splice(2, 0, ['Hours per Pay Period', (budgetData.paySettings.hoursPerPayPeriod || 0).toString()]);
+      const hoursPerWeek = ((budgetData.paySettings.hoursPerPayPeriod || 0) * getPaychecksPerYear(budgetData.paySettings.payFrequency)) / 52;
+      payData.splice(2, 0, ['Hours per Week', hoursPerWeek.toFixed(2)]);
     }
 
     autoTable(doc, {

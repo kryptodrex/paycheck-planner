@@ -21,7 +21,7 @@ interface PaySettingsModalProps {
 type PaySettingsFieldErrors = {
   annualSalary?: string;
   hourlyRate?: string;
-  hoursPerPayPeriod?: string;
+  hoursPerWeek?: string;
   minLeftover?: string;
 };
 
@@ -33,7 +33,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   const [editPayType, setEditPayType] = useState<'salary' | 'hourly'>('salary');
   const [editAnnualSalary, setEditAnnualSalary] = useState('');
   const [editHourlyRate, setEditHourlyRate] = useState('');
-  const [editHoursPerPayPeriod, setEditHoursPerPayPeriod] = useState('');
+  const [editHoursPerWeek, setEditHoursPerWeek] = useState('');
   const [editPayFrequency, setEditPayFrequency] = useState<PayFrequency>('bi-weekly');
   const [editMinLeftover, setEditMinLeftover] = useState('0');
   // Track previous frequency to scale minLeftover proportionally on change
@@ -57,7 +57,9 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       setExchangeRate('');
       setEditAnnualSalary(budgetData.paySettings.annualSalary?.toString() || '');
       setEditHourlyRate(budgetData.paySettings.hourlyRate?.toString() || '');
-      setEditHoursPerPayPeriod(budgetData.paySettings.hoursPerPayPeriod?.toString() || '');
+      const currentPaychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+      const storedHoursPerWeek = (budgetData.paySettings.hoursPerPayPeriod || 0) * (currentPaychecksPerYear / 52);
+      setEditHoursPerWeek(storedHoursPerWeek > 0 ? storedHoursPerWeek.toString() : '');
       setFieldErrors({});
     }
   }, [isOpen, budgetData]);
@@ -86,7 +88,8 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       return (parseFloat(editAnnualSalary) || 0) / paychecksPerYear;
     }
 
-    return (parseFloat(editHourlyRate) || 0) * (parseFloat(editHoursPerPayPeriod) || 0);
+    const hoursPerPayPeriod = ((parseFloat(editHoursPerWeek) || 0) * 52) / paychecksPerYear;
+    return (parseFloat(editHourlyRate) || 0) * hoursPerPayPeriod;
   };
 
   const suggestedLeftoverPerPaycheck = getSuggestedLeftoverPerPaycheck(estimateGrossPerPaycheck());
@@ -96,7 +99,11 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   const handleSaveSettings = () => {
     const parsedAnnualSalary = parseFloat(editAnnualSalary);
     const parsedHourlyRate = parseFloat(editHourlyRate);
-    const parsedHoursPerPayPeriod = parseFloat(editHoursPerPayPeriod);
+    const parsedHoursPerWeek = parseFloat(editHoursPerWeek);
+    const paychecksPerYear = getPaychecksPerYear(editPayFrequency);
+    const computedHoursPerPayPeriod = Number.isFinite(parsedHoursPerWeek) && paychecksPerYear > 0
+      ? (parsedHoursPerWeek * 52) / paychecksPerYear
+      : 0;
     const parsedMinLeftover = parseFloat(editMinLeftover);
     const errors: PaySettingsFieldErrors = {};
 
@@ -108,8 +115,8 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       errors.hourlyRate = 'Please enter a valid hourly rate greater than zero.';
     }
 
-    if (editPayType === 'hourly' && (!Number.isFinite(parsedHoursPerPayPeriod) || parsedHoursPerPayPeriod <= 0)) {
-      errors.hoursPerPayPeriod = 'Please enter valid hours per pay period greater than zero.';
+    if (editPayType === 'hourly' && (!Number.isFinite(parsedHoursPerWeek) || parsedHoursPerWeek <= 0)) {
+      errors.hoursPerWeek = 'Please enter valid hours per week greater than zero.';
     }
 
     if (!Number.isFinite(parsedMinLeftover) || parsedMinLeftover < 0) {
@@ -130,7 +137,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         ? { annualSalary: parsedAnnualSalary }
         : {
             hourlyRate: parsedHourlyRate,
-            hoursPerPayPeriod: parsedHoursPerPayPeriod
+            hoursPerPayPeriod: computedHoursPerPayPeriod
           }
       ),
     };
@@ -284,15 +291,15 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
                 step="0.50"
               />
             </FormGroup>
-            <FormGroup label="Hours per Pay Period" required error={fieldErrors.hoursPerPayPeriod}>
+            <FormGroup label="Hours per Week" required error={fieldErrors.hoursPerWeek}>
               <input
-                className={fieldErrors.hoursPerPayPeriod ? 'field-error' : ''}
+                className={fieldErrors.hoursPerWeek ? 'field-error' : ''}
                 type="number"
-                value={editHoursPerPayPeriod}
+                value={editHoursPerWeek}
                 onChange={(e) => {
-                  setEditHoursPerPayPeriod(e.target.value);
-                  if (fieldErrors.hoursPerPayPeriod) {
-                    setFieldErrors((prev) => ({ ...prev, hoursPerPayPeriod: undefined }));
+                  setEditHoursPerWeek(e.target.value);
+                  if (fieldErrors.hoursPerWeek) {
+                    setFieldErrors((prev) => ({ ...prev, hoursPerWeek: undefined }));
                   }
                 }}
                 min="0"
@@ -315,7 +322,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
                 const newGrossPerPaycheck =
                   editPayType === 'salary'
                     ? (parseFloat(editAnnualSalary) || 0) / newOccurrences
-                    : (parseFloat(editHourlyRate) || 0) * (parseFloat(editHoursPerPayPeriod) || 0);
+                    : (parseFloat(editHourlyRate) || 0) * (((parseFloat(editHoursPerWeek) || 0) * 52) / newOccurrences);
                 const suggested = getSuggestedLeftoverPerPaycheck(newGrossPerPaycheck);
                 if (suggested > 0) {
                   setEditMinLeftover(String(suggested));

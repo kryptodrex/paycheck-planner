@@ -32,7 +32,7 @@ import type {
 import { FileStorageService } from '../services/fileStorage';
 import { calculatePaycheckBreakdown as calculateBudgetPaycheckBreakdown, getEmptyPaycheckBreakdown } from '../services/budgetCalculations';
 import { KeychainService } from '../services/keychainService';
-import { roundToCent, roundUpToCent } from '../utils/money';
+import { roundToCent } from '../utils/money';
 import { getPlanNameFromPath } from '../utils/filePath';
 import { getPaychecksPerYear } from '../utils/payPeriod';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
@@ -907,9 +907,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     let grossPay = 0;
     if (paySettings.payType === 'salary' && paySettings.annualSalary) {
       const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
-      grossPay = roundUpToCent(paySettings.annualSalary / paychecksPerYear);
+      grossPay = paySettings.annualSalary / paychecksPerYear;
     } else if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
-      grossPay = roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
+      grossPay = paySettings.hourlyRate * paySettings.hoursPerPayPeriod;
     }
 
     // If no pay settings configured yet, return zeros

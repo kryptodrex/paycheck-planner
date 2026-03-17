@@ -96,6 +96,28 @@ describe('budgetCalculations', () => {
     });
   });
 
+  it('keeps annual gross aligned to annual salary for non-even paycheck splits', () => {
+    const annualSalary = 123456;
+    const paychecksPerYear = 26;
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [],
+        additionalWithholding: 0,
+      },
+    });
+
+    const annualized = calculateAnnualizedPaySummary(breakdown, paychecksPerYear);
+    expect(annualized.annualGross).toBe(annualSalary);
+  });
+
   it('builds annual and display pay breakdowns that stay aligned with the paycheck breakdown', () => {
     const paycheckBreakdown = {
       grossPay: 5000,

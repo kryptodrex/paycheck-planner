@@ -44,11 +44,11 @@ function calculateGrossPayPerPaycheck(input: BudgetCalculationInput): number {
 
   if (paySettings.payType === 'salary' && paySettings.annualSalary) {
     const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
-    return roundUpToCent(paySettings.annualSalary / paychecksPerYear);
+    return paySettings.annualSalary / paychecksPerYear;
   }
 
   if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
-    return roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
+    return paySettings.hourlyRate * paySettings.hoursPerPayPeriod;
   }
 
   return 0;
