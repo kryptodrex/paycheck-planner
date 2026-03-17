@@ -17,30 +17,64 @@ export function getPaychecksPerYear(frequency: PayFrequency | string): number {
   return getPayFrequencyOccurrencesPerYear(String(frequency));
 }
 
+export function getPayFrequencyViewMode(frequency: PayFrequency | string): ViewMode {
+  switch (String(frequency)) {
+    case 'weekly':
+      return 'weekly';
+    case 'bi-weekly':
+      return 'bi-weekly';
+    case 'semi-monthly':
+      return 'semi-monthly';
+    case 'monthly':
+      return 'monthly';
+    case 'quarterly':
+      return 'quarterly';
+    case 'yearly':
+      return 'yearly';
+    default:
+      return 'bi-weekly';
+  }
+}
+
 /**
  * Convert a per-paycheck amount to the specified display mode
  * @param paycheckAmount - Amount per paycheck
  * @param paychecksPerYear - Number of paychecks per year (from getPaychecksPerYear)
- * @param displayMode - The display mode ('paycheck', 'monthly', 'yearly')
+ * @param displayMode - The display mode
  * @returns Converted amount in the requested display mode
  */
+export function getDisplayModeOccurrencesPerYear(
+  displayMode: ViewMode,
+  paychecksPerYear: number,
+): number {
+  switch (displayMode) {
+    case 'paycheck':
+      return paychecksPerYear;
+    case 'weekly':
+      return 52;
+    case 'bi-weekly':
+      return 26;
+    case 'semi-monthly':
+      return 24;
+    case 'monthly':
+      return 12;
+    case 'quarterly':
+      return 4;
+    case 'yearly':
+      return 1;
+    default:
+      return paychecksPerYear;
+  }
+}
+
 export function convertToDisplayMode(
   paycheckAmount: number,
   paychecksPerYear: number,
   displayMode: ViewMode
 ): number {
   const roundToCent = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
-
-  switch (displayMode) {
-    case 'paycheck':
-      return roundToCent(paycheckAmount);
-    case 'monthly':
-      return roundToCent((paycheckAmount * paychecksPerYear) / 12);
-    case 'yearly':
-      return roundToCent(paycheckAmount * paychecksPerYear);
-    default:
-      return roundToCent(paycheckAmount);
-  }
+  const displayOccurrences = getDisplayModeOccurrencesPerYear(displayMode, paychecksPerYear);
+  return roundToCent((paycheckAmount * paychecksPerYear) / displayOccurrences);
 }
 
 function roundForStoredAmount(amount: number): number {
@@ -51,7 +85,7 @@ function roundForStoredAmount(amount: number): number {
  * Convert a display mode amount back to per-paycheck amount
  * @param displayAmount - Amount in the display mode
  * @param paychecksPerYear - Number of paychecks per year (from getPaychecksPerYear)
- * @param displayMode - The display mode ('paycheck', 'monthly', 'yearly')
+ * @param displayMode - The display mode
  * @returns Amount per paycheck
  */
 export function convertFromDisplayMode(
@@ -59,29 +93,29 @@ export function convertFromDisplayMode(
   paychecksPerYear: number,
   displayMode: ViewMode
 ): number {
-  switch (displayMode) {
-    case 'paycheck':
-      return roundForStoredAmount(displayAmount);
-    case 'monthly':
-      return roundForStoredAmount((displayAmount * 12) / paychecksPerYear);
-    case 'yearly':
-      return roundForStoredAmount(displayAmount / paychecksPerYear);
-    default:
-      return roundForStoredAmount(displayAmount);
-  }
+  const displayOccurrences = getDisplayModeOccurrencesPerYear(displayMode, paychecksPerYear);
+  return roundForStoredAmount((displayAmount * displayOccurrences) / paychecksPerYear);
 }
 
 /**
  * Get the human-readable label for a display mode
- * @param displayMode - The display mode ('paycheck', 'monthly', 'yearly')
+ * @param displayMode - The display mode
  * @returns Human-readable label
  */
 export function getDisplayModeLabel(displayMode: ViewMode): string {
   switch (displayMode) {
     case 'paycheck':
       return 'Per Paycheck';
+    case 'weekly':
+      return 'Weekly';
+    case 'bi-weekly':
+      return 'Bi-weekly';
+    case 'semi-monthly':
+      return 'Semi-monthly';
     case 'monthly':
       return 'Monthly';
+    case 'quarterly':
+      return 'Quarterly';
     case 'yearly':
       return 'Yearly';
     default:
@@ -102,6 +136,10 @@ export function formatPayFrequencyLabel(frequency: PayFrequency | string): strin
       return 'Semi-monthly';
     case 'monthly':
       return 'Monthly';
+    case 'quarterly':
+      return 'Quarterly';
+    case 'yearly':
+      return 'Yearly';
     default:
       return 'Bi-weekly';
   }

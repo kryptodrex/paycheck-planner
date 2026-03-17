@@ -4,7 +4,11 @@ import { fromDisplayAmount, monthlyToDisplayAmount, toDisplayAmount } from './di
 describe('displayAmounts utilities', () => {
   it('converts per-paycheck amounts to each display mode', () => {
     expect(toDisplayAmount(100, 26, 'paycheck')).toBe(100);
+    expect(toDisplayAmount(100, 26, 'weekly')).toBe(50);
+    expect(toDisplayAmount(100, 26, 'bi-weekly')).toBe(100);
+    expect(toDisplayAmount(100, 26, 'semi-monthly')).toBe(108.33);
     expect(toDisplayAmount(100, 26, 'monthly')).toBe(216.67);
+    expect(toDisplayAmount(100, 26, 'quarterly')).toBe(650);
     expect(toDisplayAmount(100, 26, 'yearly')).toBe(2600);
   });
 
