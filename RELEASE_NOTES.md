@@ -14,3 +14,5 @@
 
 ### Bug Fixes
 
+- Improved cross-mode amount stability so manual allocation edits keep the same entered monthly or yearly values after saving and reopening the app.
+
