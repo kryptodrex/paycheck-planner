@@ -131,6 +131,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const leftoverPerPaycheck = allocationPlan.remaining;
   const grossPayPerPaycheck = paycheckBreakdown.grossPay;
   const targetLeftoverPerPaycheck = budgetData.paySettings.minLeftover || 0;
+  const roundedLeftoverPerPaycheck = roundToCent(leftoverPerPaycheck);
+  const roundedTargetLeftoverPerPaycheck = roundToCent(targetLeftoverPerPaycheck);
+  const isBelowTarget =
+    roundedLeftoverPerPaycheck >= 0
+    && roundedTargetLeftoverPerPaycheck > 0
+    && roundedLeftoverPerPaycheck < roundedTargetLeftoverPerPaycheck;
+  const belowTargetGap = roundToCent(
+    Math.max(0, roundedTargetLeftoverPerPaycheck - roundedLeftoverPerPaycheck),
+  );
 
   const customAllocations = buildCustomAllocationItems(budgetData.accounts);
 
@@ -309,7 +318,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
     setReallocationUndoSnapshot(beforeSnapshot);
     setReallocationSummaryItems(summaryItems);
-    setSelectedReallocationSummaryIds(summaryItems.map((item) => item.id));
+    setSelectedReallocationSummaryIds([]);
     setReallocationSummaryMeta({
       appliedCount: summaryItems.length,
       appliedResolved: resolvedAfterRounding,
@@ -709,7 +718,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             <div className="stage-detail">
               {budgetData.paySettings.payType === 'salary' 
                 ? `${formatWithSymbol(budgetData.paySettings.annualSalary || 0, currency, { maximumFractionDigits: 0 })}/year`
-                : `${getCurrencySymbol(currency)}${budgetData.paySettings.hourlyRate}/hr × ${budgetData.paySettings.hoursPerPayPeriod} hrs`
+                : `${getCurrencySymbol(currency)}${budgetData.paySettings.hourlyRate}/hr × ${(((budgetData.paySettings.hoursPerPayPeriod || 0) * getPaychecksPerYear(budgetData.paySettings.payFrequency)) / 52).toFixed(2)} hrs/week`
               }
             </div>
           </div>
@@ -944,9 +953,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               );
             })}
 
-            <div className={`waterfall-row waterfall-footer-row ${leftoverPerPaycheck < 0 ? 'negative-remaining' : (leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) ? 'warning-remaining' : 'positive-remaining')}`}>
+            <div className={`waterfall-row waterfall-footer-row ${roundedLeftoverPerPaycheck < 0 ? 'negative-remaining' : (isBelowTarget ? 'warning-remaining' : 'positive-remaining')}`}>
               <span className="waterfall-label"><GlossaryTerm termId="residual-amount">All that remains</GlossaryTerm> for spending</span>
-              <span className={`waterfall-amount ${leftoverPerPaycheck < 0 ? 'negative-remaining' : (leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) ? 'warning-remaining' : 'positive-remaining')}`}>{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className={`waterfall-amount ${roundedLeftoverPerPaycheck < 0 ? 'negative-remaining' : (isBelowTarget ? 'warning-remaining' : 'positive-remaining')}`}>{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {leftoverPerPaycheck < 0 && (
               <div className="waterfall-alert-row">
@@ -968,12 +977,12 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 </Alert>
               </div>
             )}
-            {leftoverPerPaycheck >= 0 && leftoverPerPaycheck < (budgetData.paySettings.minLeftover || 0) && (budgetData.paySettings.minLeftover || 0) > 0 && (
+            {isBelowTarget && (
               <div className="waterfall-alert-row">
                 <Alert type="warning">
                   <div className="reallocation-alert-content">
                     <span>
-                      You are {formatWithSymbol(toDisplayAmount((budgetData.paySettings.minLeftover || 0) - leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(budgetData.paySettings.minLeftover || 0, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}.
+                      You are {formatWithSymbol(toDisplayAmount(belowTargetGap, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(roundedTargetLeftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}.
                     </span>
                     {reallocationPlan.proposals.length > 0 ? (
                       <Button variant="secondary" size="small" onClick={openReallocationModal}>
