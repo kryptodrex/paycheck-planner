@@ -43,6 +43,10 @@ export function convertToDisplayMode(
   }
 }
 
+function roundForStoredAmount(amount: number): number {
+  return Math.round((amount + Number.EPSILON) * 1_000_000_000_000) / 1_000_000_000_000;
+}
+
 /**
  * Convert a display mode amount back to per-paycheck amount
  * @param displayAmount - Amount in the display mode
@@ -57,13 +61,13 @@ export function convertFromDisplayMode(
 ): number {
   switch (displayMode) {
     case 'paycheck':
-      return displayAmount;
+      return roundForStoredAmount(displayAmount);
     case 'monthly':
-      return (displayAmount * 12) / paychecksPerYear;
+      return roundForStoredAmount((displayAmount * 12) / paychecksPerYear);
     case 'yearly':
-      return displayAmount / paychecksPerYear;
+      return roundForStoredAmount(displayAmount / paychecksPerYear);
     default:
-      return displayAmount;
+      return roundForStoredAmount(displayAmount);
   }
 }
 

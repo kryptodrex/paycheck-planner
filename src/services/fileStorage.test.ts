@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_STORAGE_KEYS, STORAGE_KEYS } from '../constants/storage';
 import { FileStorageService } from './fileStorage';
+import { toAllocationDisplayAmount } from '../utils/allocationEditor';
 
 class LocalStorageMock {
   private store = new Map<string, string>();
@@ -113,6 +114,57 @@ describe('FileStorageService', () => {
     };
     const [, serialized] = saveBudgetMock.mock.calls[0];
     expect(serialized).not.toContain('encryptionKey');
+  });
+
+  it('preserves allocation edit amounts across save and load round trips', async () => {
+    const budget = FileStorageService.createEmptyBudget(2026, 'USD');
+    budget.settings.encryptionEnabled = false;
+    budget.accounts = [
+      {
+        id: 'acct-1',
+        name: 'Checking',
+        type: 'checking',
+        color: '#3366ff',
+        allocationCategories: [
+          {
+            id: 'cat-1',
+            name: 'Flexible Spending',
+            amount: 92.312307692308,
+          },
+        ],
+      },
+    ];
+
+    await FileStorageService.saveBudget(budget, '/tmp/persisted-roundtrip.ppb');
+
+    const saveBudgetMock = window.electronAPI.saveBudget as unknown as {
+      mock: { calls: [string, string][] };
+    };
+    const [, serialized] = saveBudgetMock.mock.calls.at(-1)!;
+
+    Object.defineProperty(globalThis, 'window', {
+      value: {
+        electronAPI: {
+          saveFileDialog: vi.fn(async () => '/tmp/plan.ppb'),
+          saveBudget: vi.fn(async () => ({ success: true })),
+          openFileDialog: vi.fn(async () => '/tmp/persisted-roundtrip.ppb'),
+          loadBudget: vi.fn(async () => ({ success: true, data: serialized })),
+          selectDirectory: vi.fn(async () => '/tmp'),
+        },
+      },
+      configurable: true,
+    });
+
+    const loaded = await FileStorageService.loadBudget('/tmp/persisted-roundtrip.ppb');
+
+    expect(loaded?.accounts[0].allocationCategories?.[0].amount).toBe(92.312307692308);
+    expect(
+      toAllocationDisplayAmount(
+        loaded!.accounts[0].allocationCategories![0].amount,
+        26,
+        'monthly',
+      ),
+    ).toBe(200.01);
   });
 
   it('creates default tax lines with percentage mode metadata', () => {

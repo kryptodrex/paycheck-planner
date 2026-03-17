@@ -19,4 +19,18 @@ describe('displayAmounts utilities', () => {
     expect(monthlyToDisplayAmount(200, 26, 'paycheck')).toBeCloseTo(92.31, 2);
     expect(monthlyToDisplayAmount(200, 26, 'yearly')).toBe(2400);
   });
+
+  it('keeps monthly edits stable when converted to stored values and displayed again', () => {
+    const storedAmount = fromDisplayAmount(200.01, 26, 'monthly');
+
+    expect(storedAmount).toBe(92.312307692308);
+    expect(toDisplayAmount(storedAmount, 26, 'monthly')).toBe(200.01);
+  });
+
+  it('keeps yearly edits stable when converted to stored values and displayed again', () => {
+    const storedAmount = fromDisplayAmount(2600.17, 26, 'yearly');
+
+    expect(storedAmount).toBe(100.006538461538);
+    expect(toDisplayAmount(storedAmount, 26, 'yearly')).toBe(2600.17);
+  });
 });

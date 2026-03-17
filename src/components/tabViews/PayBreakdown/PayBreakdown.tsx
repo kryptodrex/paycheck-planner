@@ -5,13 +5,14 @@ import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '.
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { fromAllocationDisplayAmount, normalizeStoredAllocationAmount, toAllocationDisplayAmount } from '../../../utils/allocationEditor';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import type { Account } from '../../../types/accounts';
 import type { Bill, Loan, SavingsContribution } from '../../../types/obligations';
 import type { Benefit, RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
-import { fromDisplayAmount, toDisplayAmount } from '../../../utils/displayAmounts';
+import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
 import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
 import { Alert, Button, ConfirmDialog, InputWithPrefix, ViewModeSelector, PageHeader, AmountBreakdown, Toast } from '../../_shared';
@@ -497,9 +498,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
       .map((category) => ({
         ...category,
         name: category.name.trim(),
-        amount: Number.isFinite(category.amount)
-          ? Math.round(Math.max(0, category.amount) * 1_000_000_000_000) / 1_000_000_000_000
-          : 0,
+        amount: normalizeStoredAllocationAmount(category.amount),
       }))
       .filter((category) => category.name.length > 0 && category.amount > 0);
 
@@ -882,11 +881,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={String(inputValues.has(category.id) ? inputValues.get(category.id) : toDisplayAmount(category.amount, paychecksPerYear, displayMode))}
+                                value={String(inputValues.has(category.id) ? inputValues.get(category.id) : toAllocationDisplayAmount(category.amount, paychecksPerYear, displayMode))}
                                 onChange={(e) => setInputValues(prev => new Map(prev).set(category.id, parseFloat(e.target.value) || 0))}
                                 onBlur={(e) => {
                                   const displayValue = parseFloat(e.target.value) || 0;
-                                  updateCategory(displayAccount.id, category.id, { amount: fromDisplayAmount(displayValue, paychecksPerYear, displayMode) });
+                                  updateCategory(displayAccount.id, category.id, { amount: fromAllocationDisplayAmount(displayValue, paychecksPerYear, displayMode) });
                                   setInputValues(prev => {
                                     const next = new Map(prev);
                                     next.delete(category.id);

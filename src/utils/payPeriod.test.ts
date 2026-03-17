@@ -28,6 +28,20 @@ describe('payPeriod utilities', () => {
     expect(convertFromDisplayMode(2600, 26, 'yearly')).toBe(100);
   });
 
+  it('round-trips display-mode edits without losing the entered monthly value', () => {
+    const storedAmount = convertFromDisplayMode(185.55, 26, 'monthly');
+
+    expect(storedAmount).toBe(85.638461538462);
+    expect(convertToDisplayMode(storedAmount, 26, 'monthly')).toBe(185.55);
+  });
+
+  it('round-trips display-mode edits without losing the entered yearly value', () => {
+    const storedAmount = convertFromDisplayMode(1234.56, 26, 'yearly');
+
+    expect(storedAmount).toBe(47.483076923077);
+    expect(convertToDisplayMode(storedAmount, 26, 'yearly')).toBe(1234.56);
+  });
+
   it('returns display labels', () => {
     expect(getDisplayModeLabel('paycheck')).toBe('Per Paycheck');
     expect(getDisplayModeLabel('monthly')).toBe('Monthly');
