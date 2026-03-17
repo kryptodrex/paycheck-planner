@@ -1,5 +1,33 @@
 # Implementation Notes
 
+## Cross-Mode Rounding and Persistence Strategy
+
+### Goal
+Keep paycheck, monthly, and yearly views interchangeable for users without introducing save/reopen drift.
+
+### Source-of-Truth Decision
+- Do not force a single yearly canonical model across the whole app.
+- Keep canonical storage domain-specific so existing calculation paths stay coherent.
+- For manually edited account allocation categories in Pay Breakdown, store normalized per-paycheck values.
+- For bills, loans, savings, and other recurring items, keep their existing native/monthly/frequency-based storage models.
+
+### Why this approach
+- Account allocation categories are validated directly against per-paycheck net pay and reallocation logic.
+- Converting them to yearly storage would add unnecessary back-and-forth math in the screen that edits them most often.
+- Other domains already have stable storage models tied to their own business logic, so changing them all at once would create broad regression risk.
+
+### Current stabilization work
+- `convertFromDisplayMode()` now normalizes stored values to a consistent precision so monthly/yearly edits do not accumulate floating-point noise.
+- Pay Breakdown allocation editing now uses a dedicated allocation editor conversion utility rather than duplicating conversion + normalization inline.
+- Regression coverage now exists at three levels:
+  - conversion utility round trips
+  - allocation editor round trips
+  - save/load persistence round trips through `FileStorageService`
+
+### Remaining follow-up
+- Continue checking whether any other editable surfaces write display-mode-converted values back into stored state.
+- Keep item 5 separate from view-mode selector expansion work so data-integrity fixes and UX/view-option changes do not get conflated.
+
 ## Feedback System via GitHub Issues (Private Repo)
 
 ### **Goal**
