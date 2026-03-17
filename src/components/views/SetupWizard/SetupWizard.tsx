@@ -67,7 +67,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [annualSalary, setAnnualSalary] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
   const [hoursPerWeek, setHoursPerWeek] = useState('');
-  const [payFrequency, setPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
+  const [payFrequency, setPayFrequency] = useState<PaySettings['payFrequency']>('bi-weekly');
   const [minLeftover, setMinLeftover] = useState('0');
 
   const [taxLines, setTaxLines] = useState<EditableTaxLineValues[]>(() => getDefaultTaxLinesForCurrency(budgetData?.settings?.currency || 'USD'));
@@ -497,20 +497,22 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
             <div className="wizard-step">
               <h2>How often are you paid?</h2>
               <p className="step-description">
-                Select your pay frequency so we can calculate your per-paycheck amounts.
+                Select your pay frequency so we can calculate your per-pay-period amounts.
               </p>
 
               <FormGroup label="Pay Frequency">
                 <RadioGroup
                   name="payFrequency"
                   value={payFrequency}
-                  onChange={(value) => setPayFrequency(value as 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly')}
+                  onChange={(value) => setPayFrequency(value as PaySettings['payFrequency'])}
                   layout="column"
                   options={[
                     { value: 'weekly', label: 'Weekly', description: '52 paychecks per year' },
                     { value: 'bi-weekly', label: 'Bi-weekly', description: '26 paychecks per year (every 2 weeks)' },
                     { value: 'semi-monthly', label: 'Semi-monthly', description: '24 paychecks per year (twice a month)' },
                     { value: 'monthly', label: 'Monthly', description: '12 paychecks per year' },
+                    { value: 'quarterly', label: 'Quarterly', description: '4 paychecks per year' },
+                    { value: 'yearly', label: 'Yearly', description: '1 paycheck per year' },
                   ]}
                 />
               </FormGroup>
@@ -519,8 +521,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   Keep this area reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
 
               <FormGroup 
-                label="Target Leftover Per Paycheck" 
-                helperText="The target amount you want to keep around for spending on variable expenses like groceries, entertainment, and shopping. If you go below this amount, the app will alert you that you may be over-budget."
+                label="Target Leftover Per Pay Period" 
+                helperText="The target amount you want to keep around for spending on variable expenses like groceries, entertainment, and shopping each time you are paid. If you go below this amount, the app will alert you that you may be over-budget."
               >
                 <InputWithPrefix
                   prefix={getCurrencySymbol(currency)}
@@ -536,7 +538,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               {formattedSuggestedLeftover && parseInt(formattedSuggestedLeftover.replace(/[^0-9]/g, ''), 10) > parseInt(minLeftover || '0', 10) && (
                 <div className="leftover-suggestion">
                   <div className="leftover-suggestion-copy">
-                    <strong>Suggested leftover: {formattedSuggestedLeftover} per paycheck</strong>
+                    <strong>Suggested leftover: {formattedSuggestedLeftover} per pay period</strong>
                     <span>
                       Based on your pay details, this is about 20% of estimated gross pay to leave room for variable spending.
                     </span>

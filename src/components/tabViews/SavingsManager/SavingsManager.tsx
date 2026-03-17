@@ -5,7 +5,7 @@ import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getAccountNameById } from '../../../utils/accountGrouping';
@@ -104,7 +104,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
 
   const frequencyMatchesPaySchedule = (itemFrequency: string): boolean => {
@@ -433,9 +432,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           <ViewModeSelector
             mode={displayMode}
             onChange={onDisplayModeChange || (() => {})}
-            hintText={`Current setting: ${payFrequencyLabel}`}
-            hintVisibleModes={['paycheck']}
-            reserveHintSpace
+            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
           />
         )}
       />

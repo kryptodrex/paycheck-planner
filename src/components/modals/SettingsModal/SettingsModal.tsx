@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { Button, ErrorDialog, Modal, PillToggle } from '../../_shared';
+import type { SelectableViewMode } from '../../../types/viewMode';
+import { Button, CheckboxGroup, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
 import { FileStorageService } from '../../../services/fileStorage';
+import { SELECTABLE_VIEW_MODES, sanitizeFavoriteViewModes } from '../../../utils/viewModePreferences';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -16,6 +18,7 @@ type ThemeOption = 'light' | 'dark' | 'system';
 interface SettingsState {
   themeMode: ThemeOption;
   glossaryTermsEnabled: boolean;
+  viewModeFavorites: SelectableViewMode[];
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
@@ -31,6 +34,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     return {
       themeMode: (appSettings.themeMode as ThemeOption) || 'light',
       glossaryTermsEnabled: appSettings.glossaryTermsEnabled !== false,
+      viewModeFavorites: sanitizeFavoriteViewModes(appSettings.viewModeFavorites),
     };
   });
 
@@ -41,6 +45,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       ...existing,
       themeMode: updated.themeMode,
       glossaryTermsEnabled: updated.glossaryTermsEnabled,
+      viewModeFavorites: sanitizeFavoriteViewModes(updated.viewModeFavorites),
     });
   };
 
@@ -70,6 +75,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       const updated = { ...prev, glossaryTermsEnabled: enabled };
       persistSettings(updated);
       window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled } }));
+      return updated;
+    });
+  };
+
+  const handleViewModeFavoritesChange = (values: string[]) => {
+    setSettings((prev) => {
+      const updated = {
+        ...prev,
+        viewModeFavorites: sanitizeFavoriteViewModes(values) as SelectableViewMode[],
+      };
+      persistSettings(updated);
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.viewModeFavoritesChanged));
       return updated;
     });
   };
@@ -112,7 +129,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       const restored = FileStorageService.getAppSettings();
       const newThemeMode = (restored.themeMode as ThemeOption) || 'light';
       const newGlossary = restored.glossaryTermsEnabled !== false;
-      setSettings({ themeMode: newThemeMode, glossaryTermsEnabled: newGlossary });
+      const newFavorites = sanitizeFavoriteViewModes(restored.viewModeFavorites);
+      setSettings({
+        themeMode: newThemeMode,
+        glossaryTermsEnabled: newGlossary,
+        viewModeFavorites: newFavorites,
+      });
 
       if (newThemeMode === 'light' || newThemeMode === 'dark') {
         setTheme(newThemeMode);
@@ -122,6 +144,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       }
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
       window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled: newGlossary } }));
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.viewModeFavoritesChanged));
       const reopenResult = await window.electronAPI.reopenWelcomeWindow();
       if (!reopenResult.success) {
         throw new Error(reopenResult.error || 'Failed to reopen welcome window');
@@ -227,14 +250,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           />
         </div>
 
-        <div className="settings-info">
-          <span>
-            Glossary term links are <strong>{settings.glossaryTermsEnabled ? 'enabled' : 'disabled'}</strong>.
-            {settings.glossaryTermsEnabled
-              ? ' Hover for definitions, click to open the full glossary.'
-              : ' Terms display as plain text with no hover or click behaviour.'}
-          </span>
+        <InfoBox>
+          Glossary term links are <strong>{settings.glossaryTermsEnabled ? 'enabled' : 'disabled'}</strong>.
+          {settings.glossaryTermsEnabled
+            ? ' Hover for definitions, click to open the full glossary.'
+            : ' Terms display as plain text with no hover or click behaviour.'}
+        </InfoBox>
+
+      </div>
+
+      <div className="settings-section">
+        <h3>View Mode Favorites</h3>
+
+        <div className="settings-group">
+          <label>Always Show These View Modes</label>
+          <CheckboxGroup
+            selectedValues={settings.viewModeFavorites}
+            onChange={handleViewModeFavoritesChange}
+            className="settings-view-mode-grid"
+            options={SELECTABLE_VIEW_MODES.map((mode) => ({
+              value: mode,
+              label:
+                mode === 'bi-weekly'
+                  ? 'Bi-weekly'
+                  : mode === 'semi-monthly'
+                    ? 'Semi-monthly'
+                    : mode.charAt(0).toUpperCase() + mode.slice(1),
+              disabled: settings.viewModeFavorites.length === 1 && settings.viewModeFavorites.includes(mode),
+            }))}
+          />
         </div>
+
+        <InfoBox>
+            Favorites apply app-wide and carry across all plans on this device. At least one view mode must stay enabled.
+        </InfoBox>
       </div>
 
       <div className="settings-section settings-danger-zone">

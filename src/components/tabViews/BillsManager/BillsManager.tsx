@@ -7,7 +7,7 @@ import type { BillFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
-import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
@@ -71,7 +71,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
   const isBillEnabled = (bill: Bill) => bill.enabled !== false;
   const isBenefitEnabled = (benefit: Benefit) => benefit.enabled !== false;
@@ -317,9 +316,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             <ViewModeSelector
               mode={displayMode}
               onChange={onDisplayModeChange}
-              hintText={`Current setting: ${payFrequencyLabel}`}
-              hintVisibleModes={['paycheck']}
-              reserveHintSpace
+              payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
             />
             <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
             <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector, TaxLinesEditor, InfoBox } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import type { TaxLine } from '../../../types/payroll';
@@ -36,7 +36,6 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
     const breakdown = calculatePaycheckBreakdown();
     const taxSettings = budgetData.taxSettings;
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-    const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
     const taxableIncomeForEditor = breakdown.taxableIncome;
 
     const formatRateLabel = (line: TaxLine) => {
@@ -159,9 +158,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                         <ViewModeSelector
                             mode={displayMode}
                             onChange={onDisplayModeChange}
-                            hintText={`Current setting: ${payFrequencyLabel}`}
-                            hintVisibleModes={['paycheck']}
-                            reserveHintSpace
+                            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
                         />
                         <Button variant="primary" onClick={handleEditStart}>
                             Edit Tax Settings

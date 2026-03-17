@@ -5,7 +5,7 @@ import type { Loan, LoanPaymentLine } from '../../../types/obligations';
 import type { LoanPaymentFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
@@ -349,8 +349,6 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     const loansByAccount = groupByAccountId(loansList);
 
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-    const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
-
     const displayAmount = (monthlyAmount: number): number => monthlyToDisplayAmount(monthlyAmount, paychecksPerYear, displayMode);
     const allAccountsLoansTotalMonthly = roundToCent(
         loansList.reduce((sum, loan) => {
@@ -371,9 +369,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                 <ViewModeSelector
                                                     mode={displayMode}
                                                     onChange={onDisplayModeChange}
-                                                    hintText={`Current setting: ${payFrequencyLabel}`}
-                                                    hintVisibleModes={['paycheck']}
-                                                    reserveHintSpace
+                                                    payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
                                                 />
                         <Button variant="primary" onClick={handleAddLoan}>
                             + Add Payment

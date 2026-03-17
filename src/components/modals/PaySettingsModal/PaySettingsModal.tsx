@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import type { BudgetData } from '../../../types/budget';
+import type { PayFrequency } from '../../../types/frequencies';
 import type { PaySettings } from '../../../types/payroll';
 import { convertBudgetAmounts } from '../../../services/budgetCurrencyConversion';
 import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
+import { normalizeStoredAllocationAmount } from '../../../utils/allocationEditor';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
 import { Modal, Button, ErrorDialog, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../../_shared';
 import '../../_shared/payEditorShared.css';
@@ -32,8 +34,10 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   const [editAnnualSalary, setEditAnnualSalary] = useState('');
   const [editHourlyRate, setEditHourlyRate] = useState('');
   const [editHoursPerPayPeriod, setEditHoursPerPayPeriod] = useState('');
-  const [editPayFrequency, setEditPayFrequency] = useState<'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly'>('bi-weekly');
+  const [editPayFrequency, setEditPayFrequency] = useState<PayFrequency>('bi-weekly');
   const [editMinLeftover, setEditMinLeftover] = useState('0');
+  // Track previous frequency to scale minLeftover proportionally on change
+  const prevEditPayFrequencyRef = useRef<PayFrequency>('bi-weekly');
   const [editCurrency, setEditCurrency] = useState('USD');
   const [originalCurrency, setOriginalCurrency] = useState('USD');
   const [exchangeRate, setExchangeRate] = useState('');
@@ -46,6 +50,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditPayType(budgetData.paySettings.payType);
       setEditPayFrequency(budgetData.paySettings.payFrequency);
+      prevEditPayFrequencyRef.current = budgetData.paySettings.payFrequency;
       setEditMinLeftover(budgetData.paySettings.minLeftover?.toString() || '0');
       setEditCurrency(currentCurrency);
       setOriginalCurrency(currentCurrency);
@@ -154,6 +159,35 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       updatedBudget = convertBudgetAmounts(updatedBudget, parsedExchangeRate);
     }
 
+    // Migrate custom allocation amounts proportionally when pay frequency changes
+    const oldPaychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+    const newPaychecksPerYear = getPaychecksPerYear(editPayFrequency);
+    if (oldPaychecksPerYear !== newPaychecksPerYear && oldPaychecksPerYear > 0 && newPaychecksPerYear > 0) {
+      const scaleFactor = oldPaychecksPerYear / newPaychecksPerYear;
+      updatedBudget = {
+        ...updatedBudget,
+        accounts: updatedBudget.accounts.map((account) => ({
+          ...account,
+          allocationCategories: (account.allocationCategories || []).map((category) => {
+            // Skip auto-generated categories (bills, benefits, retirement, loans, savings)
+            if (
+              category.id.startsWith('__bills_') ||
+              category.id.startsWith('__benefits_') ||
+              category.id.startsWith('__retirement_') ||
+              category.id.startsWith('__loans_') ||
+              category.id.startsWith('__savings_')
+            ) {
+              return category;
+            }
+            return {
+              ...category,
+              amount: normalizeStoredAllocationAmount(category.amount * scaleFactor),
+            };
+          }),
+        })),
+      };
+    }
+
     updateBudgetData(updatedBudget);
 
     setFieldErrors({});
@@ -246,7 +280,6 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
                     setFieldErrors((prev) => ({ ...prev, hourlyRate: undefined }));
                   }
                 }}
-                placeholder="25.00"
                 min="0"
                 step="0.50"
               />
@@ -262,7 +295,6 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
                     setFieldErrors((prev) => ({ ...prev, hoursPerPayPeriod: undefined }));
                   }
                 }}
-                placeholder="80"
                 min="0"
                 step="1"
               />
@@ -274,13 +306,32 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           <RadioGroup
             name="editPayFrequency"
             value={editPayFrequency}
-            onChange={(value) => setEditPayFrequency(value as 'weekly' | 'bi-weekly' | 'semi-monthly' | 'monthly')}
+            onChange={(value) => {
+              const newFrequency = value as PayFrequency;
+              const newOccurrences = getPaychecksPerYear(newFrequency);
+              if (newOccurrences > 0 && newFrequency !== prevEditPayFrequencyRef.current) {
+                // Compute gross per new pay period and derive suggestion using the same
+                // 20%-rounded-to-$10 formula as the suggestion banner
+                const newGrossPerPaycheck =
+                  editPayType === 'salary'
+                    ? (parseFloat(editAnnualSalary) || 0) / newOccurrences
+                    : (parseFloat(editHourlyRate) || 0) * (parseFloat(editHoursPerPayPeriod) || 0);
+                const suggested = getSuggestedLeftoverPerPaycheck(newGrossPerPaycheck);
+                if (suggested > 0) {
+                  setEditMinLeftover(String(suggested));
+                }
+              }
+              prevEditPayFrequencyRef.current = newFrequency;
+              setEditPayFrequency(newFrequency);
+            }}
             layout="column"
             options={[
               { value: 'weekly', label: 'Weekly', description: '52 per year' },
               { value: 'bi-weekly', label: 'Bi-weekly', description: '26 per year' },
               { value: 'semi-monthly', label: 'Semi-monthly', description: '24 per year' },
               { value: 'monthly', label: 'Monthly', description: '12 per year' },
+              { value: 'quarterly', label: 'Quarterly', description: '4 per year' },
+              { value: 'yearly', label: 'Yearly', description: '1 per year' },
             ]}
           />
         </FormGroup>
@@ -289,8 +340,8 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
             Keep this location reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
 
         <FormGroup
-          label="Target Leftover Per Paycheck"
-          helperText="The target amount you want to keep unallocated for spending. If you go below this amount, the app will alert you that you may be over-budget."
+          label="Target Leftover Per Pay Period"
+          helperText="The target amount you want to keep unallocated for spending each time you are paid. If you go below this amount, the app will alert you that you may be over-budget."
           error={fieldErrors.minLeftover}
         >
           <InputWithPrefix
@@ -313,7 +364,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         {formattedSuggestedLeftover && parseInt(formattedSuggestedLeftover.replace(/[^0-9]/g, ''), 10) > parseInt(editMinLeftover || '0', 10) && (
           <div className="leftover-suggestion">
             <div className="leftover-suggestion-copy">
-              <strong>Suggested leftover: {formattedSuggestedLeftover} per paycheck</strong>
+              <strong>Suggested leftover: {formattedSuggestedLeftover} per pay period</strong>
               <span>
                 Based on your pay details, this is about 20% of estimated gross pay to leave room for variable spending.
               </span>

@@ -6,7 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
-import { MENU_EVENTS } from '../../constants/events';
+import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
@@ -24,6 +24,8 @@ import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
+import { getPayFrequencyViewMode } from '../../utils/payPeriod';
+import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
 import './PlanDashboard.css';
@@ -45,6 +47,11 @@ interface PlanDashboardProps {
 
 const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
 
+const getFirstVisibleFavoriteMode = (): ViewMode => {
+  const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+  return favorites[0];
+};
+
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
   const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
   const getInitialTab = () => {
@@ -65,7 +72,20 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [pendingTabScroll, setPendingTabScroll] = useState<{ tab: TabId; position: TabScrollPosition } | null>(null);
-  const [displayMode, setDisplayMode] = useState<ViewMode>('paycheck');
+  const [displayMode, setDisplayMode] = useState<ViewMode>(() => {
+    if (budgetData?.settings?.displayMode) {
+      return sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites).includes(
+        budgetData.settings.displayMode as never,
+      )
+        ? budgetData.settings.displayMode
+        : getFirstVisibleFavoriteMode();
+    }
+
+    const cadenceMode = getPayFrequencyViewMode(budgetData?.paySettings?.payFrequency ?? 'bi-weekly');
+    return sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites).includes(cadenceMode as never)
+      ? cadenceMode
+      : getFirstVisibleFavoriteMode();
+  });
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
@@ -299,7 +319,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (budgetData?.settings?.tabDisplayMode) {
       setTabDisplayMode(budgetData.settings.tabDisplayMode);
     }
-  }, [budgetData?.settings?.tabDisplayMode, budgetData?.settings?.tabPosition]);
+    if (budgetData?.settings?.displayMode) {
+      const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+      setDisplayMode(
+        favorites.includes(budgetData.settings.displayMode as never)
+          ? budgetData.settings.displayMode
+          : favorites[0],
+      );
+    } else if (budgetData?.paySettings?.payFrequency) {
+      const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+      const cadenceMode = getPayFrequencyViewMode(budgetData.paySettings.payFrequency);
+      setDisplayMode(favorites.includes(cadenceMode as never) ? cadenceMode : favorites[0]);
+    }
+  }, [
+    budgetData?.settings?.tabDisplayMode,
+    budgetData?.settings?.tabPosition,
+    budgetData?.settings?.displayMode,
+    budgetData?.paySettings?.payFrequency,
+  ]);
+
+  useEffect(() => {
+    const handleViewModeFavoritesChanged = () => {
+      const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+      if (!favorites.includes(displayMode as never)) {
+        setDisplayMode(favorites[0]);
+      }
+    };
+
+    window.addEventListener(APP_CUSTOM_EVENTS.viewModeFavoritesChanged, handleViewModeFavoritesChanged);
+    return () => {
+      window.removeEventListener(APP_CUSTOM_EVENTS.viewModeFavoritesChanged, handleViewModeFavoritesChanged);
+    };
+  }, [displayMode]);
 
   // Handle tab position changes
   const handleTabPositionChange = useCallback((newPosition: TabPosition) => {
@@ -326,6 +377,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       tabDisplayMode: newMode,
     });
   }, [tabDisplayMode, budgetData, updateBudgetSettings]);
+
+  // Handle view display mode changes — persisted to settings so it survives frequency changes
+  const handleDisplayModeChange = useCallback((newMode: ViewMode) => {
+    if (newMode === displayMode || !budgetData) return;
+    setDisplayMode(newMode);
+    updateBudgetSettings({
+      ...budgetData.settings,
+      displayMode: newMode,
+    });
+  }, [displayMode, budgetData, updateBudgetSettings]);
 
   const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
     const currentPath = budgetData?.settings?.filePath;
@@ -367,12 +428,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         tabConfigs: latestTabConfigsRef.current,
         tabPosition,
         tabDisplayMode,
+        displayMode,
       },
     });
     if (success) {
       setStatusToast({ message: 'Saved successfully', type: 'success' });
     }
-  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, missingActiveFile, ensureValidSavePath]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, missingActiveFile, ensureValidSavePath]);
 
   const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
     const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
@@ -1186,7 +1248,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <PayBreakdown 
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onDisplayModeChange={handleDisplayModeChange}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
@@ -1210,7 +1272,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <BillsManager 
             scrollToAccountId={scrollToAccountId}
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
         <div
@@ -1222,7 +1284,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <LoansManager 
             scrollToAccountId={scrollToAccountId}
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
         <div
@@ -1233,7 +1295,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <TaxBreakdown 
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
         <div
@@ -1246,7 +1308,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             shouldScrollToRetirement={shouldScrollToRetirement}
             onScrollToRetirementComplete={handleScrollToRetirementComplete}
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
       </div>

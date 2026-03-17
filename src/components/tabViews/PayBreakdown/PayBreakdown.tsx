@@ -4,7 +4,7 @@ import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
-import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { fromAllocationDisplayAmount, normalizeStoredAllocationAmount, toAllocationDisplayAmount } from '../../../utils/allocationEditor';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
@@ -119,8 +119,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
-
   // Get per-paycheck breakdown for allocation purposes
   const paycheckBreakdown = calculatePaycheckBreakdown();
   const annualBreakdown = calculateAnnualizedPayBreakdown(paycheckBreakdown, paychecksPerYear);
@@ -683,9 +681,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
             <ViewModeSelector
               mode={displayMode}
               onChange={onDisplayModeChange}
-              hintText={`Current setting: ${payFrequencyLabel}`}
-              hintVisibleModes={['paycheck']}
-              reserveHintSpace
+              payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
             />
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
               ⚙️ Pay Settings
