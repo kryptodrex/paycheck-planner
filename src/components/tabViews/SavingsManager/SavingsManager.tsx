@@ -271,12 +271,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     const employeePerPaycheck = isPercentage
       ? (grossPayPerPaycheck * employeeContribAmount) / 100
       : employeeContribAmount;
-    const total = employeePerPaycheck * paychecksPerYear;
+    const total = roundToCent(employeePerPaycheck * paychecksPerYear);
+    const overage = roundToCent(Math.max(0, total - limit));
     return {
-      exceeded: total > limit,
+      exceeded: overage > 0,
       total,
-      overage: Math.max(0, total - limit),
+      overage,
     };
+  };
+
+  const floorToDecimals = (value: number, decimals: number): number => {
+    const factor = 10 ** decimals;
+    return Math.floor(value * factor) / factor;
   };
 
   const handleAutoCalculateYearlyAmount = () => {
@@ -285,13 +291,24 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       return;
     }
 
+    if (grossPayPerPaycheck <= 0 || paychecksPerYear <= 0) {
+      setRetirementFormMessage({
+        type: 'warning',
+        message: 'Gross pay must be greater than zero before auto-calculating to yearly limit.',
+      });
+      return;
+    }
+
     const yearlyLimitAmount = parseFloat(yearlyLimit);
     const employeePerPaycheck = yearlyLimitAmount / paychecksPerYear;
 
     if (employeeIsPercentage) {
-      setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
+      const annualGrossPay = grossPayPerPaycheck * paychecksPerYear;
+      const maxSafePercent = floorToDecimals((yearlyLimitAmount / annualGrossPay) * 100, 2);
+      setEmployeeAmount(maxSafePercent.toFixed(2));
     } else {
-      setEmployeeAmount(employeePerPaycheck.toFixed(2));
+      const maxSafePerPaycheck = floorToDecimals(employeePerPaycheck, 2);
+      setEmployeeAmount(maxSafePerPaycheck.toFixed(2));
     }
     setRetirementFormMessage(null);
   };
