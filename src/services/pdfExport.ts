@@ -145,6 +145,8 @@ export async function exportToPDF(
       'bi-weekly': 'Bi-weekly (26/year)',
       'semi-monthly': 'Semi-monthly (24/year)',
       'monthly': 'Monthly (12/year)',
+      'quarterly': 'Quarterly (4/year)',
+      'yearly': 'Yearly (1/year)',
     };
 
     const payData = [

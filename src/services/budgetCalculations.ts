@@ -2,7 +2,7 @@ import type { BudgetData } from '../types/budget';
 import type { PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
 import { roundUpToCent } from '../utils/money';
-import { getPaychecksPerYear } from '../utils/payPeriod';
+import { getDisplayModeOccurrencesPerYear, getPaychecksPerYear } from '../utils/payPeriod';
 import { calculateTaxLineAmount } from '../utils/taxLines';
 
 type BudgetCalculationInput = Pick<
@@ -197,7 +197,7 @@ export function calculateDisplayPayBreakdown(
   mode: ViewMode,
   paychecksPerYear: number,
 ): PayBreakdownSummary {
-  const divisor = mode === 'paycheck' ? paychecksPerYear : mode === 'monthly' ? 12 : 1;
+  const divisor = getDisplayModeOccurrencesPerYear(mode, paychecksPerYear);
 
   return {
     grossPay: roundUpToCent(annualBreakdown.grossPay / divisor),

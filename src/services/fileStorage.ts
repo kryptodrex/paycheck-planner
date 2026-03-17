@@ -13,6 +13,7 @@ import type { BudgetData } from '../types/budget';
 import type { AppSettings } from '../types/settings';
 import { KeychainService } from './keychainService';
 import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
+import { sanitizeFavoriteViewModes } from '../utils/viewModePreferences';
 
 const BACKUP_EXCLUDED_KEYS = new Set<string>(BACKUP_EXCLUDED_STORAGE_KEYS);
 
@@ -247,6 +248,7 @@ export class FileStorageService {
         // Remove encryptionKey from settings - it's now stored in keychain
         const settingsWithoutKey = { ...parsedSettings };
         Reflect.deleteProperty(settingsWithoutKey, 'encryptionKey');
+        settingsWithoutKey.viewModeFavorites = sanitizeFavoriteViewModes(settingsWithoutKey.viewModeFavorites);
         return settingsWithoutKey;
       } catch {
         // If parsing fails, return undefined to force setup
