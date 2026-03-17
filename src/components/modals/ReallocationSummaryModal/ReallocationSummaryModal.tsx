@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, CheckboxGroup, Modal, PillBadge } from '../../_shared';
+import './ReallocationSummaryModal.css';
 
 export interface ReallocationSummaryItem {
   id: string;
@@ -32,22 +33,37 @@ const ReallocationSummaryModal: React.FC<ReallocationSummaryModalProps> = ({
   onUndoSelected,
   onUndoAll,
 }) => {
-  const options = items.map((item) => ({
-    value: item.id,
-    label: (
-      <div className="reallocation-option-label">
-        <div className="reallocation-option-heading">
-          <span className="reallocation-proposal-title">{item.label}</span>
-          <div className="reallocation-proposal-badges">
-            <PillBadge variant="info">{item.sourceTypeLabel}</PillBadge>
-            <PillBadge variant="outline">{item.actionLabel}</PillBadge>
+  const getUndoDeltaLabel = (label: string): string => {
+    if (label.startsWith('+')) {
+      return `-${label.slice(1)}`;
+    }
+    if (label.startsWith('-')) {
+      return label;
+    }
+    return `-${label}`;
+  };
+
+  const options = items.map((item) => {
+    const isSelectedForUndo = selectedIds.includes(item.id);
+    const deltaLabel = isSelectedForUndo ? getUndoDeltaLabel(item.deltaLabel) : item.deltaLabel;
+
+    return {
+      value: item.id,
+      label: (
+        <div className="reallocation-option-label">
+          <div className="reallocation-option-heading">
+            <span className="reallocation-proposal-title">{item.label}</span>
+            <div className="reallocation-proposal-badges">
+              <PillBadge variant="info">{item.sourceTypeLabel}</PillBadge>
+              <PillBadge variant="outline">{item.actionLabel}</PillBadge>
+            </div>
           </div>
+          <span className={`reallocation-proposal-freed ${isSelectedForUndo ? 'is-undo' : ''}`}>{deltaLabel}</span>
         </div>
-        <span className="reallocation-proposal-freed">{item.deltaLabel}</span>
-      </div>
-    ),
-    description: `${item.beforeLabel} -> ${item.afterLabel}`,
-  }));
+      ),
+      description: `${item.beforeLabel} -> ${item.afterLabel}`,
+    };
+  });
 
   return (
     <Modal
@@ -78,7 +94,7 @@ const ReallocationSummaryModal: React.FC<ReallocationSummaryModalProps> = ({
       }
     >
       <div className="reallocation-modal-body">
-        <p className="reallocation-alert-note">
+        <p className="reallocation-summary-note">
           Review what changed. Select any rows you want to roll back.
         </p>
 

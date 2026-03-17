@@ -8,6 +8,7 @@ import { formatWithSymbol } from '../../../utils/currency';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { getDisplayModeLabel } from '../../../utils/payPeriod';
 import { Alert, Button, CheckboxGroup, Modal, PillBadge } from '../../_shared';
+import './ReallocationReviewModal.css';
 
 interface ReallocationReviewModalProps {
   isOpen: boolean;

@@ -1,0 +1,88 @@
+.reallocation-modal {
+  max-width: 760px;
+}
+
+.reallocation-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reallocation-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.reallocation-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.reallocation-summary-label {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
+.reallocation-proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reallocation-checkbox-group .shared-checkbox-option {
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+}
+
+.reallocation-checkbox-group .shared-checkbox-description {
+  margin-top: 0.35rem;
+}
+
+.reallocation-option-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.reallocation-option-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.reallocation-proposal-badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.reallocation-proposal-title {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.reallocation-proposal-freed {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--success-color);
+}
+
+@media (max-width: 640px) {
+  .reallocation-proposal-freed {
+    grid-column: 2;
+  }
+
+  .reallocation-option-label {
+    flex-direction: column;
+  }
+}
