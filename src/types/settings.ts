@@ -30,6 +30,8 @@ export interface AppSettings {
   encryptionKey?: string;
   lastOpenedFile?: string;
   themeMode?: 'light' | 'dark' | 'system';
+  highContrastMode?: boolean;
+  fontScale?: number;
   glossaryTermsEnabled?: boolean;
   viewModeFavorites?: SelectableViewMode[];
 }

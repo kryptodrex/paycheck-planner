@@ -95,6 +95,37 @@ describe('FileStorageService', () => {
     expect(settings.viewModeFavorites).toEqual(['weekly']);
   });
 
+  it('normalizes appearance values from stored app settings', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        themeMode: 'invalid-theme',
+        highContrastMode: 'yes',
+        fontScale: 7,
+      }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+
+    expect(settings.themeMode).toBeUndefined();
+    expect(settings.highContrastMode).toBe(false);
+    expect(settings.fontScale).toBe(1.25);
+  });
+
+  it('normalizes appearance values before persisting app settings', () => {
+    FileStorageService.saveAppSettings({
+      themeMode: 'system',
+      highContrastMode: false,
+      fontScale: 0.1,
+      glossaryTermsEnabled: true,
+    });
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
+    expect(stored.themeMode).toBe('system');
+    expect(stored.highContrastMode).toBe(false);
+    expect(stored.fontScale).toBe(0.9);
+  });
+
   it('adds and de-duplicates recent files', () => {
     FileStorageService.addRecentFile('/a/first.ppb');
     FileStorageService.addRecentFile('/a/second.ppb');
@@ -257,7 +288,7 @@ describe('FileStorageService', () => {
       exportedAt: new Date().toISOString(),
       data: {
         [STORAGE_KEYS.theme]: 'dark',
-        [STORAGE_KEYS.settings]: '{"themeMode":"dark","encryptionEnabled":true,"encryptionKey":"secret"}',
+        [STORAGE_KEYS.settings]: '{"themeMode":"unknown","highContrastMode":"yes","fontScale":10,"encryptionEnabled":true,"encryptionKey":"secret"}',
         [STORAGE_KEYS.accounts]: '[{"id":"1"}]',
         'foreign-key': 'should-be-ignored',
       },
@@ -270,7 +301,9 @@ describe('FileStorageService', () => {
 
     // Settings blob restored, but plan-specific fields stripped
     const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
-    expect(settings.themeMode).toBe('dark');
+    expect(settings.themeMode).toBeUndefined();
+    expect(settings.highContrastMode).toBe(false);
+    expect(settings.fontScale).toBe(1.25);
     expect(settings.encryptionEnabled).toBeUndefined();
     expect(settings.encryptionKey).toBeUndefined();
 

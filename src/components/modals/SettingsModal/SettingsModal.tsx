@@ -3,9 +3,14 @@ import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
 import { useTheme } from '../../../contexts/ThemeContext';
 import type { SelectableViewMode } from '../../../types/viewMode';
-import { Button, CheckboxGroup, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
+import { Button, CheckboxGroup, Dropdown, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
 import { FileStorageService } from '../../../services/fileStorage';
 import { SELECTABLE_VIEW_MODES, sanitizeFavoriteViewModes } from '../../../utils/viewModePreferences';
+import {
+  normalizeFontScale,
+  normalizeHighContrastMode,
+  normalizeThemeMode,
+} from '../../../utils/appearanceSettings';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -17,6 +22,8 @@ type ThemeOption = 'light' | 'dark' | 'system';
 
 interface SettingsState {
   themeMode: ThemeOption;
+  highContrastMode: boolean;
+  fontScale: number;
   glossaryTermsEnabled: boolean;
   viewModeFavorites: SelectableViewMode[];
 }
@@ -29,13 +36,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [backedUp, setBackedUp] = useState(false);
   const [importing, setImporting] = useState(false);
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
+
+  const getNormalizedSettingsState = (appSettings: ReturnType<typeof FileStorageService.getAppSettings>): SettingsState => ({
+    themeMode: normalizeThemeMode(appSettings.themeMode) || 'light',
+    highContrastMode: normalizeHighContrastMode(appSettings.highContrastMode),
+    fontScale: normalizeFontScale(appSettings.fontScale),
+    glossaryTermsEnabled: appSettings.glossaryTermsEnabled !== false,
+    viewModeFavorites: sanitizeFavoriteViewModes(appSettings.viewModeFavorites),
+  });
+
   const [settings, setSettings] = useState<SettingsState>(() => {
-    const appSettings = FileStorageService.getAppSettings();
-    return {
-      themeMode: (appSettings.themeMode as ThemeOption) || 'light',
-      glossaryTermsEnabled: appSettings.glossaryTermsEnabled !== false,
-      viewModeFavorites: sanitizeFavoriteViewModes(appSettings.viewModeFavorites),
-    };
+    return getNormalizedSettingsState(FileStorageService.getAppSettings());
   });
 
   // Always merges with full existing settings so encryptionEnabled is never lost
@@ -44,6 +55,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     FileStorageService.saveAppSettings({
       ...existing,
       themeMode: updated.themeMode,
+      highContrastMode: updated.highContrastMode,
+      fontScale: updated.fontScale,
       glossaryTermsEnabled: updated.glossaryTermsEnabled,
       viewModeFavorites: sanitizeFavoriteViewModes(updated.viewModeFavorites),
     });
@@ -65,7 +78,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
       // Dispatch custom event to notify ThemeProvider
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
 
+      return updated;
+    });
+  };
+
+  const handleHighContrastModeChange = (enabled: boolean) => {
+    setSettings((prev) => {
+      const updated = { ...prev, highContrastMode: enabled };
+      persistSettings(updated);
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
+      return updated;
+    });
+  };
+
+  const handleFontScaleChange = (scale: number) => {
+    setSettings((prev) => {
+      const normalized = normalizeFontScale(scale);
+      const updated = { ...prev, fontScale: normalized };
+      persistSettings(updated);
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
       return updated;
     });
   };
@@ -127,14 +160,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
       // Refresh component's settings state from newly restored values
       const restored = FileStorageService.getAppSettings();
-      const newThemeMode = (restored.themeMode as ThemeOption) || 'light';
-      const newGlossary = restored.glossaryTermsEnabled !== false;
-      const newFavorites = sanitizeFavoriteViewModes(restored.viewModeFavorites);
-      setSettings({
-        themeMode: newThemeMode,
-        glossaryTermsEnabled: newGlossary,
-        viewModeFavorites: newFavorites,
-      });
+      const normalized = getNormalizedSettingsState(restored);
+      const newThemeMode = normalized.themeMode;
+      const newGlossary = normalized.glossaryTermsEnabled;
+      setSettings(normalized);
 
       if (newThemeMode === 'light' || newThemeMode === 'dark') {
         setTheme(newThemeMode);
@@ -143,6 +172,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         setTheme(systemDark ? 'dark' : 'light');
       }
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
       window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled: newGlossary } }));
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.viewModeFavoritesChanged));
       const reopenResult = await window.electronAPI.reopenWelcomeWindow();
@@ -234,6 +264,37 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         <div className="settings-info">
           <span>Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong></span>
         </div>
+      </div>
+
+      <div className="settings-section">
+        <h3>Accessibility</h3>
+
+        <div className="settings-group">
+          <label>High Contrast Mode</label>
+          <PillToggle
+            value={settings.highContrastMode}
+            onChange={handleHighContrastModeChange}
+            leftLabel="Off"
+            rightLabel="On"
+          />
+        </div>
+
+        <div className="settings-group">
+          <label>UI Font Scale</label>
+          <Dropdown
+            value={String(settings.fontScale)}
+            onChange={(e) => handleFontScaleChange(parseFloat(e.target.value))}
+          >
+            <option value="0.9">90% (Compact)</option>
+            <option value="1">100% (Default)</option>
+            <option value="1.1">110% (Comfortable)</option>
+            <option value="1.25">125% (Large)</option>
+          </Dropdown>
+        </div>
+
+        <InfoBox>
+          Accessibility options apply app-wide and persist across sessions on this device.
+        </InfoBox>
       </div>
 
       {/* Glossary Settings */}
