@@ -290,7 +290,7 @@
 }
 
 .waterfall-amount.negative-remaining {
-  color: var(--error-contrast-text, #fff);
+  color: var(--text-inverse);
 }
 
 .reallocation-alert-content {

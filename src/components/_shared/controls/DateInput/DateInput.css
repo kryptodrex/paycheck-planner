@@ -15,6 +15,11 @@
   padding: 0 0.25rem;
 }
 
+.date-input.day-month .date-input-select-container {
+  flex: 1;
+  min-width: 0;
+}
+
 .date-input input {
   width: 100%;
   border: none !important;
@@ -56,6 +61,7 @@
 }
 
 .date-input-select {
+  min-height: 0 !important;
   flex: 1;
   min-width: 0;
   border: none;
@@ -68,6 +74,17 @@
   font-weight: 600;
   cursor: pointer;
   appearance: none;
+}
+
+.date-input.day-month .shared-dropdown .date-input-select {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0.72rem 1.5rem 0.72rem 0.45rem;
+}
+
+.date-input.day-month .shared-dropdown-caret {
+  right: 0.55rem;
 }
 
 .date-input-select:focus {
@@ -85,7 +102,7 @@
   align-items: center;
   justify-content: center;
   align-self: stretch;
-  width: 44px;
+  width: 2.75rem;
   border: none;
   border-left: 1px solid var(--border-color);
   background: var(--bg-secondary);
@@ -160,7 +177,11 @@
     font-size: 0.95rem;
   }
 
+  .date-input.day-month .shared-dropdown .date-input-select {
+    padding: 0.62rem 1.4rem 0.62rem 0.4rem;
+  }
+
   .date-input-trigger {
-    width: 40px;
+    width: 2.5rem;
   }
 }

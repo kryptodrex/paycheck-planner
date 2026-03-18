@@ -4,6 +4,7 @@ import type { Bill, Loan, SavingsContribution } from '../types/obligations';
 import type { Benefit, RetirementElection } from '../types/payroll';
 import type { PayFrequency } from '../types/frequencies';
 import { getPaychecksPerYear } from './payPeriod';
+import { getDefaultAccountColor, getDefaultAccountIcon } from './accountDefaults';
 
 /**
  * Generate realistic demo budget data for app demonstration
@@ -50,8 +51,8 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
       id: checkingId,
       name: 'My Checking',
       type: 'checking',
-      icon: '💳',
-      color: '#667eea',
+      icon: getDefaultAccountIcon('checking'),
+      color: getDefaultAccountColor('checking'),
     },
   ];
 
@@ -63,22 +64,14 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
       savings: 'Emergency Fund',
       investment: 'Investment Account',
     };
-    const accountIcons = {
-      savings: '💰',
-      investment: '📈',
-    };
-    const accountColors = {
-      savings: '#f093fb',
-      investment: '#4facfe',
-    };
     for (let i = 0; i < numAdditionalAccounts; i++) {
       const type = shuffled[i];
       accounts.push({
         id: crypto.randomUUID(),
         name: accountNames[type],
         type,
-        icon: accountIcons[type],
-        color: accountColors[type],
+        icon: getDefaultAccountIcon(type),
+        color: getDefaultAccountColor(type),
       });
     }
   }

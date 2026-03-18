@@ -35,7 +35,7 @@
 }
 
 .export-checkbox span {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--text-primary);
 }
 
@@ -49,5 +49,5 @@
   border: 1px solid var(--alert-error-border);
   border-radius: 6px;
   color: var(--alert-error-text);
-  font-size: 14px;
+  font-size: 0.875rem;
 }

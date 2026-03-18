@@ -397,7 +397,7 @@
 /* Icons Only Mode (only for left/right sidebars) */
 .tab-navigation.tab-position-left.tab-display-icons-only,
 .tab-navigation.tab-position-right.tab-display-icons-only {
-  width: 60px;
+  width: 3.75rem;
 }
 
 .tab-navigation.tab-display-icons-only .tab-label {
@@ -419,7 +419,9 @@
 /* Icons with Labels Mode for sidebars */
 .tab-navigation.tab-position-left.tab-display-icons-with-labels,
 .tab-navigation.tab-position-right.tab-display-icons-with-labels {
-  width: 200px;
+  width: fit-content;
+  min-width: 13rem;
+  max-width: 18rem;
 }
 
 /* ============================

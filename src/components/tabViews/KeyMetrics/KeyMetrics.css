@@ -277,11 +277,19 @@
 }
 
 .km-posttax-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, #f43f5e 85%, var(--bg-primary)), #f43f5e);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--metric-posttax-color) 85%, var(--bg-primary)),
+    var(--metric-posttax-color)
+  );
 }
 
 .km-bills-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, #f97316 85%, var(--bg-primary)), #f97316);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--metric-bills-color) 85%, var(--bg-primary)),
+    var(--metric-bills-color)
+  );
 }
 
 .km-savings-segment {
@@ -293,7 +301,7 @@
 }
 
 .km-shortfall-segment {
-  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  background: linear-gradient(135deg, var(--metric-shortfall-color), var(--metric-shortfall-color-strong));
 }
 
 .km-bar-labels {
@@ -326,11 +334,11 @@
 }
 
 .km-posttax-dot {
-  background: #f43f5e;
+  background: var(--metric-posttax-color);
 }
 
 .km-bills-dot {
-  background: #f97316;
+  background: var(--metric-bills-color);
 }
 
 .km-savings-dot {
@@ -342,7 +350,7 @@
 }
 
 .km-shortfall-dot {
-  background: #991b1b;
+  background: var(--metric-shortfall-color);
 }
 
 .km-flow-summary-list {
@@ -393,7 +401,7 @@
 }
 
 .km-flow-fill-income {
-  background: linear-gradient(135deg, var(--success-color), #059669);
+  background: linear-gradient(135deg, var(--success-color), color-mix(in srgb, var(--success-color) 70%, var(--bg-primary)));
 }
 
 .km-flow-fill-taxes {
@@ -405,7 +413,7 @@
 }
 
 .km-flow-fill-posttax {
-  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  background: linear-gradient(135deg, var(--metric-posttax-color), var(--metric-posttax-color-strong));
 }
 
 .km-flow-fill-net {
@@ -413,7 +421,7 @@
 }
 
 .km-flow-fill-bills {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: linear-gradient(135deg, var(--metric-bills-color), var(--metric-bills-color-strong));
 }
 
 .km-flow-fill-savings {
@@ -425,7 +433,7 @@
 }
 
 .km-flow-fill-shortfall {
-  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  background: linear-gradient(135deg, var(--metric-shortfall-color), var(--metric-shortfall-color-strong));
 }
 
 .km-pie-view {

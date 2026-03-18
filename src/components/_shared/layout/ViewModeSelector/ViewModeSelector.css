@@ -24,6 +24,7 @@
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
+  white-space: nowrap;
   transition: all 0.2s;
   color: var(--text-secondary);
 }

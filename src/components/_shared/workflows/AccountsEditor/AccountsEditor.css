@@ -354,8 +354,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 2.25rem;
+  height: 2.25rem;
   color: var(--text-primary);
 }
 
@@ -367,8 +367,8 @@
 
 /* Account Action Button for Move */
 .account-action-btn {
-  width: 32px;
-  height: 32px;
+  width: 2rem;
+  height: 2rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
@@ -395,7 +395,7 @@
 }
 
 .account-action-btn:focus-visible {
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.5);
+  box-shadow: var(--focus-ring-accent);
 }
 
 .account-action-btn:disabled {

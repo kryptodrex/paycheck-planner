@@ -1,7 +1,7 @@
 import React from 'react';
 import { getCurrencySymbol } from '../../../../utils/currency';
 import type { EditableTaxLineValues } from '../../../../utils/taxLines';
-import { Button, FormGroup, InputWithPrefix } from '../../';
+import { Button, Dropdown, FormGroup, InputWithPrefix } from '../../';
 import './TaxLinesEditor.css';
 
 interface TaxLinesEditorProps {
@@ -53,14 +53,14 @@ const TaxLinesEditor: React.FC<TaxLinesEditorProps> = ({
                 />
               </FormGroup>
               <FormGroup label="Calculation Mode">
-                <select
+                <Dropdown
                   className="tax-mode-select"
                   value={line.calculationType === 'fixed' ? 'fixed' : 'rate'}
                   onChange={(e) => onLineChange(line.id, 'calculationType', e.target.value === 'fixed' ? 'fixed' : 'percentage')}
                 >
                   <option value="rate">Rate (%)</option>
                   <option value="fixed">Fixed Amount</option>
-                </select>
+                </Dropdown>
               </FormGroup>
             </div>
 
