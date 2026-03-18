@@ -134,9 +134,14 @@ describe('contrastRatio – known spot-check values', () => {
     expect(contrastRatio('#111827', '#ffffff')).toBeCloseTo(17.74, 1);
   });
 
-  // #6b7280 (text-secondary) on #ffffff: ~4.83:1
-  it('#6b7280 on #ffffff ≈ 4.83:1', () => {
-    expect(contrastRatio('#6b7280', '#ffffff')).toBeCloseTo(4.83, 1);
+  // #4b5563 (text-secondary) on #ffffff: ~7.56:1
+  it('#4b5563 on #ffffff ≈ 7.56:1', () => {
+    expect(contrastRatio('#4b5563', '#ffffff')).toBeCloseTo(7.56, 1);
+  });
+
+  // #5568d3 (default light text-accent) on #ffffff: ~4.88:1
+  it('#5568d3 on #ffffff ≈ 4.88:1', () => {
+    expect(contrastRatio('#5568d3', '#ffffff')).toBeCloseTo(4.88, 1);
   });
 
   // White on #667eea (light accent-primary, primary button): ~3.66:1
@@ -159,14 +164,14 @@ describe('contrastRatio – known spot-check values', () => {
     expect(contrastRatio('#166534', '#f0fdf4')).toBeCloseTo(6.81, 1);
   });
 
-  // Dark text #111827 on toast-success-bg #10b981 (light mode fix): ~6.99:1
-  it('#111827 on #10b981 ≈ 6.99:1 (dark text on light-mode success toast)', () => {
-    expect(contrastRatio('#111827', '#10b981')).toBeCloseTo(6.99, 1);
+  // White text on the darker success toast easily clears AA.
+  it('#ffffff on #047857 meets normal-text AA for success toasts', () => {
+    expect(contrastRatio('#ffffff', '#047857')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
   });
 
-  // Dark text #111827 on toast-warning-bg #f59e0b (light mode fix): ~8.26:1
-  it('#111827 on #f59e0b ≈ 8.26:1 (dark text on light-mode warning toast)', () => {
-    expect(contrastRatio('#111827', '#f59e0b')).toBeCloseTo(8.26, 1);
+  // White text on the darker warning toast also clears AA.
+  it('#ffffff on #b45309 meets normal-text AA for warning toasts', () => {
+    expect(contrastRatio('#ffffff', '#b45309')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
   });
 
   // #f9fafb (dark text-primary) on #1a1a1a (dark bg-primary): ~16.65:1
@@ -200,11 +205,8 @@ describe('Light theme – primary text on surface backgrounds', () => {
 });
 
 describe('Light theme – secondary text on surface backgrounds', () => {
-  // --text-secondary: #6b7280 — used for supplementary / caption-level content
-  // Tested at the large-text / UI-component threshold (3:1) as it is typically
-  // rendered at or above 14 pt bold / 18 pt regular.
-  assertAA('#6b7280', '#ffffff', 'text-secondary (#6b7280) on bg-primary (#ffffff)', true);
-  assertAA('#6b7280', '#f9fafb', 'text-secondary (#6b7280) on bg-secondary (#f9fafb)', true);
+  assertAA('#4b5563', '#ffffff', 'text-secondary (#4b5563) on bg-primary (#ffffff)');
+  assertAA('#4b5563', '#f9fafb', 'text-secondary (#4b5563) on bg-secondary (#f9fafb)');
 });
 
 describe('Light theme – alert text on alert backgrounds (normal-text 4.5:1)', () => {
@@ -223,16 +225,16 @@ describe('Light theme – button text on button backgrounds (UI component 3:1)',
 });
 
 describe('Light theme – toast text on toast backgrounds (UI component 3:1)', () => {
-  // Light-mode toast-success (#10b981) and toast-warning (#f59e0b) use DARK text
-  // (fixed in Toast.css) because the bright backgrounds fail WCAG AA with white text.
-  assertAA('#111827', '#10b981', 'dark text (#111827) on toast-success-bg (#10b981) — light mode', true);
-  assertAA('#111827', '#f59e0b', 'dark text (#111827) on toast-warning-bg (#f59e0b) — light mode', true);
+  assertAA('#ffffff', '#047857', 'white text on toast-success-bg (#047857) — light mode');
+  assertAA('#ffffff', '#b45309', 'white text on toast-warning-bg (#b45309) — light mode');
   // Error toast keeps white text on the darker red background
   assertAA('#ffffff', '#ef4444', 'white text on toast-error-bg (#ef4444) — light mode', true);
 });
 
-describe('Light theme – link colors', () => {
-  assertAA('#646cff', '#ffffff', 'link-color (#646cff) on bg-primary (#ffffff)', true);
+describe('Light theme – accent text and link colors', () => {
+  assertAA('#5568d3', '#ffffff', 'text-accent (#5568d3) on bg-primary (#ffffff)');
+  assertAA('#5568d3', '#ffffff', 'link-color (#5568d3) on bg-primary (#ffffff)');
+  assertAA('#4338ca', '#ffffff', 'link-hover (#4338ca) on bg-primary (#ffffff)');
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -273,4 +275,30 @@ describe('Dark theme – toast text on toast backgrounds (UI component 3:1)', ()
 
 describe('Dark theme – link colors', () => {
   assertAA('#818cf8', '#1a1a1a', 'dark link-color (#818cf8) on bg-primary (#1a1a1a)', true);
+});
+
+describe('Preset themes – accent button contrast', () => {
+  assertAA('#ffffff', '#0f766e', 'white text on Ocean light accent-primary (#0f766e)');
+  assertAA('#ffffff', '#0284c7', 'white text on Ocean dark accent-primary (#0284c7)', true);
+  assertAA('#ffffff', '#2f6f4f', 'white text on Forest light accent-primary (#2f6f4f)');
+  assertAA('#ffffff', '#2f855a', 'white text on Forest dark accent-primary (#2f855a)', true);
+  assertAA('#ffffff', '#b45309', 'white text on Sunset light accent-primary (#b45309)');
+  assertAA('#ffffff', '#c2410c', 'white text on Sunset dark accent-primary (#c2410c)');
+  assertAA('#ffffff', '#be185d', 'white text on Pink light accent-primary (#be185d)');
+  assertAA('#ffffff', '#db2777', 'white text on Pink dark accent-primary (#db2777)');
+  assertAA('#ffffff', '#4b5563', 'white text on Spreadsheet Core light accent-primary (#4b5563)');
+  assertAA('#ffffff', '#64748b', 'white text on Spreadsheet Core dark accent-primary (#64748b)');
+});
+
+describe('Preset themes – readable text-accent colors', () => {
+  assertAA('#0f766e', '#ffffff', 'Ocean light text-accent (#0f766e) on bg-primary (#ffffff)');
+  assertAA('#2f6f4f', '#ffffff', 'Forest light text-accent (#2f6f4f) on bg-primary (#ffffff)');
+  assertAA('#b45309', '#ffffff', 'Sunset light text-accent (#b45309) on bg-primary (#ffffff)');
+  assertAA('#9d174d', '#ffffff', 'Pink light text-accent (#9d174d) on bg-primary (#ffffff)');
+  assertAA('#374151', '#ffffff', 'Spreadsheet Core light text-accent (#374151) on bg-primary (#ffffff)');
+  assertAA('#7dd3fc', '#1a1a1a', 'Ocean dark text-accent (#7dd3fc) on dark bg-primary (#1a1a1a)');
+  assertAA('#bbf7d0', '#1a1a1a', 'Forest dark text-accent (#bbf7d0) on dark bg-primary (#1a1a1a)');
+  assertAA('#fdba74', '#1a1a1a', 'Sunset dark text-accent (#fdba74) on dark bg-primary (#1a1a1a)');
+  assertAA('#f9a8d4', '#1a1a1a', 'Pink dark text-accent (#f9a8d4) on dark bg-primary (#1a1a1a)');
+  assertAA('#cbd5e1', '#1a1a1a', 'Spreadsheet Core dark text-accent (#cbd5e1) on dark bg-primary (#1a1a1a)');
 });

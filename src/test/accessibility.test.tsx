@@ -23,7 +23,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-// @ts-expect-error jest-axe does not have type definitions
 import { axe } from 'jest-axe';
 
 import Alert from '../components/_shared/feedback/Alert/Alert';
