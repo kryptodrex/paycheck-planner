@@ -73,17 +73,12 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
     searchTerms: 'glossary terms links definitions hover tooltip',
   },
   {
-    id: 'view-mode-favorites',
-    title: 'View Mode Favorites',
+    id: 'app-data-reset',
+    title: 'App Data and Reset',
     searchTerms: [
-      'view mode cadence favorites',
+      'view mode cadence favorites app data reset import backup',
       VIEW_MODE_OPTIONS.map((option) => `${option.value} ${option.label}`).join(' '),
     ].join(' '),
-  },
-  {
-    id: 'reset-app-settings',
-    title: 'Reset App Settings',
-    searchTerms: 'reset import backup danger zone memory settings app data',
   },
 ];
 
@@ -519,6 +514,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   Preset: <strong>{APPEARANCE_PRESET_MAP[settings.appearancePreset].label}</strong>
                 </span>
               </div>
+
+              <InfoBox>
+                Theme Mode controls light, dark, or system behavior.
+                {' '}
+                Preset controls the color family.
+                {' '}
+                Custom theme editing is intentionally hidden in this release to keep setup simple.
+              </InfoBox>
             </div>
           )}
 
@@ -590,68 +593,65 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {visibleSectionIds.has('view-mode-favorites') && (
+          {visibleSectionIds.has('app-data-reset') && (
             <div
               className="settings-section"
               ref={(node) => {
-                sectionRefs.current['view-mode-favorites'] = node;
+                sectionRefs.current['app-data-reset'] = node;
               }}
             >
-              <h3 id="view-mode-favorites">View Mode Favorites</h3>
+              <h3 id="app-data-reset">App Data and Reset</h3>
 
-        <div className="settings-group">
-          <label>Always Show These View Modes</label>
-          <CheckboxGroup
-            selectedValues={settings.viewModeFavorites}
-            onChange={handleViewModeFavoritesChange}
-            className="settings-view-mode-grid"
-            options={visibleViewModeOptions.map((option) => ({
-              value: option.value,
-              label: option.label,
-              disabled:
-                settings.viewModeFavorites.length === 1
-                && settings.viewModeFavorites.includes(option.value),
-            }))}
-          />
-          {matchingViewModeValues && matchingViewModeValues.size > 0 && (
-            <p className="settings-search-hint" role="status">
-              Showing matching view modes for "{searchQuery.trim()}".
-            </p>
-          )}
-        </div>
+              <div className="settings-subsection">
+                <h4 className="settings-subsection-title">View Mode Favorites</h4>
 
-              <InfoBox>
-                Favorites apply app-wide and carry across all plans on this device. At least one view mode must stay enabled.
-              </InfoBox>
-            </div>
-          )}
+                <div className="settings-group">
+                  <label>Always Show These View Modes</label>
+                  <CheckboxGroup
+                    selectedValues={settings.viewModeFavorites}
+                    onChange={handleViewModeFavoritesChange}
+                    className="settings-view-mode-grid"
+                    options={visibleViewModeOptions.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                      disabled:
+                        settings.viewModeFavorites.length === 1
+                        && settings.viewModeFavorites.includes(option.value),
+                    }))}
+                  />
+                  {matchingViewModeValues && matchingViewModeValues.size > 0 && (
+                    <p className="settings-search-hint" role="status">
+                      Showing matching view modes for "{searchQuery.trim()}".
+                    </p>
+                  )}
+                </div>
 
-          {visibleSectionIds.has('reset-app-settings') && (
-            <div
-              className="settings-section settings-danger-zone"
-              ref={(node) => {
-                sectionRefs.current['reset-app-settings'] = node;
-              }}
-            >
-              <h3 id="reset-app-settings">Reset App Settings</h3>
-              <p className="settings-danger-copy">
-                Remove this app&apos;s local preferences, recent files, and in-memory plan session. <b>Budget files themselves as well as keychain links are not deleted.</b>
-              </p>
-              <div className="settings-danger-actions">
-                <Button
-                  variant="tertiary"
-                  onClick={handleImportAppData}
-                  isLoading={importing}
-                  loadingText="Importing…"
-                >
-                  Import App Settings
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => setShowResetConfirm(true)}
-                >
-                  Reset App Settings
-                </Button>
+                <InfoBox>
+                  Favorites apply app-wide and carry across all plans on this device. At least one view mode must stay enabled.
+                </InfoBox>
+              </div>
+
+              <div className="settings-danger-zone">
+                <h4 className="settings-subsection-title">Reset App Settings</h4>
+                <p className="settings-danger-copy">
+                  Remove this app&apos;s local preferences, recent files, and in-memory plan session. <b>Budget files themselves as well as keychain links are not deleted.</b>
+                </p>
+                <div className="settings-danger-actions">
+                  <Button
+                    variant="tertiary"
+                    onClick={handleImportAppData}
+                    isLoading={importing}
+                    loadingText="Importing…"
+                  >
+                    Import App Settings
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => setShowResetConfirm(true)}
+                  >
+                    Reset App Settings
+                  </Button>
+                </div>
               </div>
             </div>
           )}

@@ -1,7 +1,7 @@
 /* Settings-specific styles */
 .modal-content.settings-modal-content {
   --settings-sticky-search-top: 0rem;
-  --settings-sticky-sidebar-top-mobile: 5.1rem;
+  --settings-sticky-sidebar-top: 8rem;
   max-width: min(940px, 96vw);
 }
 
@@ -56,10 +56,11 @@
 
 .settings-sidebar {
   position: sticky;
-  top: 0;
+  top: var(--settings-sticky-sidebar-top);
+  z-index: 20;
   display: grid;
   gap: 0.45rem;
-  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
   border: 1px solid var(--border-color);
   border-radius: 0.85rem;
   padding: 0.55rem;
@@ -115,6 +116,7 @@
 
 .settings-section {
   margin-bottom: 2rem;
+  scroll-margin-top: calc(var(--settings-sticky-sidebar-top) + 1rem);
 }
 
 .settings-section h3 {
@@ -126,6 +128,16 @@
 
 .settings-group {
   margin-bottom: 1.5rem;
+}
+
+.settings-subsection {
+  margin-bottom: 1.5rem;
+}
+
+.settings-subsection-title {
+  margin: 0 0 0.85rem;
+  font-size: 1rem;
+  color: var(--text-primary);
 }
 
 .settings-group label {
@@ -305,15 +317,24 @@
   }
 
   .settings-sidebar {
-    position: sticky;
-    top: var(--settings-sticky-sidebar-top-mobile);
-    z-index: 20;
+    position: static;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
   }
 
   .settings-sidebar-item {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .settings-section {
+    scroll-margin-top: 0.75rem;
   }
 
   .settings-preset-grid {

@@ -263,7 +263,11 @@ function App() {
           className={`zoom-indicator ${zoomIndicatorAtLimit ? 'limit' : ''}`}
           role="status"
           aria-live="polite"
-          style={{ transform: `scale(${1 / currentZoomFactor})` }}
+          style={{
+            top: `${2.35 / currentZoomFactor}rem`,
+            right: `${1 / currentZoomFactor}rem`,
+            transform: `scale(${1 / currentZoomFactor})`,
+          }}
         >
           {zoomIndicatorMessage}
         </div>

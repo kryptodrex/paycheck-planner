@@ -109,9 +109,8 @@ html, body {
 
 .zoom-indicator {
   position: fixed;
-  top: 2.35rem;
-  right: 1rem;
   z-index: 2400;
+  min-width: 8.5rem;
   padding: 0.45rem 0.75rem;
   border-radius: 0.55rem;
   border: 1px solid var(--border-accent-soft);
@@ -123,6 +122,9 @@ html, body {
   box-shadow: var(--shadow-md);
   pointer-events: none;
   backdrop-filter: blur(6px);
+  transform-origin: top right;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .zoom-indicator.limit {

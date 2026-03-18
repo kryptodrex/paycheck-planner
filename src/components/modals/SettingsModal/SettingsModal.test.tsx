@@ -150,10 +150,19 @@ describe('SettingsModal', () => {
 
     await user.type(screen.getByLabelText(/search settings/i), 'quarterly');
 
+    expect(screen.getByRole('heading', { name: 'App Data and Reset' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'View Mode Favorites' })).toBeInTheDocument();
     expect(screen.getByLabelText('Quarterly')).toBeInTheDocument();
     expect(screen.queryByLabelText('Weekly')).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Showing matching view modes for "quarterly".');
+  });
+
+  it('explains theme mode and preset distinctions in appearance settings', () => {
+    renderSettingsModal();
+
+    expect(screen.getByText(/Theme Mode controls light, dark, or system behavior\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Preset controls the color family\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Custom theme editing is intentionally hidden in this release/i)).toBeInTheDocument();
   });
 
   it('scrolls to the selected section when using sidebar navigation', async () => {
