@@ -1,7 +1,35 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ViewModeSelector from './ViewModeSelector';
+
+class LocalStorageMock {
+  private store = new Map<string, string>();
+
+  get length(): number {
+    return this.store.size;
+  }
+
+  getItem(key: string): string | null {
+    return this.store.has(key) ? this.store.get(key)! : null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.store.set(key, value);
+  }
+
+  removeItem(key: string): void {
+    this.store.delete(key);
+  }
+
+  key(index: number): string | null {
+    return Array.from(this.store.keys())[index] ?? null;
+  }
+
+  clear(): void {
+    this.store.clear();
+  }
+}
 
 const DEFAULT_OPTIONS = [
   { value: 'paycheck' as const, label: 'Per Paycheck' },
@@ -10,9 +38,18 @@ const DEFAULT_OPTIONS = [
 ];
 
 describe('ViewModeSelector', () => {
+  const localStorageMock = new LocalStorageMock();
+
+  beforeEach(() => {
+    localStorageMock.clear();
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: localStorageMock,
+      configurable: true,
+    });
+  });
   it('renders default options when none provided', () => {
-    render(<ViewModeSelector mode="paycheck" onChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: 'Per Paycheck' })).toBeInTheDocument();
+    render(<ViewModeSelector mode="weekly" onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Weekly' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Monthly' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Yearly' })).toBeInTheDocument();
   });
@@ -38,62 +75,5 @@ describe('ViewModeSelector', () => {
     render(<ViewModeSelector mode="a" onChange={vi.fn()} options={opts} />);
     expect(screen.getByRole('button', { name: 'Option A' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Option B' })).toBeInTheDocument();
-  });
-
-  it('renders hint text when provided', () => {
-    render(
-      <ViewModeSelector
-        mode="paycheck"
-        onChange={vi.fn()}
-        options={DEFAULT_OPTIONS}
-        hintText="Per 2 weeks"
-      />,
-    );
-    expect(screen.getByText('Per 2 weeks')).toBeInTheDocument();
-  });
-
-  it('hides hint when mode is not in hintVisibleModes', () => {
-    render(
-      <ViewModeSelector
-        mode="monthly"
-        onChange={vi.fn()}
-        options={DEFAULT_OPTIONS}
-        hintText="Per 2 weeks"
-        hintVisibleModes={['paycheck']}
-      />,
-    );
-    expect(screen.queryByText('Per 2 weeks')).toBeNull();
-  });
-
-  it('shows hint when mode is in hintVisibleModes', () => {
-    render(
-      <ViewModeSelector
-        mode="paycheck"
-        onChange={vi.fn()}
-        options={DEFAULT_OPTIONS}
-        hintText="Per 2 weeks"
-        hintVisibleModes={['paycheck']}
-      />,
-    );
-    expect(screen.getByText('Per 2 weeks')).toBeInTheDocument();
-  });
-
-  it('reserves hint row space when reserveHintSpace is true even without hint', () => {
-    const { container } = render(
-      <ViewModeSelector
-        mode="paycheck"
-        onChange={vi.fn()}
-        options={DEFAULT_OPTIONS}
-        reserveHintSpace={true}
-      />,
-    );
-    expect(container.querySelector('.view-mode-selector-hint')).toBeInTheDocument();
-  });
-
-  it('does not render hint row when neither hintText nor reserveHintSpace', () => {
-    const { container } = render(
-      <ViewModeSelector mode="paycheck" onChange={vi.fn()} options={DEFAULT_OPTIONS} />,
-    );
-    expect(container.querySelector('.view-mode-selector-hint')).toBeNull();
   });
 });

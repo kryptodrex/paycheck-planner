@@ -23,6 +23,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// @ts-expect-error jest-axe does not have type definitions
 import { axe } from 'jest-axe';
 
 import Alert from '../components/_shared/feedback/Alert/Alert';
@@ -42,6 +43,44 @@ import RadioGroup from '../components/_shared/controls/RadioGroup/RadioGroup';
 import Toast from '../components/_shared/feedback/Toast/Toast';
 import Toggle from '../components/_shared/controls/Toggle/Toggle';
 import ViewModeSelector from '../components/_shared/layout/ViewModeSelector/ViewModeSelector';
+
+class LocalStorageMock {
+  private store = new Map<string, string>();
+
+  get length(): number {
+    return this.store.size;
+  }
+
+  getItem(key: string): string | null {
+    return this.store.has(key) ? this.store.get(key)! : null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.store.set(key, value);
+  }
+
+  removeItem(key: string): void {
+    this.store.delete(key);
+  }
+
+  key(index: number): string | null {
+    return Array.from(this.store.keys())[index] ?? null;
+  }
+
+  clear(): void {
+    this.store.clear();
+  }
+}
+
+const localStorageMock = new LocalStorageMock();
+
+beforeEach(() => {
+  localStorageMock.clear();
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: localStorageMock,
+    configurable: true,
+  });
+});
 
 afterEach(cleanup);
 
