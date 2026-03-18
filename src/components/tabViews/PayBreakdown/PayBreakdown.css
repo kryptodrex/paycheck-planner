@@ -853,4 +853,28 @@
   .final-summary-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Reduce deep indent so category labels don't get squished */
+  .waterfall-category-row {
+    padding-left: 1rem;
+  }
+
+  .category-edit-row {
+    padding-left: 1rem;
+  }
+
+  .category-actions-row {
+    padding-left: 1rem;
+  }
+
+  .validation-message-row {
+    padding-left: 1rem;
+  }
+
+  /* Tighten section card padding on mobile */
+  .account-allocations,
+  .waterfall-breakdown,
+  .flow-breakdown {
+    padding: 1rem;
+  }
 }

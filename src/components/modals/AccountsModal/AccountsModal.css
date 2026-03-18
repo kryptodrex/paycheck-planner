@@ -8,3 +8,8 @@
 .account-delete-modal {
   max-width: 560px;
 }
+@media (max-width: 600px) {
+  .accounts-modal {
+    max-height: 90vh;
+  }
+}

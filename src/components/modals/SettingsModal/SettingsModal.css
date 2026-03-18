@@ -88,3 +88,18 @@
   color: var(--text-secondary);
   line-height: 1.5;
 }
+
+@media (max-width: 600px) {
+  .theme-options {
+    flex-wrap: wrap;
+  }
+
+  .settings-danger-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-danger-actions > button {
+    width: 100%;
+  }
+}

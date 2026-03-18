@@ -99,12 +99,20 @@
     max-height: 95vh;
   }
 
+  .modal-header {
+    padding: 1rem;
+  }
+
   .modal-body {
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .modal-footer {
     flex-direction: column-reverse;
-    padding: 1.5rem;
+    padding: 1rem;
+  }
+
+  .modal-footer > button {
+    width: 100%;
   }
 }

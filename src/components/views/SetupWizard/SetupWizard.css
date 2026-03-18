@@ -427,3 +427,31 @@
   border-color: var(--accent-primary);
   box-shadow: var(--focus-ring-accent-soft);
 }
+
+@media (max-width: 600px) {
+  .wizard-container {
+    height: 90vh;
+  }
+
+  .wizard-header {
+    padding: 1rem;
+  }
+
+  .wizard-content {
+    padding: 1rem;
+  }
+
+  .wizard-footer {
+    padding: 1rem;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+
+  .wizard-footer > button {
+    width: 100%;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+}

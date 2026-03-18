@@ -105,3 +105,13 @@
   color: var(--error-color);
   padding-left: 0.25rem;
 }
+
+@media (max-width: 768px) {
+  .tax-lines-header {
+    display: none;
+  }
+
+  .tax-line-fields {
+    grid-template-columns: 1fr;
+  }
+}
