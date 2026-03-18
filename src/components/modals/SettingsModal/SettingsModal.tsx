@@ -36,11 +36,31 @@ interface SettingsSection {
   searchTerms: string;
 }
 
+const formatViewModeLabel = (mode: SelectableViewMode): string => {
+  if (mode === 'bi-weekly') {
+    return 'Bi-weekly';
+  }
+
+  if (mode === 'semi-monthly') {
+    return 'Semi-monthly';
+  }
+
+  return mode.charAt(0).toUpperCase() + mode.slice(1);
+};
+
+const VIEW_MODE_OPTIONS = SELECTABLE_VIEW_MODES.map((mode) => ({
+  value: mode,
+  label: formatViewModeLabel(mode),
+}));
+
 const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: 'appearance',
     title: 'Appearance',
-    searchTerms: 'theme light dark system preset style color palette',
+    searchTerms: [
+      'theme light dark system preset style color palette',
+      APPEARANCE_PRESET_OPTIONS.map((preset) => `${preset.value} ${preset.label} ${preset.description}`).join(' '),
+    ].join(' '),
   },
   {
     id: 'accessibility',
@@ -55,7 +75,10 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: 'view-mode-favorites',
     title: 'View Mode Favorites',
-    searchTerms: 'view mode weekly bi-weekly semi-monthly monthly favorites',
+    searchTerms: [
+      'view mode cadence favorites',
+      VIEW_MODE_OPTIONS.map((option) => `${option.value} ${option.label}`).join(' '),
+    ].join(' '),
   },
   {
     id: 'reset-app-settings',
@@ -277,6 +300,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     });
   }, [searchQuery]);
 
+  const searchTokens = useMemo(() => searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean), [searchQuery]);
+
+  const matchingAppearancePresetValues = useMemo(() => {
+    if (searchTokens.length === 0) {
+      return null;
+    }
+
+    const matches = APPEARANCE_PRESET_OPTIONS.filter((preset) => {
+      const corpus = `${preset.value} ${preset.label} ${preset.description}`.toLowerCase();
+      return searchTokens.every((token) => corpus.includes(token));
+    }).map((preset) => preset.value);
+
+    return new Set(matches);
+  }, [searchTokens]);
+
+  const visibleAppearancePresets = useMemo(() => {
+    if (!matchingAppearancePresetValues || matchingAppearancePresetValues.size === 0) {
+      return APPEARANCE_PRESET_OPTIONS;
+    }
+
+    return APPEARANCE_PRESET_OPTIONS.filter((preset) => matchingAppearancePresetValues.has(preset.value));
+  }, [matchingAppearancePresetValues]);
+
+  const matchingViewModeValues = useMemo(() => {
+    if (searchTokens.length === 0) {
+      return null;
+    }
+
+    const matches = VIEW_MODE_OPTIONS.filter((option) => {
+      const corpus = `${option.value} ${option.label}`.toLowerCase();
+      return searchTokens.every((token) => corpus.includes(token));
+    }).map((option) => option.value);
+
+    return new Set(matches);
+  }, [searchTokens]);
+
+  const visibleViewModeOptions = useMemo(() => {
+    if (!matchingViewModeValues || matchingViewModeValues.size === 0) {
+      return VIEW_MODE_OPTIONS;
+    }
+
+    return VIEW_MODE_OPTIONS.filter((option) => matchingViewModeValues.has(option.value));
+  }, [matchingViewModeValues]);
+
   const visibleSectionIds = useMemo(() => new Set(visibleSections.map((section) => section.id)), [visibleSections]);
 
   useEffect(() => {
@@ -288,6 +355,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       setActiveSectionId(visibleSections[0].id);
     }
   }, [activeSectionId, visibleSectionIds, visibleSections]);
+
+  useEffect(() => {
+    if (isOpen) {
+      return;
+    }
+
+    setSearchQuery('');
+    setActiveSectionId(SETTINGS_SECTIONS[0].id);
+  }, [isOpen]);
 
   const scrollToSection = (sectionId: string) => {
     const sectionNode = sectionRefs.current[sectionId];
@@ -384,15 +460,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         <div className="settings-group">
           <label>Preset</label>
           <div className="settings-preset-grid" role="radiogroup" aria-label="Theme preset">
-            {APPEARANCE_PRESET_OPTIONS.map((preset) => {
+            {visibleAppearancePresets.map((preset) => {
               const active = settings.appearancePreset === preset.value;
+              const matchedBySearch = !!matchingAppearancePresetValues?.has(preset.value);
               return (
                 <button
                   key={preset.value}
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  className={`settings-preset-card ${active ? 'active' : ''}`}
+                  className={`settings-preset-card ${active ? 'active' : ''} ${matchedBySearch ? 'search-match' : ''}`}
                   onClick={() => handleAppearancePresetChange(preset.value)}
                 >
                   <span className="settings-preset-preview" aria-hidden="true">
@@ -428,6 +505,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               );
             })}
           </div>
+          {matchingAppearancePresetValues && matchingAppearancePresetValues.size > 0 && (
+            <p className="settings-search-hint" role="status">
+              Showing matching presets for "{searchQuery.trim()}".
+            </p>
+          )}
         </div>
 
               <div className="settings-info">
@@ -521,17 +603,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             selectedValues={settings.viewModeFavorites}
             onChange={handleViewModeFavoritesChange}
             className="settings-view-mode-grid"
-            options={SELECTABLE_VIEW_MODES.map((mode) => ({
-              value: mode,
-              label:
-                mode === 'bi-weekly'
-                  ? 'Bi-weekly'
-                  : mode === 'semi-monthly'
-                    ? 'Semi-monthly'
-                    : mode.charAt(0).toUpperCase() + mode.slice(1),
-              disabled: settings.viewModeFavorites.length === 1 && settings.viewModeFavorites.includes(mode),
+            options={visibleViewModeOptions.map((option) => ({
+              value: option.value,
+              label: option.label,
+              disabled:
+                settings.viewModeFavorites.length === 1
+                && settings.viewModeFavorites.includes(option.value),
             }))}
           />
+          {matchingViewModeValues && matchingViewModeValues.size > 0 && (
+            <p className="settings-search-hint" role="status">
+              Showing matching view modes for "{searchQuery.trim()}".
+            </p>
+          )}
         </div>
 
               <InfoBox>

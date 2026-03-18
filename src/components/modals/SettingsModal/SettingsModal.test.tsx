@@ -132,6 +132,30 @@ describe('SettingsModal', () => {
     expect(screen.getByRole('status')).toHaveTextContent('No matching settings found. Try broader keywords.');
   });
 
+  it('finds appearance by preset name and narrows the preset list', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.type(screen.getByLabelText(/search settings/i), 'ocean');
+
+    expect(screen.getByRole('heading', { name: 'Appearance' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /ocean/i })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /default/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Showing matching presets for "ocean".');
+  });
+
+  it('finds view mode favorites by cadence value and narrows visible options', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.type(screen.getByLabelText(/search settings/i), 'quarterly');
+
+    expect(screen.getByRole('heading', { name: 'View Mode Favorites' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Quarterly')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Weekly')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Showing matching view modes for "quarterly".');
+  });
+
   it('scrolls to the selected section when using sidebar navigation', async () => {
     const user = userEvent.setup();
     renderSettingsModal();
@@ -141,5 +165,36 @@ describe('SettingsModal', () => {
 
     expect(scrollIntoViewSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
     expect(within(sidebar).getByRole('button', { name: 'Glossary' })).toHaveClass('active');
+  });
+
+  it('resets search state when the modal closes and reopens', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+
+    const { rerender } = render(
+      <ThemeProvider>
+        <SettingsModal isOpen={true} onClose={onClose} />
+      </ThemeProvider>,
+    );
+
+    const searchInput = screen.getByLabelText(/search settings/i);
+    await user.type(searchInput, 'ocean');
+
+    expect(screen.queryByRole('radio', { name: /default/i })).not.toBeInTheDocument();
+
+    rerender(
+      <ThemeProvider>
+        <SettingsModal isOpen={false} onClose={onClose} />
+      </ThemeProvider>,
+    );
+
+    rerender(
+      <ThemeProvider>
+        <SettingsModal isOpen={true} onClose={onClose} />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByLabelText(/search settings/i)).toHaveValue('');
+    expect(screen.getByRole('radio', { name: /paycheck planner purple/i })).toBeInTheDocument();
   });
 });
