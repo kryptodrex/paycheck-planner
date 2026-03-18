@@ -13,7 +13,7 @@ import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Banner, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -668,26 +668,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             />
           </FormGroup>
           <FormGroup label="Frequency" required>
-            <select value={savingsFrequency} onChange={(e) => setSavingsFrequency(e.target.value as SavingsContribution['frequency'])}>
+            <Dropdown value={savingsFrequency} onChange={(e) => setSavingsFrequency(e.target.value as SavingsContribution['frequency'])}>
               <option value="weekly">Weekly</option>
               <option value="bi-weekly">Bi-weekly</option>
               <option value="monthly">Monthly</option>
               <option value="quarterly">Quarterly</option>
               <option value="semi-annual">Semi-annual</option>
               <option value="yearly">Yearly</option>
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
         <div className="form-row">
           <FormGroup label="Category" required>
-            <select value={savingsType} onChange={(e) => setSavingsType(e.target.value as SavingsContribution['type'])}>
+            <Dropdown value={savingsType} onChange={(e) => setSavingsType(e.target.value as SavingsContribution['type'])}>
               <option value="savings">Savings</option>
               <option value="investment">Investment</option>
-            </select>
+            </Dropdown>
           </FormGroup>
           <FormGroup label="Paid from Account" required error={savingsFieldErrors.accountId}>
-            <select
+            <Dropdown
               value={savingsAccountId}
               className={savingsFieldErrors.accountId ? 'field-error' : ''}
               onChange={(e) => {
@@ -703,7 +703,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   {account.icon || getDefaultAccountIcon(account.type)} {account.name}
                 </option>
               ))}
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
@@ -741,11 +741,11 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         )}
       >
         <FormGroup label={<><GlossaryTerm termId="retirement-contribution">Plan Type</GlossaryTerm></>} required>
-          <select value={retirementType} onChange={(e) => setRetirementType(e.target.value as RetirementElection['type'])} required>
+          <Dropdown value={retirementType} onChange={(e) => setRetirementType(e.target.value as RetirementElection['type'])} required>
             {RETIREMENT_PLAN_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
-          </select>
+          </Dropdown>
         </FormGroup>
 
         {retirementType === 'other' && (
@@ -770,7 +770,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           <h4><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm></h4>
 
           <FormGroup label="Deduction Source" error={retirementFieldErrors.sourceAccountId}>
-            <select
+            <Dropdown
               className={retirementFieldErrors.sourceAccountId ? 'field-error' : ''}
               value={retirementSource === 'account' ? retirementSourceAccountId : 'paycheck'}
               onChange={(e) => {
@@ -794,7 +794,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   {account.icon || getDefaultAccountIcon(account.type)} {account.name}
                 </option>
               ))}
-            </select>
+            </Dropdown>
           </FormGroup>
 
           <div className="form-row">
@@ -818,10 +818,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               />
             </FormGroup>
             <FormGroup label="Type">
-              <select value={employeeIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployeeIsPercentage(e.target.value === 'percentage')}>
+              <Dropdown value={employeeIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployeeIsPercentage(e.target.value === 'percentage')}>
                 <option value="amount">Fixed Amount</option>
                 <option value="percentage">Percentage of Gross</option>
-              </select>
+              </Dropdown>
             </FormGroup>
           </div>
 
@@ -904,10 +904,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 />
               </FormGroup>
               <FormGroup label={<><GlossaryTerm termId="employer-match">Cap Type</GlossaryTerm></>}>
-                <select value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
+                <Dropdown value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
                   <option value="percentage">% of Gross Pay</option>
                   <option value="amount">Fixed Amount</option>
-                </select>
+                </Dropdown>
               </FormGroup>
             </div>
           )}

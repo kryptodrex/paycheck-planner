@@ -195,14 +195,14 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   };
 
   const pieColorByKey: Record<string, string> = {
-    billsAndDeductions: '#f97316',
+    billsAndDeductions: 'var(--metric-bills-color)',
     pretax: 'var(--warning-color)',
     taxes: 'var(--error-color)',
-    posttax: '#f43f5e',
-    bills: '#f97316',
+    posttax: 'var(--metric-posttax-color)',
+    bills: 'var(--metric-bills-color)',
     savings: 'var(--cyan-color)',
     remaining: 'var(--violet-color)',
-    shortfall: '#991b1b',
+    shortfall: 'var(--metric-shortfall-color)',
   };
 
   const pieTotal = barSegments.reduce((sum, segment) => sum + segment.amount, 0);

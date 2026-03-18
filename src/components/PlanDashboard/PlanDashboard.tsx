@@ -22,7 +22,7 @@ import AccountsModal from '../modals/AccountsModal';
 import ExportModal from '../modals/ExportModal';
 import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel } from '../_shared';
+import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
 import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
@@ -1454,7 +1454,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         </FormGroup>
 
         <FormGroup label="Plan Year" required>
-          <select
+          <Dropdown
             value={draftYearSelection}
             onChange={(event) => {
               const selectedValue = event.target.value;
@@ -1471,7 +1471,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             <option value={String(budgetData.year)}>{budgetData.year}</option>
             <option value={String(budgetData.year + 1)}>{budgetData.year + 1}</option>
             <option value="custom">Custom</option>
-          </select>
+          </Dropdown>
         </FormGroup>
 
         {draftYearSelection === 'custom' && (

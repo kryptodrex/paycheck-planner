@@ -9,7 +9,7 @@ import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { normalizeStoredAllocationAmount } from '../../../utils/allocationEditor';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
-import { Modal, Button, ErrorDialog, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../../_shared';
+import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../../_shared';
 import '../../_shared/payEditorShared.css';
 import './PaySettingsModal.css';
 
@@ -232,13 +232,13 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         </FormGroup>
 
         <FormGroup label="Currency" helperText="Select the currency for this plan.">
-          <select value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
+          <Dropdown value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
             {CURRENCIES.map((currency) => (
               <option key={currency.code} value={currency.code}>
                 {currency.flag} {currency.code} - {currency.name}
               </option>
             ))}
-          </select>
+          </Dropdown>
         </FormGroup>
 
         {editCurrency !== originalCurrency && (

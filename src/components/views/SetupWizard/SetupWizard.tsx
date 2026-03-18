@@ -13,7 +13,7 @@ import {
 } from '../../../utils/taxLines';
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings } from '../../../types/payroll';
-import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor } from '../../_shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor, Dropdown } from '../../_shared';
 import '../views.shared.css';
 import '../../_shared/payEditorShared.css';
 import './SetupWizard.css';
@@ -388,7 +388,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               </p>
 
               <FormGroup label="Currency" helperText="Choose your local currency for this plan">
-                <select
+                <Dropdown
                   value={currency}
                   onChange={(e) => handleCurrencyChange(e.target.value)}
                   className="currency-select"
@@ -398,7 +398,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                       {curr.flag} {curr.name} ({curr.code})
                     </option>
                   ))}
-                </select>
+                </Dropdown>
               </FormGroup>
 
               <InfoBox>

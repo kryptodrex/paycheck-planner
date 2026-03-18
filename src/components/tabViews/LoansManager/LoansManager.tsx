@@ -10,7 +10,7 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector, AmountBreakdown } from '../../_shared';
+import { Banner, Modal, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector, AmountBreakdown } from '../../_shared';
 import '../tabViews.shared.css';
 import './LoansManager.css';
 
@@ -516,7 +516,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                     </FormGroup>
 
                     <FormGroup label="Loan Type" required>
-                        <select
+                        <Dropdown
                             value={loanType}
                             onChange={(event) => {
                                 const nextType = event.target.value as Loan['type'];
@@ -531,13 +531,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                     {type.label}
                                 </option>
                             ))}
-                        </select>
+                        </Dropdown>
                     </FormGroup>
                 </div>
 
                 <div className="loan-setup-grid">
                     <FormGroup label="Paid from Account" required error={loanFieldErrors.accountId}>
-                        <select
+                        <Dropdown
                             value={loanAccountId}
                             onChange={(event) => {
                                 setLoanAccountId(event.target.value);
@@ -550,11 +550,11 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                     {account.icon || getDefaultAccountIcon(account.type)} {account.name}
                                 </option>
                             ))}
-                        </select>
+                        </Dropdown>
                     </FormGroup>
 
                     <FormGroup label="Payment Frequency" required>
-                        <select
+                        <Dropdown
                             value={loanPaymentFrequency}
                             onChange={(event) => setLoanPaymentFrequency(event.target.value as LoanPaymentFrequency)}
                         >
@@ -563,7 +563,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                     {frequency.label}
                                 </option>
                             ))}
-                        </select>
+                        </Dropdown>
                     </FormGroup>
                 </div>
 

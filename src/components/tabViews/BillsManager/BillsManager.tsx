@@ -12,7 +12,7 @@ import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './BillsManager.css';
@@ -312,15 +312,17 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
         actions={
-          <>
+          <div className="bills-header-actions">
             <ViewModeSelector
               mode={displayMode}
               onChange={onDisplayModeChange}
               payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
             />
-            <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
-            <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
-          </>
+            <div className="bills-header-buttons">
+              <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
+              <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
+            </div>
+          </div>
         }
       />
 
@@ -522,19 +524,19 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           </FormGroup>
 
           <FormGroup label="Frequency" required>
-            <select value={billFrequency} onChange={(e) => setBillFrequency(e.target.value as BillFrequency)} required>
+            <Dropdown value={billFrequency} onChange={(e) => setBillFrequency(e.target.value as BillFrequency)} required>
               <option value="weekly">Weekly</option>
               <option value="bi-weekly">Bi-weekly</option>
               <option value="monthly">Monthly</option>
               <option value="quarterly">Quarterly</option>
               <option value="semi-annual">Semi-annual</option>
               <option value="yearly">Yearly</option>
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
         <FormGroup label="Paid from Account" required error={billFieldErrors.accountId}>
-          <select
+          <Dropdown
             value={billAccountId}
             onChange={(e) => {
               setBillAccountId(e.target.value);
@@ -548,7 +550,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 {account.icon || getDefaultAccountIcon(account.type)} {account.name}
               </option>
             ))}
-          </select>
+          </Dropdown>
         </FormGroup>
 
         <FormGroup label={<><GlossaryTerm termId="discretionary">Reallocation Eligibility</GlossaryTerm></>}>
@@ -600,7 +602,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
         </FormGroup>
 
         <FormGroup label="Deduction Source" error={benefitFieldErrors.sourceAccountId}>
-          <select
+          <Dropdown
             className={benefitFieldErrors.sourceAccountId ? 'field-error' : ''}
             value={benefitSource === 'account' ? benefitSourceAccountId : 'paycheck'}
             onChange={(e) => {
@@ -621,7 +623,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 {account.icon || getDefaultAccountIcon(account.type)} {account.name}
               </option>
             ))}
-          </select>
+          </Dropdown>
         </FormGroup>
 
         <div className="form-row">
@@ -644,10 +646,10 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           </FormGroup>
 
           <FormGroup label="Type">
-            <select value={benefitIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setBenefitIsPercentage(e.target.value === 'percentage')}>
+            <Dropdown value={benefitIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setBenefitIsPercentage(e.target.value === 'percentage')}>
               <option value="amount">Fixed Amount</option>
               <option value="percentage">Percentage of Gross</option>
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
