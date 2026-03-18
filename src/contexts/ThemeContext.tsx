@@ -1,18 +1,22 @@
 // Theme Context - Manages light/dark mode preference
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { DEFAULT_APPEARANCE_PRESET } from '../constants/appearancePresets';
 import { APP_CUSTOM_EVENTS } from '../constants/events';
 import { STORAGE_KEYS } from '../constants/storage';
 import {
+  normalizeAppearancePreset,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeThemeMode,
 } from '../utils/appearanceSettings';
+import type { AppearancePreset, ThemeMode } from '../types/appearance';
 import type { ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
+  appearancePreset: AppearancePreset;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
 }
@@ -38,6 +42,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     if (!settingsStr) {
       return {
         themeMode: 'light' as const,
+        appearancePreset: DEFAULT_APPEARANCE_PRESET,
         highContrastMode: false,
         fontScale: 1,
       };
@@ -45,19 +50,22 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     try {
       const settings = JSON.parse(settingsStr) as {
-        themeMode?: 'light' | 'dark' | 'system';
+        themeMode?: ThemeMode;
+        appearancePreset?: AppearancePreset;
         highContrastMode?: boolean;
         fontScale?: number;
       };
 
       return {
         themeMode: normalizeThemeMode(settings.themeMode) || 'light',
+        appearancePreset: normalizeAppearancePreset(settings.appearancePreset),
         highContrastMode: normalizeHighContrastMode(settings.highContrastMode),
         fontScale: normalizeFontScale(settings.fontScale),
       };
     } catch {
       return {
         themeMode: 'light' as const,
+        appearancePreset: DEFAULT_APPEARANCE_PRESET,
         highContrastMode: false,
         fontScale: 1,
       };
@@ -84,16 +92,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return 'light';
   });
 
+  const [appearancePreset, setAppearancePreset] = useState<AppearancePreset>(() => getCurrentSettings().appearancePreset);
   const [highContrastMode, setHighContrastMode] = useState<boolean>(() => getCurrentSettings().highContrastMode);
   const [fontScale, setFontScale] = useState<number>(() => getCurrentSettings().fontScale);
 
   // Apply theme to document element
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme-preset', appearancePreset);
     document.documentElement.setAttribute('data-contrast', highContrastMode ? 'high' : 'normal');
     document.documentElement.style.fontSize = `${Math.round(fontScale * 100)}%`;
     localStorage.setItem(STORAGE_KEYS.theme, theme);
-  }, [theme, highContrastMode, fontScale]);
+  }, [theme, appearancePreset, highContrastMode, fontScale]);
 
   // Listen for system theme changes when in System mode
   useEffect(() => {
@@ -101,6 +111,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     const syncAppearanceFromSettings = () => {
       const settings = getCurrentSettings();
+      setAppearancePreset(settings.appearancePreset);
       setHighContrastMode(settings.highContrastMode);
       setFontScale(settings.fontScale);
 
@@ -162,6 +173,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const value: ThemeContextType = {
     theme,
+    appearancePreset,
     toggleTheme,
     setTheme,
   };
