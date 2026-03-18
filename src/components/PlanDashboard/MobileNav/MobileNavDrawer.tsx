@@ -53,7 +53,16 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Lock body scroll while drawer is open
+  // Reset stale touch tracking whenever the drawer is opened externally
+  // (e.g. via the hamburger button) so a partially-started swipe can't
+  // misfire on the next touchend event.
+  useEffect(() => {
+    if (isOpen) {
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      isEdgeSwipeRef.current = false;
+    }
+  }, [isOpen]);
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -81,7 +90,7 @@ const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
 
       const touch = e.changedTouches[0];
       const dx = touch.clientX - touchStartXRef.current;
-      const dy = Math.abs(touch.clientY - (touchStartYRef.current ?? 0));
+      const dy = Math.abs(touch.clientY - touchStartYRef.current);
 
       // Only open for primarily horizontal rightward swipes
       if (dx >= SWIPE_OPEN_MIN_DISTANCE && dy < dx * 0.6 && !isOpen) {
