@@ -100,6 +100,9 @@ describe('FileStorageService', () => {
       STORAGE_KEYS.settings,
       JSON.stringify({
         themeMode: 'invalid-theme',
+        appearanceMode: 'wildcard',
+        appearancePreset: 'neon-chaos',
+        customAppearance: { primaryAccent: 'bad', surfaceTint: '#fff' },
         highContrastMode: 'yes',
         fontScale: 7,
       }),
@@ -108,6 +111,12 @@ describe('FileStorageService', () => {
     const settings = FileStorageService.getAppSettings();
 
     expect(settings.themeMode).toBeUndefined();
+    expect(settings.appearanceMode).toBe('preset');
+    expect(settings.appearancePreset).toBe('default');
+    expect(settings.customAppearance).toEqual({
+      primaryAccent: '#667eea',
+      surfaceTint: '#eef2ff',
+    });
     expect(settings.highContrastMode).toBe(false);
     expect(settings.fontScale).toBe(1.25);
   });
@@ -115,6 +124,12 @@ describe('FileStorageService', () => {
   it('normalizes appearance values before persisting app settings', () => {
     FileStorageService.saveAppSettings({
       themeMode: 'system',
+      appearanceMode: 'custom',
+      appearancePreset: 'forest',
+      customAppearance: {
+        primaryAccent: '#123456',
+        surfaceTint: '#abcdef',
+      },
       highContrastMode: false,
       fontScale: 0.1,
       glossaryTermsEnabled: true,
@@ -122,6 +137,12 @@ describe('FileStorageService', () => {
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
     expect(stored.themeMode).toBe('system');
+    expect(stored.appearanceMode).toBe('custom');
+    expect(stored.appearancePreset).toBe('forest');
+    expect(stored.customAppearance).toEqual({
+      primaryAccent: '#123456',
+      surfaceTint: '#abcdef',
+    });
     expect(stored.highContrastMode).toBe(false);
     expect(stored.fontScale).toBe(0.9);
   });
