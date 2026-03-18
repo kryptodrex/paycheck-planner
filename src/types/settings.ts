@@ -1,4 +1,5 @@
 import type { TabConfig, TabDisplayMode, TabPosition } from './tabs';
+import type { AppearanceMode, AppearancePreset, CustomAppearanceSettings, ThemeMode } from './appearance';
 import type { SelectableViewMode } from './viewMode';
 import type { ViewMode } from './viewMode';
 
@@ -29,7 +30,10 @@ export interface AppSettings {
   encryptionEnabled?: boolean;
   encryptionKey?: string;
   lastOpenedFile?: string;
-  themeMode?: 'light' | 'dark' | 'system';
+  themeMode?: ThemeMode;
+  appearanceMode?: AppearanceMode;
+  appearancePreset?: AppearancePreset;
+  customAppearance?: CustomAppearanceSettings;
   highContrastMode?: boolean;
   fontScale?: number;
   glossaryTermsEnabled?: boolean;
