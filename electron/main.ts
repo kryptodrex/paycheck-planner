@@ -991,6 +991,17 @@ function createApplicationMenu() {
           }
         },
       },
+      { type: 'separator' },
+      {
+        label: 'Search Plan',
+        accelerator: isMac ? 'Cmd+F' : 'Ctrl+F',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openSearch);
+          }
+        },
+      },
     ],
   });
 
@@ -1224,6 +1235,15 @@ function registerGlobalShortcuts() {
       if (focusedWindow) {
         sendMenuEvent(focusedWindow, MENU_EVENTS.historyHome);
         debug(`Home shortcut triggered via globalShortcut (${homeShortcut})`);
+      }
+    });
+
+    const searchShortcut = process.platform === 'darwin' ? 'Cmd+F' : 'Ctrl+F';
+    globalShortcut.register(searchShortcut, () => {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (focusedWindow) {
+        sendMenuEvent(focusedWindow, MENU_EVENTS.openSearch);
+        debug(`Search shortcut triggered via globalShortcut (${searchShortcut})`);
       }
     });
 

@@ -33,6 +33,7 @@ const shortcuts: ShortcutSection[] = [
   {
     title: 'Plan Actions',
     items: [
+      { keys: [modifier, 'F'], description: 'Open plan-wide search' },
       { keys: [modifier, ','], description: 'Open Settings' },
       { keys: [modifier, 'S'], description: 'Save the current plan' },
       { keys: [modifier, 'O'], description: 'Open an existing plan' },
