@@ -99,6 +99,8 @@ const GlossaryTerm: React.FC<GlossaryTermProps> = ({ termId, children, className
         aria-label={`${term.term}: ${term.shortDefinition}. Click for full definition.`}
       >
         {children}
+        {/* Commented out the glossary term icon for now until color settings are fixed */}
+        {/* {children}<span className="glossary-term-icon" aria-hidden="true">ⓘ</span> */}
       </button>
       {isOpen && createPortal(
         <span className="glossary-term-tooltip" style={tooltipStyle} role="tooltip">
