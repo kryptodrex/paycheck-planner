@@ -22,7 +22,9 @@ export type MenuEventName = (typeof MENU_EVENTS)[keyof typeof MENU_EVENTS];
 export const APP_CUSTOM_EVENTS = {
   openGlossary: 'app:open-glossary',
   themeModeChanged: 'theme-mode-changed',
+  appearanceSettingsChanged: 'appearance-settings-changed',
   glossaryTermsChanged: 'glossary-terms-changed',
+  viewModeFavoritesChanged: 'view-mode-favorites-changed',
 } as const;
 
 export const menuChannel = (event: MenuEventName) => `menu:${event}`;

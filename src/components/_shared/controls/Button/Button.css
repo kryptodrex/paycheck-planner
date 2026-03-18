@@ -61,7 +61,7 @@
   background: var(--border-color);
   border-color: var(--border-color-hover, var(--accent-primary));
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-secondary:active:not(:disabled) {
@@ -185,7 +185,7 @@
 
 /* Remove button — icon variant with red hover */
 .btn.btn-icon.btn-remove:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--surface-danger-subtle);
   color: var(--error-color);
 }
 

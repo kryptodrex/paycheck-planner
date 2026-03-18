@@ -13,6 +13,13 @@ import type { BudgetData } from '../types/budget';
 import type { AppSettings } from '../types/settings';
 import { KeychainService } from './keychainService';
 import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
+import {
+  normalizeFontScale,
+  normalizeHighContrastMode,
+  normalizeThemeMode,
+} from '../utils/appearanceSettings';
+import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountDefaults';
+import { sanitizeFavoriteViewModes } from '../utils/viewModePreferences';
 
 const BACKUP_EXCLUDED_KEYS = new Set<string>(BACKUP_EXCLUDED_STORAGE_KEYS);
 
@@ -75,6 +82,25 @@ function isSettingsBackupEnvelopeV1(value: unknown): value is SettingsBackupEnve
   );
 }
 
+function normalizeAppSettingsValue(
+  value: AppSettings & { encryptionKey?: string }
+): AppSettings & { encryptionKey?: string } {
+  const normalized = { ...value };
+
+  const normalizedThemeMode = normalizeThemeMode(normalized.themeMode);
+  if (normalizedThemeMode) {
+    normalized.themeMode = normalizedThemeMode;
+  } else {
+    Reflect.deleteProperty(normalized, 'themeMode');
+  }
+
+  normalized.highContrastMode = normalizeHighContrastMode(normalized.highContrastMode);
+  normalized.fontScale = normalizeFontScale(normalized.fontScale);
+  normalized.viewModeFavorites = sanitizeFavoriteViewModes(normalized.viewModeFavorites);
+
+  return normalized;
+}
+
 /**
  * Migrate/upgrade budget data to ensure all required fields exist
  * This handles old budget files that may be missing newer fields
@@ -86,10 +112,10 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
   if (!migrated.taxSettings) {
     migrated.taxSettings = {
       taxLines: [
-        { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0 },
-        { id: crypto.randomUUID(), label: 'State Tax', rate: 0 },
-        { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2 },
-        { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45 },
+        { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: 0,
     };
@@ -104,12 +130,21 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
     };
     migrated.taxSettings = {
       taxLines: [
-        { id: crypto.randomUUID(), label: 'Federal Tax', rate: old.federalTaxRate ?? 0 },
-        { id: crypto.randomUUID(), label: 'State Tax', rate: old.stateTaxRate ?? 0 },
-        { id: crypto.randomUUID(), label: 'Social Security', rate: old.socialSecurityRate ?? 6.2 },
-        { id: crypto.randomUUID(), label: 'Medicare', rate: old.medicareRate ?? 1.45 },
+        { id: crypto.randomUUID(), label: 'Federal Tax', rate: old.federalTaxRate ?? 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'State Tax', rate: old.stateTaxRate ?? 0, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Social Security', rate: old.socialSecurityRate ?? 6.2, amount: 0, calculationType: 'percentage' },
+        { id: crypto.randomUUID(), label: 'Medicare', rate: old.medicareRate ?? 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: old.additionalWithholding ?? 0,
+    };
+  } else {
+    migrated.taxSettings = {
+      ...migrated.taxSettings,
+      taxLines: (migrated.taxSettings.taxLines || []).map((line) => ({
+        ...line,
+        amount: typeof line.amount === 'number' ? line.amount : 0,
+        calculationType: line.calculationType === 'fixed' ? 'fixed' : 'percentage',
+      })),
     };
   }
 
@@ -234,11 +269,18 @@ export class FileStorageService {
     const stored = localStorage.getItem(STORAGE_KEYS.settings);
     if (stored) {
       try {
-        const parsedSettings = JSON.parse(stored) as AppSettings & { encryptionKey?: string };
+        const parsed = JSON.parse(stored) as unknown;
+        if (!parsed || typeof parsed !== 'object') {
+          return {
+            encryptionEnabled: undefined,
+          };
+        }
+
+        const parsedSettings = parsed as AppSettings & { encryptionKey?: string };
         // Remove encryptionKey from settings - it's now stored in keychain
         const settingsWithoutKey = { ...parsedSettings };
         Reflect.deleteProperty(settingsWithoutKey, 'encryptionKey');
-        return settingsWithoutKey;
+        return normalizeAppSettingsValue(settingsWithoutKey);
       } catch {
         // If parsing fails, return undefined to force setup
       }
@@ -256,7 +298,9 @@ export class FileStorageService {
    */
   static saveAppSettings(settings: AppSettings): void {
     // Remove encryptionKey if it exists - we don't store keys in localStorage
-    const settingsToStore = { ...(settings as AppSettings & { encryptionKey?: string }) };
+    const settingsToStore = normalizeAppSettingsValue({
+      ...(settings as AppSettings & { encryptionKey?: string }),
+    });
     Reflect.deleteProperty(settingsToStore, 'encryptionKey');
     localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settingsToStore));
   }
@@ -407,7 +451,7 @@ export class FileStorageService {
           for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
             delete parsed[field];
           }
-          value = JSON.stringify(parsed);
+          value = JSON.stringify(normalizeAppSettingsValue(parsed as AppSettings & { encryptionKey?: string }));
         } catch {
           // If parsing fails, skip this key entirely rather than export corrupt data
           continue;
@@ -470,7 +514,7 @@ export class FileStorageService {
           for (const field of SETTINGS_PLAN_SPECIFIC_FIELDS) {
             delete parsed[field];
           }
-          valueToStore = JSON.stringify(parsed);
+          valueToStore = JSON.stringify(normalizeAppSettingsValue(parsed as AppSettings & { encryptionKey?: string }));
         } catch {
           continue;
         }
@@ -587,10 +631,16 @@ export class FileStorageService {
     }
 
     return new Promise<string | null>((resolve) => {
+      const rootStyle = window.getComputedStyle(document.documentElement);
+      const token = (name: string, fallback: string): string => {
+        const value = rootStyle.getPropertyValue(name).trim();
+        return value || fallback;
+      };
+
       const overlay = document.createElement('div');
       overlay.style.position = 'fixed';
       overlay.style.inset = '0';
-      overlay.style.background = 'rgba(0, 0, 0, 0.45)';
+      overlay.style.background = token('--overlay-backdrop', 'rgba(0, 0, 0, 0.45)');
       overlay.style.display = 'flex';
       overlay.style.alignItems = 'center';
       overlay.style.justifyContent = 'center';
@@ -598,12 +648,12 @@ export class FileStorageService {
 
       const dialog = document.createElement('div');
       dialog.style.width = 'min(520px, calc(100vw - 32px))';
-      dialog.style.background = '#1f1f1f';
-      dialog.style.color = '#f2f2f2';
-      dialog.style.border = '1px solid #3a3a3a';
+      dialog.style.background = token('--bg-primary', '#1f1f1f');
+      dialog.style.color = token('--text-primary', '#f2f2f2');
+      dialog.style.border = `1px solid ${token('--border-color', '#3a3a3a')}`;
       dialog.style.borderRadius = '12px';
       dialog.style.padding = '16px';
-      dialog.style.boxShadow = '0 12px 28px rgba(0, 0, 0, 0.35)';
+      dialog.style.boxShadow = token('--shadow-elevated-shell', '0 12px 28px rgba(0, 0, 0, 0.35)');
       dialog.style.fontFamily = 'system-ui, -apple-system, Segoe UI, sans-serif';
 
       const title = document.createElement('div');
@@ -616,6 +666,7 @@ export class FileStorageService {
       body.textContent = message;
       body.style.fontSize = '13px';
       body.style.lineHeight = '1.4';
+      body.style.color = token('--text-secondary', '#d1d5db');
       body.style.whiteSpace = 'pre-line';
       body.style.marginBottom = '12px';
 
@@ -626,9 +677,9 @@ export class FileStorageService {
       input.style.boxSizing = 'border-box';
       input.style.padding = '10px 12px';
       input.style.borderRadius = '8px';
-      input.style.border = '1px solid #4a4a4a';
-      input.style.background = '#111';
-      input.style.color = '#fff';
+      input.style.border = `1px solid ${token('--border-color', '#4a4a4a')}`;
+      input.style.background = token('--bg-secondary', '#111');
+      input.style.color = token('--text-primary', '#fff');
       input.style.marginBottom = '14px';
 
       const actions = document.createElement('div');
@@ -640,18 +691,18 @@ export class FileStorageService {
       cancelBtn.textContent = 'Cancel';
       cancelBtn.style.padding = '8px 12px';
       cancelBtn.style.borderRadius = '8px';
-      cancelBtn.style.border = '1px solid #555';
-      cancelBtn.style.background = '#2a2a2a';
-      cancelBtn.style.color = '#fff';
+      cancelBtn.style.border = `1px solid ${token('--border-color', '#555')}`;
+      cancelBtn.style.background = token('--bg-tertiary', '#2a2a2a');
+      cancelBtn.style.color = token('--text-primary', '#fff');
       cancelBtn.style.cursor = 'pointer';
 
       const submitBtn = document.createElement('button');
       submitBtn.textContent = 'Continue';
       submitBtn.style.padding = '8px 12px';
       submitBtn.style.borderRadius = '8px';
-      submitBtn.style.border = '1px solid #4e9bff';
-      submitBtn.style.background = '#2b6fd8';
-      submitBtn.style.color = '#fff';
+      submitBtn.style.border = `1px solid ${token('--accent-hover', '#4e9bff')}`;
+      submitBtn.style.background = token('--accent-primary', '#2b6fd8');
+      submitBtn.style.color = token('--text-inverse', '#fff');
       submitBtn.style.cursor = 'pointer';
 
       const cleanup = (value: string | null) => {
@@ -1121,10 +1172,10 @@ export class FileStorageService {
       preTaxDeductions: [],
       taxSettings: {
         taxLines: [
-          { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0 },
-          { id: crypto.randomUUID(), label: 'State Tax', rate: 0 },
-          { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2 },
-          { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45 },
+          { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+          { id: crypto.randomUUID(), label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+          { id: crypto.randomUUID(), label: 'Social Security', rate: 6.2, amount: 0, calculationType: 'percentage' },
+          { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
         ],
         additionalWithholding: 0,
       },
@@ -1133,8 +1184,8 @@ export class FileStorageService {
           id: crypto.randomUUID(),
           name: 'My Checking',
           type: 'checking',
-          color: '#667eea',
-          icon: '💳',
+          color: getDefaultAccountColor('checking'),
+          icon: getDefaultAccountIcon('checking'),
         },
       ],
       bills: [],

@@ -5,12 +5,12 @@ import type { Loan, LoanPaymentLine } from '../../../types/obligations';
 import type { LoanPaymentFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Modal, Button, ConfirmDialog, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Modal, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector, AmountBreakdown } from '../../_shared';
 import '../tabViews.shared.css';
 import './LoansManager.css';
 
@@ -349,8 +349,6 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     const loansByAccount = groupByAccountId(loansList);
 
     const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-    const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
-
     const displayAmount = (monthlyAmount: number): number => monthlyToDisplayAmount(monthlyAmount, paychecksPerYear, displayMode);
     const allAccountsLoansTotalMonthly = roundToCent(
         loansList.reduce((sum, loan) => {
@@ -371,9 +369,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                 <ViewModeSelector
                                                     mode={displayMode}
                                                     onChange={onDisplayModeChange}
-                                                    hintText={`Current setting: ${payFrequencyLabel}`}
-                                                    hintVisibleModes={['paycheck']}
-                                                    reserveHintSpace
+                                                    payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
                                                 />
                         <Button variant="primary" onClick={handleAddLoan}>
                             + Add Payment
@@ -462,18 +458,18 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                         onDelete={() => handleDeleteLoan(loan.id)}
                                                     >
                                                         {lineItems.length > 0 && (
-                                                            <div className="loan-breakdown">
-                                                                {lineItems
+                                                            <AmountBreakdown
+                                                                items={lineItems
                                                                     .sort((a, b) => b.amount - a.amount)
-                                                                    .map((line) => (
-                                                                        <div key={line.id} className="loan-line-items-preview-row">
-                                                                            <span>{line.label}</span>
-                                                                            <span>
-                                                                                {formatWithSymbol(displayAmount(convertBillToMonthly(line.amount, line.frequency)), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                            </span>
-                                                                        </div>
-                                                                    ))}
-                                                            </div>
+                                                                    .map((item) => ({
+                                                                        id: item.id,
+                                                                        label: item.label,
+                                                                        amount: displayAmount(convertBillToMonthly(item.amount, item.frequency))
+                                                                    }))
+                                                                }
+                                                                formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                className="deduction-breakdown"
+                                                            />
                                                         )}
                                                         {loan.notes && <div className="loan-notes">{loan.notes}</div>}
                                                     </SectionItemCard>
@@ -520,7 +516,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                     </FormGroup>
 
                     <FormGroup label="Loan Type" required>
-                        <select
+                        <Dropdown
                             value={loanType}
                             onChange={(event) => {
                                 const nextType = event.target.value as Loan['type'];
@@ -535,13 +531,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                     {type.label}
                                 </option>
                             ))}
-                        </select>
+                        </Dropdown>
                     </FormGroup>
                 </div>
 
                 <div className="loan-setup-grid">
                     <FormGroup label="Paid from Account" required error={loanFieldErrors.accountId}>
-                        <select
+                        <Dropdown
                             value={loanAccountId}
                             onChange={(event) => {
                                 setLoanAccountId(event.target.value);
@@ -554,11 +550,11 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                     {account.icon || getDefaultAccountIcon(account.type)} {account.name}
                                 </option>
                             ))}
-                        </select>
+                        </Dropdown>
                     </FormGroup>
 
                     <FormGroup label="Payment Frequency" required>
-                        <select
+                        <Dropdown
                             value={loanPaymentFrequency}
                             onChange={(event) => setLoanPaymentFrequency(event.target.value as LoanPaymentFrequency)}
                         >
@@ -567,7 +563,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                     {frequency.label}
                                 </option>
                             ))}
-                        </select>
+                        </Dropdown>
                     </FormGroup>
                 </div>
 

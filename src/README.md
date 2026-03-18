@@ -183,6 +183,10 @@ This repository uses GitHub Actions workflows in `.github/workflows/`.
   - encrypted `payload`
 - Encryption uses AES via `crypto-js`.
 - Encryption keys are **not** stored inside plan files or localStorage; they are saved in system keychain via `keytar`.
+- Cross-mode display storage is domain-specific rather than globally yearly-normalized.
+  - Manual Pay Breakdown allocation categories are stored as normalized per-paycheck amounts.
+  - Bills, loans, savings, and other recurring items keep their existing native/monthly/frequency-based storage models.
+  - Display-mode helpers are expected to round-trip user-entered monthly/yearly values without save/reopen drift.
 
 ## Architecture (Current)
 
@@ -235,6 +239,7 @@ Utilities
   ├─ frequency.ts (general frequency conversion helpers)
   ├─ accountDefaults.ts (default account configurations)
   ├─ accountGrouping.ts (group and sort accounts by type)
+  ├─ allocationEditor.ts (stable round-trip conversion for editable allocation amounts)
   ├─ tabManagement.ts (tab visibility and ordering)
   ├─ displayAmounts.ts (format amounts for display with period normalization)
   ├─ filePath.ts (file path utilities for platform-safe path handling)

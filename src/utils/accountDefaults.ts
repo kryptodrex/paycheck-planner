@@ -1,18 +1,8 @@
 import type { Account } from '../types/accounts';
+import { ACCOUNT_TYPE_COLORS, DEFAULT_ACCOUNT_COLOR } from '../constants/accountPalette';
 
 export function getDefaultAccountColor(type: Account['type']): string {
-  switch (type) {
-    case 'checking':
-      return '#667eea';
-    case 'savings':
-      return '#f093fb';
-    case 'investment':
-      return '#4facfe';
-    case 'other':
-      return '#43e97b';
-    default:
-      return '#667eea';
-  }
+  return ACCOUNT_TYPE_COLORS[type] ?? DEFAULT_ACCOUNT_COLOR;
 }
 
 export function getDefaultAccountIcon(type: Account['type']): string {

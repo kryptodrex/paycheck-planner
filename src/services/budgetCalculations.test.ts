@@ -96,6 +96,28 @@ describe('budgetCalculations', () => {
     });
   });
 
+  it('keeps annual gross aligned to annual salary for non-even paycheck splits', () => {
+    const annualSalary = 123456;
+    const paychecksPerYear = 26;
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [],
+        additionalWithholding: 0,
+      },
+    });
+
+    const annualized = calculateAnnualizedPaySummary(breakdown, paychecksPerYear);
+    expect(annualized.annualGross).toBe(annualSalary);
+  });
+
   it('builds annual and display pay breakdowns that stay aligned with the paycheck breakdown', () => {
     const paycheckBreakdown = {
       grossPay: 5000,
@@ -140,5 +162,65 @@ describe('budgetCalculations', () => {
       postTaxDeductions: 541.67,
       netPay: 8290.21,
     });
+  });
+
+  it('uses fixed tax line amounts when a tax line is configured as fixed', () => {
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary: 52000,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [
+          { id: 'tax-fixed', label: 'Local Tax', rate: 0, amount: 75, calculationType: 'fixed' },
+          { id: 'tax-percent', label: 'Federal Tax', rate: 10, amount: 0, calculationType: 'percentage' },
+        ],
+        additionalWithholding: 0,
+      },
+    });
+
+    expect(breakdown.grossPay).toBe(2000);
+    expect(breakdown.taxableIncome).toBe(2000);
+    expect(breakdown.taxLineAmounts).toEqual([
+      { id: 'tax-fixed', label: 'Local Tax', amount: 75 },
+      { id: 'tax-percent', label: 'Federal Tax', amount: 200 },
+    ]);
+    expect(breakdown.totalTaxes).toBe(275);
+    expect(breakdown.netPay).toBe(1725);
+  });
+
+  it('applies per-line taxable income when tax lines target different taxable bases', () => {
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary: 52000,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [
+          { id: 'tax-federal', label: 'Federal Tax', rate: 10, taxableIncome: 1800, calculationType: 'percentage' },
+          { id: 'tax-state', label: 'State Tax', rate: 5, taxableIncome: 1200, calculationType: 'percentage' },
+          { id: 'tax-local-fixed', label: 'Local Fixed Tax', rate: 0, amount: 50, taxableIncome: 900, calculationType: 'fixed' },
+        ],
+        additionalWithholding: 0,
+      },
+    });
+
+    expect(breakdown.grossPay).toBe(2000);
+    expect(breakdown.taxableIncome).toBe(2000);
+    expect(breakdown.taxLineAmounts).toEqual([
+      { id: 'tax-federal', label: 'Federal Tax', amount: 180 },
+      { id: 'tax-state', label: 'State Tax', amount: 60 },
+      { id: 'tax-local-fixed', label: 'Local Fixed Tax', amount: 50 },
+    ]);
+    expect(breakdown.totalTaxes).toBe(290);
+    expect(breakdown.netPay).toBe(1710);
   });
 });

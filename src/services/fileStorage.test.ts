@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_STORAGE_KEYS, STORAGE_KEYS } from '../constants/storage';
 import { FileStorageService } from './fileStorage';
+import { toAllocationDisplayAmount } from '../utils/allocationEditor';
 
 class LocalStorageMock {
   private store = new Map<string, string>();
@@ -70,6 +71,7 @@ describe('FileStorageService', () => {
       encryptionEnabled: true,
       encryptionKey: 'super-secret',
       lastOpenedFile: '/tmp/file',
+      viewModeFavorites: ['weekly', 'monthly'],
     });
 
     const raw = localStorage.getItem(STORAGE_KEYS.settings);
@@ -79,6 +81,49 @@ describe('FileStorageService', () => {
     const settings = FileStorageService.getAppSettings();
     expect(settings.encryptionEnabled).toBe(true);
     expect(settings.encryptionKey).toBeUndefined();
+    expect(settings.viewModeFavorites).toEqual(['weekly', 'monthly']);
+  });
+
+  it('normalizes invalid view mode favorites from stored app settings', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({ viewModeFavorites: ['weekly', 'invalid-mode', 'weekly'] }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+
+    expect(settings.viewModeFavorites).toEqual(['weekly']);
+  });
+
+  it('normalizes appearance values from stored app settings', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        themeMode: 'invalid-theme',
+        highContrastMode: 'yes',
+        fontScale: 7,
+      }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+
+    expect(settings.themeMode).toBeUndefined();
+    expect(settings.highContrastMode).toBe(false);
+    expect(settings.fontScale).toBe(1.25);
+  });
+
+  it('normalizes appearance values before persisting app settings', () => {
+    FileStorageService.saveAppSettings({
+      themeMode: 'system',
+      highContrastMode: false,
+      fontScale: 0.1,
+      glossaryTermsEnabled: true,
+    });
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
+    expect(stored.themeMode).toBe('system');
+    expect(stored.highContrastMode).toBe(false);
+    expect(stored.fontScale).toBe(0.9);
   });
 
   it('adds and de-duplicates recent files', () => {
@@ -113,6 +158,68 @@ describe('FileStorageService', () => {
     };
     const [, serialized] = saveBudgetMock.mock.calls[0];
     expect(serialized).not.toContain('encryptionKey');
+  });
+
+  it('preserves allocation edit amounts across save and load round trips', async () => {
+    const budget = FileStorageService.createEmptyBudget(2026, 'USD');
+    budget.settings.encryptionEnabled = false;
+    budget.accounts = [
+      {
+        id: 'acct-1',
+        name: 'Checking',
+        type: 'checking',
+        color: '#3366ff',
+        allocationCategories: [
+          {
+            id: 'cat-1',
+            name: 'Flexible Spending',
+            amount: 92.312307692308,
+          },
+        ],
+      },
+    ];
+
+    await FileStorageService.saveBudget(budget, '/tmp/persisted-roundtrip.ppb');
+
+    const saveBudgetMock = window.electronAPI.saveBudget as unknown as {
+      mock: { calls: [string, string][] };
+    };
+    const [, serialized] = saveBudgetMock.mock.calls.at(-1)!;
+
+    Object.defineProperty(globalThis, 'window', {
+      value: {
+        electronAPI: {
+          saveFileDialog: vi.fn(async () => '/tmp/plan.ppb'),
+          saveBudget: vi.fn(async () => ({ success: true })),
+          openFileDialog: vi.fn(async () => '/tmp/persisted-roundtrip.ppb'),
+          loadBudget: vi.fn(async () => ({ success: true, data: serialized })),
+          selectDirectory: vi.fn(async () => '/tmp'),
+        },
+      },
+      configurable: true,
+    });
+
+    const loaded = await FileStorageService.loadBudget('/tmp/persisted-roundtrip.ppb');
+
+    expect(loaded?.accounts[0].allocationCategories?.[0].amount).toBe(92.312307692308);
+    expect(
+      toAllocationDisplayAmount(
+        loaded!.accounts[0].allocationCategories![0].amount,
+        26,
+        'monthly',
+      ),
+    ).toBe(200.01);
+  });
+
+  it('creates default tax lines with percentage mode metadata', () => {
+    const budget = FileStorageService.createEmptyBudget(2026, 'USD');
+
+    expect(budget.taxSettings.taxLines).toEqual([
+      { id: 'uuid-mock', label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'Social Security', rate: 6.2, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
+    ]);
   });
 
   it('returns known plan IDs from path mappings', () => {
@@ -181,7 +288,7 @@ describe('FileStorageService', () => {
       exportedAt: new Date().toISOString(),
       data: {
         [STORAGE_KEYS.theme]: 'dark',
-        [STORAGE_KEYS.settings]: '{"themeMode":"dark","encryptionEnabled":true,"encryptionKey":"secret"}',
+        [STORAGE_KEYS.settings]: '{"themeMode":"unknown","highContrastMode":"yes","fontScale":10,"encryptionEnabled":true,"encryptionKey":"secret"}',
         [STORAGE_KEYS.accounts]: '[{"id":"1"}]',
         'foreign-key': 'should-be-ignored',
       },
@@ -194,7 +301,9 @@ describe('FileStorageService', () => {
 
     // Settings blob restored, but plan-specific fields stripped
     const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
-    expect(settings.themeMode).toBe('dark');
+    expect(settings.themeMode).toBeUndefined();
+    expect(settings.highContrastMode).toBe(false);
+    expect(settings.fontScale).toBe(1.25);
     expect(settings.encryptionEnabled).toBeUndefined();
     expect(settings.encryptionKey).toBeUndefined();
 

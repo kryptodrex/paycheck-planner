@@ -33,12 +33,38 @@
 }
 
 .glossary-term-button:hover {
-  color: var(--accent-primary);
-  text-decoration-color: var(--accent-primary);
+  color: inherit;
+  text-decoration-color: currentColor;
+}
+
+.glossary-term-icon {
+  display: inline-block;
+  font-style: normal;
+  font-size: 0.82em;
+  vertical-align: 0.05em;
+  margin-left: 0.38em;
+  color: currentColor;
+  opacity: 1;
+  min-width: 1.05em;
+  text-align: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 65%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+  line-height: 1.05;
+  padding: 0.02em 0.08em;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  user-select: none;
+  text-decoration: none;
+}
+
+.glossary-term-button:hover .glossary-term-icon,
+.glossary-term-button:focus-visible .glossary-term-icon {
+  opacity: 1;
 }
 
 .glossary-term-button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent-primary) 50%, transparent);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
   border-radius: 0.2rem;
 }

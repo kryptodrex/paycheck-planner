@@ -162,6 +162,16 @@ export const glossaryTerms: GlossaryTerm[] = [
     relatedTermIds: ['allocation', 'net-pay'],
   },
   {
+    id: 'discretionary',
+    term: 'Reallocation Eligibility',
+    category: 'allocations',
+    shortDefinition: 'Items marked to include in automated reallocation when remaining is below target.',
+    fullDefinition:
+      'Bills and deductions can be marked as eligible for reallocation. When remaining is below target, Paycheck Planner can suggest pausing or reducing eligible items before recommending changes to retirement or other locked obligations.',
+    aliases: ['optional spending', 'flexible expense', 'discretionary'],
+    relatedTermIds: ['allocation', 'residual-amount', 'deduction'],
+  },
+  {
     id: 'benefit',
     term: 'Benefit',
     category: 'benefits',

@@ -7,12 +7,13 @@ import type { BillFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
-import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './BillsManager.css';
 
@@ -45,6 +46,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const [billFrequency, setBillFrequency] = useState<BillFrequency>('monthly');
   const [billAccountId, setBillAccountId] = useState('');
   const [billNotes, setBillNotes] = useState('');
+  const [billIsDiscretionary, setBillIsDiscretionary] = useState(false);
   const billErrors = useFieldErrors<BillFieldErrors>();
 
   const [benefitName, setBenefitName] = useState('');
@@ -53,6 +55,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const [benefitIsTaxable, setBenefitIsTaxable] = useState(false);
   const [benefitSource, setBenefitSource] = useState<'paycheck' | 'account'>('paycheck');
   const [benefitSourceAccountId, setBenefitSourceAccountId] = useState('');
+  const [benefitIsDiscretionary, setBenefitIsDiscretionary] = useState(false);
   const benefitErrors = useFieldErrors<BenefitFieldErrors>();
 
   useEffect(() => {
@@ -68,7 +71,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
   const isBillEnabled = (bill: Bill) => bill.enabled !== false;
   const isBenefitEnabled = (benefit: Benefit) => benefit.enabled !== false;
@@ -156,6 +158,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBillFrequency('monthly');
     setBillAccountId(budgetData.accounts[0]?.id || '');
     setBillNotes('');
+    setBillIsDiscretionary(false);
     billErrors.clearErrors();
     billEditor.openForCreate();
   };
@@ -166,6 +169,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBillFrequency(bill.frequency);
     setBillAccountId(bill.accountId);
     setBillNotes(bill.notes || '');
+    setBillIsDiscretionary(bill.discretionary === true);
     billErrors.clearErrors();
     billEditor.openForEdit(bill);
   };
@@ -196,6 +200,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       frequency: billFrequency,
       accountId: billAccountId,
       enabled: editingBill ? editingBill.enabled !== false : true,
+      discretionary: billIsDiscretionary,
       notes: billNotes.trim() || undefined,
     };
 
@@ -229,6 +234,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBenefitIsTaxable(false);
     setBenefitSource('paycheck');
     setBenefitSourceAccountId('');
+    setBenefitIsDiscretionary(false);
     benefitErrors.clearErrors();
     benefitEditor.openForCreate();
   };
@@ -240,6 +246,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
     setBenefitSource(benefit.deductionSource || 'paycheck');
     setBenefitSourceAccountId(benefit.sourceAccountId || '');
     setBenefitIsTaxable((benefit.deductionSource || 'paycheck') === 'account' ? true : benefit.isTaxable);
+    setBenefitIsDiscretionary(benefit.discretionary === true);
     benefitErrors.clearErrors();
     benefitEditor.openForEdit(benefit);
   };
@@ -269,6 +276,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       name,
       amount: parsedAmount,
       enabled: editingBenefit ? editingBenefit.enabled !== false : true,
+      discretionary: benefitIsDiscretionary,
       isTaxable: isAccountSource ? true : benefitIsTaxable,
       isPercentage: benefitIsPercentage,
       deductionSource: benefitSource,
@@ -304,17 +312,17 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
         actions={
-          <>
+          <div className="bills-header-actions">
             <ViewModeSelector
               mode={displayMode}
               onChange={onDisplayModeChange}
-              hintText={`Current setting: ${payFrequencyLabel}`}
-              hintVisibleModes={['paycheck']}
-              reserveHintSpace
+              payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
             />
-            <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
-            <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
-          </>
+            <div className="bills-header-buttons">
+              <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
+              <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
+            </div>
+          </div>
         }
       />
 
@@ -369,9 +377,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                       amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
                       amountLabel={getDisplayModeLabel(displayMode)}
                       badges={
-                        <PillBadge variant={benefit.isTaxable ? 'accent' : 'success'}>
-                          {benefit.isTaxable ? 'Post-Tax' : 'Pre-Tax'}
-                        </PillBadge>
+                        <>
+                          <PillBadge variant={benefit.isTaxable ? 'accent' : 'success'}>
+                            {benefit.isTaxable ? 'Post-Tax' : 'Pre-Tax'}
+                          </PillBadge>
+                          {benefit.discretionary && <PillBadge variant="warning">Discretionary</PillBadge>}
+                        </>
                       }
                       isPaused={!isBenefitEnabled(benefit)}
                       onPauseToggle={() => handleToggleBenefitEnabled(benefit)}
@@ -418,7 +429,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                         subtitle={`From account per paycheck: ${benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}`}
                         amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
                         amountLabel={getDisplayModeLabel(displayMode)}
-                        badges={<PillBadge variant="accent">Post-Tax</PillBadge>}
+                        badges={
+                          <>
+                            <PillBadge variant="accent">Post-Tax</PillBadge>
+                            {benefit.discretionary && <PillBadge variant="warning">Discretionary</PillBadge>}
+                          </>
+                        }
                         isPaused={!isBenefitEnabled(benefit)}
                         onPauseToggle={() => handleToggleBenefitEnabled(benefit)}
                         onEdit={() => handleEditBenefit(benefit)}
@@ -441,6 +457,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                       subtitle={`Paid ${formatBillFrequency(bill.frequency)}: ${formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}`}
                       amount={formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}
                       amountLabel={getDisplayModeLabel(displayMode)}
+                      badges={bill.discretionary ? <PillBadge variant="warning">Discretionary</PillBadge> : undefined}
                       isPaused={!isBillEnabled(bill)}
                       onPauseToggle={() => handleToggleBillEnabled(bill)}
                       onEdit={() => handleEditBill(bill)}
@@ -507,19 +524,19 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           </FormGroup>
 
           <FormGroup label="Frequency" required>
-            <select value={billFrequency} onChange={(e) => setBillFrequency(e.target.value as BillFrequency)} required>
+            <Dropdown value={billFrequency} onChange={(e) => setBillFrequency(e.target.value as BillFrequency)} required>
               <option value="weekly">Weekly</option>
               <option value="bi-weekly">Bi-weekly</option>
               <option value="monthly">Monthly</option>
               <option value="quarterly">Quarterly</option>
               <option value="semi-annual">Semi-annual</option>
               <option value="yearly">Yearly</option>
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
         <FormGroup label="Paid from Account" required error={billFieldErrors.accountId}>
-          <select
+          <Dropdown
             value={billAccountId}
             onChange={(e) => {
               setBillAccountId(e.target.value);
@@ -533,7 +550,16 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 {account.icon || getDefaultAccountIcon(account.type)} {account.name}
               </option>
             ))}
-          </select>
+          </Dropdown>
+        </FormGroup>
+
+        <FormGroup label={<><GlossaryTerm termId="discretionary">Reallocation Eligibility</GlossaryTerm></>}>
+          <PillToggle
+            value={billIsDiscretionary}
+            onChange={setBillIsDiscretionary}
+            leftLabel="Exclude"
+            rightLabel="Include"
+          />
         </FormGroup>
 
         <FormGroup label="Notes">
@@ -576,7 +602,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
         </FormGroup>
 
         <FormGroup label="Deduction Source" error={benefitFieldErrors.sourceAccountId}>
-          <select
+          <Dropdown
             className={benefitFieldErrors.sourceAccountId ? 'field-error' : ''}
             value={benefitSource === 'account' ? benefitSourceAccountId : 'paycheck'}
             onChange={(e) => {
@@ -597,7 +623,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                 {account.icon || getDefaultAccountIcon(account.type)} {account.name}
               </option>
             ))}
-          </select>
+          </Dropdown>
         </FormGroup>
 
         <div className="form-row">
@@ -620,10 +646,10 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
           </FormGroup>
 
           <FormGroup label="Type">
-            <select value={benefitIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setBenefitIsPercentage(e.target.value === 'percentage')}>
+            <Dropdown value={benefitIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setBenefitIsPercentage(e.target.value === 'percentage')}>
               <option value="amount">Fixed Amount</option>
               <option value="percentage">Percentage of Gross</option>
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
@@ -645,6 +671,15 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
             Account-based deductions are treated as post-tax and will be grouped under the selected account in Pay Breakdown.
           </p>
         )}
+
+        <FormGroup label={<><GlossaryTerm termId="discretionary">Reallocation Eligibility</GlossaryTerm></>}>
+          <PillToggle
+            value={benefitIsDiscretionary}
+            onChange={setBenefitIsDiscretionary}
+            leftLabel="Exclude"
+            rightLabel="Include"
+          />
+        </FormGroup>
       </Modal>
 
       <ConfirmDialog

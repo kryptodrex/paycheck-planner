@@ -1,7 +1,7 @@
 {
   "name": "paycheck-planner",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "Desktop paycheck planning and budget management application.",
   "author": {
     "name": "Paycheck Planner",
@@ -68,7 +68,12 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -98,6 +103,9 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
     "@eslint/js": "^9.39.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/crypto-js": "^4.2.2",
     "@types/d3-sankey": "^0.12.5",
     "@types/node": "^24.10.1",
@@ -111,6 +119,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jest-axe": "^10.0.0",
+    "jsdom": "^29.0.0",
     "png2icons": "^2.0.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",

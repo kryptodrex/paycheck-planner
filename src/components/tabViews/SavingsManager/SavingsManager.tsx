@@ -5,7 +5,7 @@ import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getAccountNameById } from '../../../utils/accountGrouping';
@@ -13,7 +13,7 @@ import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Banner, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -104,7 +104,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
 
   const frequencyMatchesPaySchedule = (itemFrequency: string): boolean => {
@@ -264,54 +263,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     updateSavingsContribution(item.id, { enabled: item.enabled === false });
   };
 
-  const calculateYearlyRetirementContribution = (
-    employeeContribAmount: number,
-    isPercentage: boolean,
-    hasEmployerMatch: boolean,
-    employerCapAmount: number,
-    employerCapIsPercentage: boolean
-  ): number => {
-    let employeePerPaycheck = 0;
-    if (isPercentage) {
-      employeePerPaycheck = (grossPayPerPaycheck * employeeContribAmount) / 100;
-    } else {
-      employeePerPaycheck = employeeContribAmount;
-    }
-
-    let employerPerPaycheck = 0;
-    if (hasEmployerMatch) {
-      const employeePercentage = (employeePerPaycheck / grossPayPerPaycheck) * 100;
-      if (employerCapIsPercentage) {
-        const matchPercentage = Math.min(employeePercentage, employerCapAmount);
-        employerPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
-      } else {
-        employerPerPaycheck = Math.min(employeePerPaycheck, employerCapAmount);
-      }
-    }
-
-    return (employeePerPaycheck + employerPerPaycheck) * paychecksPerYear;
-  };
-
   const checkYearlyLimitExceeded = (
     limit: number,
     employeeContribAmount: number,
     isPercentage: boolean,
-    hasEmployerMatch: boolean,
-    employerCapAmount: number,
-    employerCapIsPercentage: boolean
   ): { exceeded: boolean; total: number; overage: number } => {
-    const total = calculateYearlyRetirementContribution(
-      employeeContribAmount,
-      isPercentage,
-      hasEmployerMatch,
-      employerCapAmount,
-      employerCapIsPercentage
-    );
+    const employeePerPaycheck = isPercentage
+      ? (grossPayPerPaycheck * employeeContribAmount) / 100
+      : employeeContribAmount;
+    const total = roundToCent(employeePerPaycheck * paychecksPerYear);
+    const overage = roundToCent(Math.max(0, total - limit));
     return {
-      exceeded: total > limit,
+      exceeded: overage > 0,
       total,
-      overage: Math.max(0, total - limit),
+      overage,
     };
+  };
+
+  const floorToDecimals = (value: number, decimals: number): number => {
+    const factor = 10 ** decimals;
+    return Math.floor(value * factor) / factor;
   };
 
   const handleAutoCalculateYearlyAmount = () => {
@@ -320,44 +291,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       return;
     }
 
-    const yearlyLimitAmount = parseFloat(yearlyLimit);
-
-    if (employerMatchOption === 'has-match') {
-      const employerCapAmount = parseFloat(employerMatchCap) || 0;
-      let employeePerPaycheck = yearlyLimitAmount / paychecksPerYear * 0.9;
-
-      for (let i = 0; i < 10; i += 1) {
-        const employeePercentage = (employeePerPaycheck / grossPayPerPaycheck) * 100;
-        let employerPerPaycheck = 0;
-        if (employerMatchCapIsPercentage) {
-          const matchPercentage = Math.min(employeePercentage, employerCapAmount);
-          employerPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
-        } else {
-          employerPerPaycheck = Math.min(employeePerPaycheck, employerCapAmount);
-        }
-
-        const totalYearly = (employeePerPaycheck + employerPerPaycheck) * paychecksPerYear;
-        if (Math.abs(totalYearly - yearlyLimitAmount) < 0.01) {
-          if (employeeIsPercentage) {
-            setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
-          } else {
-            setEmployeeAmount(employeePerPaycheck.toFixed(2));
-          }
-          setRetirementFormMessage(null);
-          return;
-        }
-
-        employeePerPaycheck = employeePerPaycheck * (yearlyLimitAmount / totalYearly);
-      }
-    } else {
-      const employeePerPaycheck = yearlyLimitAmount / paychecksPerYear;
-      if (employeeIsPercentage) {
-        setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
-      } else {
-        setEmployeeAmount(employeePerPaycheck.toFixed(2));
-      }
-      setRetirementFormMessage(null);
+    if (grossPayPerPaycheck <= 0 || paychecksPerYear <= 0) {
+      setRetirementFormMessage({
+        type: 'warning',
+        message: 'Gross pay must be greater than zero before auto-calculating to yearly limit.',
+      });
+      return;
     }
+
+    const yearlyLimitAmount = parseFloat(yearlyLimit);
+    const employeePerPaycheck = yearlyLimitAmount / paychecksPerYear;
+
+    if (employeeIsPercentage) {
+      const annualGrossPay = grossPayPerPaycheck * paychecksPerYear;
+      const maxSafePercent = floorToDecimals((yearlyLimitAmount / annualGrossPay) * 100, 2);
+      setEmployeeAmount(maxSafePercent.toFixed(2));
+    } else {
+      const maxSafePerPaycheck = floorToDecimals(employeePerPaycheck, 2);
+      setEmployeeAmount(maxSafePerPaycheck.toFixed(2));
+    }
+    setRetirementFormMessage(null);
   };
 
   const handleAddRetirement = () => {
@@ -435,9 +388,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         parsedYearlyLimit,
         parsedEmployeeContribution,
         employeeIsPercentage,
-        hasEmployerMatch,
-        parsedMatchCap || 0,
-        employerMatchCapIsPercentage
       );
 
       if (limitCheck.exceeded) {
@@ -499,9 +449,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           <ViewModeSelector
             mode={displayMode}
             onChange={onDisplayModeChange || (() => {})}
-            hintText={`Current setting: ${payFrequencyLabel}`}
-            hintVisibleModes={['paycheck']}
-            reserveHintSpace
+            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
           />
         )}
       />
@@ -720,26 +668,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             />
           </FormGroup>
           <FormGroup label="Frequency" required>
-            <select value={savingsFrequency} onChange={(e) => setSavingsFrequency(e.target.value as SavingsContribution['frequency'])}>
+            <Dropdown value={savingsFrequency} onChange={(e) => setSavingsFrequency(e.target.value as SavingsContribution['frequency'])}>
               <option value="weekly">Weekly</option>
               <option value="bi-weekly">Bi-weekly</option>
               <option value="monthly">Monthly</option>
               <option value="quarterly">Quarterly</option>
               <option value="semi-annual">Semi-annual</option>
               <option value="yearly">Yearly</option>
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
         <div className="form-row">
           <FormGroup label="Category" required>
-            <select value={savingsType} onChange={(e) => setSavingsType(e.target.value as SavingsContribution['type'])}>
+            <Dropdown value={savingsType} onChange={(e) => setSavingsType(e.target.value as SavingsContribution['type'])}>
               <option value="savings">Savings</option>
               <option value="investment">Investment</option>
-            </select>
+            </Dropdown>
           </FormGroup>
           <FormGroup label="Paid from Account" required error={savingsFieldErrors.accountId}>
-            <select
+            <Dropdown
               value={savingsAccountId}
               className={savingsFieldErrors.accountId ? 'field-error' : ''}
               onChange={(e) => {
@@ -755,7 +703,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   {account.icon || getDefaultAccountIcon(account.type)} {account.name}
                 </option>
               ))}
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
@@ -793,11 +741,11 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         )}
       >
         <FormGroup label={<><GlossaryTerm termId="retirement-contribution">Plan Type</GlossaryTerm></>} required>
-          <select value={retirementType} onChange={(e) => setRetirementType(e.target.value as RetirementElection['type'])} required>
+          <Dropdown value={retirementType} onChange={(e) => setRetirementType(e.target.value as RetirementElection['type'])} required>
             {RETIREMENT_PLAN_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
-          </select>
+          </Dropdown>
         </FormGroup>
 
         {retirementType === 'other' && (
@@ -822,7 +770,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           <h4><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm></h4>
 
           <FormGroup label="Deduction Source" error={retirementFieldErrors.sourceAccountId}>
-            <select
+            <Dropdown
               className={retirementFieldErrors.sourceAccountId ? 'field-error' : ''}
               value={retirementSource === 'account' ? retirementSourceAccountId : 'paycheck'}
               onChange={(e) => {
@@ -846,7 +794,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   {account.icon || getDefaultAccountIcon(account.type)} {account.name}
                 </option>
               ))}
-            </select>
+            </Dropdown>
           </FormGroup>
 
           <div className="form-row">
@@ -870,10 +818,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               />
             </FormGroup>
             <FormGroup label="Type">
-              <select value={employeeIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployeeIsPercentage(e.target.value === 'percentage')}>
+              <Dropdown value={employeeIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployeeIsPercentage(e.target.value === 'percentage')}>
                 <option value="amount">Fixed Amount</option>
                 <option value="percentage">Percentage of Gross</option>
-              </select>
+              </Dropdown>
             </FormGroup>
           </div>
 
@@ -956,10 +904,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 />
               </FormGroup>
               <FormGroup label={<><GlossaryTerm termId="employer-match">Cap Type</GlossaryTerm></>}>
-                <select value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
+                <Dropdown value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
                   <option value="percentage">% of Gross Pay</option>
                   <option value="amount">Fixed Amount</option>
-                </select>
+                </Dropdown>
               </FormGroup>
             </div>
           )}

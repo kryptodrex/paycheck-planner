@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import type { Account } from '../../../../types/accounts';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../../utils/accountDefaults';
-import { Button, InfoBox } from '../../';
+import { Button, Dropdown, InfoBox } from '../../';
 import './AccountsEditor.css';
 
 interface AccountsEditorProps {
@@ -179,7 +179,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                           }
                         }}
                       />
-                      <select
+                      <Dropdown
                         className="account-type-select"
                         value={editingType}
                         onChange={(e) => {
@@ -194,7 +194,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                         <option value="savings">Savings</option>
                         <option value="investment">Investment</option>
                         <option value="other">Other</option>
-                      </select>
+                      </Dropdown>
                       <div className="account-edit-actions">
                         <Button variant="secondary" size="small" onClick={handleCancelEdit}>
                           Cancel
@@ -310,7 +310,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
               </div>
               <div className="add-account-field add-account-type-field">
                 <label className="add-account-label">Type</label>
-                <select
+                <Dropdown
                   className="account-type-select"
                   value={newAccountType}
                   onChange={(e) => {
@@ -323,7 +323,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                   <option value="savings">Savings</option>
                   <option value="investment">Investment</option>
                   <option value="other">Other</option>
-                </select>
+                </Dropdown>
               </div>
             </div>
             <Button

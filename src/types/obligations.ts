@@ -18,6 +18,7 @@ export interface Bill {
   frequency: BillFrequency;
   accountId: string;
   enabled?: boolean;
+  discretionary?: boolean;
   dueDay?: number;
   customFrequencyDays?: number;
   category?: string;

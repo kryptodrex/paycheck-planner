@@ -4,7 +4,9 @@ import autoTable from 'jspdf-autotable';
 import type { BudgetData } from '../types/budget';
 import { calculatePaycheckBreakdown } from './budgetCalculations';
 import { formatWithSymbol } from '../utils/currency';
+import { getPaychecksPerYear } from '../utils/payPeriod';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';
+import { getTaxLineCalculationType } from '../utils/taxLines';
 
 type JsPdfWithAutoTable = jsPDF & {
   lastAutoTable?: {
@@ -81,7 +83,9 @@ export async function exportToPDF(
   const preTaxDeductions = breakdown.preTaxDeductions;
   const taxLineAmounts = (budgetData.taxSettings.taxLines || []).map((line, index) => ({
     label: line.label,
-    rate: line.rate,
+    rateLabel: getTaxLineCalculationType(line) === 'fixed'
+      ? `${formatWithSymbol(line.amount || 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} fixed`
+      : `${line.rate}%`,
     amount: breakdown.taxLineAmounts[index]?.amount ?? 0,
   }));
   const additionalWithholding = breakdown.additionalWithholding;
@@ -142,6 +146,8 @@ export async function exportToPDF(
       'bi-weekly': 'Bi-weekly (26/year)',
       'semi-monthly': 'Semi-monthly (24/year)',
       'monthly': 'Monthly (12/year)',
+      'quarterly': 'Quarterly (4/year)',
+      'yearly': 'Yearly (1/year)',
     };
 
     const payData = [
@@ -152,7 +158,8 @@ export async function exportToPDF(
     ];
 
     if (budgetData.paySettings.payType === 'hourly') {
-      payData.splice(2, 0, ['Hours per Pay Period', (budgetData.paySettings.hoursPerPayPeriod || 0).toString()]);
+      const hoursPerWeek = ((budgetData.paySettings.hoursPerPayPeriod || 0) * getPaychecksPerYear(budgetData.paySettings.payFrequency)) / 52;
+      payData.splice(2, 0, ['Hours per Week', hoursPerWeek.toFixed(2)]);
     }
 
     autoTable(doc, {
@@ -174,7 +181,7 @@ export async function exportToPDF(
     yPosition += 10;
 
     const taxData = [
-      ...taxLineAmounts.map(l => [l.label, `${l.rate}%`, formatWithSymbol(l.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
+        ...taxLineAmounts.map(l => [l.label, l.rateLabel, formatWithSymbol(l.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
       ['Additional Withholding', '-', formatWithSymbol(additionalWithholding, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
     ];
 

@@ -41,20 +41,20 @@
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 2.75rem;
+  height: 1.5rem;
   background-color: var(--toggle-bg-inactive);
-  border-radius: 24px;
+  border-radius: 1.5rem;
   transition: background-color 0.2s ease;
   flex-shrink: 0;
 }
 
 .toggle-slider {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px;
-  height: 20px;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.25rem;
+  height: 1.25rem;
   background-color: white;
   border-radius: 50%;
   transition: transform 0.2s ease;
@@ -66,7 +66,7 @@
 }
 
 .toggle-input:checked + .toggle-switch .toggle-slider {
-  transform: translateX(20px);
+  transform: translateX(1.25rem);
 }
 
 .toggle-input:focus + .toggle-switch {

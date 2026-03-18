@@ -57,7 +57,8 @@ const TabPositionHandle: React.FC<TabPositionHandleProps> = ({ currentPosition, 
     // Create a custom drag image with the grip icon
     const rootStyle = getComputedStyle(document.documentElement);
     const accentPrimary = rootStyle.getPropertyValue('--accent-primary').trim() || '#667eea';
-    const textOnAccent = rootStyle.getPropertyValue('--text-on-accent').trim() || '#ffffff';
+    const textInverse = rootStyle.getPropertyValue('--text-inverse').trim() || '#ffffff';
+    const shadowMd = rootStyle.getPropertyValue('--shadow-md').trim() || '0 4px 12px rgba(0, 0, 0, 0.2)';
 
     const dragImage = document.createElement('div');
     dragImage.innerHTML = '⋮⋮';
@@ -66,10 +67,10 @@ const TabPositionHandle: React.FC<TabPositionHandleProps> = ({ currentPosition, 
     dragImage.style.fontSize = '1.5rem';
     dragImage.style.padding = '0.5rem';
     dragImage.style.background = accentPrimary;
-    dragImage.style.color = textOnAccent;
+    dragImage.style.color = textInverse;
     dragImage.style.opacity = '0.92';
     dragImage.style.borderRadius = '8px';
-    dragImage.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+    dragImage.style.boxShadow = shadowMd;
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, 20, 20);
     setTimeout(() => document.body.removeChild(dragImage), 0);

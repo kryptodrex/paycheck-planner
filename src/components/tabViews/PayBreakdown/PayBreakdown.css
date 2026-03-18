@@ -115,19 +115,6 @@
   color: var(--text-tertiary);
 }
 
-  .postax-box {
-    background: transparent;
-    color: inherit;
-  }
-
-  .postax-box h3 {
-    color: var(--text-primary);
-  }
-
-  .postax-box .stage-detail {
-    color: var(--text-tertiary);
-  }
-
 .taxable-box {
   background: transparent;
   color: inherit;
@@ -148,21 +135,8 @@
 
 .stage-breakdown {
   margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-color-light);
-}
-
-.breakdown-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
-.breakdown-item span:last-child {
-  font-weight: 600;
-  color: var(--text-primary);
+  padding-top: 0;
+  border-top: none;
 }
 
 .net-box {
@@ -288,8 +262,17 @@
   border-bottom: none;
 }
 
+/* Red color for negative remaining amounts */
 .waterfall-footer-row.negative-remaining {
   background: linear-gradient(135deg, color-mix(in srgb, var(--error-color) 88%, var(--bg-primary)), var(--error-color));
+}
+/* Warning color for amounts under target amount */
+.waterfall-footer-row.warning-remaining {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--warning-color) 88%, var(--bg-primary)), var(--warning-color));
+}
+/* Green color mix for positive remaining amounts */
+.waterfall-footer-row.positive-remaining {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--success-color) 88%, var(--bg-primary)), var(--success-color));
 }
 
 .waterfall-label {
@@ -307,7 +290,20 @@
 }
 
 .waterfall-amount.negative-remaining {
-  color: var(--error-contrast-text, #fff);
+  color: var(--text-inverse);
+}
+
+.reallocation-alert-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.reallocation-alert-note {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 .account-icon-small {
@@ -347,11 +343,11 @@
 }
 
 .category-name-static {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .category-button:hover {

@@ -120,7 +120,7 @@
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--error-color);
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: color-mix(in srgb, var(--error-color) 30%, transparent);
 }
 
 .tab-action-hide:hover {
@@ -154,7 +154,7 @@
 }
 
 .tab-action-show:hover {
-  background: rgba(102, 126, 234, 0.2);
+  background: var(--surface-accent-soft-hover);
   border-color: var(--accent-primary);
   color: var(--accent-hover);
 }
