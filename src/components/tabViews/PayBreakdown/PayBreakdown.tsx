@@ -15,7 +15,7 @@ import type { ViewMode } from '../../../types/viewMode';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
 import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
-import { Alert, Button, ConfirmDialog, InputWithPrefix, ViewModeSelector, PageHeader, AmountBreakdown, Toast } from '../../_shared';
+import { Alert, Button, ConfirmDialog, InputWithPrefix, ViewModeSelector, PageHeader, AmountBreakdown, Toast, FormGroup } from '../../_shared';
 import PaySettingsModal from '../../modals/PaySettingsModal';
 import ReallocationReviewModal from '../../modals/ReallocationReviewModal/ReallocationReviewModal';
 import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../modals/ReallocationSummaryModal/ReallocationSummaryModal';
@@ -953,9 +953,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               );
             })}
 
-            <div className={`waterfall-row waterfall-footer-row ${roundedLeftoverPerPaycheck < 0 ? 'negative-remaining' : (isBelowTarget ? 'warning-remaining' : 'positive-remaining')}`}>
+            <div className="waterfall-row waterfall-footer-row">
               <span className="waterfall-label"><GlossaryTerm termId="residual-amount">All that remains</GlossaryTerm> for spending</span>
-              <span className={`waterfall-amount ${roundedLeftoverPerPaycheck < 0 ? 'negative-remaining' : (isBelowTarget ? 'warning-remaining' : 'positive-remaining')}`}>{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="waterfall-amount">{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {leftoverPerPaycheck < 0 && (
               <div className="waterfall-alert-row">

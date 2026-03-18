@@ -262,19 +262,6 @@
   border-bottom: none;
 }
 
-/* Red color for negative remaining amounts */
-.waterfall-footer-row.negative-remaining {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--error-color) 88%, var(--bg-primary)), var(--error-color));
-}
-/* Warning color for amounts under target amount */
-.waterfall-footer-row.warning-remaining {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--warning-color) 88%, var(--bg-primary)), var(--warning-color));
-}
-/* Green color mix for positive remaining amounts */
-.waterfall-footer-row.positive-remaining {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--success-color) 88%, var(--bg-primary)), var(--success-color));
-}
-
 .waterfall-label {
   display: flex;
   align-items: center;
@@ -283,14 +270,10 @@
 }
 
 .waterfall-amount {
-  font-family: var(--font-mono);
+  font-family: inherit;
   font-weight: 600;
   white-space: nowrap;
   margin-left: 0.75rem;
-}
-
-.waterfall-amount.negative-remaining {
-  color: var(--text-inverse);
 }
 
 .reallocation-alert-content {

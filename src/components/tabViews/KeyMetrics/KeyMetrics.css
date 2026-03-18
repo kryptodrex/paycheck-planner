@@ -378,7 +378,7 @@
 }
 
 .km-flow-summary-value {
-  font-family: var(--font-mono);
+  font-family: inherit;
   color: var(--text-primary);
   white-space: nowrap;
 }
@@ -504,7 +504,7 @@
 .km-pie-center strong {
   color: var(--text-primary);
   font-size: 0.9rem;
-  font-family: var(--font-mono);
+  font-family: inherit;
 }
 
 .km-pie-legend {
@@ -539,7 +539,7 @@
 .km-pie-legend-value {
   color: var(--text-secondary);
   font-size: 0.85rem;
-  font-family: var(--font-mono);
+  font-family: inherit;
   text-align: right;
   white-space: nowrap;
 }
