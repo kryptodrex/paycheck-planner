@@ -30,16 +30,6 @@
   box-shadow: 0 12px 40px color-mix(in srgb, var(--toast-error-bg) 45%, transparent);
 }
 
-/* Light mode: success (#10b981) and warning (#f59e0b) backgrounds are bright enough
-   that white text fails WCAG AA (2.54:1 and 2.15:1 respectively). Use dark text. */
-:root .toast-success,
-[data-theme="light"] .toast-success,
-:root .toast-warning,
-[data-theme="light"] .toast-warning {
-  color: #111827;
-  border-color: rgba(0, 0, 0, 0.15);
-}
-
 @keyframes slideDown {
   from {
     opacity: 0;
