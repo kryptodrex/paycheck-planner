@@ -31,7 +31,7 @@
 
 .view-mode-selector button.active {
   background: var(--bg-primary);
-  color: var(--accent-primary);
+  color: var(--text-accent);
   box-shadow: var(--shadow-sm);
 }
 
@@ -62,7 +62,7 @@
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
-  color: var(--accent-primary);
+  color: var(--text-accent);
   background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
 }
 
