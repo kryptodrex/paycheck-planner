@@ -1,5 +1,5 @@
 // Main App component - decides whether to show setup, welcome screen, or dashboard
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from './constants/events'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
@@ -35,6 +35,10 @@ function App() {
   // Track if glossary modal is open
   const [showGlossary, setShowGlossary] = useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
+  const [zoomIndicatorMessage, setZoomIndicatorMessage] = useState<string | null>(null)
+  const [zoomIndicatorAtLimit, setZoomIndicatorAtLimit] = useState(false)
+  const [currentZoomFactor, setCurrentZoomFactor] = useState(1)
+  const zoomIndicatorTimeoutRef = useRef<number | null>(null)
   // Track requested glossary term when opened from inline tooltips
   const [initialGlossaryTermId, setInitialGlossaryTermId] = useState<string | null>(null)
 
@@ -57,6 +61,57 @@ function App() {
     })
 
     return unsubscribe
+  }, [])
+
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.zoomStatus, (arg) => {
+      if (!arg || typeof arg !== 'object') {
+        return
+      }
+
+      const payload = arg as {
+        action?: 'in' | 'out' | 'reset'
+        zoomPercent?: number
+        atLimit?: boolean
+        limit?: 'min' | 'max'
+      }
+
+      if (typeof payload.zoomPercent !== 'number') {
+        return
+      }
+
+      const zoomFactor = payload.zoomPercent / 100
+      setCurrentZoomFactor(zoomFactor)
+      const atLimit = payload.atLimit === true
+      const message = atLimit
+        ? payload.limit === 'max'
+          ? `Zoom ${payload.zoomPercent}% (Maximum reached)`
+          : `Zoom ${payload.zoomPercent}% (Minimum reached)`
+        : payload.action === 'reset'
+          ? `Zoom ${payload.zoomPercent}% (Reset)`
+          : `Zoom ${payload.zoomPercent}%`
+
+      setZoomIndicatorMessage(message)
+      setZoomIndicatorAtLimit(atLimit)
+
+      if (zoomIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(zoomIndicatorTimeoutRef.current)
+      }
+
+      zoomIndicatorTimeoutRef.current = window.setTimeout(() => {
+        setZoomIndicatorMessage(null)
+        setZoomIndicatorAtLimit(false)
+      }, 1500)
+    })
+
+    return () => {
+      unsubscribe()
+      if (zoomIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(zoomIndicatorTimeoutRef.current)
+      }
+    }
   }, [])
 
   // Listen for about menu event from Electron menu (Windows/Linux)
@@ -203,6 +258,16 @@ function App() {
         isOpen={showKeyboardShortcuts}
         onClose={() => setShowKeyboardShortcuts(false)}
       />
+      {zoomIndicatorMessage && (
+        <div
+          className={`zoom-indicator ${zoomIndicatorAtLimit ? 'limit' : ''}`}
+          role="status"
+          aria-live="polite"
+          style={{ transform: `scale(${1 / currentZoomFactor})` }}
+        >
+          {zoomIndicatorMessage}
+        </div>
+      )}
     </>
   )
 }

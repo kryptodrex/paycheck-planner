@@ -556,6 +556,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
               <InfoBox>
                 Accessibility options apply app-wide and persist across sessions on this device.
+                {' '}
+                Use Zoom shortcuts for whole-window scaling; use UI Font Scale for readability-focused text sizing.
               </InfoBox>
             </div>
           )}

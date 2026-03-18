@@ -15,6 +15,7 @@ export const MENU_EVENTS = {
   historyBack: 'history-back',
   historyForward: 'history-forward',
   historyHome: 'history-home',
+  zoomStatus: 'zoom-status',
 } as const;
 
 export type MenuEventName = (typeof MENU_EVENTS)[keyof typeof MENU_EVENTS];

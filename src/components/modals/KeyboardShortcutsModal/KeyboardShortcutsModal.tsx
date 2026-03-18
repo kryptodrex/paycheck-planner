@@ -51,6 +51,9 @@ const shortcuts: ShortcutSection[] = [
       { keys: [modifier, 'Shift', 'L'], description: 'Move tab bar to the left' },
       { keys: [modifier, 'Shift', 'R'], description: 'Move tab bar to the right' },
       { keys: [modifier, 'Shift', 'D'], description: 'Toggle tab display mode between compact and expanded (left/right tab bar only)' },
+      { keys: [modifier, '+'], description: 'Zoom in (scales the full app viewport)' },
+      { keys: [modifier, '-'], description: 'Zoom out (scales the full app viewport)' },
+      { keys: [modifier, '0'], description: 'Reset zoom to 100%' },
     ],
   },
   {
@@ -90,6 +93,9 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
       <div className="keyboard-shortcuts-intro">
         <p>
           These shortcuts work within the current app session. Back and Forward navigate your in-session plan history, and Home jumps to the first visible tab in your current tab order.
+        </p>
+        <p>
+          Zoom changes the entire app viewport. Font Scale in Settings adjusts text sizing for readability preferences.
         </p>
       </div>
 

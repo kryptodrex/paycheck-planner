@@ -216,6 +216,66 @@ const sendMenuEvent = (window: BrowserWindow, event: MenuEventName, arg?: unknow
   window.webContents.send(menuChannel(event), arg);
 };
 
+const MIN_ZOOM_FACTOR = 0.8;
+const MAX_ZOOM_FACTOR = 1.6;
+const ZOOM_STEP = 0.1;
+const DEFAULT_ZOOM_FACTOR = 1;
+
+type ZoomAction = 'in' | 'out' | 'reset';
+
+type ZoomStatusPayload = {
+  action: ZoomAction;
+  zoomFactor: number;
+  zoomPercent: number;
+  atLimit: boolean;
+  limit?: 'min' | 'max';
+};
+
+const clampZoomFactor = (factor: number): number => {
+  return Math.min(MAX_ZOOM_FACTOR, Math.max(MIN_ZOOM_FACTOR, factor));
+};
+
+const getTargetWindowForAppAction = (): BrowserWindow | null => {
+  return BrowserWindow.getFocusedWindow() ?? mainWindow ?? welcomeWindow ?? BrowserWindow.getAllWindows()[0] ?? null;
+};
+
+const applyZoomDelta = (window: BrowserWindow, delta: number): ZoomStatusPayload => {
+  const current = window.webContents.getZoomFactor();
+  const next = clampZoomFactor(Number((current + delta).toFixed(2)));
+  window.webContents.setZoomFactor(next);
+
+  const action: ZoomAction = delta > 0 ? 'in' : 'out';
+  const limit = action === 'in'
+    ? (next === MAX_ZOOM_FACTOR ? 'max' : undefined)
+    : (next === MIN_ZOOM_FACTOR ? 'min' : undefined);
+
+  return {
+    action,
+    zoomFactor: next,
+    zoomPercent: Math.round(next * 100),
+    atLimit: !!limit,
+    limit,
+  };
+};
+
+const resetZoom = (window: BrowserWindow): ZoomStatusPayload => {
+  window.webContents.setZoomFactor(DEFAULT_ZOOM_FACTOR);
+  return {
+    action: 'reset',
+    zoomFactor: DEFAULT_ZOOM_FACTOR,
+    zoomPercent: Math.round(DEFAULT_ZOOM_FACTOR * 100),
+    atLimit: false,
+  };
+};
+
+const executeZoomAction = (window: BrowserWindow, action: ZoomAction) => {
+  const zoomStatus = action === 'reset'
+    ? resetZoom(window)
+    : applyZoomDelta(window, action === 'in' ? ZOOM_STEP : -ZOOM_STEP);
+
+  sendMenuEvent(window, MENU_EVENTS.zoomStatus, zoomStatus);
+};
+
 const stopBudgetFileWatch = (windowId: number) => {
   const state = budgetFileWatchByWindowId.get(windowId);
   if (!state) return;
@@ -990,6 +1050,37 @@ function createApplicationMenu() {
           const focusedWindow = BrowserWindow.getFocusedWindow();
           if (focusedWindow) {
             sendMenuEvent(focusedWindow, MENU_EVENTS.toggleTabDisplayMode);
+          }
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Zoom In',
+        accelerator: 'CmdOrCtrl+=',
+        click: () => {
+          const targetWindow = getTargetWindowForAppAction();
+          if (targetWindow) {
+            executeZoomAction(targetWindow, 'in');
+          }
+        },
+      },
+      {
+        label: 'Zoom Out',
+        accelerator: 'CmdOrCtrl+-',
+        click: () => {
+          const targetWindow = getTargetWindowForAppAction();
+          if (targetWindow) {
+            executeZoomAction(targetWindow, 'out');
+          }
+        },
+      },
+      {
+        label: 'Actual Size',
+        accelerator: 'CmdOrCtrl+0',
+        click: () => {
+          const targetWindow = getTargetWindowForAppAction();
+          if (targetWindow) {
+            executeZoomAction(targetWindow, 'reset');
           }
         },
       },
