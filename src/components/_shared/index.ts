@@ -7,6 +7,7 @@ export { default as FormGroup } from './controls/FormGroup';
 export { default as InputWithPrefix } from './controls/InputWithPrefix';
 export { default as DateInput } from './controls/DateInput';
 export { default as FormattedNumberInput } from './controls/FormattedNumberInput';
+export { default as Dropdown } from './controls/Dropdown';
 export { default as StickyActions } from './layout/StickyActions';
 export { default as RadioGroup } from './controls/RadioGroup';
 export { default as CheckboxGroup } from './controls/CheckboxGroup';
