@@ -15,7 +15,7 @@ import type { ViewMode } from '../../../types/viewMode';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
 import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
-import { Alert, Button, ConfirmDialog, InputWithPrefix, ViewModeSelector, PageHeader, AmountBreakdown, Toast, FormGroup } from '../../_shared';
+import { Alert, Button, ConfirmDialog, InputWithPrefix, ViewModeSelector, PageHeader, AmountBreakdown, Toast } from '../../_shared';
 import PaySettingsModal from '../../modals/PaySettingsModal';
 import ReallocationReviewModal from '../../modals/ReallocationReviewModal/ReallocationReviewModal';
 import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../modals/ReallocationSummaryModal/ReallocationSummaryModal';
@@ -501,12 +501,31 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
     const draftAccount = draftAccounts.get(accountId);
     if (!draftAccount) return;
 
-    const cleanedCategories = draftAccount.allocationCategories
+    const normalizedCategories = draftAccount.allocationCategories
       .map((category) => ({
         ...category,
         name: category.name.trim(),
         amount: normalizeStoredAllocationAmount(category.amount),
-      }))
+      }));
+
+    const unnamedCustomCategories = normalizedCategories.filter(
+      (category) => !isAutoCategory(category) && category.amount > 0 && category.name.length === 0,
+    );
+
+    if (unnamedCustomCategories.length > 0) {
+      setValidationMessages((prev) => new Map(prev).set(
+        accountId,
+        {
+          type: 'error',
+          message: unnamedCustomCategories.length === 1
+            ? 'Add a name to the custom allocation item before saving.'
+            : `Add names to all ${unnamedCustomCategories.length} custom allocation items before saving.`,
+        },
+      ));
+      return;
+    }
+
+    const cleanedCategories = normalizedCategories
       .filter((category) => category.name.length > 0 && category.amount > 0);
 
     // Calculate total allocations with the new changes
