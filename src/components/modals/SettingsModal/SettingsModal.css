@@ -1,4 +1,105 @@
 /* Settings-specific styles */
+.modal-content.settings-modal-content {
+  max-width: min(940px, 96vw);
+}
+
+.settings-search-wrap {
+  margin-bottom: 1rem;
+}
+
+.settings-search-label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.settings-search-input {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 0.7rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+}
+
+.settings-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.settings-search-input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-accent-soft);
+  border-color: var(--accent-primary);
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.settings-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 0.45rem;
+  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+  padding: 0.55rem;
+}
+
+.settings-sidebar-item {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  border-radius: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-sidebar-item:hover {
+  color: var(--text-primary);
+  background: var(--surface-accent-subtle);
+}
+
+.settings-sidebar-item.active {
+  color: var(--text-primary);
+  background: var(--surface-accent-subtle);
+  border-color: var(--border-accent-soft);
+}
+
+.settings-sidebar-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-accent-soft);
+}
+
+.settings-sidebar-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  padding: 0.4rem;
+}
+
+.settings-content {
+  min-width: 0;
+}
+
+.settings-empty-state {
+  border: 1px dashed var(--border-color);
+  border-radius: 0.85rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  padding: 1rem;
+}
+
 .settings-section {
   margin-bottom: 2rem;
 }
@@ -174,6 +275,21 @@
 }
 
 @media (max-width: 900px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .settings-sidebar {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .settings-sidebar-item {
+    flex: 0 1 auto;
+  }
+
   .settings-preset-grid {
     grid-template-columns: 1fr;
   }

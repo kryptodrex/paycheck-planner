@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { APPEARANCE_PRESET_MAP, APPEARANCE_PRESET_OPTIONS } from '../../../constants/appearancePresets';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
@@ -30,6 +30,40 @@ interface SettingsState {
   viewModeFavorites: SelectableViewMode[];
 }
 
+interface SettingsSection {
+  id: string;
+  title: string;
+  searchTerms: string;
+}
+
+const SETTINGS_SECTIONS: SettingsSection[] = [
+  {
+    id: 'appearance',
+    title: 'Appearance',
+    searchTerms: 'theme light dark system preset style color palette',
+  },
+  {
+    id: 'accessibility',
+    title: 'Accessibility',
+    searchTerms: 'contrast high contrast font scale text size readability',
+  },
+  {
+    id: 'glossary',
+    title: 'Glossary',
+    searchTerms: 'glossary terms links definitions hover tooltip',
+  },
+  {
+    id: 'view-mode-favorites',
+    title: 'View Mode Favorites',
+    searchTerms: 'view mode weekly bi-weekly semi-monthly monthly favorites',
+  },
+  {
+    id: 'reset-app-settings',
+    title: 'Reset App Settings',
+    searchTerms: 'reset import backup danger zone memory settings app data',
+  },
+];
+
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const { theme, setTheme } = useTheme();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -37,7 +71,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [backingUp, setBackingUp] = useState(false);
   const [backedUp, setBackedUp] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSectionId, setActiveSectionId] = useState<string>(SETTINGS_SECTIONS[0].id);
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const getNormalizedSettingsState = (appSettings: ReturnType<typeof FileStorageService.getAppSettings>): SettingsState => ({
     themeMode: normalizeThemeMode(appSettings.themeMode) || 'light',
@@ -227,12 +264,48 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const visibleSections = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return SETTINGS_SECTIONS;
+    }
+
+    const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+    return SETTINGS_SECTIONS.filter((section) => {
+      const corpus = `${section.title.toLowerCase()} ${section.searchTerms}`;
+      return queryTokens.every((token) => corpus.includes(token));
+    });
+  }, [searchQuery]);
+
+  const visibleSectionIds = useMemo(() => new Set(visibleSections.map((section) => section.id)), [visibleSections]);
+
+  useEffect(() => {
+    if (visibleSections.length === 0) {
+      return;
+    }
+
+    if (!visibleSectionIds.has(activeSectionId)) {
+      setActiveSectionId(visibleSections[0].id);
+    }
+  }, [activeSectionId, visibleSectionIds, visibleSections]);
+
+  const scrollToSection = (sectionId: string) => {
+    const sectionNode = sectionRefs.current[sectionId];
+    if (!sectionNode) {
+      return;
+    }
+
+    sectionNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSectionId(sectionId);
+  };
+
   if (!isOpen) return null;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      contentClassName="settings-modal-content"
       header="Settings"
       footer={
         <Button variant="primary" onClick={onClose}>
@@ -240,9 +313,46 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         </Button>
       }
     >
-      {/* Theme Settings */}
-      <div className="settings-section">
-        <h3>Appearance</h3>
+      <div className="settings-search-wrap">
+        <label htmlFor="settings-search" className="settings-search-label">Search Settings</label>
+        <input
+          id="settings-search"
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          className="settings-search-input"
+          placeholder="Search by section or setting"
+          autoComplete="off"
+        />
+      </div>
+
+      <div className="settings-layout">
+        <aside className="settings-sidebar" aria-label="Settings sections">
+          {visibleSections.length === 0 ? (
+            <p className="settings-sidebar-empty">No sections match your search.</p>
+          ) : (
+            visibleSections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                className={`settings-sidebar-item ${activeSectionId === section.id ? 'active' : ''}`}
+                onClick={() => scrollToSection(section.id)}
+              >
+                {section.title}
+              </button>
+            ))
+          )}
+        </aside>
+
+        <div className="settings-content">
+          {visibleSectionIds.has('appearance') && (
+            <div
+              className="settings-section"
+              ref={(node) => {
+                sectionRefs.current.appearance = node;
+              }}
+            >
+              <h3 id="appearance">Appearance</h3>
         
         <div className="settings-group">
           <label>Theme</label>
@@ -320,17 +430,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        <div className="settings-info">
-          <span>
-            Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong>
-            {' • '}
-            Preset: <strong>{APPEARANCE_PRESET_MAP[settings.appearancePreset].label}</strong>
-          </span>
-        </div>
-      </div>
+              <div className="settings-info">
+                <span>
+                  Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong>
+                  {' • '}
+                  Preset: <strong>{APPEARANCE_PRESET_MAP[settings.appearancePreset].label}</strong>
+                </span>
+              </div>
+            </div>
+          )}
 
-      <div className="settings-section">
-        <h3>Accessibility</h3>
+          {visibleSectionIds.has('accessibility') && (
+            <div
+              className="settings-section"
+              ref={(node) => {
+                sectionRefs.current.accessibility = node;
+              }}
+            >
+              <h3 id="accessibility">Accessibility</h3>
 
         <div className="settings-group">
           <label>High Contrast Mode</label>
@@ -355,14 +472,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           </Dropdown>
         </div>
 
-        <InfoBox>
-          Accessibility options apply app-wide and persist across sessions on this device.
-        </InfoBox>
-      </div>
+              <InfoBox>
+                Accessibility options apply app-wide and persist across sessions on this device.
+              </InfoBox>
+            </div>
+          )}
 
-      {/* Glossary Settings */}
-      <div className="settings-section">
-        <h3>Glossary</h3>
+          {visibleSectionIds.has('glossary') && (
+            <div
+              className="settings-section"
+              ref={(node) => {
+                sectionRefs.current.glossary = node;
+              }}
+            >
+              <h3 id="glossary">Glossary</h3>
 
         <div className="settings-group">
           <label>Term Links</label>
@@ -374,17 +497,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           />
         </div>
 
-        <InfoBox>
-          Glossary term links are <strong>{settings.glossaryTermsEnabled ? 'enabled' : 'disabled'}</strong>.
-          {settings.glossaryTermsEnabled
-            ? ' Hover for definitions, click to open the full glossary.'
-            : ' Terms display as plain text with no hover or click behaviour.'}
-        </InfoBox>
+              <InfoBox>
+                Glossary term links are <strong>{settings.glossaryTermsEnabled ? 'enabled' : 'disabled'}</strong>.
+                {settings.glossaryTermsEnabled
+                  ? ' Hover for definitions, click to open the full glossary.'
+                  : ' Terms display as plain text with no hover or click behaviour.'}
+              </InfoBox>
+            </div>
+          )}
 
-      </div>
-
-      <div className="settings-section">
-        <h3>View Mode Favorites</h3>
+          {visibleSectionIds.has('view-mode-favorites') && (
+            <div
+              className="settings-section"
+              ref={(node) => {
+                sectionRefs.current['view-mode-favorites'] = node;
+              }}
+            >
+              <h3 id="view-mode-favorites">View Mode Favorites</h3>
 
         <div className="settings-group">
           <label>Always Show These View Modes</label>
@@ -405,31 +534,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           />
         </div>
 
-        <InfoBox>
-            Favorites apply app-wide and carry across all plans on this device. At least one view mode must stay enabled.
-        </InfoBox>
-      </div>
+              <InfoBox>
+                Favorites apply app-wide and carry across all plans on this device. At least one view mode must stay enabled.
+              </InfoBox>
+            </div>
+          )}
 
-      <div className="settings-section settings-danger-zone">
-        <h3>Reset App Settings</h3>
-        <p className="settings-danger-copy">
-          Remove this app&apos;s local preferences, recent files, and in-memory plan session. <b>Budget files themselves as well as keychain links are not deleted.</b>
-        </p>
-        <div className="settings-danger-actions">
-          <Button
-            variant="tertiary"
-            onClick={handleImportAppData}
-            isLoading={importing}
-            loadingText="Importing…"
-          >
-            Import App Settings
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => setShowResetConfirm(true)}
-          >
-            Reset App Settings
-          </Button>
+          {visibleSectionIds.has('reset-app-settings') && (
+            <div
+              className="settings-section settings-danger-zone"
+              ref={(node) => {
+                sectionRefs.current['reset-app-settings'] = node;
+              }}
+            >
+              <h3 id="reset-app-settings">Reset App Settings</h3>
+              <p className="settings-danger-copy">
+                Remove this app&apos;s local preferences, recent files, and in-memory plan session. <b>Budget files themselves as well as keychain links are not deleted.</b>
+              </p>
+              <div className="settings-danger-actions">
+                <Button
+                  variant="tertiary"
+                  onClick={handleImportAppData}
+                  isLoading={importing}
+                  loadingText="Importing…"
+                >
+                  Import App Settings
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => setShowResetConfirm(true)}
+                >
+                  Reset App Settings
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {visibleSections.length === 0 && (
+            <div className="settings-empty-state" role="status">
+              No matching settings found. Try broader keywords.
+            </div>
+          )}
         </div>
       </div>
 

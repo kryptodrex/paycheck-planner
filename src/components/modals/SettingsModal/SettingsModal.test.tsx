@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '../../../contexts/ThemeContext';
 import { STORAGE_KEYS } from '../../../constants/storage';
@@ -14,7 +14,16 @@ function renderSettingsModal() {
 }
 
 describe('SettingsModal', () => {
+  let scrollIntoViewSpy: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
+    scrollIntoViewSpy = vi.fn();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: scrollIntoViewSpy,
+    });
+
     localStorage.clear();
     localStorage.setItem(
       STORAGE_KEYS.settings,
@@ -97,5 +106,40 @@ describe('SettingsModal', () => {
 
     const storedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || '{}');
     expect(storedSettings.appearanceMode).toBe('preset');
+  });
+
+  it('filters settings sections using search keywords', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.type(screen.getByLabelText(/search settings/i), 'contrast');
+
+    expect(screen.getByRole('heading', { name: 'Accessibility' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Appearance' })).not.toBeInTheDocument();
+
+    const sidebar = screen.getByLabelText('Settings sections');
+    expect(within(sidebar).getByRole('button', { name: 'Accessibility' })).toBeInTheDocument();
+    expect(within(sidebar).queryByRole('button', { name: 'Appearance' })).not.toBeInTheDocument();
+  });
+
+  it('shows an empty state when no settings sections match search', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.type(screen.getByLabelText(/search settings/i), 'zebra');
+
+    expect(screen.getByText('No sections match your search.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No matching settings found. Try broader keywords.');
+  });
+
+  it('scrolls to the selected section when using sidebar navigation', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    const sidebar = screen.getByLabelText('Settings sections');
+    await user.click(within(sidebar).getByRole('button', { name: 'Glossary' }));
+
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(within(sidebar).getByRole('button', { name: 'Glossary' })).toHaveClass('active');
   });
 });
