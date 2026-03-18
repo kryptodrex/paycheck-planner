@@ -302,3 +302,17 @@ describe('Preset themes – readable text-accent colors', () => {
   assertAA('#f9a8d4', '#1a1a1a', 'Pink dark text-accent (#f9a8d4) on dark bg-primary (#1a1a1a)');
   assertAA('#cbd5e1', '#1a1a1a', 'Spreadsheet Core dark text-accent (#cbd5e1) on dark bg-primary (#1a1a1a)');
 });
+
+describe('PillBadge text contrast on card surfaces', () => {
+  // Light theme badge text colors against common neutral card backgrounds.
+  assertAA('#4338ca', '#f3f4f6', 'PillBadge accent text (#4338ca) on light surface (#f3f4f6)');
+  assertAA('#166534', '#f3f4f6', 'PillBadge success text (#166534) on light surface (#f3f4f6)');
+  assertAA('#92400e', '#f3f4f6', 'PillBadge warning text (#92400e) on light surface (#f3f4f6)');
+  assertAA('#0369a1', '#f3f4f6', 'PillBadge info text (#0369a1) on light surface (#f3f4f6)');
+
+  // Dark theme badge text colors against dark card surfaces.
+  assertAA('#c084fc', '#2d2d2d', 'PillBadge accent text (#c084fc) on dark surface (#2d2d2d)');
+  assertAA('#86efac', '#2d2d2d', 'PillBadge success text (#86efac) on dark surface (#2d2d2d)');
+  assertAA('#fbbf24', '#2d2d2d', 'PillBadge warning text (#fbbf24) on dark surface (#2d2d2d)');
+  assertAA('#7dd3fc', '#2d2d2d', 'PillBadge info text (#7dd3fc) on dark surface (#2d2d2d)');
+});
