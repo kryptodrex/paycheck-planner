@@ -191,6 +191,80 @@ function assertAA(fg: string, bg: string, label: string, largeText = false) {
   });
 }
 
+function toHexChannel(value: number): string {
+  const clamped = Math.max(0, Math.min(255, Math.round(value)));
+  return clamped.toString(16).padStart(2, '0');
+}
+
+function mixHex(base: string, tint: string, baseWeight: number): string {
+  const baseRgb = hexToRgb(base);
+  const tintRgb = hexToRgb(tint);
+  const tintWeight = 1 - baseWeight;
+
+  return `#${toHexChannel(baseRgb.r * baseWeight + tintRgb.r * tintWeight)}${toHexChannel(baseRgb.g * baseWeight + tintRgb.g * tintWeight)}${toHexChannel(baseRgb.b * baseWeight + tintRgb.b * tintWeight)}`;
+}
+
+type ThemeMode = 'light' | 'dark';
+
+const PRESET_ACCENTS = [
+  { name: 'Default', light: '#667eea', dark: '#a855f7' },
+  { name: 'Ocean', light: '#0f766e', dark: '#0284c7' },
+  { name: 'Forest', light: '#2f6f4f', dark: '#2f855a' },
+  { name: 'Sunset', light: '#b45309', dark: '#c2410c' },
+  { name: 'Pink', light: '#be185d', dark: '#db2777' },
+  { name: 'Spreadsheet Core', light: '#4b5563', dark: '#64748b' },
+] as const;
+
+function buildPresetStatePalette(mode: ThemeMode, accentPrimary: string) {
+  const isLight = mode === 'light';
+  const bgSecondary = isLight ? '#f9fafb' : '#242424';
+  const textPrimary = isLight ? '#111827' : '#f9fafb';
+
+  const surfaceAccentSubtle = isLight
+    ? mixHex(accentPrimary, bgSecondary, 0.1)
+    : mixHex(accentPrimary, bgSecondary, 0.12);
+
+  return {
+    toastSuccessBg: isLight
+      ? mixHex('#047857', accentPrimary, 0.88)
+      : mixHex('#047857', accentPrimary, 0.86),
+    toastWarningBg: isLight
+      ? mixHex('#b45309', accentPrimary, 0.88)
+      : mixHex('#b45309', accentPrimary, 0.86),
+    toastErrorBg: isLight
+      ? mixHex('#b91c1c', accentPrimary, 0.9)
+      : mixHex('#b91c1c', accentPrimary, 0.88),
+
+    alertErrorBg: isLight
+      ? mixHex('#fef2f2', surfaceAccentSubtle, 0.8)
+      : mixHex('#2d1f1f', surfaceAccentSubtle, 0.84),
+    alertErrorText: isLight
+      ? mixHex('#b91c1c', textPrimary, 0.86)
+      : mixHex('#fca5a5', textPrimary, 0.88),
+
+    alertWarningBg: isLight
+      ? mixHex('#fffbeb', surfaceAccentSubtle, 0.8)
+      : mixHex('#2d2718', surfaceAccentSubtle, 0.84),
+    alertWarningText: isLight
+      ? mixHex('#92400e', textPrimary, 0.84)
+      : mixHex('#fbbf24', textPrimary, 0.86),
+
+    alertSuccessBg: isLight
+      ? mixHex('#f0fdf4', surfaceAccentSubtle, 0.8)
+      : mixHex('#1e2d24', surfaceAccentSubtle, 0.84),
+    alertSuccessText: isLight
+      ? mixHex('#166534', textPrimary, 0.84)
+      : mixHex('#86efac', textPrimary, 0.86),
+
+    alertInfoBg: isLight
+      ? mixHex('#f0f9ff', surfaceAccentSubtle, 0.8)
+      : mixHex('#1e2838', surfaceAccentSubtle, 0.84),
+    alertInfoText: isLight
+      ? mixHex('#0369a1', textPrimary, 0.84)
+      : mixHex('#7dd3fc', textPrimary, 0.86),
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Light-theme design token pairs
 // ─────────────────────────────────────────────────────────────────
@@ -315,4 +389,42 @@ describe('PillBadge text contrast on card surfaces', () => {
   assertAA('#86efac', '#2d2d2d', 'PillBadge success text (#86efac) on dark surface (#2d2d2d)');
   assertAA('#fbbf24', '#2d2d2d', 'PillBadge warning text (#fbbf24) on dark surface (#2d2d2d)');
   assertAA('#7dd3fc', '#2d2d2d', 'PillBadge info text (#7dd3fc) on dark surface (#2d2d2d)');
+});
+
+describe('Preset themes – blended alert/toast semantic state contrast', () => {
+  PRESET_ACCENTS.forEach((preset) => {
+    it(`${preset.name} light: blended alert text stays AA readable`, () => {
+      const palette = buildPresetStatePalette('light', preset.light);
+
+      expect(contrastRatio(palette.alertErrorText, palette.alertErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertWarningText, palette.alertWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertSuccessText, palette.alertSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertInfoText, palette.alertInfoBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${preset.name} dark: blended alert text stays AA readable`, () => {
+      const palette = buildPresetStatePalette('dark', preset.dark);
+
+      expect(contrastRatio(palette.alertErrorText, palette.alertErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertWarningText, palette.alertWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertSuccessText, palette.alertSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertInfoText, palette.alertInfoBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${preset.name} light: blended toast backgrounds keep white text readable`, () => {
+      const palette = buildPresetStatePalette('light', preset.light);
+
+      expect(contrastRatio('#ffffff', palette.toastSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${preset.name} dark: blended toast backgrounds keep white text readable`, () => {
+      const palette = buildPresetStatePalette('dark', preset.dark);
+
+      expect(contrastRatio('#ffffff', palette.toastSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+  });
 });

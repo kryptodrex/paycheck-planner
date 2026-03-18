@@ -69,24 +69,24 @@
   --metric-shortfall-color: #991b1b;
   --metric-shortfall-color-strong: #7f1d1d;
 
-  /* Toast backgrounds */
-  --toast-success-bg: #047857;
-  --toast-warning-bg: #b45309;
-  --toast-error-bg: #ef4444;
+  /* Toast backgrounds - keep strong contrast while subtly harmonizing to active preset */
+  --toast-success-bg: color-mix(in srgb, #047857 88%, var(--accent-primary) 12%);
+  --toast-warning-bg: color-mix(in srgb, #b45309 88%, var(--accent-primary) 12%);
+  --toast-error-bg: color-mix(in srgb, #b91c1c 90%, var(--accent-primary) 10%);
 
-  /* Alert backgrounds */
-  --alert-error-bg: #fef2f2;
-  --alert-error-border: #fca5a5;
-  --alert-error-text: #b91c1c;
-  --alert-warning-bg: #fffbeb;
-  --alert-warning-border: #fbbf24;
-  --alert-warning-text: #92400e;
-  --alert-success-bg: #f0fdf4;
-  --alert-success-border: #86efac;
-  --alert-success-text: #166534;
-  --alert-info-bg: #f0f9ff;
-  --alert-info-border: #7dd3fc;
-  --alert-info-text: #0369a1;
+  /* Alert backgrounds - blend semantic states with active surfaces/preset accents */
+  --alert-error-bg: color-mix(in srgb, #fef2f2 80%, var(--surface-accent-subtle) 20%);
+  --alert-error-border: color-mix(in srgb, #fca5a5 70%, var(--border-accent-soft) 30%);
+  --alert-error-text: color-mix(in srgb, #b91c1c 86%, var(--text-primary) 14%);
+  --alert-warning-bg: color-mix(in srgb, #fffbeb 80%, var(--surface-accent-subtle) 20%);
+  --alert-warning-border: color-mix(in srgb, #fbbf24 68%, var(--border-accent-soft) 32%);
+  --alert-warning-text: color-mix(in srgb, #92400e 84%, var(--text-primary) 16%);
+  --alert-success-bg: color-mix(in srgb, #f0fdf4 80%, var(--surface-accent-subtle) 20%);
+  --alert-success-border: color-mix(in srgb, #86efac 68%, var(--border-accent-soft) 32%);
+  --alert-success-text: color-mix(in srgb, #166534 84%, var(--text-primary) 16%);
+  --alert-info-bg: color-mix(in srgb, #f0f9ff 80%, var(--surface-accent-subtle) 20%);
+  --alert-info-border: color-mix(in srgb, #7dd3fc 70%, var(--border-accent-soft) 30%);
+  --alert-info-text: color-mix(in srgb, #0369a1 84%, var(--text-primary) 16%);
   
   /* Toggle colors */
   --toggle-bg-inactive: #d1d5db;
@@ -159,24 +159,24 @@
   --metric-shortfall-color: #ef4444;
   --metric-shortfall-color-strong: #dc2626;
 
-  /* Toast backgrounds - muted for dark mode */
-  --toast-success-bg: #047857;
-  --toast-warning-bg: #b45309;
-  --toast-error-bg: #b91c1c;
+  /* Toast backgrounds - muted for dark mode, with preset-aware tinting */
+  --toast-success-bg: color-mix(in srgb, #047857 86%, var(--accent-primary) 14%);
+  --toast-warning-bg: color-mix(in srgb, #b45309 86%, var(--accent-primary) 14%);
+  --toast-error-bg: color-mix(in srgb, #b91c1c 88%, var(--accent-primary) 12%);
 
-  /* Alert backgrounds - dark theme variants */
-  --alert-error-bg: #2d1f1f;
-  --alert-error-border: #7f1d1d;
-  --alert-error-text: #fca5a5;
-  --alert-warning-bg: #2d2718;
-  --alert-warning-border: #854d0e;
-  --alert-warning-text: #fbbf24;
-  --alert-success-bg: #1e2d24;
-  --alert-success-border: #166534;
-  --alert-success-text: #86efac;
-  --alert-info-bg: #1e2838;
-  --alert-info-border: #075985;
-  --alert-info-text: #7dd3fc;
+  /* Alert backgrounds - dark mode variants blended with active preset surfaces */
+  --alert-error-bg: color-mix(in srgb, #2d1f1f 84%, var(--surface-accent-subtle) 16%);
+  --alert-error-border: color-mix(in srgb, #7f1d1d 78%, var(--border-accent-soft) 22%);
+  --alert-error-text: color-mix(in srgb, #fca5a5 88%, var(--text-primary) 12%);
+  --alert-warning-bg: color-mix(in srgb, #2d2718 84%, var(--surface-accent-subtle) 16%);
+  --alert-warning-border: color-mix(in srgb, #854d0e 78%, var(--border-accent-soft) 22%);
+  --alert-warning-text: color-mix(in srgb, #fbbf24 86%, var(--text-primary) 14%);
+  --alert-success-bg: color-mix(in srgb, #1e2d24 84%, var(--surface-accent-subtle) 16%);
+  --alert-success-border: color-mix(in srgb, #166534 78%, var(--border-accent-soft) 22%);
+  --alert-success-text: color-mix(in srgb, #86efac 86%, var(--text-primary) 14%);
+  --alert-info-bg: color-mix(in srgb, #1e2838 84%, var(--surface-accent-subtle) 16%);
+  --alert-info-border: color-mix(in srgb, #075985 78%, var(--border-accent-soft) 22%);
+  --alert-info-text: color-mix(in srgb, #7dd3fc 86%, var(--text-primary) 14%);
   
   /* Toggle colors */
   --toggle-bg-inactive: #4b5563;
