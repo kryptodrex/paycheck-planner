@@ -77,13 +77,13 @@
   /* Alert backgrounds */
   --alert-error-bg: #fef2f2;
   --alert-error-border: #fca5a5;
-  --alert-error-text: #dc2626;
+  --alert-error-text: #b91c1c;
   --alert-warning-bg: #fffbeb;
   --alert-warning-border: #fbbf24;
-  --alert-warning-text: #d97706;
+  --alert-warning-text: #92400e;
   --alert-success-bg: #f0fdf4;
   --alert-success-border: #86efac;
-  --alert-success-text: #16a34a;
+  --alert-success-text: #166534;
   --alert-info-bg: #f0f9ff;
   --alert-info-border: #7dd3fc;
   --alert-info-text: #0369a1;
