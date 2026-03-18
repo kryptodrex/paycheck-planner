@@ -45,6 +45,7 @@ Read these before working to understand the project and its conventions:
 - **NEVER** skip validation even for "small" CSS or comment changes
 - **CRITICAL:** Use `npx tsc -b` (project references), not `--noEmit`—CI workflow uses project references build
 - **ALWAYS** test keyboard shortcuts with focus on form elements (input, textarea, contentEditable)
+- **CRITICAL:** Tests that interact with persisted settings/preferences must use the shared localStorage helper in `src/test/localStorageMock.ts`; do not redefine `LocalStorageMock` per test file
 
 ### Code Organization
 - **NEVER** use global CSS class names (.empty-state, .account-section) without component scope
@@ -413,6 +414,11 @@ Update when architecture or technical patterns change:
 - Project Structure
 - Hooks, Services, Utils
 - **Command note:** Always use `npx tsc -b`, not `--noEmit`
+
+### copilot/INSTRUCTIONS.md
+Update when durable repo-specific agent instructions or conventions change:
+- If the user asks for an instruction to be saved to memory for future agents, mirror that instruction here as well when it should persist as repo guidance
+- Keep test conventions, validation rules, and collaboration policies aligned with repo memory notes so future agents see the same guidance in both places
 
 ---
 
