@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
+import { APPEARANCE_PRESET_MAP, APPEARANCE_PRESET_OPTIONS } from '../../../constants/appearancePresets';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
 import { useTheme } from '../../../contexts/ThemeContext';
+import type { AppearancePreset, ThemeMode } from '../../../types/appearance';
 import type { SelectableViewMode } from '../../../types/viewMode';
 import { Button, CheckboxGroup, Dropdown, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
 import { FileStorageService } from '../../../services/fileStorage';
 import { SELECTABLE_VIEW_MODES, sanitizeFavoriteViewModes } from '../../../utils/viewModePreferences';
 import {
+  normalizeAppearancePreset,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeThemeMode,
@@ -18,10 +21,9 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type ThemeOption = 'light' | 'dark' | 'system';
-
 interface SettingsState {
-  themeMode: ThemeOption;
+  themeMode: ThemeMode;
+  appearancePreset: AppearancePreset;
   highContrastMode: boolean;
   fontScale: number;
   glossaryTermsEnabled: boolean;
@@ -29,7 +31,7 @@ interface SettingsState {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const { theme, setTheme } = useTheme();
+  const { theme, appearancePreset, setTheme } = useTheme();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resettingMemory, setResettingMemory] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
@@ -39,6 +41,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   const getNormalizedSettingsState = (appSettings: ReturnType<typeof FileStorageService.getAppSettings>): SettingsState => ({
     themeMode: normalizeThemeMode(appSettings.themeMode) || 'light',
+    appearancePreset: normalizeAppearancePreset(appSettings.appearancePreset),
     highContrastMode: normalizeHighContrastMode(appSettings.highContrastMode),
     fontScale: normalizeFontScale(appSettings.fontScale),
     glossaryTermsEnabled: appSettings.glossaryTermsEnabled !== false,
@@ -55,6 +58,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     FileStorageService.saveAppSettings({
       ...existing,
       themeMode: updated.themeMode,
+      appearancePreset: updated.appearancePreset,
       highContrastMode: updated.highContrastMode,
       fontScale: updated.fontScale,
       glossaryTermsEnabled: updated.glossaryTermsEnabled,
@@ -62,7 +66,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     });
   };
 
-  const handleThemeModeChange = (mode: ThemeOption) => {
+  const handleThemeModeChange = (mode: ThemeMode) => {
     setSettings((prev) => {
       const updated = { ...prev, themeMode: mode };
       persistSettings(updated);
@@ -80,6 +84,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
 
+      return updated;
+    });
+  };
+
+  const handleAppearancePresetChange = (preset: AppearancePreset) => {
+    setSettings((prev) => {
+      const updated = { ...prev, appearancePreset: preset };
+      persistSettings(updated);
+      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
       return updated;
     });
   };
@@ -261,8 +274,61 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
+        <div className="settings-group">
+          <label>Preset</label>
+          <div className="settings-preset-grid" role="radiogroup" aria-label="Theme preset">
+            {APPEARANCE_PRESET_OPTIONS.map((preset) => {
+              const active = settings.appearancePreset === preset.value;
+              return (
+                <button
+                  key={preset.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  className={`settings-preset-card ${active ? 'active' : ''}`}
+                  onClick={() => handleAppearancePresetChange(preset.value)}
+                >
+                  <span className="settings-preset-preview" aria-hidden="true">
+                    <span
+                      className="settings-preset-preview-header"
+                      style={{
+                        background: `linear-gradient(135deg, ${preset.preview.accent} 0%, ${preset.preview.accentAlt} 100%)`,
+                      }}
+                    />
+                    <span
+                      className="settings-preset-preview-surface"
+                      style={{ background: preset.preview.surface }}
+                    >
+                      <span
+                        className="settings-preset-preview-pill"
+                        style={{ background: preset.preview.accent }}
+                      />
+                      <span
+                        className="settings-preset-preview-line"
+                        style={{ background: preset.preview.text }}
+                      />
+                      <span
+                        className="settings-preset-preview-line settings-preset-preview-line-soft"
+                        style={{ background: preset.preview.accentAlt }}
+                      />
+                    </span>
+                  </span>
+                  <span className="settings-preset-copy">
+                    <strong>{preset.label}</strong>
+                    <span>{preset.description}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="settings-info">
-          <span>Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong></span>
+          <span>
+            Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong>
+            {' • '}
+            Preset: <strong>{APPEARANCE_PRESET_MAP[appearancePreset].label}</strong>
+          </span>
         </div>
       </div>
 

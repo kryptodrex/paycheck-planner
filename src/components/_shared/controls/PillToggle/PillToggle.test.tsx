@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import PillToggle from './PillToggle';
 
 describe('PillToggle', () => {
@@ -53,7 +53,7 @@ describe('PillToggle', () => {
     const handleChange = vi.fn();
     render(<PillToggle value={false} onChange={handleChange} disabled />);
     for (const btn of screen.getAllByRole('button')) {
-      await userEvent.click(btn, { skipPointerEventsCheck: true });
+      await userEvent.click(btn, { pointerEventsCheck: PointerEventsCheckLevel.Never });
     }
     expect(handleChange).not.toHaveBeenCalled();
   });

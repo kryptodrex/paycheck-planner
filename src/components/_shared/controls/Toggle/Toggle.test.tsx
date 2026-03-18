@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import Toggle from './Toggle';
 
 describe('Toggle', () => {
@@ -49,7 +49,7 @@ describe('Toggle', () => {
   it('does not call onChange when disabled and clicked', async () => {
     const handleChange = vi.fn();
     render(<Toggle checked={false} onChange={handleChange} disabled />);
-    await userEvent.click(screen.getByRole('checkbox'), { skipPointerEventsCheck: true });
+    await userEvent.click(screen.getByRole('checkbox'), { pointerEventsCheck: PointerEventsCheckLevel.Never });
     expect(handleChange).not.toHaveBeenCalled();
   });
 
