@@ -1053,6 +1053,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
   };
 
+  const encryptionModalHeader = (() => {
+    if (encryptionEnabled === true) return '🔐 Encryption Key Setup';
+    if (encryptionEnabled === false) return '🔐 Disable Encryption';
+    return budgetData?.settings?.encryptionEnabled ? '🔐 Manage Encryption' : '🔐 Enable Encryption';
+  })();
+
   return (
     <div className={`plan-dashboard layout-with-tabs-${tabPosition}`}>
       <header className="dashboard-header app-drag-region">
@@ -1500,7 +1506,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <Modal
         isOpen={showEncryptionSetup && !!budgetData}
         onClose={handleEncryptionModalClose}
-        header={encryptionEnabled ? '🔐 Encryption Key Setup' : '🔐 Security Setup'}
+        header={encryptionModalHeader}
         footer={
           <>
             {encryptionEnabled === null ? (
@@ -1535,11 +1541,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </>
         }
       >
-        {encryptionEnabled !== null && (
+        {encryptionEnabled === true && (
           <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>
-            {encryptionEnabled
-              ? 'This key will be used to encrypt and decrypt your budget files.'
-              : 'Your plan file will be saved without encryption.'}
+            This key will be used to encrypt and decrypt your budget files.
           </p>
         )}
         <EncryptionConfigPanel
@@ -1551,6 +1555,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           setCustomKey={setCustomKey}
           generatedKey={generatedKey}
           onGenerateKey={handleGenerateEncryptionKey}
+          mode="manage"
+          currentlyEncrypted={budgetData?.settings?.encryptionEnabled === true}
         />
       </Modal>
 
