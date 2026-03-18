@@ -3,34 +3,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ViewModeSelector from './ViewModeSelector';
 
-class LocalStorageMock {
-  private store = new Map<string, string>();
-
-  get length(): number {
-    return this.store.size;
-  }
-
-  getItem(key: string): string | null {
-    return this.store.has(key) ? this.store.get(key)! : null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-
-  key(index: number): string | null {
-    return Array.from(this.store.keys())[index] ?? null;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-}
-
 const DEFAULT_OPTIONS = [
   { value: 'paycheck' as const, label: 'Per Paycheck' },
   { value: 'monthly' as const, label: 'Monthly' },
@@ -38,14 +10,8 @@ const DEFAULT_OPTIONS = [
 ];
 
 describe('ViewModeSelector', () => {
-  const localStorageMock = new LocalStorageMock();
-
   beforeEach(() => {
-    localStorageMock.clear();
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
+    localStorage.clear();
   });
   it('renders default options when none provided', () => {
     render(<ViewModeSelector mode="weekly" onChange={vi.fn()} />);

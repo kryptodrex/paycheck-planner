@@ -7,28 +7,6 @@ import Button from '../components/_shared/controls/Button/Button';
 import Modal from '../components/_shared/layout/Modal/Modal';
 import ViewModeSelector from '../components/_shared/layout/ViewModeSelector/ViewModeSelector';
 
-class LocalStorageMock {
-  private store = new Map<string, string>();
-
-  clear(): void {
-    this.store.clear();
-  }
-
-  getItem(key: string): string | null {
-    return this.store.has(key) ? this.store.get(key)! : null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-}
-
-const localStorageMock = new LocalStorageMock();
-
 function PresetQaFixture() {
   return (
     <Modal isOpen={true} onClose={() => undefined} header="Preset QA Surface">
@@ -47,11 +25,6 @@ function PresetQaFixture() {
 
 describe('Preset surface QA', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
-
     localStorage.clear();
     document.documentElement.setAttribute('data-contrast', 'normal');
   });

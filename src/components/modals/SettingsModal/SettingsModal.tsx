@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { APPEARANCE_PRESET_MAP, APPEARANCE_PRESET_OPTIONS } from '../../../constants/appearancePresets';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
@@ -31,7 +31,7 @@ interface SettingsState {
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const { theme, appearancePreset, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resettingMemory, setResettingMemory] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
@@ -58,6 +58,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     FileStorageService.saveAppSettings({
       ...existing,
       themeMode: updated.themeMode,
+      appearanceMode: 'preset',
       appearancePreset: updated.appearancePreset,
       highContrastMode: updated.highContrastMode,
       fontScale: updated.fontScale,
@@ -66,75 +67,71 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     });
   };
 
+  // Custom mode groundwork remains in the data model, but UI currently enforces curated presets only.
+  useEffect(() => {
+    const existing = FileStorageService.getAppSettings();
+    if (existing.appearanceMode !== 'custom') {
+      return;
+    }
+
+    persistSettings(settings);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleThemeModeChange = (mode: ThemeMode) => {
-    setSettings((prev) => {
-      const updated = { ...prev, themeMode: mode };
-      persistSettings(updated);
+    const updated = { ...settings, themeMode: mode };
+    setSettings(updated);
+    persistSettings(updated);
 
-      // Update the actual theme based on the mode
-      if (mode === 'light' || mode === 'dark') {
-        setTheme(mode);
-      } else if (mode === 'system') {
-        // For system mode, detect the system preference
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        setTheme(systemPrefersDark ? 'dark' : 'light');
-      }
+    if (mode === 'light' || mode === 'dark') {
+      setTheme(mode);
+    } else if (mode === 'system') {
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(systemPrefersDark ? 'dark' : 'light');
+    }
 
-      // Dispatch custom event to notify ThemeProvider
-      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
-      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
-
-      return updated;
-    });
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
   };
 
   const handleAppearancePresetChange = (preset: AppearancePreset) => {
-    setSettings((prev) => {
-      const updated = { ...prev, appearancePreset: preset };
-      persistSettings(updated);
-      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
-      return updated;
-    });
+    const updated = { ...settings, appearancePreset: preset };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
   };
 
   const handleHighContrastModeChange = (enabled: boolean) => {
-    setSettings((prev) => {
-      const updated = { ...prev, highContrastMode: enabled };
-      persistSettings(updated);
-      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
-      return updated;
-    });
+    const updated = { ...settings, highContrastMode: enabled };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
   };
 
   const handleFontScaleChange = (scale: number) => {
-    setSettings((prev) => {
-      const normalized = normalizeFontScale(scale);
-      const updated = { ...prev, fontScale: normalized };
-      persistSettings(updated);
-      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
-      return updated;
-    });
+    const normalized = normalizeFontScale(scale);
+    const updated = { ...settings, fontScale: normalized };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
   };
 
   const handleGlossaryTermsChange = (enabled: boolean) => {
-    setSettings((prev) => {
-      const updated = { ...prev, glossaryTermsEnabled: enabled };
-      persistSettings(updated);
-      window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled } }));
-      return updated;
-    });
+    const updated = { ...settings, glossaryTermsEnabled: enabled };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled } }));
   };
 
   const handleViewModeFavoritesChange = (values: string[]) => {
-    setSettings((prev) => {
-      const updated = {
-        ...prev,
-        viewModeFavorites: sanitizeFavoriteViewModes(values) as SelectableViewMode[],
-      };
-      persistSettings(updated);
-      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.viewModeFavoritesChanged));
-      return updated;
-    });
+    const updated = {
+      ...settings,
+      viewModeFavorites: sanitizeFavoriteViewModes(values) as SelectableViewMode[],
+    };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.viewModeFavoritesChanged));
   };
 
   const handleExportBackup = async () => {
@@ -327,7 +324,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           <span>
             Current theme: <strong>{theme === 'light' ? 'Light' : 'Dark'}</strong>
             {' • '}
-            Preset: <strong>{APPEARANCE_PRESET_MAP[appearancePreset].label}</strong>
+            Preset: <strong>{APPEARANCE_PRESET_MAP[settings.appearancePreset].label}</strong>
           </span>
         </div>
       </div>

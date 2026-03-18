@@ -5,28 +5,6 @@ import { ThemeProvider } from '../../../contexts/ThemeContext';
 import { STORAGE_KEYS } from '../../../constants/storage';
 import SettingsModal from './SettingsModal';
 
-class LocalStorageMock {
-  private store = new Map<string, string>();
-
-  clear(): void {
-    this.store.clear();
-  }
-
-  getItem(key: string): string | null {
-    return this.store.has(key) ? this.store.get(key)! : null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-}
-
-const localStorageMock = new LocalStorageMock();
-
 function renderSettingsModal() {
   return render(
     <ThemeProvider>
@@ -37,17 +15,17 @@ function renderSettingsModal() {
 
 describe('SettingsModal', () => {
   beforeEach(() => {
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
-
     localStorage.clear();
     localStorage.setItem(
       STORAGE_KEYS.settings,
       JSON.stringify({
         themeMode: 'light',
+        appearanceMode: 'preset',
         appearancePreset: 'default',
+        customAppearance: {
+          primaryAccent: '#667eea',
+          surfaceTint: '#eef2ff',
+        },
         highContrastMode: false,
         fontScale: 1,
         glossaryTermsEnabled: true,
@@ -90,5 +68,34 @@ describe('SettingsModal', () => {
 
     expect(screen.getByRole('radio', { name: /pretty in pink/i })).toHaveAttribute('aria-checked', 'true');
     expect(rerendered.container.querySelector('.settings-info')).toHaveTextContent('Current theme: Light • Preset: Pretty in Pink');
+  });
+
+  it('hides custom controls and coerces custom appearance mode back to preset persistence', async () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        themeMode: 'light',
+        appearanceMode: 'custom',
+        appearancePreset: 'ocean',
+        customAppearance: {
+          primaryAccent: '#0f766e',
+          surfaceTint: '#ecfeff',
+        },
+        highContrastMode: false,
+        fontScale: 1,
+        glossaryTermsEnabled: true,
+        viewModeFavorites: ['weekly', 'monthly'],
+      }),
+    );
+
+    const { container } = renderSettingsModal();
+
+    expect(screen.queryByRole('button', { name: 'Custom' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/primary accent color/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/surface tint color/i)).not.toBeInTheDocument();
+    expect(container.querySelector('.settings-info')).toHaveTextContent('Current theme: Light • Preset: Ocean');
+
+    const storedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || '{}');
+    expect(storedSettings.appearanceMode).toBe('preset');
   });
 });

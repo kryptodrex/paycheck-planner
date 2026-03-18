@@ -3,28 +3,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PayBreakdown from './PayBreakdown';
 
-class LocalStorageMock {
-  private store = new Map<string, string>();
-
-  clear(): void {
-    this.store.clear();
-  }
-
-  getItem(key: string): string | null {
-    return this.store.has(key) ? this.store.get(key)! : null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-}
-
-const localStorageMock = new LocalStorageMock();
-
 const {
   updateBudgetDataMock,
   calculatePaycheckBreakdownMock,
@@ -140,11 +118,6 @@ describe('PayBreakdown custom allocation validation', () => {
     closeConfirmDialogMock.mockClear();
     confirmCurrentDialogMock.mockClear();
 
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
-
     localStorage.clear();
 
     Object.defineProperty(window, 'matchMedia', {
@@ -163,9 +136,7 @@ describe('PayBreakdown custom allocation validation', () => {
     });
   });
 
-  it('shows an error and blocks save when a custom allocation amount has no name', async () => {
-    const user = userEvent.setup();
-
+  async function openCustomAllocationEditor(user: ReturnType<typeof userEvent.setup>) {
     render(
       <PayBreakdown
         displayMode="monthly"
@@ -175,6 +146,12 @@ describe('PayBreakdown custom allocation validation', () => {
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
     await user.click(screen.getByRole('button', { name: '+ Add Item' }));
+  }
+
+  it('shows an error and blocks save when a custom allocation amount has no name', async () => {
+    const user = userEvent.setup();
+
+    await openCustomAllocationEditor(user);
 
     const amountInput = screen.getByRole('spinbutton');
     await user.clear(amountInput);
@@ -183,7 +160,30 @@ describe('PayBreakdown custom allocation validation', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(screen.getByText(/add a name to the custom allocation item before saving/i)).toBeInTheDocument();
+    expect(screen.getByText(/complete or remove the custom allocation item before saving/i)).toBeInTheDocument();
+    expect(updateBudgetDataMock).not.toHaveBeenCalled();
+  });
+
+  it('shows an error and blocks save when a custom allocation item is left blank', async () => {
+    const user = userEvent.setup();
+
+    await openCustomAllocationEditor(user);
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(screen.getByText(/complete or remove the custom allocation item before saving/i)).toBeInTheDocument();
+    expect(updateBudgetDataMock).not.toHaveBeenCalled();
+  });
+
+  it('shows an error and blocks save when a custom allocation name has a zero amount', async () => {
+    const user = userEvent.setup();
+
+    await openCustomAllocationEditor(user);
+
+    await user.type(screen.getByPlaceholderText('Item name'), 'Emergency fund');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(screen.getByText(/complete or remove the custom allocation item before saving/i)).toBeInTheDocument();
     expect(updateBudgetDataMock).not.toHaveBeenCalled();
   });
 });

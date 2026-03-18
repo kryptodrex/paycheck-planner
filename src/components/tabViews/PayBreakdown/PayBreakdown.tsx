@@ -508,18 +508,18 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         amount: normalizeStoredAllocationAmount(category.amount),
       }));
 
-    const unnamedCustomCategories = normalizedCategories.filter(
-      (category) => !isAutoCategory(category) && category.amount > 0 && category.name.length === 0,
+    const incompleteCustomCategories = normalizedCategories.filter(
+      (category) => !isAutoCategory(category) && (category.name.length === 0 || category.amount <= 0),
     );
 
-    if (unnamedCustomCategories.length > 0) {
+    if (incompleteCustomCategories.length > 0) {
       setValidationMessages((prev) => new Map(prev).set(
         accountId,
         {
           type: 'error',
-          message: unnamedCustomCategories.length === 1
-            ? 'Add a name to the custom allocation item before saving.'
-            : `Add names to all ${unnamedCustomCategories.length} custom allocation items before saving.`,
+          message: incompleteCustomCategories.length === 1
+            ? 'Complete or remove the custom allocation item before saving.'
+            : `Complete or remove all ${incompleteCustomCategories.length} custom allocation items before saving.`,
         },
       ));
       return;
