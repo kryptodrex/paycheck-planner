@@ -4,3 +4,4 @@ export { useAppDialogs } from './useAppDialogs';
 export { useEncryptionSetupFlow } from './useEncryptionSetupFlow';
 export { useModalEntityEditor } from './useModalEntityEditor';
 export { useFieldErrors } from './useFieldErrors';
+export { useIsMobile } from './useIsMobile';

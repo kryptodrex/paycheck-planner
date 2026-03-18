@@ -8,7 +8,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMe
 import { flushSync } from 'react-dom';
 import { MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
-import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
+import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow, useIsMobile } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
 import SetupWizard from '../views/SetupWizard';
 import KeyMetrics from '../tabViews/KeyMetrics';
@@ -22,6 +22,7 @@ import AccountsModal from '../modals/AccountsModal';
 import ExportModal from '../modals/ExportModal';
 import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
+import { MobileNavDrawer } from './MobileNav';
 import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
@@ -88,6 +89,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
   const [tabPosition, setTabPosition] = useState<TabPosition>('left');
   const [tabDisplayMode, setTabDisplayMode] = useState<TabDisplayMode>('icons-with-labels');
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const isMobile = useIsMobile();
   const {
     encryptionEnabled,
     setEncryptionEnabled,
@@ -1054,9 +1057,24 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   };
 
   return (
-    <div className={`plan-dashboard layout-with-tabs-${tabPosition}`}>
+    <div className={`plan-dashboard layout-with-tabs-${tabPosition}${isMobile ? ' layout-mobile' : ''}`}>
       <header className="dashboard-header app-drag-region">
         <div className="header-left">
+          {/* Hamburger trigger — only visible on mobile viewports */}
+          {!viewMode && isMobile && (
+            <button
+              className="mobile-nav-trigger"
+              onClick={() => setIsMobileNavOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={isMobileNavOpen}
+            >
+              <span className="mobile-nav-trigger-icon" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
+            </button>
+          )}
           <div className="plan-title-block">
             <div className="plan-title-view-row">
               <h1>{budgetData.name}</h1>
@@ -1109,7 +1127,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Content area wrapper (contains tabs for left/right, content for all) */}
       <div className="plan-dashboard-content-wrapper">
         {/* Tabs on left (inside content wrapper) */}
-        {!viewMode && tabPosition === 'left' && (
+        {!viewMode && !isMobile && tabPosition === 'left' && (
           <PlanTabs
             visibleTabs={visibleTabsForRender}
             activeTab={activeTab}
@@ -1132,7 +1150,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         {/* Main content area */}
         <div className="plan-dashboard-main">
           {/* Tabs on top (after header) */}
-          {!viewMode && tabPosition === 'top' && (
+          {!viewMode && !isMobile && tabPosition === 'top' && (
             <PlanTabs
               visibleTabs={visibleTabsForRender}
               activeTab={activeTab}
@@ -1252,7 +1270,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       </div>
 
           {/* Tabs on bottom (after content) */}
-          {!viewMode && tabPosition === 'bottom' && (
+          {!viewMode && !isMobile && tabPosition === 'bottom' && (
             <PlanTabs
               visibleTabs={visibleTabsForRender}
               activeTab={activeTab}
@@ -1275,7 +1293,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         {/* End plan-dashboard-main */}
 
         {/* Tabs on right (inside content wrapper, after main) */}
-        {!viewMode && tabPosition === 'right' && (
+        {!viewMode && !isMobile && tabPosition === 'right' && (
           <PlanTabs
             visibleTabs={visibleTabsForRender}
             activeTab={activeTab}
@@ -1296,6 +1314,20 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         )}
       </div>
       {/* End plan-dashboard-content-wrapper */}
+
+      {/* Mobile navigation drawer — rendered outside the content wrapper so it
+          can overlay the entire viewport independently of tab position */}
+      {!viewMode && isMobile && (
+        <MobileNavDrawer
+          isOpen={isMobileNavOpen}
+          onOpen={() => setIsMobileNavOpen(true)}
+          onClose={() => setIsMobileNavOpen(false)}
+          visibleTabs={visibleTabsForRender}
+          activeTab={activeTab}
+          onTabClick={handleTabClick}
+          onManageTabs={() => setShowTabManagementModal(true)}
+        />
+      )}
 
       <footer className="dashboard-footer">
         <div className="footer-left-actions">
