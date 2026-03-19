@@ -31,9 +31,11 @@ export interface OpenAccountsAction {
   scrollToAccountId?: string;
 }
 
-/** Open the app Settings modal. */
+/** Open the app Settings modal, optionally scrolling to a specific section. */
 export interface OpenSettingsAction {
   type: 'open-settings';
+  /** Section id to scroll into view: 'appearance' | 'accessibility' | 'glossary' | 'app-data-reset' */
+  sectionId?: string;
 }
 
 export type SearchResultAction =
@@ -334,31 +336,151 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
     });
   }
 
-  // ── Settings shortcuts ────────────────────────────────────────────────────
+  // ── Settings entries ──────────────────────────────────────────────────────
+  // sectionId values must match the SETTINGS_SECTIONS ids defined in SettingsModal.tsx:
+  //   'appearance' | 'accessibility' | 'glossary' | 'app-data-reset'
+
+  // ── Settings — Appearance ─────────────────────────────────────────────────
   results.push(
     {
       id: 'settings-theme',
       title: 'Theme',
-      subtitle: 'Light, dark, or system appearance',
+      subtitle: 'Switch between light, dark, or system appearance',
       category: 'Settings',
       categoryIcon: '🎨',
-      action: { type: 'open-settings' },
+      action: { type: 'open-settings', sectionId: 'appearance' },
     },
     {
-      id: 'settings-currency',
-      title: 'Currency',
-      subtitle: 'Change the display currency',
+      id: 'settings-preset',
+      title: 'Appearance Preset',
+      subtitle: 'Choose a color preset: Purple, Ocean, Forest, Sunset, Slate, Rose',
       category: 'Settings',
-      categoryIcon: '💱',
-      action: { type: 'open-settings' },
+      categoryIcon: '🖌️',
+      action: { type: 'open-settings', sectionId: 'appearance' },
     },
     {
-      id: 'settings-font',
+      id: 'settings-theme-light',
+      title: 'Light Mode',
+      subtitle: 'Switch to light theme',
+      category: 'Settings',
+      categoryIcon: '☀️',
+      action: { type: 'open-settings', sectionId: 'appearance' },
+    },
+    {
+      id: 'settings-theme-dark',
+      title: 'Dark Mode',
+      subtitle: 'Switch to dark theme',
+      category: 'Settings',
+      categoryIcon: '🌙',
+      action: { type: 'open-settings', sectionId: 'appearance' },
+    },
+    {
+      id: 'settings-theme-system',
+      title: 'System Theme',
+      subtitle: 'Follow the operating system appearance preference',
+      category: 'Settings',
+      categoryIcon: '💻',
+      action: { type: 'open-settings', sectionId: 'appearance' },
+    },
+  );
+
+  // ── Settings — Accessibility ───────────────────────────────────────────────
+  results.push(
+    {
+      id: 'settings-font-scale',
       title: 'Font Scale',
-      subtitle: 'Adjust text size',
+      subtitle: 'Adjust text size for readability',
       category: 'Settings',
       categoryIcon: '🔤',
-      action: { type: 'open-settings' },
+      action: { type: 'open-settings', sectionId: 'accessibility' },
+    },
+    {
+      id: 'settings-high-contrast',
+      title: 'High Contrast Mode',
+      subtitle: 'Increase color contrast for accessibility',
+      category: 'Settings',
+      categoryIcon: '🔲',
+      action: { type: 'open-settings', sectionId: 'accessibility' },
+    },
+    {
+      id: 'settings-accessibility',
+      title: 'Accessibility',
+      subtitle: 'Font scale, high contrast, readability options',
+      category: 'Settings',
+      categoryIcon: '♿',
+      action: { type: 'open-settings', sectionId: 'accessibility' },
+    },
+  );
+
+  // ── Settings — Glossary ───────────────────────────────────────────────────
+  results.push(
+    {
+      id: 'settings-glossary',
+      title: 'Glossary Terms',
+      subtitle: 'Enable or disable inline term definitions and hover tooltips',
+      category: 'Settings',
+      categoryIcon: '📖',
+      action: { type: 'open-settings', sectionId: 'glossary' },
+    },
+    {
+      id: 'settings-tooltips',
+      title: 'Tooltips',
+      subtitle: 'Show or hide inline glossary term tooltips',
+      category: 'Settings',
+      categoryIcon: '💬',
+      action: { type: 'open-settings', sectionId: 'glossary' },
+    },
+  );
+
+  // ── Settings — App Data & View Modes ──────────────────────────────────────
+  results.push(
+    {
+      id: 'settings-view-mode',
+      title: 'View Mode Favorites',
+      subtitle: 'Choose which cadence views appear in the selector: weekly, bi-weekly, monthly…',
+      category: 'Settings',
+      categoryIcon: '📊',
+      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+    },
+    {
+      id: 'settings-view-mode-weekly',
+      title: 'Weekly View',
+      subtitle: 'Show amounts on a weekly cadence',
+      category: 'Settings',
+      categoryIcon: '📅',
+      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+    },
+    {
+      id: 'settings-view-mode-biweekly',
+      title: 'Bi-weekly View',
+      subtitle: 'Show amounts on a bi-weekly cadence',
+      category: 'Settings',
+      categoryIcon: '📅',
+      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+    },
+    {
+      id: 'settings-view-mode-monthly',
+      title: 'Monthly View',
+      subtitle: 'Show amounts on a monthly cadence',
+      category: 'Settings',
+      categoryIcon: '📅',
+      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+    },
+    {
+      id: 'settings-backup',
+      title: 'Backup & Export Settings',
+      subtitle: 'Export or import app settings as a backup',
+      category: 'Settings',
+      categoryIcon: '💾',
+      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+    },
+    {
+      id: 'settings-reset',
+      title: 'Reset App Data',
+      subtitle: 'Clear all app settings and restore defaults',
+      category: 'Settings',
+      categoryIcon: '🔄',
+      action: { type: 'open-settings', sectionId: 'app-data-reset' },
     },
   );
 

@@ -191,6 +191,26 @@ describe('buildSearchIndex', () => {
     const ret = index.find((r) => r.id === 'retirement-ret1');
     expect((ret?.action as { elementId?: string }).elementId).toBe('retirement-section');
   });
+
+  it('includes settings entries with open-settings action and sectionId', () => {
+    const index = buildSearchIndex(MOCK_BUDGET);
+
+    const themeEntry = index.find((r) => r.id === 'settings-theme');
+    expect(themeEntry).toBeDefined();
+    expect(themeEntry?.action).toMatchObject({ type: 'open-settings', sectionId: 'appearance' });
+
+    const fontEntry = index.find((r) => r.id === 'settings-font-scale');
+    expect(fontEntry).toBeDefined();
+    expect(fontEntry?.action).toMatchObject({ type: 'open-settings', sectionId: 'accessibility' });
+
+    const glossaryEntry = index.find((r) => r.id === 'settings-glossary');
+    expect(glossaryEntry).toBeDefined();
+    expect(glossaryEntry?.action).toMatchObject({ type: 'open-settings', sectionId: 'glossary' });
+
+    const viewModeEntry = index.find((r) => r.id === 'settings-view-mode');
+    expect(viewModeEntry).toBeDefined();
+    expect(viewModeEntry?.action).toMatchObject({ type: 'open-settings', sectionId: 'app-data-reset' });
+  });
 });
 
 // ─── searchPlan ───────────────────────────────────────────────────────────────
@@ -266,5 +286,16 @@ describe('searchPlan', () => {
     const ids = results.map((r) => r.id);
     expect(ids).toContain('bill-bill1'); // Netflix $15.99
     expect(ids).not.toContain('bill-bill2'); // Rent $1800
+  });
+
+  it('matches settings by keyword (theme, dark, contrast, glossary, view mode)', () => {
+    expect(searchPlan('theme', MOCK_BUDGET).some((r) => r.category === 'Settings')).toBe(true);
+    expect(searchPlan('dark mode', MOCK_BUDGET).some((r) => r.id === 'settings-theme-dark')).toBe(true);
+    expect(searchPlan('high contrast', MOCK_BUDGET).some((r) => r.id === 'settings-high-contrast')).toBe(true);
+    expect(searchPlan('glossary', MOCK_BUDGET).some((r) => r.id === 'settings-glossary')).toBe(true);
+    expect(searchPlan('view mode', MOCK_BUDGET).some((r) => r.id === 'settings-view-mode')).toBe(true);
+    expect(searchPlan('font scale', MOCK_BUDGET).some((r) => r.id === 'settings-font-scale')).toBe(true);
+    expect(searchPlan('backup', MOCK_BUDGET).some((r) => r.id === 'settings-backup')).toBe(true);
+    expect(searchPlan('reset', MOCK_BUDGET).some((r) => r.id === 'settings-reset')).toBe(true);
   });
 });

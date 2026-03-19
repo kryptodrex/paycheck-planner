@@ -99,6 +99,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined);
   const [showSearch, setShowSearch] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
@@ -949,6 +950,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       } else if (action.type === 'open-accounts') {
         setShowAccountsModal(true);
       } else if (action.type === 'open-settings') {
+        setSettingsInitialSection(action.sectionId);
         setShowSettings(true);
       }
     },
@@ -1623,7 +1625,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettings} 
-        onClose={() => setShowSettings(false)}
+        onClose={() => {
+          setShowSettings(false);
+          setSettingsInitialSection(undefined);
+        }}
+        initialSectionId={settingsInitialSection}
       />
 
       {/* Encryption Setup Modal */}
