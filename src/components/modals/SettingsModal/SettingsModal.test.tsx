@@ -36,6 +36,8 @@ describe('SettingsModal', () => {
           surfaceTint: '#eef2ff',
         },
         highContrastMode: false,
+        colorVisionMode: 'normal',
+        stateCueMode: 'enhanced',
         fontScale: 1,
         glossaryTermsEnabled: true,
         viewModeFavorites: ['weekly', 'monthly'],
@@ -91,6 +93,8 @@ describe('SettingsModal', () => {
           surfaceTint: '#ecfeff',
         },
         highContrastMode: false,
+        colorVisionMode: 'normal',
+        stateCueMode: 'enhanced',
         fontScale: 1,
         glossaryTermsEnabled: true,
         viewModeFavorites: ['weekly', 'monthly'],
@@ -160,9 +164,32 @@ describe('SettingsModal', () => {
   it('explains theme mode and preset distinctions in appearance settings', () => {
     renderSettingsModal();
 
-    expect(screen.getByText(/Theme Mode controls light, dark, or system behavior\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Preset controls the color family\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Custom theme editing is intentionally hidden in this release/i)).toBeInTheDocument();
+    expect(screen.getByText(/Theme setting controls whether is in light or dark mode, or matching your system preference\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Preset setting controls the overall color scheme of the app\./i)).toBeInTheDocument();
+  });
+
+  it('persists color vision support selection', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.selectOptions(screen.getByLabelText('Color Vision Support'), 'deuteranopia');
+
+    const storedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || '{}');
+    expect(storedSettings.colorVisionMode).toBe('deuteranopia');
+    expect(screen.getByText(/Green-sensitive color adjustments\./i)).toBeInTheDocument();
+  });
+
+  it('persists enhanced state cue selection', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    const stateCueGroup = screen.getByText('Enhanced State Cues').closest('.settings-group');
+    expect(stateCueGroup).toBeTruthy();
+    await user.click(within(stateCueGroup as HTMLElement).getByRole('button', { name: 'Off' }));
+
+    const storedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || '{}');
+    expect(storedSettings.stateCueMode).toBe('minimal');
+    expect(screen.getByText('Hides additional state cues while preserving core behavior and theme colors.')).toBeInTheDocument();
   });
 
   it('scrolls to the selected section when using sidebar navigation', async () => {

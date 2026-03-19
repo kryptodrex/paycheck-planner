@@ -24,6 +24,17 @@
   cursor: not-allowed;
 }
 
+[data-state-cues="enhanced"] .btn-disabled-state:not(.btn-icon) {
+  border: 1px dashed color-mix(in srgb, var(--text-secondary) 40%, var(--border-color));
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--bg-primary) 88%, transparent) 0,
+    color-mix(in srgb, var(--bg-primary) 88%, transparent) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
 .btn:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;

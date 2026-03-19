@@ -935,7 +935,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                       {validationMessages.has(displayAccount.id) && (
                         <div className="waterfall-row waterfall-category-row validation-message-row">
                           <Alert type={validationMessages.get(displayAccount.id)?.type}>
-                            {validationMessages.get(displayAccount.id)?.type === 'error' ? '🚫' : '⚠️'} {validationMessages.get(displayAccount.id)?.message}
+                            <span className="state-message-prefix">
+                              {validationMessages.get(displayAccount.id)?.type === 'error' ? 'Allocation error:' : 'Allocation warning:'}
+                            </span>{' '}
+                            {validationMessages.get(displayAccount.id)?.message}
                           </Alert>
                         </div>
                       )}
@@ -981,6 +984,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 <Alert type="error">
                   <div className="reallocation-alert-content">
                     <span>
+                      <span className="state-message-prefix">Overallocation:</span>{' '}
                       Your allocations exceed net pay by {formatWithSymbol(toDisplayAmount(Math.abs(leftoverPerPaycheck), paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}.
                     </span>
                     {reallocationPlan.proposals.length > 0 ? (
@@ -1001,6 +1005,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
                 <Alert type="warning">
                   <div className="reallocation-alert-content">
                     <span>
+                      <span className="state-message-prefix">Below target:</span>{' '}
                       You are {formatWithSymbol(toDisplayAmount(belowTargetGap, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })} below your target minimum of {formatWithSymbol(toDisplayAmount(roundedTargetLeftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2 })}.
                     </span>
                     {reallocationPlan.proposals.length > 0 ? (

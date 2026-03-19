@@ -68,6 +68,8 @@ describe('FileStorageService', () => {
         appearancePreset: 'neon-chaos',
         customAppearance: { primaryAccent: 'bad', surfaceTint: '#fff' },
         highContrastMode: 'yes',
+        colorVisionMode: 'tetrachromacy',
+        stateCueMode: 'verbose',
         fontScale: 7,
       }),
     );
@@ -82,6 +84,8 @@ describe('FileStorageService', () => {
       surfaceTint: '#eef2ff',
     });
     expect(settings.highContrastMode).toBe(false);
+    expect(settings.colorVisionMode).toBe('normal');
+    expect(settings.stateCueMode).toBe('enhanced');
     expect(settings.fontScale).toBe(1.25);
   });
 
@@ -95,6 +99,8 @@ describe('FileStorageService', () => {
         surfaceTint: '#abcdef',
       },
       highContrastMode: false,
+      colorVisionMode: 'deuteranopia',
+      stateCueMode: 'minimal',
       fontScale: 0.1,
       glossaryTermsEnabled: true,
     });
@@ -108,6 +114,8 @@ describe('FileStorageService', () => {
       surfaceTint: '#abcdef',
     });
     expect(stored.highContrastMode).toBe(false);
+    expect(stored.colorVisionMode).toBe('deuteranopia');
+    expect(stored.stateCueMode).toBe('minimal');
     expect(stored.fontScale).toBe(0.9);
   });
 

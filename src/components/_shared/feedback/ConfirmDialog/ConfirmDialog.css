@@ -2,6 +2,42 @@
   max-width: 500px;
 }
 
+.confirm-dialog-context {
+  margin: 0 0 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color-light);
+  background: var(--bg-secondary);
+}
+
+[data-state-cues="minimal"] .confirm-dialog-context {
+  display: none;
+}
+
+.confirm-dialog-context-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-accent);
+  background: color-mix(in srgb, var(--accent-primary) 14%, var(--bg-primary));
+}
+
+.confirm-dialog-context-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
 .confirm-dialog-message {
   margin: 0;
   color: var(--text-secondary);

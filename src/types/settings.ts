@@ -1,5 +1,5 @@
 import type { TabConfig, TabDisplayMode, TabPosition } from './tabs';
-import type { AppearanceMode, AppearancePreset, CustomAppearanceSettings, ThemeMode } from './appearance';
+import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from './appearance';
 import type { SelectableViewMode } from './viewMode';
 import type { ViewMode } from './viewMode';
 
@@ -35,6 +35,8 @@ export interface AppSettings {
   appearancePreset?: AppearancePreset;
   customAppearance?: CustomAppearanceSettings;
   highContrastMode?: boolean;
+  colorVisionMode?: ColorVisionMode;
+  stateCueMode?: StateCueMode;
   fontScale?: number;
   glossaryTermsEnabled?: boolean;
   viewModeFavorites?: SelectableViewMode[];

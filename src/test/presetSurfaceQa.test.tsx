@@ -27,12 +27,14 @@ describe('Preset surface QA', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.setAttribute('data-contrast', 'normal');
+    document.documentElement.setAttribute('data-color-vision', 'normal');
   });
 
   afterEach(() => {
     document.documentElement.removeAttribute('data-theme');
     document.documentElement.removeAttribute('data-theme-preset');
     document.documentElement.removeAttribute('data-contrast');
+    document.documentElement.removeAttribute('data-color-vision');
   });
 
   for (const preset of APPEARANCE_PRESET_OPTIONS) {

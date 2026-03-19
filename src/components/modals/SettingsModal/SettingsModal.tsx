@@ -3,15 +3,17 @@ import { APPEARANCE_PRESET_MAP, APPEARANCE_PRESET_OPTIONS } from '../../../const
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
 import { useTheme } from '../../../contexts/ThemeContext';
-import type { AppearancePreset, ThemeMode } from '../../../types/appearance';
+import type { AppearancePreset, ColorVisionMode, StateCueMode, ThemeMode } from '../../../types/appearance';
 import type { SelectableViewMode } from '../../../types/viewMode';
 import { Button, CheckboxGroup, Dropdown, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
 import { FileStorageService } from '../../../services/fileStorage';
 import { SELECTABLE_VIEW_MODES, sanitizeFavoriteViewModes } from '../../../utils/viewModePreferences';
 import {
   normalizeAppearancePreset,
+  normalizeColorVisionMode,
   normalizeFontScale,
   normalizeHighContrastMode,
+  normalizeStateCueMode,
   normalizeThemeMode,
 } from '../../../utils/appearanceSettings';
 import './SettingsModal.css';
@@ -25,10 +27,32 @@ interface SettingsState {
   themeMode: ThemeMode;
   appearancePreset: AppearancePreset;
   highContrastMode: boolean;
+  colorVisionMode: ColorVisionMode;
+  stateCueMode: StateCueMode;
   fontScale: number;
   glossaryTermsEnabled: boolean;
   viewModeFavorites: SelectableViewMode[];
 }
+
+const COLOR_VISION_OPTIONS: Array<{ value: ColorVisionMode; label: string; description: string }> = [
+  { value: 'normal', label: 'Standard Color Vision', description: 'Default color behavior.' },
+  { value: 'protanopia', label: 'Protanopia Support', description: 'Red-sensitive color adjustments.' },
+  { value: 'deuteranopia', label: 'Deuteranopia Support', description: 'Green-sensitive color adjustments.' },
+  { value: 'tritanopia', label: 'Tritanopia Support', description: 'Blue-sensitive color adjustments.' },
+];
+
+const STATE_CUE_OPTIONS: Array<{ value: StateCueMode; label: string; description: string }> = [
+  {
+    value: 'enhanced',
+    label: 'Enhanced Cues (Recommended)',
+    description: 'Shows extra state labels/icons/patterns for warning, error, destructive, and disabled states.',
+  },
+  {
+    value: 'minimal',
+    label: 'Minimal Cues',
+    description: 'Hides additional state cues while preserving core behavior and theme colors.',
+  },
+];
 
 interface SettingsSection {
   id: string;
@@ -65,7 +89,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: 'accessibility',
     title: 'Accessibility',
-    searchTerms: 'contrast high contrast font scale text size readability',
+    searchTerms: 'contrast high contrast color vision colorblind protanopia deuteranopia tritanopia font scale text size readability state cues labels icons pattern minimal enhanced',
   },
   {
     id: 'glossary',
@@ -98,6 +122,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     themeMode: normalizeThemeMode(appSettings.themeMode) || 'light',
     appearancePreset: normalizeAppearancePreset(appSettings.appearancePreset),
     highContrastMode: normalizeHighContrastMode(appSettings.highContrastMode),
+    colorVisionMode: normalizeColorVisionMode(appSettings.colorVisionMode),
+    stateCueMode: normalizeStateCueMode(appSettings.stateCueMode),
     fontScale: normalizeFontScale(appSettings.fontScale),
     glossaryTermsEnabled: appSettings.glossaryTermsEnabled !== false,
     viewModeFavorites: sanitizeFavoriteViewModes(appSettings.viewModeFavorites),
@@ -116,6 +142,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       appearanceMode: 'preset',
       appearancePreset: updated.appearancePreset,
       highContrastMode: updated.highContrastMode,
+      colorVisionMode: updated.colorVisionMode,
+      stateCueMode: updated.stateCueMode,
       fontScale: updated.fontScale,
       glossaryTermsEnabled: updated.glossaryTermsEnabled,
       viewModeFavorites: sanitizeFavoriteViewModes(updated.viewModeFavorites),
@@ -131,7 +159,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
     persistSettings(settings);
     window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleThemeModeChange = (mode: ThemeMode) => {
@@ -167,6 +195,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const handleFontScaleChange = (scale: number) => {
     const normalized = normalizeFontScale(scale);
     const updated = { ...settings, fontScale: normalized };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
+  };
+
+  const handleColorVisionModeChange = (mode: ColorVisionMode) => {
+    const updated = { ...settings, colorVisionMode: normalizeColorVisionMode(mode) };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
+  };
+
+  const handleStateCueModeChange = (mode: StateCueMode) => {
+    const updated = { ...settings, stateCueMode: normalizeStateCueMode(mode) };
     setSettings(updated);
     persistSettings(updated);
     window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
@@ -424,88 +466,94 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
               }}
             >
               <h3 id="appearance">Appearance</h3>
-        
-        <div className="settings-group">
-          <label>Theme</label>
-          <div className="theme-options">
-            <button
-              className={`theme-option ${settings.themeMode === 'light' ? 'active' : ''}`}
-              onClick={() => handleThemeModeChange('light')}
-              title="Light theme"
-            >
-              ☀️ Light
-            </button>
-            <button
-              className={`theme-option ${settings.themeMode === 'dark' ? 'active' : ''}`}
-              onClick={() => handleThemeModeChange('dark')}
-              title="Dark theme"
-            >
-              🌙 Dark
-            </button>
-            <button
-              className={`theme-option ${settings.themeMode === 'system' ? 'active' : ''}`}
-              onClick={() => handleThemeModeChange('system')}
-              title="Follow system preference"
-            >
-              💻 System
-            </button>
-          </div>
-        </div>
 
-        <div className="settings-group">
-          <label>Preset</label>
-          <div className="settings-preset-grid" role="radiogroup" aria-label="Theme preset">
-            {visibleAppearancePresets.map((preset) => {
-              const active = settings.appearancePreset === preset.value;
-              const matchedBySearch = !!matchingAppearancePresetValues?.has(preset.value);
-              return (
-                <button
-                  key={preset.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  className={`settings-preset-card ${active ? 'active' : ''} ${matchedBySearch ? 'search-match' : ''}`}
-                  onClick={() => handleAppearancePresetChange(preset.value)}
-                >
-                  <span className="settings-preset-preview" aria-hidden="true">
-                    <span
-                      className="settings-preset-preview-header"
-                      style={{
-                        background: `linear-gradient(135deg, ${preset.preview.accent} 0%, ${preset.preview.accentAlt} 100%)`,
-                      }}
-                    />
-                    <span
-                      className="settings-preset-preview-surface"
-                      style={{ background: preset.preview.surface }}
-                    >
-                      <span
-                        className="settings-preset-preview-pill"
-                        style={{ background: preset.preview.accent }}
-                      />
-                      <span
-                        className="settings-preset-preview-line"
-                        style={{ background: preset.preview.text }}
-                      />
-                      <span
-                        className="settings-preset-preview-line settings-preset-preview-line-soft"
-                        style={{ background: preset.preview.accentAlt }}
-                      />
-                    </span>
-                  </span>
-                  <span className="settings-preset-copy">
-                    <strong>{preset.label}</strong>
-                    <span>{preset.description}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          {matchingAppearancePresetValues && matchingAppearancePresetValues.size > 0 && (
-            <p className="settings-search-hint" role="status">
-              Showing matching presets for "{searchQuery.trim()}".
-            </p>
-          )}
-        </div>
+              <InfoBox>
+                Theme setting controls whether is in light or dark mode, or matching your system preference.
+                {' '}
+                Preset setting controls the overall color scheme of the app.
+              </InfoBox>
+
+              <div className="settings-group">
+                <label>Theme</label>
+                <div className="theme-options">
+                  <button
+                    className={`theme-option ${settings.themeMode === 'light' ? 'active' : ''}`}
+                    onClick={() => handleThemeModeChange('light')}
+                    title="Light theme"
+                  >
+                    ☀️ Light
+                  </button>
+                  <button
+                    className={`theme-option ${settings.themeMode === 'dark' ? 'active' : ''}`}
+                    onClick={() => handleThemeModeChange('dark')}
+                    title="Dark theme"
+                  >
+                    🌙 Dark
+                  </button>
+                  <button
+                    className={`theme-option ${settings.themeMode === 'system' ? 'active' : ''}`}
+                    onClick={() => handleThemeModeChange('system')}
+                    title="Follow system preference"
+                  >
+                    💻 System
+                  </button>
+                </div>
+              </div>
+
+              <div className="settings-group">
+                <label>Preset</label>
+                <div className="settings-preset-grid" role="radiogroup" aria-label="Theme preset">
+                  {visibleAppearancePresets.map((preset) => {
+                    const active = settings.appearancePreset === preset.value;
+                    const matchedBySearch = !!matchingAppearancePresetValues?.has(preset.value);
+                    return (
+                      <button
+                        key={preset.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        className={`settings-preset-card ${active ? 'active' : ''} ${matchedBySearch ? 'search-match' : ''}`}
+                        onClick={() => handleAppearancePresetChange(preset.value)}
+                      >
+                        <span className="settings-preset-preview" aria-hidden="true">
+                          <span
+                            className="settings-preset-preview-header"
+                            style={{
+                              background: `linear-gradient(135deg, ${preset.preview.accent} 0%, ${preset.preview.accentAlt} 100%)`,
+                            }}
+                          />
+                          <span
+                            className="settings-preset-preview-surface"
+                            style={{ background: preset.preview.surface }}
+                          >
+                            <span
+                              className="settings-preset-preview-pill"
+                              style={{ background: preset.preview.accent }}
+                            />
+                            <span
+                              className="settings-preset-preview-line"
+                              style={{ background: preset.preview.text }}
+                            />
+                            <span
+                              className="settings-preset-preview-line settings-preset-preview-line-soft"
+                              style={{ background: preset.preview.accentAlt }}
+                            />
+                          </span>
+                        </span>
+                        <span className="settings-preset-copy">
+                          <strong>{preset.label}</strong>
+                          <span>{preset.description}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {matchingAppearancePresetValues && matchingAppearancePresetValues.size > 0 && (
+                  <p className="settings-search-hint" role="status">
+                    Showing matching presets for "{searchQuery.trim()}".
+                  </p>
+                )}
+              </div>
 
               <div className="settings-info">
                 <span>
@@ -514,14 +562,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                   Preset: <strong>{APPEARANCE_PRESET_MAP[settings.appearancePreset].label}</strong>
                 </span>
               </div>
-
-              <InfoBox>
-                Theme Mode controls light, dark, or system behavior.
-                {' '}
-                Preset controls the color family.
-                {' '}
-                Custom theme editing is intentionally hidden in this release to keep setup simple.
-              </InfoBox>
             </div>
           )}
 
@@ -534,34 +574,67 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             >
               <h3 id="accessibility">Accessibility</h3>
 
-        <div className="settings-group">
-          <label>High Contrast Mode</label>
-          <PillToggle
-            value={settings.highContrastMode}
-            onChange={handleHighContrastModeChange}
-            leftLabel="Off"
-            rightLabel="On"
-          />
-        </div>
-
-        <div className="settings-group">
-          <label>UI Font Scale</label>
-          <Dropdown
-            value={String(settings.fontScale)}
-            onChange={(e) => handleFontScaleChange(parseFloat(e.target.value))}
-          >
-            <option value="0.9">90% (Compact)</option>
-            <option value="1">100% (Default)</option>
-            <option value="1.1">110% (Comfortable)</option>
-            <option value="1.25">125% (Large)</option>
-          </Dropdown>
-        </div>
-
               <InfoBox>
                 Accessibility options apply app-wide and persist across sessions on this device.
-                {' '}
-                Use Zoom shortcuts for whole-window scaling; use UI Font Scale for readability-focused text sizing.
               </InfoBox>
+
+              <div className="settings-group">
+                <label>High Contrast Mode</label>
+                <PillToggle
+                  value={settings.highContrastMode}
+                  onChange={handleHighContrastModeChange}
+                  leftLabel="Off"
+                  rightLabel="On"
+                />
+              </div>
+
+              <div className="settings-group">
+                <label htmlFor="settings-font-scale">UI Font Scale</label>
+                <Dropdown
+                  id="settings-font-scale"
+                  value={String(settings.fontScale)}
+                  onChange={(e) => handleFontScaleChange(parseFloat(e.target.value))}
+                >
+                  <option value="0.9">90% (Compact)</option>
+                  <option value="1">100% (Default)</option>
+                  <option value="1.1">110% (Comfortable)</option>
+                  <option value="1.25">125% (Large)</option>
+                </Dropdown>
+                <p className="settings-search-hint">
+                  Adjusts the base font size used in the app UI for improved readability. Does not affect overall zoom level of windows.
+                </p>
+              </div>
+
+              <div className="settings-group">
+                <label htmlFor="settings-color-vision">Color Vision Support</label>
+                <Dropdown
+                  id="settings-color-vision"
+                  value={settings.colorVisionMode}
+                  onChange={(e) => handleColorVisionModeChange(e.target.value as ColorVisionMode)}
+                >
+                  {COLOR_VISION_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Dropdown>
+                <p className="settings-search-hint">
+                  {COLOR_VISION_OPTIONS.find((option) => option.value === settings.colorVisionMode)?.description} Color Vision Support adjusts semantic state colors without changing your selected theme preset.
+                </p>
+              </div>
+
+              <div className="settings-group">
+                <label htmlFor="settings-state-cues">Enhanced State Cues</label>
+                <PillToggle
+                  value={settings.stateCueMode === 'enhanced'}
+                  onChange={(value) => handleStateCueModeChange(value ? 'enhanced' : 'minimal')}
+                  leftLabel="Off"
+                  rightLabel="On"
+                />
+                <p className="settings-search-hint">
+                  {STATE_CUE_OPTIONS.find((option) => option.value === settings.stateCueMode)?.description}
+                </p>
+              </div>
             </div>
           )}
 
@@ -574,15 +647,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             >
               <h3 id="glossary">Glossary</h3>
 
-        <div className="settings-group">
-          <label>Term Links</label>
-          <PillToggle
-            value={settings.glossaryTermsEnabled}
-            onChange={handleGlossaryTermsChange}
-            leftLabel="Off"
-            rightLabel="On"
-          />
-        </div>
+              <div className="settings-group">
+                <label>Term Links</label>
+                <PillToggle
+                  value={settings.glossaryTermsEnabled}
+                  onChange={handleGlossaryTermsChange}
+                  leftLabel="Off"
+                  rightLabel="On"
+                />
+              </div>
 
               <InfoBox>
                 Glossary term links are <strong>{settings.glossaryTermsEnabled ? 'enabled' : 'disabled'}</strong>.

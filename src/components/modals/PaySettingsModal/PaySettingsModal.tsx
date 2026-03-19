@@ -235,7 +235,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           <Dropdown value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
             {CURRENCIES.map((currency) => (
               <option key={currency.code} value={currency.code}>
-                {currency.flag} {currency.code} - {currency.name}
+                {currency.symbol} - {currency.name} ({currency.code})
               </option>
             ))}
           </Dropdown>

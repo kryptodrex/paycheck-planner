@@ -40,6 +40,18 @@
   border: 1px solid var(--border-color);
 }
 
+.metric-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.metric-card-title {
+  min-width: 0;
+}
+
 .metric-card-interactive {
   cursor: pointer;
 }
@@ -61,11 +73,65 @@
 }
 
 .metric-card h3 {
-  margin: 0 0 0.8rem 0;
+  margin: 0;
   font-size: 1rem;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.metric-context-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+[data-state-cues="minimal"] .metric-context-badge {
+  display: none;
+}
+
+.metric-context-badge-positive {
+  background: color-mix(in srgb, var(--success-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--success-color) 26%, var(--border-color));
+  color: var(--success-color);
+}
+
+.metric-context-badge-negative {
+  background: color-mix(in srgb, var(--error-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--error-color) 26%, var(--border-color));
+  color: var(--error-color);
+}
+
+.metric-context-badge-info {
+  background: color-mix(in srgb, var(--info-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--info-color) 26%, var(--border-color));
+  color: var(--info-color);
+}
+
+.metric-context-badge-warning {
+  background: color-mix(in srgb, var(--warning-color) 16%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--warning-color) 28%, var(--border-color));
+  color: var(--alert-warning-text);
+}
+
+.metric-context-badge-accent {
+  background: color-mix(in srgb, var(--violet-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--violet-color) 24%, var(--border-color));
+  color: var(--violet-color);
+}
+
+.metric-context-badge-cyan {
+  background: color-mix(in srgb, var(--cyan-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--cyan-color) 24%, var(--border-color));
+  color: var(--cyan-color);
 }
 
 .metric-values {
@@ -547,6 +613,11 @@
 @media (max-width: 768px) {
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .metric-card-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .summary-bar {

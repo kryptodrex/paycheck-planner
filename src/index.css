@@ -309,6 +309,136 @@
   --surface-accent-soft: color-mix(in srgb, var(--accent-primary) 24%, transparent);
 }
 
+[data-color-vision="protanopia"] {
+  --success-color: #0f766e;
+  --warning-color: #c2410c;
+  --error-color: #7c3aed;
+  --info-color: #2563eb;
+  --info-color-dark: #1d4ed8;
+  --metric-posttax-color: #0f766e;
+  --metric-posttax-color-strong: #115e59;
+  --metric-bills-color: #c2410c;
+  --metric-bills-color-strong: #9a3412;
+  --metric-shortfall-color: #7c3aed;
+  --metric-shortfall-color-strong: #6d28d9;
+  --toast-success-bg: color-mix(in srgb, var(--success-color) 78%, #0b1f1b 22%);
+  --toast-warning-bg: color-mix(in srgb, var(--warning-color) 78%, #22130b 22%);
+  --toast-error-bg: color-mix(in srgb, var(--error-color) 78%, #181122 22%);
+}
+
+[data-color-vision="deuteranopia"] {
+  --success-color: #0f766e;
+  --warning-color: #b45309;
+  --error-color: #be185d;
+  --info-color: #1d4ed8;
+  --info-color-dark: #1e40af;
+  --metric-posttax-color: #0f766e;
+  --metric-posttax-color-strong: #115e59;
+  --metric-bills-color: #b45309;
+  --metric-bills-color-strong: #92400e;
+  --metric-shortfall-color: #be185d;
+  --metric-shortfall-color-strong: #9d174d;
+  --toast-success-bg: color-mix(in srgb, var(--success-color) 78%, #0b1f1b 22%);
+  --toast-warning-bg: color-mix(in srgb, var(--warning-color) 78%, #22130b 22%);
+  --toast-error-bg: color-mix(in srgb, var(--error-color) 78%, #26111b 22%);
+}
+
+[data-color-vision="tritanopia"] {
+  --success-color: #3f6212;
+  --warning-color: #c2410c;
+  --error-color: #be185d;
+  --info-color: #0f766e;
+  --info-color-dark: #115e59;
+  --metric-posttax-color: #3f6212;
+  --metric-posttax-color-strong: #365314;
+  --metric-bills-color: #c2410c;
+  --metric-bills-color-strong: #9a3412;
+  --metric-shortfall-color: #be185d;
+  --metric-shortfall-color-strong: #9d174d;
+  --toast-success-bg: color-mix(in srgb, var(--success-color) 78%, #161c0d 22%);
+  --toast-warning-bg: color-mix(in srgb, var(--warning-color) 78%, #22130b 22%);
+  --toast-error-bg: color-mix(in srgb, var(--error-color) 78%, #26111b 22%);
+}
+
+[data-theme="dark"][data-color-vision="protanopia"] {
+  --success-color: #5eead4;
+  --warning-color: #fdba74;
+  --error-color: #c4b5fd;
+  --info-color: #93c5fd;
+  --info-color-dark: #60a5fa;
+  --metric-posttax-color: #5eead4;
+  --metric-posttax-color-strong: #2dd4bf;
+  --metric-bills-color: #fdba74;
+  --metric-bills-color-strong: #fb923c;
+  --metric-shortfall-color: #c4b5fd;
+  --metric-shortfall-color-strong: #a78bfa;
+}
+
+[data-theme="dark"][data-color-vision="deuteranopia"] {
+  --success-color: #5eead4;
+  --warning-color: #fdba74;
+  --error-color: #f9a8d4;
+  --info-color: #93c5fd;
+  --info-color-dark: #60a5fa;
+  --metric-posttax-color: #5eead4;
+  --metric-posttax-color-strong: #2dd4bf;
+  --metric-bills-color: #fdba74;
+  --metric-bills-color-strong: #fb923c;
+  --metric-shortfall-color: #f9a8d4;
+  --metric-shortfall-color-strong: #f472b6;
+}
+
+[data-theme="dark"][data-color-vision="tritanopia"] {
+  --success-color: #bef264;
+  --warning-color: #fdba74;
+  --error-color: #f9a8d4;
+  --info-color: #99f6e4;
+  --info-color-dark: #5eead4;
+  --metric-posttax-color: #bef264;
+  --metric-posttax-color-strong: #a3e635;
+  --metric-bills-color: #fdba74;
+  --metric-bills-color-strong: #fb923c;
+  --metric-shortfall-color: #f9a8d4;
+  --metric-shortfall-color-strong: #f472b6;
+}
+
+[data-theme="light"][data-color-vision="protanopia"],
+[data-theme="light"][data-color-vision="deuteranopia"],
+[data-theme="light"][data-color-vision="tritanopia"] {
+  --alert-success-bg: color-mix(in srgb, var(--success-color) 14%, var(--bg-primary) 86%);
+  --alert-success-border: color-mix(in srgb, var(--success-color) 42%, var(--border-accent-soft) 58%);
+  --alert-success-text: color-mix(in srgb, var(--success-color) 82%, var(--text-primary) 18%);
+  --alert-warning-bg: color-mix(in srgb, var(--warning-color) 14%, var(--bg-primary) 86%);
+  --alert-warning-border: color-mix(in srgb, var(--warning-color) 42%, var(--border-accent-soft) 58%);
+  --alert-warning-text: color-mix(in srgb, var(--warning-color) 82%, var(--text-primary) 18%);
+  --alert-error-bg: color-mix(in srgb, var(--error-color) 14%, var(--bg-primary) 86%);
+  --alert-error-border: color-mix(in srgb, var(--error-color) 42%, var(--border-accent-soft) 58%);
+  --alert-error-text: color-mix(in srgb, var(--error-color) 82%, var(--text-primary) 18%);
+  --alert-info-bg: color-mix(in srgb, var(--info-color) 14%, var(--bg-primary) 86%);
+  --alert-info-border: color-mix(in srgb, var(--info-color) 42%, var(--border-accent-soft) 58%);
+  --alert-info-text: color-mix(in srgb, var(--info-color-dark) 82%, var(--text-primary) 18%);
+}
+
+[data-theme="dark"][data-color-vision="protanopia"],
+[data-theme="dark"][data-color-vision="deuteranopia"],
+[data-theme="dark"][data-color-vision="tritanopia"] {
+  --toast-success-bg: color-mix(in srgb, var(--success-color) 42%, #081411 58%);
+  --toast-warning-bg: color-mix(in srgb, var(--warning-color) 50%, #1f1208 50%);
+  --toast-error-bg: color-mix(in srgb, var(--error-color) 44%, #1e1020 56%);
+  --alert-success-bg: color-mix(in srgb, var(--success-color) 22%, var(--bg-secondary) 78%);
+  --alert-success-border: color-mix(in srgb, var(--success-color) 52%, var(--border-accent-soft) 48%);
+  --alert-success-text: color-mix(in srgb, var(--success-color) 50%, #dcfce7 50%);
+  --alert-warning-bg: color-mix(in srgb, var(--warning-color) 22%, var(--bg-secondary) 78%);
+  --alert-warning-border: color-mix(in srgb, var(--warning-color) 52%, var(--border-accent-soft) 48%);
+  --alert-warning-text: color-mix(in srgb, var(--warning-color) 50%, #fde68a 50%);
+  --alert-error-bg: color-mix(in srgb, var(--error-color) 22%, var(--bg-secondary) 78%);
+  --alert-error-border: color-mix(in srgb, var(--error-color) 52%, var(--border-accent-soft) 48%);
+  --alert-error-text: color-mix(in srgb, var(--error-color) 46%, #f5d0fe 54%);
+  --alert-info-bg: color-mix(in srgb, var(--info-color) 22%, var(--bg-secondary) 78%);
+  --alert-info-border: color-mix(in srgb, var(--info-color) 52%, var(--border-accent-soft) 48%);
+  --alert-info-text: color-mix(in srgb, var(--info-color) 48%, #bfdbfe 52%);
+}
+
 body {
   margin: 0;
   display: flex;

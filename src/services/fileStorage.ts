@@ -17,9 +17,11 @@ import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
 import {
   normalizeAppearanceMode,
   normalizeAppearancePreset,
+  normalizeColorVisionMode,
   normalizeCustomAppearance,
   normalizeFontScale,
   normalizeHighContrastMode,
+  normalizeStateCueMode,
   normalizeThemeMode,
 } from '../utils/appearanceSettings';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountDefaults';
@@ -102,6 +104,8 @@ function normalizeAppSettingsValue(
   normalized.appearancePreset = normalizeAppearancePreset(normalized.appearancePreset ?? DEFAULT_APPEARANCE_PRESET);
   normalized.customAppearance = normalizeCustomAppearance(normalized.customAppearance);
   normalized.highContrastMode = normalizeHighContrastMode(normalized.highContrastMode);
+  normalized.colorVisionMode = normalizeColorVisionMode(normalized.colorVisionMode);
+  normalized.stateCueMode = normalizeStateCueMode(normalized.stateCueMode);
   normalized.fontScale = normalizeFontScale(normalized.fontScale);
   normalized.viewModeFavorites = sanitizeFavoriteViewModes(normalized.viewModeFavorites);
 

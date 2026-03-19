@@ -25,6 +25,8 @@ interface MetricCardProps {
   className: string;
   icon: string;
   title: React.ReactNode;
+  contextLabel: string;
+  contextTone: 'positive' | 'negative' | 'info' | 'warning' | 'accent' | 'cyan';
   ariaLabel: string;
   onClick?: () => void;
   children: React.ReactNode;
@@ -32,7 +34,16 @@ interface MetricCardProps {
 
 type BreakdownView = 'bars' | 'stacked' | 'pie';
 
-const MetricCard: React.FC<MetricCardProps> = ({ className, icon, title, ariaLabel, onClick, children }) => {
+const MetricCard: React.FC<MetricCardProps> = ({
+  className,
+  icon,
+  title,
+  contextLabel,
+  contextTone,
+  ariaLabel,
+  onClick,
+  children,
+}) => {
   const isInteractive = Boolean(onClick);
 
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -64,8 +75,13 @@ const MetricCard: React.FC<MetricCardProps> = ({ className, icon, title, ariaLab
       tabIndex={isInteractive ? 0 : undefined}
       aria-label={isInteractive ? ariaLabel : undefined}
     >
-      <div className="metric-icon">{icon}</div>
-      <h3>{title}</h3>
+      <div className="metric-card-header">
+        <div className="metric-card-title">
+          <div className="metric-icon">{icon}</div>
+          <h3>{title}</h3>
+        </div>
+        <span className={`metric-context-badge metric-context-badge-${contextTone}`}>{contextLabel}</span>
+      </div>
       <div className="metric-values">{children}</div>
     </div>
   );
@@ -167,6 +183,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   const annualShortfall = roundUpToCent(Math.max(-annualRemaining, 0));
   const annualSavingsInBar = roundUpToCent(Math.min(annualSavings, annualRemainingPositive));
   const annualFlexibleRemaining = roundUpToCent(Math.max(annualRemainingPositive - annualSavingsInBar, 0));
+  const remainingContextLabel = annualShortfall > 0 ? 'Shortfall' : 'Flexible';
+  const remainingContextTone = annualShortfall > 0 ? 'negative' : 'accent';
 
   // Ensure tiny non-zero amounts are still visibly represented in UI bars.
   const MIN_VISIBLE_STACKED_BAR_PX = 4;
@@ -252,6 +270,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           className="income-card" 
           icon="💰" 
           title="Total Income" 
+          contextLabel="Incoming"
+          contextTone="positive"
           ariaLabel="Total income overview"
           onClick={onNavigateToNetPay}
         >
@@ -274,6 +294,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           className="taxes-card"
           icon="🏛️"
           title={<>Total <GlossaryTerm termId="withholding">TAXES</GlossaryTerm></>}
+          contextLabel="Withheld"
+          contextTone="negative"
           ariaLabel="Open taxes tab"
           onClick={onNavigateToTaxes}
         >
@@ -296,6 +318,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           className="net-card"
           icon="✅"
           title={<>Total <GlossaryTerm termId="net-pay">TAKE HOME PAY</GlossaryTerm></>}
+          contextLabel="Take-home"
+          contextTone="info"
           ariaLabel="Open pay breakdown tab"
           onClick={onNavigateToNetPay}
         >
@@ -318,6 +342,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           className="bills-card"
           icon="📋"
           title="Total Bills"
+          contextLabel="Committed"
+          contextTone="warning"
           ariaLabel="Open bills tab"
           onClick={onNavigateToBills}
         >
@@ -340,6 +366,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           className="savings-card"
           icon="🏦"
           title={<>Your <GlossaryTerm termId="allocation">SAVINGS RATE</GlossaryTerm></>}
+          contextLabel="Saved"
+          contextTone="cyan"
           ariaLabel="Open savings tab"
           onClick={onNavigateToSavings}
         >
@@ -362,6 +390,8 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           className="remaining-card"
           icon="💵"
           title={<><GlossaryTerm termId="residual-amount">REMAINING</GlossaryTerm> for Spending</>}
+          contextLabel={remainingContextLabel}
+          contextTone={remainingContextTone}
           ariaLabel="Open pay breakdown tab and scroll to remaining spending"
           onClick={onNavigateToRemaining}
         >

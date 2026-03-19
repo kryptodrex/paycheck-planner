@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_COLOR_VISION_MODE,
   DEFAULT_CUSTOM_APPEARANCE,
   DEFAULT_FONT_SCALE,
   MAX_FONT_SCALE,
   MIN_FONT_SCALE,
   normalizeAppearanceMode,
   normalizeAppearancePreset,
+  normalizeColorVisionMode,
   normalizeCustomAppearance,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeThemeMode,
+  DEFAULT_STATE_CUE_MODE,
+  normalizeStateCueMode,
 } from './appearanceSettings';
 
 describe('appearanceSettings', () => {
@@ -73,5 +77,21 @@ describe('appearanceSettings', () => {
     expect(normalizeHighContrastMode(false)).toBe(false);
     expect(normalizeHighContrastMode('true')).toBe(false);
     expect(normalizeHighContrastMode(undefined)).toBe(false);
+  });
+
+  it('normalizes color vision mode with default fallback', () => {
+    expect(normalizeColorVisionMode('normal')).toBe('normal');
+    expect(normalizeColorVisionMode('protanopia')).toBe('protanopia');
+    expect(normalizeColorVisionMode('deuteranopia')).toBe('deuteranopia');
+    expect(normalizeColorVisionMode('tritanopia')).toBe('tritanopia');
+    expect(normalizeColorVisionMode('unknown')).toBe(DEFAULT_COLOR_VISION_MODE);
+    expect(normalizeColorVisionMode(undefined)).toBe(DEFAULT_COLOR_VISION_MODE);
+  });
+
+  it('normalizes state cue mode with default fallback', () => {
+    expect(normalizeStateCueMode('enhanced')).toBe('enhanced');
+    expect(normalizeStateCueMode('minimal')).toBe('minimal');
+    expect(normalizeStateCueMode('unknown')).toBe(DEFAULT_STATE_CUE_MODE);
+    expect(normalizeStateCueMode(undefined)).toBe(DEFAULT_STATE_CUE_MODE);
   });
 });

@@ -33,7 +33,7 @@ const {
         name: 'Checking',
         type: 'checking',
         color: '#667eea',
-        allocationCategories: [],
+        allocationCategories: [] as Array<{ id: string; name: string; amount: number }>,
       },
     ],
     bills: [],
@@ -134,6 +134,9 @@ describe('PayBreakdown custom allocation validation', () => {
         dispatchEvent: vi.fn(),
       })),
     });
+
+    mockBudgetData.paySettings.minLeftover = 0;
+    mockBudgetData.accounts[0].allocationCategories = [];
   });
 
   async function openCustomAllocationEditor(user: ReturnType<typeof userEvent.setup>) {
@@ -185,5 +188,39 @@ describe('PayBreakdown custom allocation validation', () => {
 
     expect(screen.getByText(/complete or remove the custom allocation item before saving/i)).toBeInTheDocument();
     expect(updateBudgetDataMock).not.toHaveBeenCalled();
+  });
+
+  it('renders a text-first below-target warning prefix when remaining is below the configured minimum', () => {
+    mockBudgetData.paySettings.minLeftover = 1500;
+
+    render(
+      <PayBreakdown
+        displayMode="monthly"
+        onDisplayModeChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/below target:/i)).toBeInTheDocument();
+    expect(screen.getByText(/below your target minimum/i)).toBeInTheDocument();
+  });
+
+  it('renders a text-first over-allocation prefix when allocations exceed net pay', () => {
+    mockBudgetData.accounts[0].allocationCategories = [
+      {
+        id: 'custom-overallocated',
+        name: 'Overallocated Item',
+        amount: 1500,
+      },
+    ];
+
+    render(
+      <PayBreakdown
+        displayMode="monthly"
+        onDisplayModeChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/overallocation:/i)).toBeInTheDocument();
+    expect(screen.getByText(/allocations exceed net pay/i)).toBeInTheDocument();
   });
 });

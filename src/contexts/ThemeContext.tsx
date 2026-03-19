@@ -6,13 +6,15 @@ import { STORAGE_KEYS } from '../constants/storage';
 import {
   normalizeAppearanceMode,
   normalizeAppearancePreset,
+  normalizeColorVisionMode,
   normalizeCustomAppearance,
   normalizeFontScale,
   normalizeHighContrastMode,
+  normalizeStateCueMode,
   normalizeThemeMode,
 } from '../utils/appearanceSettings';
 import { CUSTOM_THEME_VARIABLES, generateCustomThemeTokens } from '../utils/customTheme';
-import type { AppearanceMode, AppearancePreset, CustomAppearanceSettings, ThemeMode } from '../types/appearance';
+import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from '../types/appearance';
 import type { ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
@@ -50,6 +52,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         appearancePreset: DEFAULT_APPEARANCE_PRESET,
         customAppearance: normalizeCustomAppearance(undefined),
         highContrastMode: false,
+        colorVisionMode: 'normal' as const,
+        stateCueMode: 'enhanced' as const,
         fontScale: 1,
       };
     }
@@ -61,6 +65,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         appearancePreset?: AppearancePreset;
         customAppearance?: CustomAppearanceSettings;
         highContrastMode?: boolean;
+        colorVisionMode?: ColorVisionMode;
+        stateCueMode?: StateCueMode;
         fontScale?: number;
       };
 
@@ -70,6 +76,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         appearancePreset: normalizeAppearancePreset(settings.appearancePreset),
         customAppearance: normalizeCustomAppearance(settings.customAppearance),
         highContrastMode: normalizeHighContrastMode(settings.highContrastMode),
+        colorVisionMode: normalizeColorVisionMode(settings.colorVisionMode),
+        stateCueMode: normalizeStateCueMode(settings.stateCueMode),
         fontScale: normalizeFontScale(settings.fontScale),
       };
     } catch {
@@ -79,6 +87,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         appearancePreset: DEFAULT_APPEARANCE_PRESET,
         customAppearance: normalizeCustomAppearance(undefined),
         highContrastMode: false,
+        colorVisionMode: 'normal' as const,
+        stateCueMode: 'enhanced' as const,
         fontScale: 1,
       };
     }
@@ -108,6 +118,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>(() => getCurrentSettings().appearanceMode);
   const [customAppearance, setCustomAppearance] = useState<CustomAppearanceSettings>(() => getCurrentSettings().customAppearance);
   const [highContrastMode, setHighContrastMode] = useState<boolean>(() => getCurrentSettings().highContrastMode);
+  const [colorVisionMode, setColorVisionMode] = useState<ColorVisionMode>(() => getCurrentSettings().colorVisionMode);
+  const [stateCueMode, setStateCueMode] = useState<StateCueMode>(() => getCurrentSettings().stateCueMode);
   const [fontScale, setFontScale] = useState<number>(() => getCurrentSettings().fontScale);
 
   // Apply theme to document element
@@ -129,9 +141,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
 
     root.setAttribute('data-contrast', highContrastMode ? 'high' : 'normal');
+    root.setAttribute('data-color-vision', colorVisionMode);
+    root.setAttribute('data-state-cues', stateCueMode);
     root.style.fontSize = `${Math.round(fontScale * 100)}%`;
     localStorage.setItem(STORAGE_KEYS.theme, theme);
-  }, [theme, appearanceMode, appearancePreset, customAppearance, highContrastMode, fontScale]);
+  }, [theme, appearanceMode, appearancePreset, customAppearance, highContrastMode, colorVisionMode, stateCueMode, fontScale]);
 
   // Listen for system theme changes when in System mode
   useEffect(() => {
@@ -143,6 +157,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       setAppearancePreset(settings.appearancePreset);
       setCustomAppearance(settings.customAppearance);
       setHighContrastMode(settings.highContrastMode);
+      setColorVisionMode(settings.colorVisionMode);
+      setStateCueMode(settings.stateCueMode);
       setFontScale(settings.fontScale);
 
       if (settings.themeMode === 'light' || settings.themeMode === 'dark') {

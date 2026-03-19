@@ -41,7 +41,10 @@ describe('Button', () => {
 
   it('is disabled when disabled prop is set', () => {
     render(<Button disabled>Can't click</Button>);
-    expect(screen.getByRole('button')).toBeDisabled();
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass('btn-disabled-state');
+    expect(button).toHaveAttribute('data-ui-state', 'disabled');
   });
 
   it('is disabled and shows loading text when isLoading', () => {

@@ -118,4 +118,33 @@ describe('ConfirmDialog', () => {
     );
     expect(screen.getByText('Important warning').tagName).toBe('STRONG');
   });
+
+  it('renders a non-destructive context cue by default', () => {
+    render(
+      <ConfirmDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Title"
+        message="Msg"
+      />,
+    );
+
+    expect(screen.getByText('Confirmation required')).toBeInTheDocument();
+  });
+
+  it('renders a destructive context cue when confirm variant is danger', () => {
+    render(
+      <ConfirmDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Delete item"
+        message="This cannot be undone"
+        confirmVariant="danger"
+      />,
+    );
+
+    expect(screen.getByText('Destructive action')).toBeInTheDocument();
+  });
 });
