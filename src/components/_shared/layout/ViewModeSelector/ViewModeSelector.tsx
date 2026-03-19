@@ -3,6 +3,7 @@ import { APP_CUSTOM_EVENTS } from '../../../../constants/events';
 import { FileStorageService } from '../../../../services/fileStorage';
 import type { ViewMode } from '../../../../types/viewMode';
 import { buildViewModeSelectorOptions, sanitizeFavoriteViewModes } from '../../../../utils/viewModePreferences';
+import { getDisplayModeLabel } from '../../../../utils/payPeriod';
 import './ViewModeSelector.css';
 
 export interface ViewModeOption<T extends string = string> {
@@ -16,6 +17,7 @@ interface ViewModeSelectorProps<T extends string = ViewMode> {
   options?: ViewModeOption<T>[];
   payCadenceMode?: T;
   payCadenceLabel?: string;
+  onOpenViewModeSettings?: () => void;
 }
 
 const ViewModeSelector = <T extends string = ViewMode,>({
@@ -24,6 +26,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   options,
   payCadenceMode,
   payCadenceLabel = 'Pay cadence',
+  onOpenViewModeSettings,
 }: ViewModeSelectorProps<T>) => {
   const [favoriteModes, setFavoriteModes] = useState(() =>
     sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites),
@@ -49,13 +52,31 @@ const ViewModeSelector = <T extends string = ViewMode,>({
       return options as ViewModeOption<T>[];
     }
 
-    return buildViewModeSelectorOptions(favoriteModes) as ViewModeOption<T>[];
-  }, [options, favoriteModes]);
+    return buildViewModeSelectorOptions(favoriteModes, payCadenceMode as never) as ViewModeOption<T>[];
+  }, [options, favoriteModes, payCadenceMode]);
+
+  const optionsWithCadence = useMemo(() => {
+    if (!payCadenceMode || options) {
+      return resolvedOptions;
+    }
+
+    if (resolvedOptions.some((option) => option.value === payCadenceMode)) {
+      return resolvedOptions;
+    }
+
+    return [
+      {
+        value: payCadenceMode,
+        label: getDisplayModeLabel(payCadenceMode as ViewMode),
+      } as ViewModeOption<T>,
+      ...resolvedOptions,
+    ];
+  }, [payCadenceMode, options, resolvedOptions]);
 
   return (
     <div className="view-mode-selector-wrap">
       <div className="view-mode-selector">
-        {resolvedOptions.map((option) => (
+        {optionsWithCadence.map((option) => (
           <button
             key={option.value}
             className={mode === option.value ? 'active' : ''}
@@ -68,6 +89,17 @@ const ViewModeSelector = <T extends string = ViewMode,>({
           </button>
         ))}
       </div>
+      {!options && onOpenViewModeSettings && (
+        <button
+          type="button"
+          className="view-mode-settings-button"
+          onClick={onOpenViewModeSettings}
+          aria-label="Open view mode settings"
+          title="Open view mode settings"
+        >
+          ⚙
+        </button>
+      )}
     </div>
   );
 };

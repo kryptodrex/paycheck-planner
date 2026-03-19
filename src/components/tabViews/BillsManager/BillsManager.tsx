@@ -32,6 +32,7 @@ interface BillsManagerProps {
   searchActionTargetId?: string;
   displayMode: ViewMode;
   onDisplayModeChange: (mode: ViewMode) => void;
+  onOpenViewModeSettings?: () => void;
 }
 
 type BillFieldErrors = {
@@ -53,6 +54,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   searchActionTargetId,
   displayMode,
   onDisplayModeChange,
+  onOpenViewModeSettings,
 }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -463,14 +465,18 @@ const BillsManager: React.FC<BillsManagerProps> = ({
               mode={displayMode}
               onChange={onDisplayModeChange}
               payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+              onOpenViewModeSettings={onOpenViewModeSettings}
             />
-            <div className="bills-header-buttons">
-              <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
-              <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
-            </div>
           </div>
         }
       />
+
+      <div className="bills-manager-header">
+        <div className="bills-header-buttons">
+          <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
+          <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
+        </div>
+      </div>
 
       <Banner
         label={`Total ${getDisplayModeLabel(displayMode)} Across All Accounts`}

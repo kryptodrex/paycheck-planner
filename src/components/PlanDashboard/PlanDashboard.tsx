@@ -1053,6 +1053,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     [openTabFromLink, selectTab],
   );
 
+  const handleOpenViewModeSettings = useCallback(() => {
+    setSettingsInitialSection('app-data-reset');
+    setShowSettings(true);
+  }, []);
+
   if (showPlanLoadingScreen) {
     return (
       <div className="plan-loading-screen" role="status" aria-live="polite" aria-label="Loading plan">
@@ -1415,6 +1420,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <PayBreakdown 
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
             searchPaySettingsRequestKey={paySettingsSearchRequestKey}
             searchPaySettingsFieldHighlight={pendingPaySettingsFieldHighlight}
             onNavigateToBills={(accountId) => {
@@ -1444,6 +1450,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
         <div
@@ -1459,6 +1466,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
         <div
@@ -1471,6 +1479,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
         <div
@@ -1487,6 +1496,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
       </div>

@@ -22,9 +22,10 @@ interface TaxBreakdownProps {
     searchOpenSettingsRequestKey?: number;
     displayMode: ViewMode;
     onDisplayModeChange: (mode: ViewMode) => void;
+    onOpenViewModeSettings?: () => void;
 }
 
-const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode, onDisplayModeChange }) => {
+const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode, onDisplayModeChange, onOpenViewModeSettings }) => {
     const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
     const [showEditModal, setShowEditModal] = useState(false);
     const [editLines, setEditLines] = useState<EditableTaxLineValues[]>([]);
@@ -195,6 +196,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
                             mode={displayMode}
                             onChange={onDisplayModeChange}
                             payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+                            onOpenViewModeSettings={onOpenViewModeSettings}
                         />
                         <Button variant="primary" onClick={handleEditStart}>
                             Edit Tax Settings

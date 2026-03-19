@@ -21,6 +21,7 @@ interface LoansManagerProps {
     searchActionTargetId?: string;
     displayMode: ViewMode;
     onDisplayModeChange: (mode: ViewMode) => void;
+    onOpenViewModeSettings?: () => void;
 }
 
 type LoanFieldErrors = {
@@ -112,6 +113,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
     searchActionTargetId,
     displayMode,
     onDisplayModeChange,
+    onOpenViewModeSettings,
 }) => {
     const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
     const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -461,18 +463,20 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                 title="Loan Payments"
                 subtitle="Track recurring mortgage, auto, student, and other loan payments"
                 actions={
-                    <>
-                                                <ViewModeSelector
-                                                    mode={displayMode}
-                                                    onChange={onDisplayModeChange}
-                                                    payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-                                                />
-                        <Button variant="primary" onClick={handleAddLoan}>
-                            + Add Payment
-                        </Button>
-                    </>
+                    <ViewModeSelector
+                        mode={displayMode}
+                        onChange={onDisplayModeChange}
+                        payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+                        onOpenViewModeSettings={onOpenViewModeSettings}
+                    />
                 }
             />
+
+            <div className="loans-manager-header">
+                <Button variant="primary" onClick={handleAddLoan}>
+                    + Add Loan
+                </Button>
+            </div>
 
             <Banner
                 label={`Total ${getDisplayModeLabel(displayMode)} Across All Accounts`}
@@ -507,74 +511,74 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                 }, 0)
                             );
                         }).map(({ account, items: accountLoans, totalMonthly }) => (
-                                <section key={account.id} className="account-section" id={`account-${account.id}`}>
-                                    <div className="account-header">
-                                        <div className="account-info">
-                                            <span className="account-icon" style={{ color: account.color }}>
-                                                {account.icon || getDefaultAccountIcon(account.type)}
-                                            </span>
-                                            <h3>{account.name}</h3>
-                                        </div>
-                                        <div className="account-total">
-                                            <span className="total-label">Total {getDisplayModeLabel(displayMode)}:</span>
-                                            <span className="total-amount">
-                                                {formatWithSymbol(displayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </span>
-                                        </div>
+                            <section key={account.id} className="account-section" id={`account-${account.id}`}>
+                                <div className="account-header">
+                                    <div className="account-info">
+                                        <span className="account-icon" style={{ color: account.color }}>
+                                            {account.icon || getDefaultAccountIcon(account.type)}
+                                        </span>
+                                        <h3>{account.name}</h3>
                                     </div>
-
-                                    <div className="loans-list">
-                                        {accountLoans
-                                            .sort((a, b) => {
-                                                const aEnabled = isLoanEnabled(a);
-                                                const bEnabled = isLoanEnabled(b);
-                                                if (aEnabled !== bEnabled) {
-                                                    return aEnabled ? -1 : 1;
-                                                }
-                                                return b.monthlyPayment - a.monthlyPayment;
-                                            })
-                                            .map((loan) => {
-                                                const lineItems = loan.paymentBreakdown || [];
-
-                                                return (
-                                                    <SectionItemCard
-                                                        key={loan.id}
-                                                        elementId={`loan-${loan.id}`}
-                                                        title={loan.name}
-                                                        subtitle={`Paid ${formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: ${formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                                                        amount={formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        amountLabel={getDisplayModeLabel(displayMode)}
-                                                        badges={
-                                                            <PillBadge variant="outline">
-                                                                {LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}
-                                                            </PillBadge>
-                                                        }
-                                                        isPaused={!isLoanEnabled(loan)}
-                                                        onPauseToggle={() => handleToggleLoanEnabled(loan)}
-                                                        onEdit={() => handleEditLoan(loan)}
-                                                        onDelete={() => handleDeleteLoan(loan.id)}
-                                                    >
-                                                        {lineItems.length > 0 && (
-                                                            <AmountBreakdown
-                                                                items={lineItems
-                                                                    .sort((a, b) => b.amount - a.amount)
-                                                                    .map((item) => ({
-                                                                        id: item.id,
-                                                                        label: item.label,
-                                                                        amount: displayAmount(convertBillToMonthly(item.amount, item.frequency))
-                                                                    }))
-                                                                }
-                                                                formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                                className="deduction-breakdown"
-                                                            />
-                                                        )}
-                                                        {loan.notes && <div className="loan-notes">{loan.notes}</div>}
-                                                    </SectionItemCard>
-                                                );
-                                            })}
+                                    <div className="account-total">
+                                        <span className="total-label">Total {getDisplayModeLabel(displayMode)}:</span>
+                                        <span className="total-amount">
+                                            {formatWithSymbol(displayAmount(totalMonthly), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
                                     </div>
-                                </section>
-                            ))}
+                                </div>
+
+                                <div className="loans-list">
+                                    {accountLoans
+                                        .sort((a, b) => {
+                                            const aEnabled = isLoanEnabled(a);
+                                            const bEnabled = isLoanEnabled(b);
+                                            if (aEnabled !== bEnabled) {
+                                                return aEnabled ? -1 : 1;
+                                            }
+                                            return b.monthlyPayment - a.monthlyPayment;
+                                        })
+                                        .map((loan) => {
+                                            const lineItems = loan.paymentBreakdown || [];
+
+                                            return (
+                                                <SectionItemCard
+                                                    key={loan.id}
+                                                    elementId={`loan-${loan.id}`}
+                                                    title={loan.name}
+                                                    subtitle={`Paid ${formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: ${formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                    amount={formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    amountLabel={getDisplayModeLabel(displayMode)}
+                                                    badges={
+                                                        <PillBadge variant="outline">
+                                                            {LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}
+                                                        </PillBadge>
+                                                    }
+                                                    isPaused={!isLoanEnabled(loan)}
+                                                    onPauseToggle={() => handleToggleLoanEnabled(loan)}
+                                                    onEdit={() => handleEditLoan(loan)}
+                                                    onDelete={() => handleDeleteLoan(loan.id)}
+                                                >
+                                                    {lineItems.length > 0 && (
+                                                        <AmountBreakdown
+                                                            items={lineItems
+                                                                .sort((a, b) => b.amount - a.amount)
+                                                                .map((item) => ({
+                                                                    id: item.id,
+                                                                    label: item.label,
+                                                                    amount: displayAmount(convertBillToMonthly(item.amount, item.frequency))
+                                                                }))
+                                                            }
+                                                            formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            className="deduction-breakdown"
+                                                        />
+                                                    )}
+                                                    {loan.notes && <div className="loan-notes">{loan.notes}</div>}
+                                                </SectionItemCard>
+                                            );
+                                        })}
+                                </div>
+                            </section>
+                        ))}
                     </>
                 )}
             </div>

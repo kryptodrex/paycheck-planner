@@ -84,6 +84,7 @@ const getCategoryItemCount = (category: AllocationCategory): number | null => {
 interface PayBreakdownProps {
   displayMode: ViewMode;
   onDisplayModeChange: (mode: ViewMode) => void;
+  onOpenViewModeSettings?: () => void;
   searchPaySettingsRequestKey?: number;
   searchPaySettingsFieldHighlight?: string;
   onNavigateToBills?: (accountId: string) => void;
@@ -95,6 +96,7 @@ interface PayBreakdownProps {
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
   displayMode,
   onDisplayModeChange,
+  onOpenViewModeSettings,
   searchPaySettingsRequestKey,
   searchPaySettingsFieldHighlight,
   onNavigateToBills,
@@ -731,6 +733,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
               mode={displayMode}
               onChange={onDisplayModeChange}
               payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+              onOpenViewModeSettings={onOpenViewModeSettings}
             />
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
               ⚙️ Pay Settings

@@ -7,7 +7,7 @@ import type { AppearancePreset, ColorVisionMode, StateCueMode, ThemeMode } from 
 import type { SelectableViewMode } from '../../../types/viewMode';
 import { Button, CheckboxGroup, Dropdown, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
 import { FileStorageService } from '../../../services/fileStorage';
-import { SELECTABLE_VIEW_MODES, sanitizeFavoriteViewModes } from '../../../utils/viewModePreferences';
+import { MAX_VISIBLE_FAVORITE_VIEW_MODES, SELECTABLE_VIEW_MODES, sanitizeFavoriteViewModes } from '../../../utils/viewModePreferences';
 import {
   normalizeAppearancePreset,
   normalizeColorVisionMode,
@@ -224,9 +224,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
   };
 
   const handleViewModeFavoritesChange = (values: string[]) => {
+    const nextFavorites = sanitizeFavoriteViewModes(values).slice(0, MAX_VISIBLE_FAVORITE_VIEW_MODES) as SelectableViewMode[];
+
     const updated = {
       ...settings,
-      viewModeFavorites: sanitizeFavoriteViewModes(values) as SelectableViewMode[],
+      viewModeFavorites: nextFavorites,
     };
     setSettings(updated);
     persistSettings(updated);
@@ -706,8 +708,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
                       value: option.value,
                       label: option.label,
                       disabled:
-                        settings.viewModeFavorites.length === 1
-                        && settings.viewModeFavorites.includes(option.value),
+                        (settings.viewModeFavorites.length === 1
+                        && settings.viewModeFavorites.includes(option.value))
+                        || (settings.viewModeFavorites.length >= MAX_VISIBLE_FAVORITE_VIEW_MODES
+                        && !settings.viewModeFavorites.includes(option.value)),
                     }))}
                   />
                   {matchingViewModeValues && matchingViewModeValues.size > 0 && (
@@ -718,7 +722,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
                 </div>
 
                 <InfoBox>
-                  Favorites apply app-wide and carry across all plans on this device. At least one view mode must stay enabled.
+                  Favorites apply app-wide and carry across all plans on this device. You can pin up to {MAX_VISIBLE_FAVORITE_VIEW_MODES} favorites, and at least one mode must stay enabled.
                 </InfoBox>
               </div>
 

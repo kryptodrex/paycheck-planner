@@ -34,6 +34,7 @@ interface SavingsManagerProps {
   searchActionTargetId?: string;
   displayMode?: ViewMode;
   onDisplayModeChange?: (mode: ViewMode) => void;
+  onOpenViewModeSettings?: () => void;
 }
 
 type SavingsFieldErrors = {
@@ -58,6 +59,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   searchActionTargetId,
   displayMode = 'paycheck',
   onDisplayModeChange,
+  onOpenViewModeSettings,
 }) => {
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const {
@@ -602,6 +604,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             mode={displayMode}
             onChange={onDisplayModeChange || (() => {})}
             payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+            onOpenViewModeSettings={onOpenViewModeSettings}
           />
         )}
       />
