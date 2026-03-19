@@ -16,6 +16,7 @@ import './PaySettingsModal.css';
 interface PaySettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  searchFieldHighlight?: string;
 }
 
 type PaySettingsFieldErrors = {
@@ -25,7 +26,12 @@ type PaySettingsFieldErrors = {
   minLeftover?: string;
 };
 
-const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) => {
+const SEARCH_FOCUS_INITIAL_DELAY_MS = 80;
+const SEARCH_FOCUS_RETRY_DELAY_MS = 120;
+const SEARCH_FOCUS_MAX_RETRIES = 6;
+const SEARCH_HIGHLIGHT_DURATION_MS = 1800;
+
+const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, searchFieldHighlight }) => {
   const { budgetData, updateBudgetData } = useBudget();
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   
@@ -42,6 +48,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
   const [originalCurrency, setOriginalCurrency] = useState('USD');
   const [exchangeRate, setExchangeRate] = useState('');
   const [fieldErrors, setFieldErrors] = useState<PaySettingsFieldErrors>({});
+  const formContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Pre-fill form when modal opens
   useEffect(() => {
@@ -77,6 +84,50 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !searchFieldHighlight) {
+      return;
+    }
+
+    let attemptsLeft = SEARCH_FOCUS_MAX_RETRIES;
+
+    const focusSearchTarget = () => {
+      const container = formContainerRef.current;
+      if (!container) {
+        return;
+      }
+
+      const targetGroup = container.querySelector<HTMLElement>(
+        `[data-pay-setting-field="${searchFieldHighlight}"]`,
+      );
+
+      if (!targetGroup) {
+        if (attemptsLeft > 0) {
+          attemptsLeft -= 1;
+          window.setTimeout(focusSearchTarget, SEARCH_FOCUS_RETRY_DELAY_MS);
+        }
+        return;
+      }
+
+      const selectedRadio = targetGroup.querySelector<HTMLElement>('[role="radio"][aria-checked="true"]');
+      const firstFocusable = targetGroup.querySelector<HTMLElement>('input, select, button, [role="radio"]');
+      const focusTarget = selectedRadio || firstFocusable;
+      if (!focusTarget) {
+        return;
+      }
+
+      targetGroup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      focusTarget.classList.add('pay-settings-search-field-highlight');
+      window.setTimeout(() => {
+        focusTarget.classList.remove('pay-settings-search-field-highlight');
+      }, SEARCH_HIGHLIGHT_DURATION_MS);
+
+      focusTarget.focus({ preventScroll: true });
+    };
+
+    window.setTimeout(focusSearchTarget, SEARCH_FOCUS_INITIAL_DELAY_MS);
+  }, [editPayType, isOpen, searchFieldHighlight]);
 
   if (!budgetData) return null;
 
@@ -218,6 +269,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         </>
       }
     >
+      <div ref={formContainerRef}>
         <FormGroup label="Pay Type">
           <RadioGroup
             name="editPayType"
@@ -258,39 +310,43 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
         )}
 
         {editPayType === 'salary' ? (
-          <FormGroup label="Annual Salary" required error={fieldErrors.annualSalary}>
-            <FormattedNumberInput
-              className={fieldErrors.annualSalary ? 'field-error' : ''}
-              prefix={getCurrencySymbol(editCurrency)}
-              value={editAnnualSalary}
-              decimals={0}
-              onChange={(e) => {
-                setEditAnnualSalary(e.target.value);
-                if (fieldErrors.annualSalary) {
-                  setFieldErrors((prev) => ({ ...prev, annualSalary: undefined }));
-                }
-              }}
-              placeholder="65000"
-            />
-          </FormGroup>
-        ) : (
-          <>
-            <FormGroup label="Hourly Rate" required error={fieldErrors.hourlyRate}>
-              <InputWithPrefix
-                className={fieldErrors.hourlyRate ? 'field-error' : ''}
+          <div data-pay-setting-field="annualSalary">
+            <FormGroup label="Annual Salary" required error={fieldErrors.annualSalary}>
+              <FormattedNumberInput
+                className={fieldErrors.annualSalary ? 'field-error' : ''}
                 prefix={getCurrencySymbol(editCurrency)}
-                type="number"
-                value={editHourlyRate}
+                value={editAnnualSalary}
+                decimals={0}
                 onChange={(e) => {
-                  setEditHourlyRate(e.target.value);
-                  if (fieldErrors.hourlyRate) {
-                    setFieldErrors((prev) => ({ ...prev, hourlyRate: undefined }));
+                  setEditAnnualSalary(e.target.value);
+                  if (fieldErrors.annualSalary) {
+                    setFieldErrors((prev) => ({ ...prev, annualSalary: undefined }));
                   }
                 }}
-                min="0"
-                step="0.50"
+                placeholder="65000"
               />
             </FormGroup>
+          </div>
+        ) : (
+          <>
+            <div data-pay-setting-field="hourlyRate">
+              <FormGroup label="Hourly Rate" required error={fieldErrors.hourlyRate}>
+                <InputWithPrefix
+                  className={fieldErrors.hourlyRate ? 'field-error' : ''}
+                  prefix={getCurrencySymbol(editCurrency)}
+                  type="number"
+                  value={editHourlyRate}
+                  onChange={(e) => {
+                    setEditHourlyRate(e.target.value);
+                    if (fieldErrors.hourlyRate) {
+                      setFieldErrors((prev) => ({ ...prev, hourlyRate: undefined }));
+                    }
+                  }}
+                  min="0"
+                  step="0.50"
+                />
+              </FormGroup>
+            </div>
             <FormGroup label="Hours per Week" required error={fieldErrors.hoursPerWeek}>
               <input
                 className={fieldErrors.hoursPerWeek ? 'field-error' : ''}
@@ -309,39 +365,41 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
           </>
         )}
 
-        <FormGroup label="Pay Frequency">
-          <RadioGroup
-            name="editPayFrequency"
-            value={editPayFrequency}
-            onChange={(value) => {
-              const newFrequency = value as PayFrequency;
-              const newOccurrences = getPaychecksPerYear(newFrequency);
-              if (newOccurrences > 0 && newFrequency !== prevEditPayFrequencyRef.current) {
-                // Compute gross per new pay period and derive suggestion using the same
-                // 20%-rounded-to-$10 formula as the suggestion banner
-                const newGrossPerPaycheck =
-                  editPayType === 'salary'
-                    ? (parseFloat(editAnnualSalary) || 0) / newOccurrences
-                    : (parseFloat(editHourlyRate) || 0) * (((parseFloat(editHoursPerWeek) || 0) * 52) / newOccurrences);
-                const suggested = getSuggestedLeftoverPerPaycheck(newGrossPerPaycheck);
-                if (suggested > 0) {
-                  setEditMinLeftover(String(suggested));
+        <div data-pay-setting-field="payFrequency">
+          <FormGroup label="Pay Frequency">
+            <RadioGroup
+              name="editPayFrequency"
+              value={editPayFrequency}
+              onChange={(value) => {
+                const newFrequency = value as PayFrequency;
+                const newOccurrences = getPaychecksPerYear(newFrequency);
+                if (newOccurrences > 0 && newFrequency !== prevEditPayFrequencyRef.current) {
+                  // Compute gross per new pay period and derive suggestion using the same
+                  // 20%-rounded-to-$10 formula as the suggestion banner
+                  const newGrossPerPaycheck =
+                    editPayType === 'salary'
+                      ? (parseFloat(editAnnualSalary) || 0) / newOccurrences
+                      : (parseFloat(editHourlyRate) || 0) * (((parseFloat(editHoursPerWeek) || 0) * 52) / newOccurrences);
+                  const suggested = getSuggestedLeftoverPerPaycheck(newGrossPerPaycheck);
+                  if (suggested > 0) {
+                    setEditMinLeftover(String(suggested));
+                  }
                 }
-              }
-              prevEditPayFrequencyRef.current = newFrequency;
-              setEditPayFrequency(newFrequency);
-            }}
-            layout="column"
-            options={[
-              { value: 'weekly', label: 'Weekly', description: '52 per year' },
-              { value: 'bi-weekly', label: 'Bi-weekly', description: '26 per year' },
-              { value: 'semi-monthly', label: 'Semi-monthly', description: '24 per year' },
-              { value: 'monthly', label: 'Monthly', description: '12 per year' },
-              { value: 'quarterly', label: 'Quarterly', description: '4 per year' },
-              { value: 'yearly', label: 'Yearly', description: '1 per year' },
-            ]}
-          />
-        </FormGroup>
+                prevEditPayFrequencyRef.current = newFrequency;
+                setEditPayFrequency(newFrequency);
+              }}
+              layout="column"
+              options={[
+                { value: 'weekly', label: 'Weekly', description: '52 per year' },
+                { value: 'bi-weekly', label: 'Bi-weekly', description: '26 per year' },
+                { value: 'semi-monthly', label: 'Semi-monthly', description: '24 per year' },
+                { value: 'monthly', label: 'Monthly', description: '12 per year' },
+                { value: 'quarterly', label: 'Quarterly', description: '4 per year' },
+                { value: 'yearly', label: 'Yearly', description: '1 per year' },
+              ]}
+            />
+          </FormGroup>
+        </div>
 
         {/* Paycheck scheduling inputs intentionally disabled for now.
             Keep this location reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
@@ -392,6 +450,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose }) 
             </Button>
           </div>
         )}
+      </div>
       <ErrorDialog
         isOpen={!!errorDialog}
         onClose={closeErrorDialog}

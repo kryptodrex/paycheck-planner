@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
@@ -84,19 +84,31 @@ const getCategoryItemCount = (category: AllocationCategory): number | null => {
 interface PayBreakdownProps {
   displayMode: ViewMode;
   onDisplayModeChange: (mode: ViewMode) => void;
+  searchPaySettingsRequestKey?: number;
+  searchPaySettingsFieldHighlight?: string;
   onNavigateToBills?: (accountId: string) => void;
   onNavigateToSavings?: (accountId: string) => void;
   onNavigateToRetirement?: (accountId: string) => void;
   onNavigateToLoans?: (accountId: string) => void;
 }
 
-const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeChange, onNavigateToBills, onNavigateToSavings, onNavigateToRetirement, onNavigateToLoans }) => {
+const PayBreakdown: React.FC<PayBreakdownProps> = ({
+  displayMode,
+  onDisplayModeChange,
+  searchPaySettingsRequestKey,
+  searchPaySettingsFieldHighlight,
+  onNavigateToBills,
+  onNavigateToSavings,
+  onNavigateToRetirement,
+  onNavigateToLoans,
+}) => {
   const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const [editingAccountIds, setEditingAccountIds] = useState<Set<string>>(new Set());
   const [draftAccounts, setDraftAccounts] = useState<Map<string, AllocationAccount>>(new Map());
   const [validationMessages, setValidationMessages] = useState<Map<string, ValidationMessage>>(new Map());
   const [showPaySettingsModal, setShowPaySettingsModal] = useState(false);
+  const [paySettingsFieldHighlight, setPaySettingsFieldHighlight] = useState<string | undefined>(undefined);
   const [inputValues, setInputValues] = useState<Map<string, number>>(new Map()); // Local input values to prevent conversion flicker
   const [showReallocationModal, setShowReallocationModal] = useState(false);
   const [selectedReallocationIds, setSelectedReallocationIds] = useState<string[]>([]);
@@ -114,6 +126,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
   const previousLeftoverRef = useRef<number | null>(null);
   const negativeBalancePromptedRef = useRef(false);
   const suppressNextNegativeBalancePromptRef = useRef(false);
+
+  useEffect(() => {
+    if (!searchPaySettingsRequestKey) {
+      return;
+    }
+
+    setPaySettingsFieldHighlight(searchPaySettingsFieldHighlight);
+    setShowPaySettingsModal(true);
+  }, [searchPaySettingsFieldHighlight, searchPaySettingsRequestKey]);
 
   if (!budgetData) return null;
 
@@ -720,7 +741,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
       <PaySettingsModal
         isOpen={showPaySettingsModal}
-        onClose={() => setShowPaySettingsModal(false)}
+        onClose={() => {
+          setShowPaySettingsModal(false);
+          setPaySettingsFieldHighlight(undefined);
+        }}
+        searchFieldHighlight={paySettingsFieldHighlight}
       />
 
       {/* Gross to Net Table */}
@@ -731,7 +756,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
         <div className="visual-flow">
         <div className="flow-stage">
-          <div className="stage-box gross-box">
+          <div id="pay-breakdown-gross-pay" className="stage-box gross-box">
             <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">
@@ -745,7 +770,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
         {displayBreakdown.preTaxDeductions > 0 && (
           <div className="flow-stage">
-            <div className="stage-box deduction-box">
+            <div id="pay-breakdown-pre-tax-deductions" className="stage-box deduction-box">
               <h3><GlossaryTerm termId="pre-tax-deduction">Pre-Tax Deductions</GlossaryTerm></h3>
               <AmountBreakdown
                 items={preTaxLineItems.map(item => ({
@@ -764,7 +789,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         )}
 
         <div className="flow-stage">
-          <div className="stage-box taxable-box">
+          <div id="pay-breakdown-taxable-income" className="stage-box taxable-box">
             <h3><GlossaryTerm termId="taxable-income">Taxable Income</GlossaryTerm></h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">Subject to taxes</div>
@@ -772,7 +797,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         </div>
 
         <div className="flow-stage">
-          <div className="stage-box taxes-box">
+          <div id="pay-breakdown-total-taxes" className="stage-box taxes-box">
             <h3><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></h3>
             <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.totalTaxes, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-breakdown">
@@ -795,7 +820,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
         {displayBreakdown.postTaxDeductions > 0 && (
           <div className="flow-stage">
-            <div className="stage-box postax-box">
+            <div id="pay-breakdown-post-tax-deductions" className="stage-box postax-box">
               <h3><GlossaryTerm termId="post-tax-deduction">Post-Tax Deductions</GlossaryTerm></h3>
               <AmountBreakdown
                 items={postTaxLineItems.map(item => ({
@@ -814,7 +839,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
         )}
 
         <div className="flow-stage">
-          <div className="stage-box net-box">
+          <div id="pay-breakdown-net-pay" className="stage-box net-box">
             <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
@@ -825,7 +850,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
 
       {/* Waterfall Breakdown with Per-Account Editing */}
       {budgetData.accounts.length > 0 && (
-        <div className="waterfall-breakdown">
+        <div id="pay-breakdown-after-tax-allocations" className="waterfall-breakdown">
           <div className="waterfall-header">
             <h3>After-Tax <GlossaryTerm termId="allocation">Allocations</GlossaryTerm></h3>
           </div>
@@ -975,8 +1000,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({ displayMode, onDisplayModeC
               );
             })}
 
-            <div className="waterfall-row waterfall-footer-row">
-              <span className="waterfall-label"><GlossaryTerm termId="residual-amount">All that remains</GlossaryTerm> for spending</span>
+            <div id="pay-breakdown-remaining-for-spending" className="waterfall-row waterfall-footer-row">
+              <span className="waterfall-label"><GlossaryTerm termId="residual-amount">All that remains</GlossaryTerm>for spending</span>
               <span className="waterfall-amount">{formatWithSymbol(toDisplayAmount(leftoverPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             {leftoverPerPaycheck < 0 && (

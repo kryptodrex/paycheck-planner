@@ -22,6 +22,7 @@ interface KeyMetricsProps {
 }
 
 interface MetricCardProps {
+  id?: string;
   className: string;
   icon: string;
   title: React.ReactNode;
@@ -35,6 +36,7 @@ interface MetricCardProps {
 type BreakdownView = 'bars' | 'stacked' | 'pie';
 
 const MetricCard: React.FC<MetricCardProps> = ({
+  id,
   className,
   icon,
   title,
@@ -68,6 +70,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
   return (
     <div
+      id={id}
       className={`metric-card ${className} ${isInteractive ? 'metric-card-interactive' : ''}`.trim()}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -267,6 +270,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
       <div className="metrics-grid">
         {/* Income Card */}
         <MetricCard 
+          id="key-metrics-income-card"
           className="income-card" 
           icon="💰" 
           title="Total Income" 
@@ -291,6 +295,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
         {/* Taxes Card */}
         <MetricCard
+          id="key-metrics-taxes-card"
           className="taxes-card"
           icon="🏛️"
           title={<>Total <GlossaryTerm termId="withholding">TAXES</GlossaryTerm></>}
@@ -315,6 +320,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
         {/* Net Pay Card */}
         <MetricCard
+          id="key-metrics-net-pay-card"
           className="net-card"
           icon="✅"
           title={<>Total <GlossaryTerm termId="net-pay">TAKE HOME PAY</GlossaryTerm></>}
@@ -339,6 +345,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
         {/* Bills Card */}
         <MetricCard
+          id="key-metrics-bills-card"
           className="bills-card"
           icon="📋"
           title="Total Bills"
@@ -363,6 +370,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
         {/* Savings Rate Card */}
         <MetricCard
+          id="key-metrics-savings-rate-card"
           className="savings-card"
           icon="🏦"
           title={<>Your <GlossaryTerm termId="allocation">SAVINGS RATE</GlossaryTerm></>}
@@ -387,6 +395,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
         {/* Remaining Card */}
         <MetricCard
+          id="key-metrics-remaining-card"
           className="remaining-card"
           icon="💵"
           title={<><GlossaryTerm termId="residual-amount">REMAINING</GlossaryTerm> for Spending</>}
@@ -410,7 +419,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
         </MetricCard>
       </div>
 
-      <div className="summary-bar">
+      <div id="key-metrics-yearly-breakdown" className="summary-bar">
         <div className="km-breakdown-header">
           <h3>Your Yearly Pay Breakdown</h3>
           <ViewModeSelector

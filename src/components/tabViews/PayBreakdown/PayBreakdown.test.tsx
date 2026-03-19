@@ -9,6 +9,7 @@ const {
   openConfirmDialogMock,
   closeConfirmDialogMock,
   confirmCurrentDialogMock,
+  paySettingsModalMock,
   mockBudgetData,
 } = vi.hoisted(() => ({
   updateBudgetDataMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   openConfirmDialogMock: vi.fn(),
   closeConfirmDialogMock: vi.fn(),
   confirmCurrentDialogMock: vi.fn(),
+  paySettingsModalMock: vi.fn(),
   mockBudgetData: {
     settings: { currency: 'USD' },
     paySettings: {
@@ -95,7 +97,14 @@ vi.mock('../../../services/reallocationPlanner', () => ({
 }));
 
 vi.mock('../../modals/PaySettingsModal', () => ({
-  default: () => null,
+  default: ({ isOpen, searchFieldHighlight }: { isOpen: boolean; searchFieldHighlight?: string }) => {
+    paySettingsModalMock({ isOpen, searchFieldHighlight });
+    if (!isOpen) {
+      return null;
+    }
+
+    return <div data-testid="pay-settings-modal">{searchFieldHighlight ?? 'none'}</div>;
+  },
 }));
 
 vi.mock('../../modals/ReallocationReviewModal/ReallocationReviewModal', () => ({
@@ -117,6 +126,7 @@ describe('PayBreakdown custom allocation validation', () => {
     openConfirmDialogMock.mockClear();
     closeConfirmDialogMock.mockClear();
     confirmCurrentDialogMock.mockClear();
+    paySettingsModalMock.mockClear();
 
     localStorage.clear();
 
@@ -222,5 +232,21 @@ describe('PayBreakdown custom allocation validation', () => {
 
     expect(screen.getByText(/overallocation:/i)).toBeInTheDocument();
     expect(screen.getByText(/allocations exceed net pay/i)).toBeInTheDocument();
+  });
+
+  it('opens pay settings modal and passes search field highlight when requested by dashboard search', async () => {
+    render(
+      <PayBreakdown
+        displayMode="monthly"
+        onDisplayModeChange={vi.fn()}
+        searchPaySettingsRequestKey={1}
+        searchPaySettingsFieldHighlight="payFrequency"
+      />,
+    );
+
+    expect(await screen.findByTestId('pay-settings-modal')).toHaveTextContent('payFrequency');
+    expect(paySettingsModalMock).toHaveBeenCalledWith(
+      expect.objectContaining({ isOpen: true, searchFieldHighlight: 'payFrequency' }),
+    );
   });
 });

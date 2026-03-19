@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
@@ -19,24 +19,60 @@ import '../tabViews.shared.css';
 import './TaxBreakdown.css';
 
 interface TaxBreakdownProps {
+    searchOpenSettingsRequestKey?: number;
     displayMode: ViewMode;
     onDisplayModeChange: (mode: ViewMode) => void;
 }
 
-const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeChange }) => {
+const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode, onDisplayModeChange }) => {
     const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
     const [showEditModal, setShowEditModal] = useState(false);
     const [editLines, setEditLines] = useState<EditableTaxLineValues[]>([]);
     const [additionalWithholding, setAdditionalWithholding] = useState('0');
     const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
+    const lastHandledSearchOpenSettingsRef = useRef(0);
+
+    const currency = budgetData?.settings?.currency || 'USD';
+    const breakdown = budgetData
+        ? calculatePaycheckBreakdown()
+        : {
+            grossPay: 0,
+            preTaxDeductions: 0,
+            taxableIncome: 0,
+            taxLineAmounts: [],
+            additionalWithholding: 0,
+            totalTaxes: 0,
+            netPay: 0,
+        };
+    const taxSettings = budgetData?.taxSettings ?? { taxLines: [], additionalWithholding: 0 };
+    const paychecksPerYear = budgetData ? getPaychecksPerYear(budgetData.paySettings.payFrequency) : 1;
+    const taxableIncomeForEditor = breakdown.taxableIncome;
+
+    useEffect(() => {
+        if (!budgetData) {
+            return;
+        }
+
+        if (!searchOpenSettingsRequestKey || searchOpenSettingsRequestKey === lastHandledSearchOpenSettingsRef.current) {
+            return;
+        }
+
+        lastHandledSearchOpenSettingsRef.current = searchOpenSettingsRequestKey;
+        const timeoutId = window.setTimeout(() => {
+            setEditLines(
+                (taxSettings.taxLines || []).map(line => ({
+                    ...toEditableTaxLineValues(line, taxableIncomeForEditor),
+                }))
+            );
+            setAdditionalWithholding(String(taxSettings.additionalWithholding ?? 0));
+            setAdditionalWithholdingError(undefined);
+            setShowEditModal(true);
+        }, 0);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [budgetData, searchOpenSettingsRequestKey, taxSettings.additionalWithholding, taxSettings.taxLines, taxableIncomeForEditor]);
 
     if (!budgetData) return null;
-
-    const currency = budgetData.settings?.currency || 'USD';
-    const breakdown = calculatePaycheckBreakdown();
-    const taxSettings = budgetData.taxSettings;
-    const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-    const taxableIncomeForEditor = breakdown.taxableIncome;
 
     const formatRateLabel = (line: TaxLine) => {
         if (getTaxLineCalculationType(line) === 'fixed') {
@@ -180,7 +216,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                             const storedLine = taxSettings.taxLines.find(l => l.id === line.id) || { id: line.id, label: line.label, rate: 0 };
 
                             return (
-                                <div key={line.id} className="summary-row">
+                                <div key={line.id} id={`tax-line-${line.id}`} className="summary-row">
                                     <span className="label">{line.label}</span>
                                     <span className="rate">{formatRateLabel(storedLine)}</span>
                                     <span className="rate">{formatTaxableIncomeLabel(storedLine)}</span>
@@ -189,14 +225,14 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ displayMode, onDisplayModeC
                             );
                         })}
                         {breakdown.additionalWithholding > 0 && (
-                            <div className="summary-row">
+                            <div id="tax-additional-withholding-row" className="summary-row">
                                 <span className="label"><GlossaryTerm termId="withholding">Additional Withholding</GlossaryTerm></span>
                                 <span className="rate">-</span>
                                 <span className="rate">-</span>
                                 <span className="amount">{formatWithSymbol(convertToDisplayMode(breakdown.additionalWithholding, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         )}
-                        <div className="summary-row total">
+                        <div id="tax-total-taxes-row" className="summary-row total">
                             <span className="label">Total Taxes</span>
                             <span className="rate">-</span>
                             <span className="rate">-</span>

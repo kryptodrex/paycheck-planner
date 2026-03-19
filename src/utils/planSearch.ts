@@ -7,6 +7,9 @@
  */
 
 import type { BudgetData } from '../types/budget';
+import { calculateAnnualizedPaySummary, calculatePaycheckBreakdown } from '../services/budgetCalculations';
+import { convertBillToYearly } from './billFrequency';
+import { getPaychecksPerYear } from './payPeriod';
 import type { TabId } from './tabManagement';
 
 // ─── Action types ───────────────────────────────────────────────────────────
@@ -38,11 +41,65 @@ export interface OpenSettingsAction {
   sectionId?: string;
 }
 
+/** Open Bills tab and trigger an action such as opening add-item modals. */
+export interface OpenBillsAction {
+  type: 'open-bills-action';
+  mode:
+    | 'add-bill'
+    | 'add-deduction'
+    | 'edit-bill'
+    | 'delete-bill'
+    | 'toggle-bill'
+    | 'edit-benefit'
+    | 'delete-benefit'
+    | 'toggle-benefit';
+  targetId?: string;
+}
+
+/** Open Loans tab and trigger an action such as opening add/edit modals. */
+export interface OpenLoansAction {
+  type: 'open-loans-action';
+  mode: 'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan';
+  targetId?: string;
+}
+
+/** Open Savings tab and trigger savings/retirement actions. */
+export interface OpenSavingsAction {
+  type: 'open-savings-action';
+  mode:
+    | 'add-contribution'
+    | 'add-retirement'
+    | 'edit-savings'
+    | 'delete-savings'
+    | 'toggle-savings'
+    | 'edit-retirement'
+    | 'delete-retirement'
+    | 'toggle-retirement';
+  targetId?: string;
+}
+
+/** Open Tax tab and optionally open tax settings modal. */
+export interface OpenTaxesAction {
+  type: 'open-taxes-action';
+  mode: 'open-settings';
+}
+
 export type SearchResultAction =
   | NavigateTabAction
   | OpenPaySettingsAction
   | OpenAccountsAction
-  | OpenSettingsAction;
+  | OpenSettingsAction
+  | OpenBillsAction
+  | OpenLoansAction
+  | OpenSavingsAction
+  | OpenTaxesAction;
+
+export interface SearchInlineAction {
+  id: string;
+  label: string;
+  action: SearchResultAction;
+  variant?: 'default' | 'danger';
+}
 
 // ─── Result type ─────────────────────────────────────────────────────────────
 
@@ -59,6 +116,10 @@ export interface SearchResult {
   categoryIcon: string;
   /** Optional badge text (e.g. disabled, paused) */
   badge?: string;
+  /** Inline action buttons shown directly on an item result row. */
+  inlineActions?: SearchInlineAction[];
+  /** Extra keywords used only for matching (not shown in UI). */
+  searchKeywords?: string[];
   /** What to do when the user selects this result */
   action: SearchResultAction;
 }
@@ -147,6 +208,109 @@ function getAnnualPaySubtitle(
 export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
   const results: SearchResult[] = [];
   const currency = budgetData.settings?.currency ?? 'USD';
+  const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+  const paycheckBreakdown = calculatePaycheckBreakdown(budgetData);
+  const annualizedSummary = calculateAnnualizedPaySummary(paycheckBreakdown, paychecksPerYear);
+
+  const annualBills = (budgetData.bills ?? [])
+    .filter((bill) => bill.enabled !== false)
+    .reduce((sum, bill) => sum + convertBillToYearly(bill.amount, bill.frequency), 0);
+  const annualRemainingForSpending = Math.max(annualizedSummary.annualNet - annualBills, 0);
+  const hasPreTaxDeductions = paycheckBreakdown.preTaxDeductions > 0;
+  const postTaxDeductionsAmount = Math.max(
+    0,
+    paycheckBreakdown.taxableIncome - paycheckBreakdown.totalTaxes - paycheckBreakdown.netPay,
+  );
+  const hasPostTaxDeductions = postTaxDeductionsAmount > 0;
+  const hasAfterTaxAllocations = (budgetData.accounts ?? []).length > 0;
+
+  // ── Key Metrics cards ────────────────────────────────────────────────────
+  results.push(
+    {
+      id: 'key-metrics-total-income',
+      title: 'Total Income',
+      subtitle: `${formatAmount(annualizedSummary.annualGross, currency)} yearly`,
+      category: 'Key Metrics',
+      categoryIcon: '📈',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'metrics',
+        elementId: 'key-metrics-income-card',
+      },
+    },
+    {
+      id: 'key-metrics-total-taxes',
+      title: 'Total Taxes',
+      subtitle: `${formatAmount(annualizedSummary.annualTaxes, currency)} yearly`,
+      category: 'Key Metrics',
+      categoryIcon: '🏛️',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'metrics',
+        elementId: 'key-metrics-taxes-card',
+      },
+    },
+    {
+      id: 'key-metrics-total-bills',
+      title: 'Total Bills',
+      subtitle: `${formatAmount(annualBills, currency)} yearly`,
+      category: 'Key Metrics',
+      categoryIcon: '📋',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'metrics',
+        elementId: 'key-metrics-bills-card',
+      },
+    },
+    {
+      id: 'key-metrics-savings-rate',
+      title: 'Savings Rate',
+      subtitle: 'Savings and investment progress',
+      category: 'Key Metrics',
+      categoryIcon: '🏦',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'metrics',
+        elementId: 'key-metrics-savings-rate-card',
+      },
+    },
+    {
+      id: 'key-metrics-take-home-pay',
+      title: 'Take Home Pay',
+      subtitle: `${formatAmount(annualizedSummary.annualNet, currency)} yearly`,
+      category: 'Key Metrics',
+      categoryIcon: '✅',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'metrics',
+        elementId: 'key-metrics-net-pay-card',
+      },
+    },
+    {
+      id: 'key-metrics-remaining-for-spending',
+      title: 'Remaining for Spending',
+      subtitle: `${formatAmount(annualRemainingForSpending, currency)} yearly`,
+      category: 'Key Metrics',
+      categoryIcon: '💵',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'metrics',
+        elementId: 'key-metrics-remaining-card',
+      },
+    },
+    {
+      id: 'key-metrics-yearly-pay-breakdown',
+      title: 'Yearly Pay Breakdown',
+      subtitle: 'Bar, stacked, and pie summary views',
+      category: 'Key Metrics',
+      categoryIcon: '📊',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'metrics',
+        elementId: 'key-metrics-yearly-breakdown',
+      },
+    },
+  );
 
   // ── Pay Settings fields ───────────────────────────────────────────────────
   const pay = budgetData.paySettings;
@@ -188,6 +352,170 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
     });
   }
 
+  // ── Quick actions (header/primary buttons) ───────────────────────────────
+  results.push(
+    {
+      id: 'quick-action-add-bill',
+      title: 'Add Bill',
+      subtitle: 'Open Bills & Expenses and start adding a bill',
+      category: 'Quick Actions',
+      categoryIcon: '➕',
+      action: { type: 'open-bills-action', mode: 'add-bill' },
+    },
+    {
+      id: 'quick-action-add-deduction',
+      title: 'Add Deduction',
+      subtitle: 'Open Bills & Expenses and start adding a deduction',
+      category: 'Quick Actions',
+      categoryIcon: '➕',
+      action: { type: 'open-bills-action', mode: 'add-deduction' },
+    },
+    {
+      id: 'quick-action-add-loan-payment',
+      title: 'Add Loan Payment',
+      subtitle: 'Open Loan Payments and start adding a payment',
+      category: 'Quick Actions',
+      categoryIcon: '➕',
+      action: { type: 'open-loans-action', mode: 'add-loan' },
+    },
+    {
+      id: 'quick-action-add-contribution',
+      title: 'Add Contribution',
+      subtitle: 'Open Savings and start adding a savings/investment contribution',
+      category: 'Quick Actions',
+      categoryIcon: '➕',
+      action: { type: 'open-savings-action', mode: 'add-contribution' },
+    },
+    {
+      id: 'quick-action-add-retirement-plan',
+      title: 'Add Retirement Plan',
+      subtitle: 'Open Savings and start adding a retirement plan',
+      category: 'Quick Actions',
+      categoryIcon: '➕',
+      action: { type: 'open-savings-action', mode: 'add-retirement' },
+    },
+    {
+      id: 'quick-action-edit-tax-settings',
+      title: 'Edit Tax Settings',
+      subtitle: 'Open Tax Breakdown and launch the tax settings modal',
+      category: 'Quick Actions',
+      categoryIcon: '⚙️',
+      action: { type: 'open-taxes-action', mode: 'open-settings' },
+    },
+  );
+
+  // ── Pay Breakdown sections ───────────────────────────────────────────────
+  results.push(
+    {
+      id: 'pay-breakdown-gross-pay',
+      title: 'Gross Pay',
+      subtitle: `${formatAmount(paycheckBreakdown.grossPay, currency)} per paycheck`,
+      category: 'Pay Breakdown',
+      categoryIcon: '💸',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'breakdown',
+        elementId: 'pay-breakdown-gross-pay',
+      },
+    },
+    {
+      id: 'pay-breakdown-total-taxes',
+      title: 'Total Taxes',
+      subtitle: `${formatAmount(paycheckBreakdown.totalTaxes, currency)} per paycheck`,
+      category: 'Pay Breakdown',
+      categoryIcon: '🏛️',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'breakdown',
+        elementId: 'pay-breakdown-total-taxes',
+      },
+    },
+    {
+      id: 'pay-breakdown-taxable-income',
+      title: 'Taxable Income',
+      subtitle: `${formatAmount(paycheckBreakdown.taxableIncome, currency)} per paycheck`,
+      category: 'Pay Breakdown',
+      categoryIcon: '🧮',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'breakdown',
+        elementId: 'pay-breakdown-taxable-income',
+      },
+    },
+    ...(hasPreTaxDeductions
+      ? [
+          {
+            id: 'pay-breakdown-pre-tax-deductions',
+            title: 'Pre-Tax Deductions',
+            subtitle: `${formatAmount(paycheckBreakdown.preTaxDeductions, currency)} per paycheck`,
+            category: 'Pay Breakdown',
+            categoryIcon: '📉',
+            action: {
+              type: 'navigate-tab' as const,
+              tabId: 'breakdown' as const,
+              elementId: 'pay-breakdown-pre-tax-deductions',
+            },
+          },
+        ]
+      : []),
+    ...(hasPostTaxDeductions
+      ? [
+          {
+            id: 'pay-breakdown-post-tax-deductions',
+            title: 'Post-Tax Deductions',
+            subtitle: `${formatAmount(postTaxDeductionsAmount, currency)} per paycheck`,
+            category: 'Pay Breakdown',
+            categoryIcon: '📌',
+            action: {
+              type: 'navigate-tab' as const,
+              tabId: 'breakdown' as const,
+              elementId: 'pay-breakdown-post-tax-deductions',
+            },
+          },
+        ]
+      : []),
+    {
+      id: 'pay-breakdown-net-pay',
+      title: 'Net Pay',
+      subtitle: `${formatAmount(paycheckBreakdown.netPay, currency)} per paycheck`,
+      category: 'Pay Breakdown',
+      categoryIcon: '✅',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'breakdown',
+        elementId: 'pay-breakdown-net-pay',
+      },
+    },
+    {
+      id: 'pay-breakdown-remaining-for-spending',
+      title: 'All That Remains for Spending',
+      subtitle: `${formatAmount(Math.max(annualRemainingForSpending / Math.max(paychecksPerYear, 1), 0), currency)} per paycheck`,
+      category: 'Pay Breakdown',
+      categoryIcon: '💵',
+      action: {
+        type: 'navigate-tab',
+        tabId: 'breakdown',
+        elementId: 'pay-breakdown-remaining-for-spending',
+      },
+    },
+    ...(hasAfterTaxAllocations
+      ? [
+          {
+            id: 'pay-breakdown-after-tax-allocations',
+            title: 'After-Tax Allocations',
+            subtitle: 'Account funding and category allocations',
+            category: 'Pay Breakdown',
+            categoryIcon: '🧾',
+            action: {
+              type: 'navigate-tab' as const,
+              tabId: 'breakdown' as const,
+              elementId: 'pay-breakdown-after-tax-allocations',
+            },
+          },
+        ]
+      : []),
+  );
+
   // ── Pre-tax deductions ────────────────────────────────────────────────────
   for (const deduction of budgetData.preTaxDeductions ?? []) {
     results.push({
@@ -214,6 +542,25 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       category: 'Benefits',
       categoryIcon: '🏥',
       badge: paused ? 'Paused' : undefined,
+      inlineActions: [
+        {
+          id: `toggle-benefit-${benefit.id}`,
+          label: paused ? 'Resume' : 'Pause',
+          action: { type: 'open-bills-action', mode: 'toggle-benefit', targetId: benefit.id },
+        },
+        {
+          id: `edit-benefit-${benefit.id}`,
+          label: 'Edit',
+          action: { type: 'open-bills-action', mode: 'edit-benefit', targetId: benefit.id },
+        },
+        {
+          id: `delete-benefit-${benefit.id}`,
+          label: 'Delete',
+          action: { type: 'open-bills-action', mode: 'delete-benefit', targetId: benefit.id },
+          variant: 'danger',
+        },
+      ],
+      searchKeywords: ['deduction', 'benefit', 'pause', 'resume', 'edit', 'delete'],
       action: { type: 'navigate-tab', tabId: 'bills', elementId: `benefit-${benefit.id}` },
     });
   }
@@ -229,9 +576,29 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
           : `${line.rate}%`,
       category: 'Tax',
       categoryIcon: '🏛️',
-      action: { type: 'navigate-tab', tabId: 'taxes' },
+      action: { type: 'navigate-tab', tabId: 'taxes', elementId: `tax-line-${line.id}` },
     });
   }
+
+  if ((budgetData.taxSettings?.additionalWithholding ?? 0) > 0) {
+    results.push({
+      id: 'tax-additional-withholding',
+      title: 'Additional Withholding',
+      subtitle: formatAmount(budgetData.taxSettings?.additionalWithholding ?? 0, currency) + ' per paycheck',
+      category: 'Tax',
+      categoryIcon: '🏛️',
+      action: { type: 'navigate-tab', tabId: 'taxes', elementId: 'tax-additional-withholding-row' },
+    });
+  }
+
+  results.push({
+    id: 'tax-total-taxes',
+    title: 'Total Taxes',
+    subtitle: formatAmount(paycheckBreakdown.totalTaxes, currency) + ' per paycheck',
+    category: 'Tax',
+    categoryIcon: '🏛️',
+    action: { type: 'navigate-tab', tabId: 'taxes', elementId: 'tax-total-taxes-row' },
+  });
 
   // ── Bills ─────────────────────────────────────────────────────────────────
   for (const bill of budgetData.bills ?? []) {
@@ -246,6 +613,25 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       category: 'Bills',
       categoryIcon: '🧾',
       badge: paused ? 'Paused' : bill.discretionary ? 'Discretionary' : undefined,
+      inlineActions: [
+        {
+          id: `toggle-bill-${bill.id}`,
+          label: paused ? 'Resume' : 'Pause',
+          action: { type: 'open-bills-action', mode: 'toggle-bill', targetId: bill.id },
+        },
+        {
+          id: `edit-bill-${bill.id}`,
+          label: 'Edit',
+          action: { type: 'open-bills-action', mode: 'edit-bill', targetId: bill.id },
+        },
+        {
+          id: `delete-bill-${bill.id}`,
+          label: 'Delete',
+          action: { type: 'open-bills-action', mode: 'delete-bill', targetId: bill.id },
+          variant: 'danger',
+        },
+      ],
+      searchKeywords: ['bill', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
         tabId: 'bills',
@@ -268,6 +654,25 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       category: 'Savings',
       categoryIcon: '🏦',
       badge: paused ? 'Paused' : undefined,
+      inlineActions: [
+        {
+          id: `toggle-savings-${contribution.id}`,
+          label: paused ? 'Resume' : 'Pause',
+          action: { type: 'open-savings-action', mode: 'toggle-savings', targetId: contribution.id },
+        },
+        {
+          id: `edit-savings-${contribution.id}`,
+          label: 'Edit',
+          action: { type: 'open-savings-action', mode: 'edit-savings', targetId: contribution.id },
+        },
+        {
+          id: `delete-savings-${contribution.id}`,
+          label: 'Delete',
+          action: { type: 'open-savings-action', mode: 'delete-savings', targetId: contribution.id },
+          variant: 'danger',
+        },
+      ],
+      searchKeywords: ['savings', 'contribution', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
         tabId: 'savings',
@@ -292,6 +697,25 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       category: 'Retirement',
       categoryIcon: '🏖️',
       badge: paused ? 'Paused' : undefined,
+      inlineActions: [
+        {
+          id: `toggle-retirement-${election.id}`,
+          label: paused ? 'Resume' : 'Pause',
+          action: { type: 'open-savings-action', mode: 'toggle-retirement', targetId: election.id },
+        },
+        {
+          id: `edit-retirement-${election.id}`,
+          label: 'Edit',
+          action: { type: 'open-savings-action', mode: 'edit-retirement', targetId: election.id },
+        },
+        {
+          id: `delete-retirement-${election.id}`,
+          label: 'Delete',
+          action: { type: 'open-savings-action', mode: 'delete-retirement', targetId: election.id },
+          variant: 'danger',
+        },
+      ],
+      searchKeywords: ['retirement', 'plan', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
         tabId: 'savings',
@@ -313,6 +737,25 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       category: 'Loans',
       categoryIcon: '💳',
       badge: paused ? 'Paused' : undefined,
+      inlineActions: [
+        {
+          id: `toggle-loan-${loan.id}`,
+          label: paused ? 'Resume' : 'Pause',
+          action: { type: 'open-loans-action', mode: 'toggle-loan', targetId: loan.id },
+        },
+        {
+          id: `edit-loan-${loan.id}`,
+          label: 'Edit',
+          action: { type: 'open-loans-action', mode: 'edit-loan', targetId: loan.id },
+        },
+        {
+          id: `delete-loan-${loan.id}`,
+          label: 'Delete',
+          action: { type: 'open-loans-action', mode: 'delete-loan', targetId: loan.id },
+          variant: 'danger',
+        },
+      ],
+      searchKeywords: ['loan', 'payment', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
         tabId: 'loans',
@@ -524,6 +967,8 @@ export function searchPlan(
       result.subtitle,
       result.category,
       result.badge,
+      result.inlineActions?.map((action) => action.label).join(' '),
+      result.searchKeywords?.join(' '),
     );
   });
 

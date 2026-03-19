@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
 import type { Bill } from '../../../types/obligations';
@@ -19,6 +19,17 @@ import './BillsManager.css';
 
 interface BillsManagerProps {
   scrollToAccountId?: string;
+  searchActionRequestKey?: number;
+  searchActionType?:
+    | 'add-bill'
+    | 'add-deduction'
+    | 'edit-bill'
+    | 'delete-bill'
+    | 'toggle-bill'
+    | 'edit-benefit'
+    | 'delete-benefit'
+    | 'toggle-benefit';
+  searchActionTargetId?: string;
   displayMode: ViewMode;
   onDisplayModeChange: (mode: ViewMode) => void;
 }
@@ -35,7 +46,14 @@ type BenefitFieldErrors = {
   sourceAccountId?: string;
 };
 
-const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
+const BillsManager: React.FC<BillsManagerProps> = ({
+  scrollToAccountId,
+  searchActionRequestKey,
+  searchActionType,
+  searchActionTargetId,
+  displayMode,
+  onDisplayModeChange,
+}) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const billEditor = useModalEntityEditor<Bill>();
@@ -57,6 +75,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const [benefitSourceAccountId, setBenefitSourceAccountId] = useState('');
   const [benefitIsDiscretionary, setBenefitIsDiscretionary] = useState(false);
   const benefitErrors = useFieldErrors<BenefitFieldErrors>();
+  const lastHandledSearchActionKeyRef = useRef(0);
 
   useEffect(() => {
     if (scrollToAccountId) {
@@ -66,6 +85,133 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       }
     }
   }, [scrollToAccountId]);
+
+  useEffect(() => {
+    if (!budgetData) {
+      return;
+    }
+
+    if (!searchActionRequestKey || searchActionRequestKey === lastHandledSearchActionKeyRef.current) {
+      return;
+    }
+
+    lastHandledSearchActionKeyRef.current = searchActionRequestKey;
+
+    const timeoutId = window.setTimeout(() => {
+      if (searchActionTargetId && searchActionType === 'toggle-bill') {
+        const bill = budgetData.bills.find((item) => item.id === searchActionTargetId);
+        if (bill) {
+          updateBill(bill.id, { enabled: bill.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-bill') {
+        const bill = budgetData.bills.find((item) => item.id === searchActionTargetId);
+        if (bill) {
+          openConfirmDialog({
+            title: 'Delete Bill',
+            message: 'Are you sure you want to delete this bill?',
+            confirmLabel: 'Delete Bill',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteBill(bill.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-bill') {
+        const bill = budgetData.bills.find((item) => item.id === searchActionTargetId);
+        if (bill) {
+          setBillName(bill.name);
+          setBillAmount(bill.amount.toString());
+          setBillFrequency(bill.frequency);
+          setBillAccountId(bill.accountId);
+          setBillNotes(bill.notes || '');
+          setBillIsDiscretionary(bill.discretionary === true);
+          billErrors.clearErrors();
+          billEditor.openForEdit(bill);
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'toggle-benefit') {
+        const benefit = budgetData.benefits.find((item) => item.id === searchActionTargetId);
+        if (benefit) {
+          updateBenefit(benefit.id, { enabled: benefit.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-benefit') {
+        const benefit = budgetData.benefits.find((item) => item.id === searchActionTargetId);
+        if (benefit) {
+          openConfirmDialog({
+            title: 'Delete Deduction',
+            message: 'Are you sure you want to delete this deduction?',
+            confirmLabel: 'Delete Deduction',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteBenefit(benefit.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-benefit') {
+        const benefit = budgetData.benefits.find((item) => item.id === searchActionTargetId);
+        if (benefit) {
+          setBenefitName(benefit.name);
+          setBenefitAmount(benefit.amount.toString());
+          setBenefitIsPercentage(benefit.isPercentage || false);
+          setBenefitSource(benefit.deductionSource || 'paycheck');
+          setBenefitSourceAccountId(benefit.sourceAccountId || '');
+          setBenefitIsTaxable((benefit.deductionSource || 'paycheck') === 'account' ? true : benefit.isTaxable);
+          setBenefitIsDiscretionary(benefit.discretionary === true);
+          benefitErrors.clearErrors();
+          benefitEditor.openForEdit(benefit);
+        }
+        return;
+      }
+
+      if (searchActionType === 'add-deduction') {
+        setBenefitName('');
+        setBenefitAmount('');
+        setBenefitIsPercentage(false);
+        setBenefitIsTaxable(false);
+        setBenefitSource('paycheck');
+        setBenefitSourceAccountId('');
+        setBenefitIsDiscretionary(false);
+        benefitErrors.clearErrors();
+        benefitEditor.openForCreate();
+        return;
+      }
+
+      setBillName('');
+      setBillAmount('');
+      setBillFrequency('monthly');
+      setBillAccountId(budgetData.accounts[0]?.id || '');
+      setBillNotes('');
+      setBillIsDiscretionary(false);
+      billErrors.clearErrors();
+      billEditor.openForCreate();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    benefitEditor,
+    benefitErrors,
+    billEditor,
+    billErrors,
+    budgetData,
+    searchActionRequestKey,
+    searchActionTargetId,
+    searchActionType,
+    deleteBenefit,
+    deleteBill,
+    openConfirmDialog,
+    updateBenefit,
+    updateBill,
+  ]);
 
   if (!budgetData) return null;
 

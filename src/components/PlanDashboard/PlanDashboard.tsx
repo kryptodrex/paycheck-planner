@@ -54,7 +54,40 @@ const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 
 const SEARCH_SCROLL_INITIAL_DELAY_MS = 80;
 const SEARCH_SCROLL_RETRY_DELAY_MS = 120;
 const SEARCH_SCROLL_MAX_RETRIES = 5;
+const SEARCH_SCROLL_SETTLE_DELAY_MS = 220;
 const SEARCH_HIGHLIGHT_DURATION_MS = 1800;
+
+const SCROLL_VISIBILITY_PADDING_PX = 12;
+
+const getNearestScrollableAncestor = (element: HTMLElement): HTMLElement | null => {
+  let current: HTMLElement | null = element.parentElement;
+
+  while (current) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    const isScrollable =
+      (overflowY === 'auto' || overflowY === 'scroll') &&
+      current.scrollHeight > current.clientHeight;
+
+    if (isScrollable) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+};
+
+const isElementVisibleInContainer = (element: HTMLElement, container: HTMLElement): boolean => {
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  return (
+    elementRect.top >= containerRect.top + SCROLL_VISIBILITY_PADDING_PX &&
+    elementRect.bottom <= containerRect.bottom - SCROLL_VISIBILITY_PADDING_PX
+  );
+};
 
 const getFirstVisibleFavoriteMode = (): ViewMode => {
   const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
@@ -100,6 +133,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined);
+  const [pendingPaySettingsFieldHighlight, setPendingPaySettingsFieldHighlight] = useState<string | undefined>(undefined);
+  const [paySettingsSearchRequestKey, setPaySettingsSearchRequestKey] = useState(0);
+  const [pendingBillsSearchAction, setPendingBillsSearchAction] = useState<
+    | 'add-bill'
+    | 'add-deduction'
+    | 'edit-bill'
+    | 'delete-bill'
+    | 'toggle-bill'
+    | 'edit-benefit'
+    | 'delete-benefit'
+    | 'toggle-benefit'
+    | undefined
+  >(undefined);
+  const [pendingBillsSearchTargetId, setPendingBillsSearchTargetId] = useState<string | undefined>(undefined);
+  const [billsSearchRequestKey, setBillsSearchRequestKey] = useState(0);
+  const [pendingLoansSearchAction, setPendingLoansSearchAction] = useState<'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan' | undefined>(undefined);
+  const [pendingLoansSearchTargetId, setPendingLoansSearchTargetId] = useState<string | undefined>(undefined);
+  const [loansSearchRequestKey, setLoansSearchRequestKey] = useState(0);
+  const [pendingSavingsSearchAction, setPendingSavingsSearchAction] = useState<
+    | 'add-contribution'
+    | 'add-retirement'
+    | 'edit-savings'
+    | 'delete-savings'
+    | 'toggle-savings'
+    | 'edit-retirement'
+    | 'delete-retirement'
+    | 'toggle-retirement'
+    | undefined
+  >(undefined);
+  const [pendingSavingsSearchTargetId, setPendingSavingsSearchTargetId] = useState<string | undefined>(undefined);
+  const [savingsSearchRequestKey, setSavingsSearchRequestKey] = useState(0);
+  const [taxSearchOpenSettingsRequestKey, setTaxSearchOpenSettingsRequestKey] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
@@ -933,12 +998,21 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           const attemptScroll = (attemptsLeft: number) => {
             const el = document.getElementById(elementId);
             if (el) {
-              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              const scrollContainer = getNearestScrollableAncestor(el);
+              el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
               el.classList.add('plan-search-highlight');
               window.setTimeout(
                 () => el.classList.remove('plan-search-highlight'),
                 SEARCH_HIGHLIGHT_DURATION_MS,
               );
+
+              if (scrollContainer) {
+                window.setTimeout(() => {
+                  if (!isElementVisibleInContainer(el, scrollContainer) && attemptsLeft > 0) {
+                    attemptScroll(attemptsLeft - 1);
+                  }
+                }, SEARCH_SCROLL_SETTLE_DELAY_MS);
+              }
             } else if (attemptsLeft > 0) {
               window.setTimeout(() => attemptScroll(attemptsLeft - 1), SEARCH_SCROLL_RETRY_DELAY_MS);
             }
@@ -946,7 +1020,29 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           window.setTimeout(() => attemptScroll(SEARCH_SCROLL_MAX_RETRIES), SEARCH_SCROLL_INITIAL_DELAY_MS);
         }
       } else if (action.type === 'open-pay-settings') {
-        selectTab('breakdown', { resetBillsAnchor: true });
+        setPendingPaySettingsFieldHighlight(action.fieldHighlight);
+        setPaySettingsSearchRequestKey((prev) => prev + 1);
+        selectTab('breakdown', { resetBillsAnchor: true, revealIfHidden: true });
+      } else if (action.type === 'open-bills-action') {
+        setPendingBillsSearchAction(action.mode);
+        setPendingBillsSearchTargetId(action.targetId);
+        setScrollToAccountId(undefined);
+        setBillsSearchRequestKey((prev) => prev + 1);
+        selectTab('bills', { resetBillsAnchor: true, revealIfHidden: true });
+      } else if (action.type === 'open-loans-action') {
+        setPendingLoansSearchAction(action.mode);
+        setPendingLoansSearchTargetId(action.targetId);
+        setScrollToAccountId(undefined);
+        setLoansSearchRequestKey((prev) => prev + 1);
+        selectTab('loans', { resetBillsAnchor: true, revealIfHidden: true });
+      } else if (action.type === 'open-savings-action') {
+        setPendingSavingsSearchAction(action.mode);
+        setPendingSavingsSearchTargetId(action.targetId);
+        setSavingsSearchRequestKey((prev) => prev + 1);
+        selectTab('savings', { resetBillsAnchor: true, revealIfHidden: true });
+      } else if (action.type === 'open-taxes-action') {
+        setTaxSearchOpenSettingsRequestKey((prev) => prev + 1);
+        selectTab('taxes', { resetBillsAnchor: true, revealIfHidden: true });
       } else if (action.type === 'open-accounts') {
         setShowAccountsModal(true);
       } else if (action.type === 'open-settings') {
@@ -1319,6 +1415,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <PayBreakdown 
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
+            searchPaySettingsRequestKey={paySettingsSearchRequestKey}
+            searchPaySettingsFieldHighlight={pendingPaySettingsFieldHighlight}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
@@ -1341,6 +1439,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <BillsManager 
             scrollToAccountId={scrollToAccountId}
+            searchActionRequestKey={billsSearchRequestKey}
+            searchActionType={pendingBillsSearchAction}
+            searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
           />
@@ -1353,6 +1454,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <LoansManager 
             scrollToAccountId={scrollToAccountId}
+            searchActionRequestKey={loansSearchRequestKey}
+            searchActionType={pendingLoansSearchAction}
+            searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
           />
@@ -1364,6 +1468,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           }}
         >
           <TaxBreakdown 
+            searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
           />
@@ -1377,6 +1482,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <SavingsManager 
             shouldScrollToRetirement={shouldScrollToRetirement}
             onScrollToRetirementComplete={handleScrollToRetirementComplete}
+            searchActionRequestKey={savingsSearchRequestKey}
+            searchActionType={pendingSavingsSearchAction}
+            searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
           />

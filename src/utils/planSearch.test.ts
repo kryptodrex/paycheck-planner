@@ -174,6 +174,134 @@ describe('buildSearchIndex', () => {
     expect(annualPay?.action).toMatchObject({ type: 'open-pay-settings' });
   });
 
+  it('includes quick action entries for add bill and add deduction', () => {
+    const index = buildSearchIndex(MOCK_BUDGET);
+
+    const addBill = index.find((r) => r.id === 'quick-action-add-bill');
+    expect(addBill).toBeDefined();
+    expect(addBill?.action).toMatchObject({ type: 'open-bills-action', mode: 'add-bill' });
+
+    const addDeduction = index.find((r) => r.id === 'quick-action-add-deduction');
+    expect(addDeduction).toBeDefined();
+    expect(addDeduction?.action).toMatchObject({ type: 'open-bills-action', mode: 'add-deduction' });
+
+    const addLoan = index.find((r) => r.id === 'quick-action-add-loan-payment');
+    expect(addLoan).toBeDefined();
+    expect(addLoan?.action).toMatchObject({ type: 'open-loans-action', mode: 'add-loan' });
+
+    const addContribution = index.find((r) => r.id === 'quick-action-add-contribution');
+    expect(addContribution).toBeDefined();
+    expect(addContribution?.action).toMatchObject({ type: 'open-savings-action', mode: 'add-contribution' });
+
+    const addRetirement = index.find((r) => r.id === 'quick-action-add-retirement-plan');
+    expect(addRetirement).toBeDefined();
+    expect(addRetirement?.action).toMatchObject({ type: 'open-savings-action', mode: 'add-retirement' });
+
+    const editTaxSettings = index.find((r) => r.id === 'quick-action-edit-tax-settings');
+    expect(editTaxSettings).toBeDefined();
+    expect(editTaxSettings?.action).toMatchObject({ type: 'open-taxes-action', mode: 'open-settings' });
+  });
+
+  it('adds inline pause/edit/delete actions on item results instead of separate rows', () => {
+    const index = buildSearchIndex(MOCK_BUDGET);
+
+    const bill = index.find((r) => r.id === 'bill-bill1');
+    expect(bill?.inlineActions).toEqual([
+      {
+        id: 'toggle-bill-bill1',
+        label: 'Pause',
+        action: { type: 'open-bills-action', mode: 'toggle-bill', targetId: 'bill1' },
+      },
+      {
+        id: 'edit-bill-bill1',
+        label: 'Edit',
+        action: { type: 'open-bills-action', mode: 'edit-bill', targetId: 'bill1' },
+      },
+      {
+        id: 'delete-bill-bill1',
+        label: 'Delete',
+        action: { type: 'open-bills-action', mode: 'delete-bill', targetId: 'bill1' },
+        variant: 'danger',
+      },
+    ]);
+
+    expect(index.some((r) => r.id === 'quick-action-bill-edit-bill1')).toBe(false);
+    expect(index.some((r) => r.id === 'quick-action-bill-toggle-bill1')).toBe(false);
+    expect(index.some((r) => r.id === 'quick-action-bill-delete-bill1')).toBe(false);
+  });
+
+  it('includes key metrics entries with metrics tab anchors', () => {
+    const index = buildSearchIndex(MOCK_BUDGET);
+    const takeHome = index.find((r) => r.id === 'key-metrics-take-home-pay');
+    expect(takeHome).toBeDefined();
+    expect(takeHome?.action).toMatchObject({
+      type: 'navigate-tab',
+      tabId: 'metrics',
+      elementId: 'key-metrics-net-pay-card',
+    });
+
+    const bills = index.find((r) => r.id === 'key-metrics-total-bills');
+    expect(bills?.action).toMatchObject({
+      type: 'navigate-tab',
+      tabId: 'metrics',
+      elementId: 'key-metrics-bills-card',
+    });
+
+    const savingsRate = index.find((r) => r.id === 'key-metrics-savings-rate');
+    expect(savingsRate?.action).toMatchObject({
+      type: 'navigate-tab',
+      tabId: 'metrics',
+      elementId: 'key-metrics-savings-rate-card',
+    });
+
+    const yearlyBreakdown = index.find((r) => r.id === 'key-metrics-yearly-pay-breakdown');
+    expect(yearlyBreakdown?.action).toMatchObject({
+      type: 'navigate-tab',
+      tabId: 'metrics',
+      elementId: 'key-metrics-yearly-breakdown',
+    });
+  });
+
+  it('includes pay breakdown entries with section anchors', () => {
+    const index = buildSearchIndex(MOCK_BUDGET);
+    const netPay = index.find((r) => r.id === 'pay-breakdown-net-pay');
+    expect(netPay).toBeDefined();
+    expect(netPay?.action).toMatchObject({
+      type: 'navigate-tab',
+      tabId: 'breakdown',
+      elementId: 'pay-breakdown-net-pay',
+    });
+
+    const taxableIncome = index.find((r) => r.id === 'pay-breakdown-taxable-income');
+    expect(taxableIncome?.action).toMatchObject({
+      type: 'navigate-tab',
+      tabId: 'breakdown',
+      elementId: 'pay-breakdown-taxable-income',
+    });
+
+    const allocations = index.find((r) => r.id === 'pay-breakdown-after-tax-allocations');
+    expect(allocations?.action).toMatchObject({
+      type: 'navigate-tab',
+      tabId: 'breakdown',
+      elementId: 'pay-breakdown-after-tax-allocations',
+    });
+  });
+
+  it('omits post-tax deduction search entry when no post-tax deductions are rendered', () => {
+    const index = buildSearchIndex(MOCK_BUDGET);
+    expect(index.some((r) => r.id === 'pay-breakdown-post-tax-deductions')).toBe(false);
+  });
+
+  it('omits after-tax allocations search entry when no accounts are present', () => {
+    const budgetWithoutAccounts: BudgetData = {
+      ...MOCK_BUDGET,
+      accounts: [],
+    };
+
+    const index = buildSearchIndex(budgetWithoutAccounts);
+    expect(index.some((r) => r.id === 'pay-breakdown-after-tax-allocations')).toBe(false);
+  });
+
   it('marks paused/disabled items with a badge', () => {
     const index = buildSearchIndex(MOCK_BUDGET);
     const pausedBill = index.find((r) => r.id === 'bill-bill3');
@@ -267,6 +395,16 @@ describe('searchPlan', () => {
   it('matches pay settings field', () => {
     const results = searchPlan('annual pay', MOCK_BUDGET);
     expect(results.some((r) => r.id === 'pay-settings-annual-pay')).toBe(true);
+  });
+
+  it('matches quick action by button label', () => {
+    const results = searchPlan('add bill', MOCK_BUDGET);
+    expect(results.some((r) => r.id === 'quick-action-add-bill')).toBe(true);
+  });
+
+  it('matches item rows by inline action labels', () => {
+    const results = searchPlan('edit netflix', MOCK_BUDGET);
+    expect(results.some((r) => r.id === 'bill-bill1')).toBe(true);
   });
 
   it('respects maxResults limit', () => {

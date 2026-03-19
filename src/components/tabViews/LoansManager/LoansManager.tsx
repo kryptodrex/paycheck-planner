@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
 import type { Loan, LoanPaymentLine } from '../../../types/obligations';
@@ -16,6 +16,9 @@ import './LoansManager.css';
 
 interface LoansManagerProps {
     scrollToAccountId?: string;
+    searchActionRequestKey?: number;
+    searchActionType?: 'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan';
+    searchActionTargetId?: string;
     displayMode: ViewMode;
     onDisplayModeChange: (mode: ViewMode) => void;
 }
@@ -102,7 +105,14 @@ const mapLoanPaymentLinesToEditable = (paymentBreakdown: LoanPaymentLine[]): Edi
         amount: String(line.amount),
     }));
 
-const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
+const LoansManager: React.FC<LoansManagerProps> = ({
+    scrollToAccountId,
+    searchActionRequestKey,
+    searchActionType,
+    searchActionTargetId,
+    displayMode,
+    onDisplayModeChange,
+}) => {
     const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
     const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
     const loanEditor = useModalEntityEditor<Loan>();
@@ -113,6 +123,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
     const [loanNotes, setLoanNotes] = useState('');
     const [loanPaymentLines, setLoanPaymentLines] = useState<EditableLoanPaymentLine[]>(createDefaultPaymentLines('personal'));
     const loanErrors = useFieldErrors<LoanFieldErrors>();
+    const lastHandledSearchActionKeyRef = useRef(0);
 
     useEffect(() => {
         if (scrollToAccountId) {
@@ -161,6 +172,91 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
         loanEditor.closeEditor();
         resetForm();
     };
+
+    useEffect(() => {
+        if (!budgetData) {
+            return;
+        }
+
+        if (!searchActionRequestKey || searchActionRequestKey === lastHandledSearchActionKeyRef.current) {
+            return;
+        }
+
+        lastHandledSearchActionKeyRef.current = searchActionRequestKey;
+
+        const timeoutId = window.setTimeout(() => {
+            if (searchActionTargetId && searchActionType === 'toggle-loan') {
+                const loan = (budgetData.loans || []).find((item) => item.id === searchActionTargetId);
+                if (loan) {
+                    updateLoan(loan.id, { enabled: loan.enabled === false });
+                }
+                return;
+            }
+
+            if (searchActionTargetId && searchActionType === 'delete-loan') {
+                const loan = (budgetData.loans || []).find((item) => item.id === searchActionTargetId);
+                if (loan) {
+                    openConfirmDialog({
+                        title: 'Delete Loan Payment',
+                        message: 'Are you sure you want to delete this loan payment?',
+                        confirmLabel: 'Delete Loan',
+                        confirmVariant: 'danger',
+                        onConfirm: () => deleteLoan(loan.id),
+                    });
+                }
+                return;
+            }
+
+            if (searchActionTargetId && searchActionType === 'edit-loan') {
+                const loan = (budgetData.loans || []).find((item) => item.id === searchActionTargetId);
+                if (loan) {
+                    setLoanName(loan.name);
+                    setLoanType(loan.type);
+                    setLoanPaymentFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency);
+                    setLoanAccountId(loan.accountId);
+                    setLoanNotes(loan.notes || '');
+
+                    if (loan.paymentBreakdown && loan.paymentBreakdown.length > 0) {
+                        setLoanPaymentLines(mapLoanPaymentLinesToEditable(loan.paymentBreakdown));
+                    } else {
+                        const fallbackFrequency = (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency;
+                        setLoanPaymentLines([
+                            {
+                                id: crypto.randomUUID(),
+                                label: 'Payment',
+                                amount: String(convertMonthlyPaymentToFrequency(loan.monthlyPayment, fallbackFrequency)),
+                            },
+                        ]);
+                    }
+
+                    loanErrors.clearErrors();
+                    loanEditor.openForEdit(loan);
+                }
+                return;
+            }
+
+            setLoanName('');
+            setLoanType('personal');
+            setLoanPaymentFrequency('monthly');
+            setLoanAccountId(budgetData.accounts[0]?.id || '');
+            setLoanNotes('');
+            setLoanPaymentLines(createDefaultPaymentLines('personal'));
+            loanErrors.clearErrors();
+            loanEditor.openForCreate();
+        }, 0);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [
+        budgetData,
+        deleteLoan,
+        loanEditor,
+        loanErrors,
+        openConfirmDialog,
+        searchActionRequestKey,
+        searchActionTargetId,
+        searchActionType,
+        updateLoan,
+    ]);
 
     if (!budgetData) return null;
 
