@@ -148,7 +148,7 @@ describe('buildSearchIndex', () => {
     const ret = index.find((r) => r.id === 'retirement-ret1');
     expect(ret).toBeDefined();
     expect(ret?.category).toBe('Retirement');
-    expect(ret?.action).toMatchObject({ type: 'navigate-tab', tabId: 'savings', elementId: 'retirement-section' });
+    expect(ret?.action).toMatchObject({ type: 'navigate-tab', tabId: 'savings', elementId: 'retirement-ret1' });
   });
 
   it('includes tax lines in the index', () => {
@@ -186,10 +186,10 @@ describe('buildSearchIndex', () => {
   it('includes element IDs that map to DOM section anchors', () => {
     const index = buildSearchIndex(MOCK_BUDGET);
     const bill = index.find((r) => r.id === 'bill-bill1');
-    expect((bill?.action as { elementId?: string }).elementId).toBe('account-acc1');
+    expect((bill?.action as { elementId?: string }).elementId).toBe('bill-bill1');
 
     const ret = index.find((r) => r.id === 'retirement-ret1');
-    expect((ret?.action as { elementId?: string }).elementId).toBe('retirement-section');
+    expect((ret?.action as { elementId?: string }).elementId).toBe('retirement-ret1');
   });
 
   it('includes settings entries with open-settings action and sectionId', () => {

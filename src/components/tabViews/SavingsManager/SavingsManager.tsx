@@ -493,6 +493,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               return (
                 <SectionItemCard
                   key={item.id}
+                  elementId={`savings-${item.id}`}
                   title={item.name}
                   subtitle={`Saved ${formatBillFrequency(item.frequency)}: ${formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}`}
                   amount={formatWithSymbol(displayAmount, currency, { minimumFractionDigits: 2 })}
@@ -557,6 +558,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               return (
                 <SectionItemCard
                   key={retirement.id}
+                  elementId={`retirement-${retirement.id}`}
                   title={displayLabel}
                   subtitle={`${formatWithSymbol(employeePerPaycheck || 0, currency, { minimumFractionDigits: 2 })} per paycheck${retirement.employeeContributionIsPercentage ? ` (${retirement.employeeContribution}%)` : ''}`}
                   amount={formatWithSymbol(totalInDisplayMode, currency, { minimumFractionDigits: 2 })}

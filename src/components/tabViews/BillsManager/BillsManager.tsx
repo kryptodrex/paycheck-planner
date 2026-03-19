@@ -372,6 +372,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                   return (
                     <SectionItemCard
                       key={benefit.id}
+                      elementId={`benefit-${benefit.id}`}
                       title={benefit.name}
                       subtitle={`Deducted per paycheck: ${benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}`}
                       amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
@@ -425,6 +426,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                     return (
                       <SectionItemCard
                         key={benefit.id}
+                        elementId={`benefit-${benefit.id}`}
                         title={benefit.name}
                         subtitle={`From account per paycheck: ${benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}`}
                         amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
@@ -453,6 +455,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                   .map((bill) => (
                     <SectionItemCard
                       key={bill.id}
+                      elementId={`bill-${bill.id}`}
                       title={bill.name}
                       subtitle={`Paid ${formatBillFrequency(bill.frequency)}: ${formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}`}
                       amount={formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}

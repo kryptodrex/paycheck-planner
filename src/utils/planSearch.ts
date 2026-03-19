@@ -163,7 +163,7 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
     subtitle: getAnnualPaySubtitle(annualAmount, pay.payType, currency),
     category: 'Pay Settings',
     categoryIcon: '💰',
-    action: { type: 'open-pay-settings', fieldHighlight: 'annualSalary' },
+    action: { type: 'open-pay-settings', fieldHighlight: pay.payType === 'salary' ? 'annualSalary' : 'hourlyRate' },
   });
 
   results.push({
@@ -214,7 +214,7 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       category: 'Benefits',
       categoryIcon: '🏥',
       badge: paused ? 'Paused' : undefined,
-      action: { type: 'navigate-tab', tabId: 'bills', elementId: 'account-paycheck' },
+      action: { type: 'navigate-tab', tabId: 'bills', elementId: `benefit-${benefit.id}` },
     });
   }
 
@@ -249,7 +249,7 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       action: {
         type: 'navigate-tab',
         tabId: 'bills',
-        elementId: bill.accountId ? `account-${bill.accountId}` : undefined,
+        elementId: `bill-${bill.id}`,
       },
     });
   }
@@ -271,7 +271,7 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       action: {
         type: 'navigate-tab',
         tabId: 'savings',
-        elementId: contribution.accountId ? `account-${contribution.accountId}` : undefined,
+        elementId: `savings-${contribution.id}`,
       },
     });
   }
@@ -295,7 +295,7 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       action: {
         type: 'navigate-tab',
         tabId: 'savings',
-        elementId: 'retirement-section',
+        elementId: `retirement-${election.id}`,
       },
     });
   }
@@ -316,7 +316,7 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
       action: {
         type: 'navigate-tab',
         tabId: 'loans',
-        elementId: loan.accountId ? `account-${loan.accountId}` : undefined,
+        elementId: `loan-${loan.id}`,
       },
     });
   }

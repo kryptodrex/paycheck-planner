@@ -443,6 +443,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({ scrollToAccountId, displayM
                                                 return (
                                                     <SectionItemCard
                                                         key={loan.id}
+                                                        elementId={`loan-${loan.id}`}
                                                         title={loan.name}
                                                         subtitle={`Paid ${formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: ${formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                                         amount={formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
