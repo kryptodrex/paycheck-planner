@@ -21,6 +21,8 @@ import './SettingsModal.css';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** When provided, the modal will scroll to this section on open */
+  initialSectionId?: string;
 }
 
 interface SettingsState {
@@ -106,7 +108,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   },
 ];
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialSectionId }) => {
   const { theme, setTheme } = useTheme();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resettingMemory, setResettingMemory] = useState(false);
@@ -401,6 +403,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     setSearchQuery('');
     setActiveSectionId(SETTINGS_SECTIONS[0].id);
   }, [isOpen]);
+
+  // When opened with an initialSectionId (e.g. from plan-wide search), scroll there.
+  // Section IDs must match SETTINGS_SECTIONS ids: 'appearance' | 'accessibility' | 'glossary' | 'app-data-reset'
+  useEffect(() => {
+    if (!isOpen || !initialSectionId) return;
+    const id = window.setTimeout(() => {
+      const sectionNode = sectionRefs.current[initialSectionId];
+      if (sectionNode) {
+        sectionNode.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setActiveSectionId(initialSectionId);
+      } else if (import.meta.env.DEV) {
+        console.warn(`[SettingsModal] initialSectionId "${initialSectionId}" did not match any section ref`);
+      }
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [isOpen, initialSectionId]);
 
   const scrollToSection = (sectionId: string) => {
     const sectionNode = sectionRefs.current[sectionId];

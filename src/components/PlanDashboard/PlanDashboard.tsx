@@ -22,10 +22,13 @@ import AccountsModal from '../modals/AccountsModal';
 import ExportModal from '../modals/ExportModal';
 import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
+import PlanSearchOverlay from './PlanSearchOverlay';
 import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
 import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
+import { useGlobalKeyboardShortcuts } from '../../hooks';
+import type { SearchResult } from '../../utils/planSearch';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
 import './PlanDashboard.css';
@@ -46,6 +49,12 @@ interface PlanDashboardProps {
 }
 
 const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
+
+/** Timing constants for the search-result scroll + highlight behaviour */
+const SEARCH_SCROLL_INITIAL_DELAY_MS = 80;
+const SEARCH_SCROLL_RETRY_DELAY_MS = 120;
+const SEARCH_SCROLL_MAX_RETRIES = 5;
+const SEARCH_HIGHLIGHT_DURATION_MS = 1800;
 
 const getFirstVisibleFavoriteMode = (): ViewMode => {
   const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
@@ -90,6 +99,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined);
+  const [showSearch, setShowSearch] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -571,6 +582,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       handleTabDisplayModeChangeRef.current?.(newMode);
     });
 
+    const unsubscribeOpenSearch = window.electronAPI.onMenuEvent(MENU_EVENTS.openSearch, () => {
+      setShowSearch(true);
+    });
+
     return () => {
       unsubscribeNew();
       unsubscribeOpen();
@@ -584,6 +599,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeHistoryHome();
       unsubscribeSetTabPosition();
       unsubscribeToggleDisplayMode();
+      unsubscribeOpenSearch();
     };
   }, [activeTab, createNewBudget, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
 
@@ -892,6 +908,54 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [visibleTabs, handleTabClick]);
+
+  // Cmd/Ctrl+F — open plan-wide search (React capture-phase fallback)
+  useGlobalKeyboardShortcuts([
+    {
+      key: 'f',
+      mac: true,
+      windows: true,
+      callback: () => setShowSearch(true),
+    },
+  ]);
+
+  // Handle navigation from search results
+  const handleSearchNavigate = useCallback(
+    (result: SearchResult) => {
+      const { action } = result;
+
+      if (action.type === 'navigate-tab') {
+        openTabFromLink(action.tabId);
+        // After tab switch, scroll to element and briefly highlight it
+        if (action.elementId) {
+          const elementId = action.elementId;
+          // Retry polling because the target tab may not be in the DOM yet immediately
+          const attemptScroll = (attemptsLeft: number) => {
+            const el = document.getElementById(elementId);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              el.classList.add('plan-search-highlight');
+              window.setTimeout(
+                () => el.classList.remove('plan-search-highlight'),
+                SEARCH_HIGHLIGHT_DURATION_MS,
+              );
+            } else if (attemptsLeft > 0) {
+              window.setTimeout(() => attemptScroll(attemptsLeft - 1), SEARCH_SCROLL_RETRY_DELAY_MS);
+            }
+          };
+          window.setTimeout(() => attemptScroll(SEARCH_SCROLL_MAX_RETRIES), SEARCH_SCROLL_INITIAL_DELAY_MS);
+        }
+      } else if (action.type === 'open-pay-settings') {
+        selectTab('breakdown', { resetBillsAnchor: true });
+      } else if (action.type === 'open-accounts') {
+        setShowAccountsModal(true);
+      } else if (action.type === 'open-settings') {
+        setSettingsInitialSection(action.sectionId);
+        setShowSettings(true);
+      }
+    },
+    [openTabFromLink, selectTab],
+  );
 
   if (showPlanLoadingScreen) {
     return (
@@ -1561,7 +1625,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettings} 
-        onClose={() => setShowSettings(false)}
+        onClose={() => {
+          setShowSettings(false);
+          setSettingsInitialSection(undefined);
+        }}
+        initialSectionId={settingsInitialSection}
       />
 
       {/* Encryption Setup Modal */}
@@ -1669,6 +1737,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <ExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
+      />
+
+      {/* Plan-wide Search Overlay */}
+      <PlanSearchOverlay
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        budgetData={budgetData}
+        onNavigate={handleSearchNavigate}
       />
     </div>
   );
