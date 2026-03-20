@@ -95,8 +95,35 @@ const getFirstVisibleFavoriteMode = (): ViewMode => {
   return favorites[0];
 };
 
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'SELECT' ||
+    target.isContentEditable
+  );
+};
+
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
-  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
+  const {
+    budgetData,
+    saveBudget,
+    loading,
+    createNewBudget,
+    loadBudget,
+    copyPlanToNewYear,
+    closeBudget,
+    updateBudgetSettings,
+    updateBudgetData,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useBudget();
   const getInitialTab = () => {
     const normalizedViewMode = normalizeLegacyTabId(viewMode);
     if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
@@ -185,6 +212,29 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
   const [tabPosition, setTabPosition] = useState<TabPosition>('left');
   const [tabDisplayMode, setTabDisplayMode] = useState<TabDisplayMode>('icons-with-labels');
+
+  const handleUndoAction = useCallback(() => {
+    if (isEditableTarget(document.activeElement)) {
+      document.execCommand('undo');
+      return;
+    }
+
+    if (canUndo) {
+      undo();
+    }
+  }, [canUndo, undo]);
+
+  const handleRedoAction = useCallback(() => {
+    if (isEditableTarget(document.activeElement)) {
+      document.execCommand('redo');
+      return;
+    }
+
+    if (canRedo) {
+      redo();
+    }
+  }, [canRedo, redo]);
+
   const {
     encryptionEnabled,
     setEncryptionEnabled,
@@ -606,6 +656,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       setShowAccountsModal(true);
     });
 
+    const unsubscribeUndo = window.electronAPI.onMenuEvent(MENU_EVENTS.undo, () => {
+      handleUndoAction();
+    });
+
+    const unsubscribeRedo = window.electronAPI.onMenuEvent(MENU_EVENTS.redo, () => {
+      handleRedoAction();
+    });
+
     const unsubscribeHistoryBack = window.electronAPI.onMenuEvent(MENU_EVENTS.historyBack, () => {
       if (!viewMode) {
         window.history.back();
@@ -660,6 +718,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeSettings();
       unsubscribePayOptions();
       unsubscribeAccounts();
+      unsubscribeUndo();
+      unsubscribeRedo();
       unsubscribeHistoryBack();
       unsubscribeHistoryForward();
       unsubscribeHistoryHome();
@@ -667,7 +727,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeToggleDisplayMode();
       unsubscribeOpenSearch();
     };
-  }, [activeTab, createNewBudget, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
+  }, [activeTab, createNewBudget, handleRedoAction, handleUndoAction, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -699,6 +759,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           ...budgetData.settings,
           filePath: newPath,
         },
+      }, {
+        trackHistory: false,
+        description: 'Sync renamed plan path',
       });
 
       FileStorageService.removeRecentFile(oldPath);
@@ -990,6 +1053,39 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       callback: () => {
         setSettingsInitialSection(undefined);
         setShowSettings(true);
+      },
+    },
+    {
+      key: 'z',
+      mac: true,
+      windows: true,
+      shouldHandle: (e) => !isEditableTarget(e.target),
+      callback: () => {
+        if (canUndo) {
+          undo();
+        }
+      },
+    },
+    {
+      key: 'z',
+      mac: true,
+      windows: true,
+      shift: true,
+      shouldHandle: (e) => !isEditableTarget(e.target),
+      callback: () => {
+        if (canRedo) {
+          redo();
+        }
+      },
+    },
+    {
+      key: 'y',
+      windows: true,
+      shouldHandle: (e) => !isEditableTarget(e.target),
+      callback: () => {
+        if (canRedo) {
+          redo();
+        }
       },
     },
   ]);

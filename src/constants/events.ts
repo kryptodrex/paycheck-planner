@@ -10,6 +10,8 @@ export const MENU_EVENTS = {
   openKeyboardShortcuts: 'open-keyboard-shortcuts',
   openPayOptions: 'open-pay-options',
   openAccounts: 'open-accounts',
+  undo: 'undo',
+  redo: 'redo',
   setTabPosition: 'set-tab-position',
   toggleTabDisplayMode: 'toggle-tab-display-mode',
   historyBack: 'history-back',

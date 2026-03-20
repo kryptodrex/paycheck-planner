@@ -961,8 +961,26 @@ function createApplicationMenu() {
   template.push({
     label: 'Edit',
     submenu: [
-      { role: 'undo' },
-      { role: 'redo' },
+      {
+        label: 'Undo',
+        accelerator: isMac ? 'Cmd+Z' : 'Ctrl+Z',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.undo);
+          }
+        },
+      },
+      {
+        label: 'Redo',
+        accelerator: isMac ? 'Cmd+Shift+Z' : 'Ctrl+Y',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.redo);
+          }
+        },
+      },
       { type: 'separator' },
       { role: 'cut' },
       { role: 'copy' },

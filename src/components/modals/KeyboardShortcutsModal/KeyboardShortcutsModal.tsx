@@ -33,6 +33,8 @@ const shortcuts: ShortcutSection[] = [
   {
     title: 'Plan Actions',
     items: [
+      { keys: [modifier, 'Z'], description: 'Undo the most recent plan data change (outside active text inputs)' },
+      { keys: [isMac ? 'Cmd' : 'Ctrl', ...(isMac ? ['Shift', 'Z'] : ['Y'])], description: 'Redo the most recently undone plan data change (outside active text inputs)' },
       { keys: [modifier, 'F'], description: 'Open plan-wide search' },
       { keys: [modifier, ','], description: 'Open Settings' },
       { keys: [modifier, 'S'], description: 'Save the current plan' },
@@ -94,6 +96,9 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
       <div className="keyboard-shortcuts-intro">
         <p>
           These shortcuts work within the current app session. Back and Forward navigate your in-session plan history, and Home jumps to the first visible tab in your current tab order.
+        </p>
+        <p>
+          Undo and Redo target plan data changes and intentionally defer to native text editing undo/redo while typing in inputs.
         </p>
         <p>
           Zoom changes the entire app viewport. Font Scale in Settings adjusts text sizing for readability preferences.

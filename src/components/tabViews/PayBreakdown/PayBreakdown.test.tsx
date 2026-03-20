@@ -153,7 +153,6 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
       />,
     );
 
@@ -206,7 +205,6 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
       />,
     );
 
@@ -226,7 +224,6 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
       />,
     );
 
@@ -238,7 +235,6 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
         searchPaySettingsRequestKey={1}
         searchPaySettingsFieldHighlight="payFrequency"
       />,
