@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from './constants/events'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
+import { initializeSearchModules } from './utils/searchModules'
 import EncryptionSetup from './components/views/EncryptionSetup'
 import WelcomeScreen from './components/views/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
@@ -14,6 +15,11 @@ import './App.css'
 
 function App() {
   if (import.meta.env.DEV) console.debug('[APP] App component rendering...');
+
+  // Initialize search modules once on app startup
+  useEffect(() => {
+    initializeSearchModules();
+  }, []);
   
   // Get the current budget data and actions from our context
   const { budgetData, saveBudget, saveWindowState, loadBudget } = useBudget()

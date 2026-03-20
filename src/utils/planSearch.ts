@@ -11,6 +11,7 @@ import { calculateAnnualizedPaySummary, calculatePaycheckBreakdown } from '../se
 import { convertBillToYearly } from './billFrequency';
 import { getPaychecksPerYear } from './payPeriod';
 import type { TabId } from './tabManagement';
+import { getAllSearchResults } from './searchRegistry';
 
 // ─── Action types ───────────────────────────────────────────────────────────
 
@@ -530,40 +531,10 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
     });
   }
 
-  // ── Benefits ──────────────────────────────────────────────────────────────
-  for (const benefit of budgetData.benefits ?? []) {
-    const paused = benefit.enabled === false;
-    results.push({
-      id: `benefit-${benefit.id}`,
-      title: benefit.name,
-      subtitle: benefit.isPercentage
-        ? `${benefit.amount}% — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`
-        : `${formatAmount(benefit.amount, currency)} — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`,
-      category: 'Benefits',
-      categoryIcon: '🏥',
-      badge: paused ? 'Paused' : undefined,
-      inlineActions: [
-        {
-          id: `toggle-benefit-${benefit.id}`,
-          label: paused ? 'Resume' : 'Pause',
-          action: { type: 'open-bills-action', mode: 'toggle-benefit', targetId: benefit.id },
-        },
-        {
-          id: `edit-benefit-${benefit.id}`,
-          label: 'Edit',
-          action: { type: 'open-bills-action', mode: 'edit-benefit', targetId: benefit.id },
-        },
-        {
-          id: `delete-benefit-${benefit.id}`,
-          label: 'Delete',
-          action: { type: 'open-bills-action', mode: 'delete-benefit', targetId: benefit.id },
-          variant: 'danger',
-        },
-      ],
-      searchKeywords: ['deduction', 'benefit', 'pause', 'resume', 'edit', 'delete'],
-      action: { type: 'navigate-tab', tabId: 'bills', elementId: `benefit-${benefit.id}` },
-    });
-  }
+  // ── Registered search modules ────────────────────────────────────────────
+  // Each search module (bills, loans, savings, taxes, etc.) contributes results via registry.
+  // This keeps the search system extensible and decoupled from core search logic.
+  results.push(...getAllSearchResults(budgetData));
 
   // ── Tax lines ─────────────────────────────────────────────────────────────
   for (const line of budgetData.taxSettings?.taxLines ?? []) {
@@ -600,45 +571,7 @@ export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
     action: { type: 'navigate-tab', tabId: 'taxes', elementId: 'tax-total-taxes-row' },
   });
 
-  // ── Bills ─────────────────────────────────────────────────────────────────
-  for (const bill of budgetData.bills ?? []) {
-    const paused = bill.enabled === false;
-    const freqLabel = bill.frequency
-      ? bill.frequency.charAt(0).toUpperCase() + bill.frequency.slice(1)
-      : '';
-    results.push({
-      id: `bill-${bill.id}`,
-      title: bill.name,
-      subtitle: `${formatAmount(bill.amount, currency)} · ${freqLabel}${bill.category ? ` · ${bill.category}` : ''}`,
-      category: 'Bills',
-      categoryIcon: '🧾',
-      badge: paused ? 'Paused' : bill.discretionary ? 'Discretionary' : undefined,
-      inlineActions: [
-        {
-          id: `toggle-bill-${bill.id}`,
-          label: paused ? 'Resume' : 'Pause',
-          action: { type: 'open-bills-action', mode: 'toggle-bill', targetId: bill.id },
-        },
-        {
-          id: `edit-bill-${bill.id}`,
-          label: 'Edit',
-          action: { type: 'open-bills-action', mode: 'edit-bill', targetId: bill.id },
-        },
-        {
-          id: `delete-bill-${bill.id}`,
-          label: 'Delete',
-          action: { type: 'open-bills-action', mode: 'delete-bill', targetId: bill.id },
-          variant: 'danger',
-        },
-      ],
-      searchKeywords: ['bill', 'pause', 'resume', 'edit', 'delete'],
-      action: {
-        type: 'navigate-tab',
-        tabId: 'bills',
-        elementId: `bill-${bill.id}`,
-      },
-    });
-  }
+
 
   // ── Savings contributions ─────────────────────────────────────────────────
   for (const contribution of budgetData.savingsContributions ?? []) {

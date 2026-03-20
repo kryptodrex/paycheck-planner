@@ -29,6 +29,7 @@ import { getPayFrequencyViewMode } from '../../utils/payPeriod';
 import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
 import { useGlobalKeyboardShortcuts } from '../../hooks';
 import type { SearchResult } from '../../utils/planSearch';
+import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
 import './PlanDashboard.css';
@@ -989,6 +990,33 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     (result: SearchResult) => {
       const { action } = result;
 
+      // Try to find a registered handler for this action type
+      const registryHandler = getActionHandler(action.type);
+      if (registryHandler) {
+        // Build context for the handler with all state setters and navigation functions
+        // Cast state setters to SearchActionContext type since React's SetStateAction is compatible
+        const context: SearchActionContext = {
+          setPendingBillsSearchAction: setPendingBillsSearchAction as SearchActionContext['setPendingBillsSearchAction'],
+          setPendingBillsSearchTargetId: setPendingBillsSearchTargetId as SearchActionContext['setPendingBillsSearchTargetId'],
+          setBillsSearchRequestKey: setBillsSearchRequestKey as SearchActionContext['setBillsSearchRequestKey'],
+          setPendingLoansSearchAction: setPendingLoansSearchAction as SearchActionContext['setPendingLoansSearchAction'],
+          setPendingLoansSearchTargetId: setPendingLoansSearchTargetId as SearchActionContext['setPendingLoansSearchTargetId'],
+          setLoansSearchRequestKey: setLoansSearchRequestKey as SearchActionContext['setLoansSearchRequestKey'],
+          setPendingSavingsSearchAction: setPendingSavingsSearchAction as SearchActionContext['setPendingSavingsSearchAction'],
+          setPendingSavingsSearchTargetId: setPendingSavingsSearchTargetId as SearchActionContext['setPendingSavingsSearchTargetId'],
+          setSavingsSearchRequestKey: setSavingsSearchRequestKey as SearchActionContext['setSavingsSearchRequestKey'],
+          setTaxSearchOpenSettingsRequestKey: setTaxSearchOpenSettingsRequestKey as SearchActionContext['setTaxSearchOpenSettingsRequestKey'],
+          selectTab: selectTab as SearchActionContext['selectTab'],
+          setShowAccountsModal: setShowAccountsModal as SearchActionContext['setShowAccountsModal'],
+          setShowSettings: setShowSettings as SearchActionContext['setShowSettings'],
+          setSettingsInitialSection: setSettingsInitialSection as SearchActionContext['setSettingsInitialSection'],
+          setScrollToAccountId: setScrollToAccountId as SearchActionContext['setScrollToAccountId'],
+        };
+        registryHandler(action, context);
+        return;
+      }
+
+      // Fallback to built-in action handling for core actions (navigate-tab, open-settings, etc.)
       if (action.type === 'navigate-tab') {
         openTabFromLink(action.tabId);
         // After tab switch, scroll to element and briefly highlight it
@@ -1023,26 +1051,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         setPendingPaySettingsFieldHighlight(action.fieldHighlight);
         setPaySettingsSearchRequestKey((prev) => prev + 1);
         selectTab('breakdown', { resetBillsAnchor: true, revealIfHidden: true });
-      } else if (action.type === 'open-bills-action') {
-        setPendingBillsSearchAction(action.mode);
-        setPendingBillsSearchTargetId(action.targetId);
-        setScrollToAccountId(undefined);
-        setBillsSearchRequestKey((prev) => prev + 1);
-        selectTab('bills', { resetBillsAnchor: true, revealIfHidden: true });
-      } else if (action.type === 'open-loans-action') {
-        setPendingLoansSearchAction(action.mode);
-        setPendingLoansSearchTargetId(action.targetId);
-        setScrollToAccountId(undefined);
-        setLoansSearchRequestKey((prev) => prev + 1);
-        selectTab('loans', { resetBillsAnchor: true, revealIfHidden: true });
-      } else if (action.type === 'open-savings-action') {
-        setPendingSavingsSearchAction(action.mode);
-        setPendingSavingsSearchTargetId(action.targetId);
-        setSavingsSearchRequestKey((prev) => prev + 1);
-        selectTab('savings', { resetBillsAnchor: true, revealIfHidden: true });
-      } else if (action.type === 'open-taxes-action') {
-        setTaxSearchOpenSettingsRequestKey((prev) => prev + 1);
-        selectTab('taxes', { resetBillsAnchor: true, revealIfHidden: true });
       } else if (action.type === 'open-accounts') {
         setShowAccountsModal(true);
       } else if (action.type === 'open-settings') {
@@ -1050,7 +1058,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         setShowSettings(true);
       }
     },
-    [openTabFromLink, selectTab],
+    [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight, setPaySettingsSearchRequestKey],
   );
 
   const handleOpenViewModeSettings = useCallback(() => {

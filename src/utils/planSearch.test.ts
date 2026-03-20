@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
 import { buildSearchIndex, searchPlan } from './planSearch';
+import { initializeSearchModules } from './searchModules';
 import type { BudgetData } from '../types/budget';
 
 // ─── Minimal budget fixture ──────────────────────────────────────────────────
@@ -117,6 +118,10 @@ const MOCK_BUDGET: BudgetData = {
 // ─── buildSearchIndex ─────────────────────────────────────────────────────────
 
 describe('buildSearchIndex', () => {
+  beforeAll(() => {
+    // Initialize search modules before tests run
+    initializeSearchModules();
+  });
   it('includes bills in the index', () => {
     const index = buildSearchIndex(MOCK_BUDGET);
     const bill = index.find((r) => r.id === 'bill-bill1');
