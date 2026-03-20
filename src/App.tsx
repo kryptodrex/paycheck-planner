@@ -48,15 +48,20 @@ function App() {
   // Track requested glossary term when opened from inline tooltips
   const [initialGlossaryTermId, setInitialGlossaryTermId] = useState<string | null>(null)
 
-  // Register global keyboard shortcuts
-  useGlobalKeyboardShortcuts([
-    {
-      key: ',',
-      mac: true,        // Cmd+, on Mac
-      windows: true,    // Ctrl+, on Windows/Linux
-      callback: () => setShowSettings(true),
-    },
-  ])
+  // Register global keyboard shortcuts for the welcome screen only.
+  // When a plan is open, PlanDashboard owns settings shortcut handling.
+  useGlobalKeyboardShortcuts(
+    budgetData
+      ? []
+      : [
+          {
+            key: ',',
+            mac: true,        // Cmd+, on Mac
+            windows: true,    // Ctrl+, on Windows/Linux
+            callback: () => setShowSettings(true),
+          },
+        ],
+  )
 
   // Listen for settings menu event from Electron menu
   useEffect(() => {
