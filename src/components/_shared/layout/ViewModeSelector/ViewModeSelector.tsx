@@ -18,6 +18,7 @@ interface ViewModeSelectorProps<T extends string = ViewMode> {
   payCadenceMode?: T;
   payCadenceLabel?: string;
   onOpenViewModeSettings?: () => void;
+  disabled?: boolean;
 }
 
 const ViewModeSelector = <T extends string = ViewMode,>({
@@ -27,6 +28,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   payCadenceMode,
   payCadenceLabel = 'Pay cadence',
   onOpenViewModeSettings,
+  disabled = false,
 }: ViewModeSelectorProps<T>) => {
   const [favoriteModes, setFavoriteModes] = useState(() =>
     sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites),
@@ -81,6 +83,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
             key={option.value}
             className={mode === option.value ? 'active' : ''}
             onClick={() => onChange(option.value)}
+            disabled={disabled}
           >
             <span>{option.label}</span>
             {payCadenceMode === option.value && (
@@ -88,10 +91,8 @@ const ViewModeSelector = <T extends string = ViewMode,>({
             )}
           </button>
         ))}
-      </div>
-      {!options && onOpenViewModeSettings && (
+        {!options && onOpenViewModeSettings && (
         <button
-          type="button"
           className="view-mode-settings-button"
           onClick={onOpenViewModeSettings}
           aria-label="Open view mode settings"
@@ -100,6 +101,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
           ⚙
         </button>
       )}
+      </div>
     </div>
   );
 };

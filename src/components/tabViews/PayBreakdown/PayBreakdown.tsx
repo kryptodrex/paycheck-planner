@@ -4,7 +4,7 @@ import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
-import { getPaychecksPerYear, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel } from '../../../utils/payPeriod';
 import { fromAllocationDisplayAmount, normalizeStoredAllocationAmount, toAllocationDisplayAmount } from '../../../utils/allocationEditor';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
@@ -15,7 +15,7 @@ import type { ViewMode } from '../../../types/viewMode';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
 import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
-import { Alert, Button, ConfirmDialog, InputWithPrefix, ViewModeSelector, PageHeader, AmountBreakdown, Toast } from '../../_shared';
+import { Alert, Button, ConfirmDialog, InputWithPrefix, PageHeader, AmountBreakdown, Toast } from '../../_shared';
 import PaySettingsModal from '../../modals/PaySettingsModal';
 import ReallocationReviewModal from '../../modals/ReallocationReviewModal/ReallocationReviewModal';
 import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../modals/ReallocationSummaryModal/ReallocationSummaryModal';
@@ -83,8 +83,6 @@ const getCategoryItemCount = (category: AllocationCategory): number | null => {
 
 interface PayBreakdownProps {
   displayMode: ViewMode;
-  onDisplayModeChange: (mode: ViewMode) => void;
-  onOpenViewModeSettings?: () => void;
   searchPaySettingsRequestKey?: number;
   searchPaySettingsFieldHighlight?: string;
   onNavigateToBills?: (accountId: string) => void;
@@ -95,8 +93,6 @@ interface PayBreakdownProps {
 
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
   displayMode,
-  onDisplayModeChange,
-  onOpenViewModeSettings,
   searchPaySettingsRequestKey,
   searchPaySettingsFieldHighlight,
   onNavigateToBills,
@@ -729,12 +725,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         subtitle="See where your paycheck goes from gross to net"
         actions={
           <>
-            <ViewModeSelector
-              mode={displayMode}
-              onChange={onDisplayModeChange}
-              payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-              onOpenViewModeSettings={onOpenViewModeSettings}
-            />
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
               ⚙️ Pay Settings
             </Button>

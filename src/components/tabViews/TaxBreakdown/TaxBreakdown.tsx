@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
-import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, ViewModeSelector, TaxLinesEditor, InfoBox } from '../../_shared';
+import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../../utils/payPeriod';
+import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, TaxLinesEditor, InfoBox } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import type { TaxLine } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
@@ -21,11 +21,9 @@ import './TaxBreakdown.css';
 interface TaxBreakdownProps {
     searchOpenSettingsRequestKey?: number;
     displayMode: ViewMode;
-    onDisplayModeChange: (mode: ViewMode) => void;
-    onOpenViewModeSettings?: () => void;
 }
 
-const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode, onDisplayModeChange, onOpenViewModeSettings }) => {
+const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode }) => {
     const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
     const [showEditModal, setShowEditModal] = useState(false);
     const [editLines, setEditLines] = useState<EditableTaxLineValues[]>([]);
@@ -192,12 +190,6 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
                 subtitle="View and manage your tax withholding information"
                 actions={
                     <>
-                        <ViewModeSelector
-                            mode={displayMode}
-                            onChange={onDisplayModeChange}
-                            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-                            onOpenViewModeSettings={onOpenViewModeSettings}
-                        />
                         <Button variant="primary" onClick={handleEditStart}>
                             Edit Tax Settings
                         </Button>

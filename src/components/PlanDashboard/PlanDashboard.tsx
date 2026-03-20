@@ -23,7 +23,7 @@ import ExportModal from '../modals/ExportModal';
 import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import PlanSearchOverlay from './PlanSearchOverlay';
-import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown } from '../_shared';
+import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeSelector } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
 import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
@@ -983,6 +983,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       windows: true,
       callback: () => setShowSearch(true),
     },
+    {
+      key: ',',
+      mac: true,
+      windows: true,
+      callback: () => {
+        setSettingsInitialSection(undefined);
+        setShowSettings(true);
+      },
+    },
   ]);
 
   // Handle navigation from search results
@@ -1316,34 +1325,43 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             )}
           </div>
         </div>
-        <div className="header-right">
-          <Button
-            variant="secondary"
-            size="small"
-            className="header-btn-secondary"
-            onClick={() => setShowAccountsModal(true)}
-            title="Manage your financial accounts"
-          >
-            🏦 Accounts
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            className="header-btn-secondary"
-            onClick={() => setShowCopyModal(true)}
-            title="Copy this plan to another year"
-          >
-            📋 Copy Plan
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={handleSave}
-            disabled={loading || !!missingActiveFile || activeRelinkLoading}
-            className="header-btn-secondary"
-          >
-            💾 Save
-          </Button>
+        <div className="header-actions">
+          <ViewModeSelector
+            mode={displayMode}
+            onChange={handleDisplayModeChange}
+            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
+            disabled={activeTab === 'metrics'}
+          />
+          <div className="header-btn-group">
+            <Button
+              variant="secondary"
+              size="small"
+              className="header-btn-secondary"
+              onClick={() => setShowAccountsModal(true)}
+              title="Manage your financial accounts"
+            >
+              🏦 Accounts
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              className="header-btn-secondary"
+              onClick={() => setShowCopyModal(true)}
+              title="Copy this plan to another year"
+            >
+              📋 Copy Plan
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={handleSave}
+              disabled={loading || !!missingActiveFile || activeRelinkLoading}
+              className="header-btn-secondary"
+            >
+              💾 Save
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -1427,8 +1445,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <PayBreakdown 
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
-            onOpenViewModeSettings={handleOpenViewModeSettings}
             searchPaySettingsRequestKey={paySettingsSearchRequestKey}
             searchPaySettingsFieldHighlight={pendingPaySettingsFieldHighlight}
             onNavigateToBills={(accountId) => {
@@ -1457,8 +1473,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionType={pendingBillsSearchAction}
             searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
-            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
         <div
@@ -1473,8 +1487,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionType={pendingLoansSearchAction}
             searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
-            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
         <div
@@ -1486,8 +1498,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <TaxBreakdown 
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
-            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
         <div
@@ -1503,8 +1513,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionType={pendingSavingsSearchAction}
             searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
-            onOpenViewModeSettings={handleOpenViewModeSettings}
           />
         </div>
       </div>

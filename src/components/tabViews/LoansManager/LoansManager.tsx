@@ -5,12 +5,12 @@ import type { Loan, LoanPaymentLine } from '../../../types/obligations';
 import type { LoanPaymentFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, getPayFrequencyViewMode } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Modal, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, ViewModeSelector, AmountBreakdown } from '../../_shared';
+import { Banner, Modal, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, PageHeader, PillBadge, SectionItemCard, AmountBreakdown } from '../../_shared';
 import '../tabViews.shared.css';
 import './LoansManager.css';
 
@@ -20,8 +20,6 @@ interface LoansManagerProps {
     searchActionType?: 'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan';
     searchActionTargetId?: string;
     displayMode: ViewMode;
-    onDisplayModeChange: (mode: ViewMode) => void;
-    onOpenViewModeSettings?: () => void;
 }
 
 type LoanFieldErrors = {
@@ -112,8 +110,6 @@ const LoansManager: React.FC<LoansManagerProps> = ({
     searchActionType,
     searchActionTargetId,
     displayMode,
-    onDisplayModeChange,
-    onOpenViewModeSettings,
 }) => {
     const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
     const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -463,20 +459,13 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                 title="Loan Payments"
                 subtitle="Track recurring mortgage, auto, student, and other loan payments"
                 actions={
-                    <ViewModeSelector
-                        mode={displayMode}
-                        onChange={onDisplayModeChange}
-                        payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-                        onOpenViewModeSettings={onOpenViewModeSettings}
-                    />
+                    <>
+                        <Button variant="primary" onClick={handleAddLoan}>
+                            + Add Loan
+                        </Button>
+                    </>
                 }
             />
-
-            <div className="loans-manager-header">
-                <Button variant="primary" onClick={handleAddLoan}>
-                    + Add Loan
-                </Button>
-            </div>
 
             <Banner
                 label={`Total ${getDisplayModeLabel(displayMode)} Across All Accounts`}

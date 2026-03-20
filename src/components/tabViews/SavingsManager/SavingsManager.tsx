@@ -5,7 +5,7 @@ import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, getPayFrequencyViewMode } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getAccountNameById } from '../../../utils/accountGrouping';
@@ -13,7 +13,7 @@ import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -33,8 +33,6 @@ interface SavingsManagerProps {
     | 'toggle-retirement';
   searchActionTargetId?: string;
   displayMode?: ViewMode;
-  onDisplayModeChange?: (mode: ViewMode) => void;
-  onOpenViewModeSettings?: () => void;
 }
 
 type SavingsFieldErrors = {
@@ -58,8 +56,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode = 'paycheck',
-  onDisplayModeChange,
-  onOpenViewModeSettings,
 }) => {
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const {
@@ -599,14 +595,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       <PageHeader
         title="Savings"
         subtitle="Manage savings/investment transfers and retirement contributions"
-        actions={(
-          <ViewModeSelector
-            mode={displayMode}
-            onChange={onDisplayModeChange || (() => {})}
-            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-            onOpenViewModeSettings={onOpenViewModeSettings}
-          />
-        )}
       />
 
       <Banner

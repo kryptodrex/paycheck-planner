@@ -7,12 +7,12 @@ import type { BillFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
-import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } from '../../../utils/payPeriod';
+import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './BillsManager.css';
@@ -31,8 +31,6 @@ interface BillsManagerProps {
     | 'toggle-benefit';
   searchActionTargetId?: string;
   displayMode: ViewMode;
-  onDisplayModeChange: (mode: ViewMode) => void;
-  onOpenViewModeSettings?: () => void;
 }
 
 type BillFieldErrors = {
@@ -53,8 +51,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode,
-  onDisplayModeChange,
-  onOpenViewModeSettings,
 }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -460,23 +456,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
         actions={
-          <div className="bills-header-actions">
-            <ViewModeSelector
-              mode={displayMode}
-              onChange={onDisplayModeChange}
-              payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-              onOpenViewModeSettings={onOpenViewModeSettings}
-            />
+          <div className="bills-header-buttons">
+            <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
+            <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
           </div>
         }
       />
-
-      <div className="bills-manager-header">
-        <div className="bills-header-buttons">
-          <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
-          <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
-        </div>
-      </div>
 
       <Banner
         label={`Total ${getDisplayModeLabel(displayMode)} Across All Accounts`}
