@@ -12,11 +12,13 @@ describe('searchModules initialization', () => {
 
     const moduleIds = getRegisteredModules().map((module) => module.id).sort();
     expect(moduleIds).toEqual([
+      'accounts',
       'bills',
       'key-metrics',
       'loans',
       'pay-breakdown',
       'pay-settings',
+      'pre-tax-deductions',
       'quick-actions',
       'savings',
       'settings',
@@ -30,11 +32,13 @@ describe('searchModules initialization', () => {
 
     const moduleIds = getRegisteredModules().map((module) => module.id).sort();
     expect(moduleIds).toEqual([
+      'accounts',
       'bills',
       'key-metrics',
       'loans',
       'pay-breakdown',
       'pay-settings',
+      'pre-tax-deductions',
       'quick-actions',
       'savings',
       'settings',

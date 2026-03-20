@@ -6,11 +6,13 @@
  */
 
 import { registerSearchModule } from '../searchRegistry';
+import { accountsSearchModule } from './accountsSearchModule';
 import { billsSearchModule } from './billsSearchModule';
 import { keyMetricsSearchModule } from './keyMetricsSearchModule';
 import { loansSearchModule } from './loansSearchModule';
 import { paySettingsSearchModule } from './paySettingsSearchModule';
 import { payBreakdownSearchModule } from './payBreakdownSearchModule';
+import { preTaxDeductionsSearchModule } from './preTaxDeductionsSearchModule';
 import { quickActionsSearchModule } from './quickActionsSearchModule';
 import { savingsSearchModule } from './savingsSearchModule';
 import { settingsSearchModule } from './settingsSearchModule';
@@ -21,11 +23,13 @@ import { taxesSearchModule } from './taxesSearchModule';
  * Call this once at app initialization (e.g., in main.tsx or App.tsx).
  */
 export function initializeSearchModules(): void {
+  registerSearchModule(accountsSearchModule);
   registerSearchModule(billsSearchModule);
   registerSearchModule(keyMetricsSearchModule);
   registerSearchModule(loansSearchModule);
   registerSearchModule(payBreakdownSearchModule);
   registerSearchModule(paySettingsSearchModule);
+  registerSearchModule(preTaxDeductionsSearchModule);
   registerSearchModule(quickActionsSearchModule);
   registerSearchModule(savingsSearchModule);
   registerSearchModule(settingsSearchModule);

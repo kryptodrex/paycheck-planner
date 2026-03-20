@@ -141,16 +141,6 @@ function matches(needle: string, ...haystacks: (string | undefined | null)[]): b
   return tokens.every((token) => combined.includes(token));
 }
 
-/** Format a number as a plain currency string, e.g. "$1,234.56". */
-function formatAmount(amount: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
 /**
  * Returns true when the query looks like an amount comparison.
  * Supports: ">500", "<500", ">=500", "<=500", "=500", "500", "$500"
@@ -195,41 +185,11 @@ function amountMatches(
  */
 export function buildSearchIndex(budgetData: BudgetData): SearchResult[] {
   const results: SearchResult[] = [];
-  const currency = budgetData.settings?.currency ?? 'USD';
-
-  // ── Pre-tax deductions ────────────────────────────────────────────────────
-  for (const deduction of budgetData.preTaxDeductions ?? []) {
-    results.push({
-      id: `deduction-${deduction.id}`,
-      title: deduction.name,
-      subtitle: deduction.isPercentage
-        ? `${deduction.amount}% of gross pay`
-        : formatAmount(deduction.amount, currency) + ' per paycheck',
-      category: 'Pre-Tax Deductions',
-      categoryIcon: '📉',
-      action: { type: 'navigate-tab', tabId: 'breakdown' },
-    });
-  }
 
   // ── Registered search modules ────────────────────────────────────────────
   // Each search module (bills, loans, savings, taxes, etc.) contributes results via registry.
   // This keeps the search system extensible and decoupled from core search logic.
   results.push(...getAllSearchResults(budgetData));
-
-  // ── Accounts ──────────────────────────────────────────────────────────────
-  for (const account of budgetData.accounts ?? []) {
-    const typeLabel = account.type
-      ? account.type.charAt(0).toUpperCase() + account.type.slice(1)
-      : '';
-    results.push({
-      id: `account-${account.id}`,
-      title: account.name,
-      subtitle: typeLabel,
-      category: 'Accounts',
-      categoryIcon: '🏛️',
-      action: { type: 'open-accounts', scrollToAccountId: account.id },
-    });
-  }
 
   return results;
 }
