@@ -2,7 +2,7 @@
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
@@ -826,8 +826,6 @@ async function createWindow() {
   // Create application menu with File and Edit options
   createApplicationMenu();
   
-  // Register global keyboard shortcuts (fallback for menu accelerators)
-  registerGlobalShortcuts();
 }
 
 /**
@@ -1010,7 +1008,7 @@ function createApplicationMenu() {
     label: 'View',
     submenu: [
       {
-        label: 'Tab Position',
+        label: 'Tab Bar Position',
         submenu: [
           {
             label: 'Top',
@@ -1086,7 +1084,7 @@ function createApplicationMenu() {
         },
       },
       {
-        label: 'Actual Size',
+        label: 'Reset Zoom',
         accelerator: 'CmdOrCtrl+0',
         click: () => {
           const targetWindow = getTargetWindowForAppAction();
@@ -1143,16 +1141,6 @@ function createApplicationMenu() {
           }
         },
       },
-      {
-        label: 'Home',
-        accelerator: isMac ? 'Cmd+Shift+H' : 'Ctrl+Shift+H',
-        click: () => {
-          const focusedWindow = BrowserWindow.getFocusedWindow();
-          if (focusedWindow) {
-            focusedWindow.webContents.send('menu:history-home');
-          }
-        },
-      },
       { type: 'separator' },
       {
         label: 'Minimize',
@@ -1193,64 +1181,6 @@ function createApplicationMenu() {
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
-}
-
-/**
- * Register global keyboard shortcuts that work even when web content has focus
- * These provide a fallback for menu accelerators which don't always work with focused form elements
- */
-function registerGlobalShortcuts() {
-  try {
-    // Register Cmd+, (Mac) and Ctrl+, (Windows/Linux) for Settings
-    const settingsShortcut = process.platform === 'darwin' ? 'Cmd+,' : 'Ctrl+,';
-    globalShortcut.register(settingsShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
-        debug(`Settings shortcut triggered via globalShortcut (${settingsShortcut})`);
-      }
-    });
-
-    const backShortcut = process.platform === 'darwin' ? 'Cmd+[' : 'Alt+Left';
-    globalShortcut.register(backShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.historyBack);
-        debug(`Back shortcut triggered via globalShortcut (${backShortcut})`);
-      }
-    });
-
-    const forwardShortcut = process.platform === 'darwin' ? 'Cmd+]' : 'Alt+Right';
-    globalShortcut.register(forwardShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.historyForward);
-        debug(`Forward shortcut triggered via globalShortcut (${forwardShortcut})`);
-      }
-    });
-
-    const homeShortcut = process.platform === 'darwin' ? 'Cmd+Shift+H' : 'Ctrl+Shift+H';
-    globalShortcut.register(homeShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.historyHome);
-        debug(`Home shortcut triggered via globalShortcut (${homeShortcut})`);
-      }
-    });
-
-    const searchShortcut = process.platform === 'darwin' ? 'Cmd+F' : 'Ctrl+F';
-    globalShortcut.register(searchShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.openSearch);
-        debug(`Search shortcut triggered via globalShortcut (${searchShortcut})`);
-      }
-    });
-
-    debug('Global shortcuts registered successfully');
-  } catch (error) {
-    console.error('Failed to register global shortcuts:', error);
-  }
 }
 
 /**
