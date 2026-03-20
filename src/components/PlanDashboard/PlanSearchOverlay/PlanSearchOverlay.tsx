@@ -57,9 +57,23 @@ const PlanSearchOverlay: React.FC<PlanSearchOverlayProps> = ({
       }
 
       const overrideBadge = badgeOverrides[result.id];
+      const isPaused = overrideBadge === 'Paused';
+
+      const nextInlineActions = result.inlineActions?.map((inlineAction) => {
+        if (!isToggleAction(inlineAction.action)) {
+          return inlineAction;
+        }
+
+        return {
+          ...inlineAction,
+          label: isPaused ? 'Resume' : 'Pause',
+        };
+      });
+
       return {
         ...result,
         badge: overrideBadge ?? undefined,
+        inlineActions: nextInlineActions,
       };
     });
   }, [badgeOverrides, results]);
@@ -277,13 +291,6 @@ const PlanSearchOverlay: React.FC<PlanSearchOverlayProps> = ({
                               inlineAction.label === 'Resume' ? 'item-card-btn-resume' : '',
                               inlineAction.label === 'Delete' ? 'item-card-btn-delete' : '',
                             ].filter(Boolean).join(' ')}
-                            successText={
-                              inlineAction.label === 'Pause'
-                                ? 'Paused'
-                                : inlineAction.label === 'Resume'
-                                  ? 'Resumed'
-                                  : undefined
-                            }
                             onClick={(event) => {
                               event.stopPropagation();
                               handleInlineActionSelect(result, inlineAction.action);
