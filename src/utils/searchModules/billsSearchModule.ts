@@ -8,16 +8,7 @@
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult, OpenBillsAction } from '../planSearch';
 import type { SearchModule, SearchActionContext } from '../searchRegistry';
-
-/** Format a number as a plain currency string, e.g. "$1,234.56". */
-function formatAmount(amount: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
+import { createTypedActionHandler, formatSearchCurrency, incrementRequestKey } from './moduleUtils';
 
 /**
  * Builds search results for Bills and Benefits.
@@ -35,7 +26,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
     results.push({
       id: `bill-${bill.id}`,
       title: bill.name,
-      subtitle: `${formatAmount(bill.amount, currency)} · ${freqLabel}${bill.category ? ` · ${bill.category}` : ''}`,
+      subtitle: `${formatSearchCurrency(bill.amount, currency)} · ${freqLabel}${bill.category ? ` · ${bill.category}` : ''}`,
       category: 'Bills',
       categoryIcon: '🧾',
       badge: paused ? 'Paused' : bill.discretionary ? 'Discretionary' : undefined,
@@ -74,7 +65,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
       title: benefit.name,
       subtitle: benefit.isPercentage
         ? `${benefit.amount}% — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`
-        : `${formatAmount(benefit.amount, currency)} — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`,
+        : `${formatSearchCurrency(benefit.amount, currency)} — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`,
       category: 'Benefits',
       categoryIcon: '🏥',
       badge: paused ? 'Paused' : undefined,
@@ -108,13 +99,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
  * Handles open-bills-action dispatches from search results.
  * Updates PlanDashboard state to trigger the appropriate modal/action.
  */
-function handleBillsAction(action: unknown, context: SearchActionContext): void {
-  // Type guard: ensure this is an OpenBillsAction
-  if (typeof action !== 'object' || !action || !('type' in action) || (action as object & Record<string, unknown>).type !== 'open-bills-action') {
-    return;
-  }
-
-  const billsAction = action as OpenBillsAction;
+const handleBillsAction = createTypedActionHandler('open-bills-action', (billsAction: OpenBillsAction, context: SearchActionContext): void => {
 
   if (!context.setPendingBillsSearchAction) {
     console.warn('handleBillsAction: setPendingBillsSearchAction context not provided');
@@ -126,11 +111,11 @@ function handleBillsAction(action: unknown, context: SearchActionContext): void 
   context.setScrollToAccountId?.(undefined);
 
   // Trigger a request key update to cause the component to react
-  context.setBillsSearchRequestKey?.((prev) => (typeof prev === 'number' ? prev + 1 : 1));
+  incrementRequestKey(context.setBillsSearchRequestKey);
 
   // Navigate to Bills tab
   context.selectTab?.('bills', { resetBillsAnchor: true, revealIfHidden: true });
-}
+});
 
 /**
  * The Bills search module.

@@ -7,6 +7,14 @@
 
 import { registerSearchModule } from '../searchRegistry';
 import { billsSearchModule } from './billsSearchModule';
+import { keyMetricsSearchModule } from './keyMetricsSearchModule';
+import { loansSearchModule } from './loansSearchModule';
+import { paySettingsSearchModule } from './paySettingsSearchModule';
+import { payBreakdownSearchModule } from './payBreakdownSearchModule';
+import { quickActionsSearchModule } from './quickActionsSearchModule';
+import { savingsSearchModule } from './savingsSearchModule';
+import { settingsSearchModule } from './settingsSearchModule';
+import { taxesSearchModule } from './taxesSearchModule';
 
 /**
  * Register all available search modules with the registry.
@@ -14,9 +22,13 @@ import { billsSearchModule } from './billsSearchModule';
  */
 export function initializeSearchModules(): void {
   registerSearchModule(billsSearchModule);
-  // Future modules will be registered here:
-  // registerSearchModule(loansSearchModule);
-  // registerSearchModule(savingsSearchModule);
-  // registerSearchModule(taxesSearchModule);
-  // etc.
+  registerSearchModule(keyMetricsSearchModule);
+  registerSearchModule(loansSearchModule);
+  registerSearchModule(payBreakdownSearchModule);
+  registerSearchModule(paySettingsSearchModule);
+  registerSearchModule(quickActionsSearchModule);
+  registerSearchModule(savingsSearchModule);
+  registerSearchModule(settingsSearchModule);
+  registerSearchModule(taxesSearchModule);
+  // Future modules can be registered here
 }
