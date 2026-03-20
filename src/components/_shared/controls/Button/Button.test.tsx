@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import Button from './Button';
 
 describe('Button', () => {
@@ -41,7 +41,10 @@ describe('Button', () => {
 
   it('is disabled when disabled prop is set', () => {
     render(<Button disabled>Can't click</Button>);
-    expect(screen.getByRole('button')).toBeDisabled();
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass('btn-disabled-state');
+    expect(button).toHaveAttribute('data-ui-state', 'disabled');
   });
 
   it('is disabled and shows loading text when isLoading', () => {
@@ -54,7 +57,7 @@ describe('Button', () => {
   it('does not call onClick when disabled', async () => {
     const handleClick = vi.fn();
     render(<Button disabled onClick={handleClick}>Blocked</Button>);
-    await userEvent.click(screen.getByRole('button'), { skipPointerEventsCheck: true });
+    await userEvent.click(screen.getByRole('button'), { pointerEventsCheck: PointerEventsCheckLevel.Never });
     expect(handleClick).not.toHaveBeenCalled();
   });
 

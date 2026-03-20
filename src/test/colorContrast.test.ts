@@ -134,9 +134,14 @@ describe('contrastRatio – known spot-check values', () => {
     expect(contrastRatio('#111827', '#ffffff')).toBeCloseTo(17.74, 1);
   });
 
-  // #6b7280 (text-secondary) on #ffffff: ~4.83:1
-  it('#6b7280 on #ffffff ≈ 4.83:1', () => {
-    expect(contrastRatio('#6b7280', '#ffffff')).toBeCloseTo(4.83, 1);
+  // #4b5563 (text-secondary) on #ffffff: ~7.56:1
+  it('#4b5563 on #ffffff ≈ 7.56:1', () => {
+    expect(contrastRatio('#4b5563', '#ffffff')).toBeCloseTo(7.56, 1);
+  });
+
+  // #5568d3 (default light text-accent) on #ffffff: ~4.88:1
+  it('#5568d3 on #ffffff ≈ 4.88:1', () => {
+    expect(contrastRatio('#5568d3', '#ffffff')).toBeCloseTo(4.88, 1);
   });
 
   // White on #667eea (light accent-primary, primary button): ~3.66:1
@@ -159,14 +164,14 @@ describe('contrastRatio – known spot-check values', () => {
     expect(contrastRatio('#166534', '#f0fdf4')).toBeCloseTo(6.81, 1);
   });
 
-  // Dark text #111827 on toast-success-bg #10b981 (light mode fix): ~6.99:1
-  it('#111827 on #10b981 ≈ 6.99:1 (dark text on light-mode success toast)', () => {
-    expect(contrastRatio('#111827', '#10b981')).toBeCloseTo(6.99, 1);
+  // White text on the darker success toast easily clears AA.
+  it('#ffffff on #047857 meets normal-text AA for success toasts', () => {
+    expect(contrastRatio('#ffffff', '#047857')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
   });
 
-  // Dark text #111827 on toast-warning-bg #f59e0b (light mode fix): ~8.26:1
-  it('#111827 on #f59e0b ≈ 8.26:1 (dark text on light-mode warning toast)', () => {
-    expect(contrastRatio('#111827', '#f59e0b')).toBeCloseTo(8.26, 1);
+  // White text on the darker warning toast also clears AA.
+  it('#ffffff on #b45309 meets normal-text AA for warning toasts', () => {
+    expect(contrastRatio('#ffffff', '#b45309')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
   });
 
   // #f9fafb (dark text-primary) on #1a1a1a (dark bg-primary): ~16.65:1
@@ -186,6 +191,188 @@ function assertAA(fg: string, bg: string, label: string, largeText = false) {
   });
 }
 
+function toHexChannel(value: number): string {
+  const clamped = Math.max(0, Math.min(255, Math.round(value)));
+  return clamped.toString(16).padStart(2, '0');
+}
+
+function mixHex(base: string, tint: string, baseWeight: number): string {
+  const baseRgb = hexToRgb(base);
+  const tintRgb = hexToRgb(tint);
+  const tintWeight = 1 - baseWeight;
+
+  return `#${toHexChannel(baseRgb.r * baseWeight + tintRgb.r * tintWeight)}${toHexChannel(baseRgb.g * baseWeight + tintRgb.g * tintWeight)}${toHexChannel(baseRgb.b * baseWeight + tintRgb.b * tintWeight)}`;
+}
+
+type ThemeMode = 'light' | 'dark';
+
+const PRESET_ACCENTS = [
+  { name: 'Default', light: '#667eea', dark: '#a855f7' },
+  { name: 'Ocean', light: '#0f766e', dark: '#0284c7' },
+  { name: 'Forest', light: '#2f6f4f', dark: '#2f855a' },
+  { name: 'Sunset', light: '#b45309', dark: '#c2410c' },
+  { name: 'Pink', light: '#be185d', dark: '#db2777' },
+  { name: 'Spreadsheet Core', light: '#4b5563', dark: '#64748b' },
+] as const;
+
+const COLOR_VISION_MODES = [
+  {
+    name: 'Protanopia',
+    light: {
+      success: '#0f766e',
+      warning: '#c2410c',
+      error: '#7c3aed',
+      info: '#2563eb',
+      infoDark: '#1d4ed8',
+      toastSuccessTint: '#0b1f1b',
+      toastWarningTint: '#22130b',
+      toastErrorTint: '#181122',
+    },
+    dark: {
+      success: '#5eead4',
+      warning: '#fdba74',
+      error: '#c4b5fd',
+      info: '#93c5fd',
+      infoDark: '#60a5fa',
+      toastSuccessTint: '#0b1f1b',
+      toastWarningTint: '#22130b',
+      toastErrorTint: '#181122',
+    },
+  },
+  {
+    name: 'Deuteranopia',
+    light: {
+      success: '#0f766e',
+      warning: '#b45309',
+      error: '#be185d',
+      info: '#1d4ed8',
+      infoDark: '#1e40af',
+      toastSuccessTint: '#0b1f1b',
+      toastWarningTint: '#22130b',
+      toastErrorTint: '#26111b',
+    },
+    dark: {
+      success: '#5eead4',
+      warning: '#fdba74',
+      error: '#f9a8d4',
+      info: '#93c5fd',
+      infoDark: '#60a5fa',
+      toastSuccessTint: '#0b1f1b',
+      toastWarningTint: '#22130b',
+      toastErrorTint: '#26111b',
+    },
+  },
+  {
+    name: 'Tritanopia',
+    light: {
+      success: '#3f6212',
+      warning: '#c2410c',
+      error: '#be185d',
+      info: '#0f766e',
+      infoDark: '#115e59',
+      toastSuccessTint: '#161c0d',
+      toastWarningTint: '#22130b',
+      toastErrorTint: '#26111b',
+    },
+    dark: {
+      success: '#bef264',
+      warning: '#fdba74',
+      error: '#f9a8d4',
+      info: '#99f6e4',
+      infoDark: '#5eead4',
+      toastSuccessTint: '#161c0d',
+      toastWarningTint: '#22130b',
+      toastErrorTint: '#26111b',
+    },
+  },
+] as const;
+
+type ColorVisionTokenSet = (typeof COLOR_VISION_MODES)[number]['light'] | (typeof COLOR_VISION_MODES)[number]['dark'];
+
+function buildPresetStatePalette(mode: ThemeMode, accentPrimary: string) {
+  const isLight = mode === 'light';
+  const bgSecondary = isLight ? '#f9fafb' : '#242424';
+  const textPrimary = isLight ? '#111827' : '#f9fafb';
+
+  const surfaceAccentSubtle = isLight
+    ? mixHex(accentPrimary, bgSecondary, 0.1)
+    : mixHex(accentPrimary, bgSecondary, 0.12);
+
+  return {
+    toastSuccessBg: isLight
+      ? mixHex('#047857', accentPrimary, 0.88)
+      : mixHex('#047857', accentPrimary, 0.86),
+    toastWarningBg: isLight
+      ? mixHex('#b45309', accentPrimary, 0.88)
+      : mixHex('#b45309', accentPrimary, 0.86),
+    toastErrorBg: isLight
+      ? mixHex('#b91c1c', accentPrimary, 0.9)
+      : mixHex('#b91c1c', accentPrimary, 0.88),
+
+    alertErrorBg: isLight
+      ? mixHex('#fef2f2', surfaceAccentSubtle, 0.8)
+      : mixHex('#2d1f1f', surfaceAccentSubtle, 0.84),
+    alertErrorText: isLight
+      ? mixHex('#b91c1c', textPrimary, 0.86)
+      : mixHex('#fca5a5', textPrimary, 0.88),
+
+    alertWarningBg: isLight
+      ? mixHex('#fffbeb', surfaceAccentSubtle, 0.8)
+      : mixHex('#2d2718', surfaceAccentSubtle, 0.84),
+    alertWarningText: isLight
+      ? mixHex('#92400e', textPrimary, 0.84)
+      : mixHex('#fbbf24', textPrimary, 0.86),
+
+    alertSuccessBg: isLight
+      ? mixHex('#f0fdf4', surfaceAccentSubtle, 0.8)
+      : mixHex('#1e2d24', surfaceAccentSubtle, 0.84),
+    alertSuccessText: isLight
+      ? mixHex('#166534', textPrimary, 0.84)
+      : mixHex('#86efac', textPrimary, 0.86),
+
+    alertInfoBg: isLight
+      ? mixHex('#f0f9ff', surfaceAccentSubtle, 0.8)
+      : mixHex('#1e2838', surfaceAccentSubtle, 0.84),
+    alertInfoText: isLight
+      ? mixHex('#0369a1', textPrimary, 0.84)
+      : mixHex('#7dd3fc', textPrimary, 0.86),
+  };
+}
+
+function buildColorVisionStatePalette(mode: ThemeMode, tokens: ColorVisionTokenSet) {
+  const isLight = mode === 'light';
+
+  if (isLight) {
+    return {
+      alertSuccessBg: mixHex(tokens.success, '#ffffff', 0.14),
+      alertSuccessText: mixHex(tokens.success, '#111827', 0.82),
+      alertWarningBg: mixHex(tokens.warning, '#ffffff', 0.14),
+      alertWarningText: mixHex(tokens.warning, '#111827', 0.82),
+      alertErrorBg: mixHex(tokens.error, '#ffffff', 0.14),
+      alertErrorText: mixHex(tokens.error, '#111827', 0.82),
+      alertInfoBg: mixHex(tokens.info, '#ffffff', 0.14),
+      alertInfoText: mixHex(tokens.infoDark, '#111827', 0.82),
+      toastSuccessBg: mixHex(tokens.success, tokens.toastSuccessTint, 0.78),
+      toastWarningBg: mixHex(tokens.warning, tokens.toastWarningTint, 0.78),
+      toastErrorBg: mixHex(tokens.error, tokens.toastErrorTint, 0.78),
+    };
+  }
+
+  return {
+    alertSuccessBg: mixHex(tokens.success, '#242424', 0.22),
+    alertSuccessText: mixHex(tokens.success, '#dcfce7', 0.5),
+    alertWarningBg: mixHex(tokens.warning, '#242424', 0.22),
+    alertWarningText: mixHex(tokens.warning, '#fde68a', 0.5),
+    alertErrorBg: mixHex(tokens.error, '#242424', 0.22),
+    alertErrorText: mixHex(tokens.error, '#f5d0fe', 0.46),
+    alertInfoBg: mixHex(tokens.info, '#242424', 0.22),
+    alertInfoText: mixHex(tokens.info, '#bfdbfe', 0.48),
+    toastSuccessBg: mixHex(tokens.success, '#081411', 0.42),
+    toastWarningBg: mixHex(tokens.warning, '#1f1208', 0.5),
+    toastErrorBg: mixHex(tokens.error, '#1e1020', 0.44),
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Light-theme design token pairs
 // ─────────────────────────────────────────────────────────────────
@@ -200,11 +387,8 @@ describe('Light theme – primary text on surface backgrounds', () => {
 });
 
 describe('Light theme – secondary text on surface backgrounds', () => {
-  // --text-secondary: #6b7280 — used for supplementary / caption-level content
-  // Tested at the large-text / UI-component threshold (3:1) as it is typically
-  // rendered at or above 14 pt bold / 18 pt regular.
-  assertAA('#6b7280', '#ffffff', 'text-secondary (#6b7280) on bg-primary (#ffffff)', true);
-  assertAA('#6b7280', '#f9fafb', 'text-secondary (#6b7280) on bg-secondary (#f9fafb)', true);
+  assertAA('#4b5563', '#ffffff', 'text-secondary (#4b5563) on bg-primary (#ffffff)');
+  assertAA('#4b5563', '#f9fafb', 'text-secondary (#4b5563) on bg-secondary (#f9fafb)');
 });
 
 describe('Light theme – alert text on alert backgrounds (normal-text 4.5:1)', () => {
@@ -223,16 +407,16 @@ describe('Light theme – button text on button backgrounds (UI component 3:1)',
 });
 
 describe('Light theme – toast text on toast backgrounds (UI component 3:1)', () => {
-  // Light-mode toast-success (#10b981) and toast-warning (#f59e0b) use DARK text
-  // (fixed in Toast.css) because the bright backgrounds fail WCAG AA with white text.
-  assertAA('#111827', '#10b981', 'dark text (#111827) on toast-success-bg (#10b981) — light mode', true);
-  assertAA('#111827', '#f59e0b', 'dark text (#111827) on toast-warning-bg (#f59e0b) — light mode', true);
+  assertAA('#ffffff', '#047857', 'white text on toast-success-bg (#047857) — light mode');
+  assertAA('#ffffff', '#b45309', 'white text on toast-warning-bg (#b45309) — light mode');
   // Error toast keeps white text on the darker red background
   assertAA('#ffffff', '#ef4444', 'white text on toast-error-bg (#ef4444) — light mode', true);
 });
 
-describe('Light theme – link colors', () => {
-  assertAA('#646cff', '#ffffff', 'link-color (#646cff) on bg-primary (#ffffff)', true);
+describe('Light theme – accent text and link colors', () => {
+  assertAA('#5568d3', '#ffffff', 'text-accent (#5568d3) on bg-primary (#ffffff)');
+  assertAA('#5568d3', '#ffffff', 'link-color (#5568d3) on bg-primary (#ffffff)');
+  assertAA('#4338ca', '#ffffff', 'link-hover (#4338ca) on bg-primary (#ffffff)');
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -273,4 +457,124 @@ describe('Dark theme – toast text on toast backgrounds (UI component 3:1)', ()
 
 describe('Dark theme – link colors', () => {
   assertAA('#818cf8', '#1a1a1a', 'dark link-color (#818cf8) on bg-primary (#1a1a1a)', true);
+});
+
+describe('Preset themes – accent button contrast', () => {
+  assertAA('#ffffff', '#0f766e', 'white text on Ocean light accent-primary (#0f766e)');
+  assertAA('#ffffff', '#0284c7', 'white text on Ocean dark accent-primary (#0284c7)', true);
+  assertAA('#ffffff', '#2f6f4f', 'white text on Forest light accent-primary (#2f6f4f)');
+  assertAA('#ffffff', '#2f855a', 'white text on Forest dark accent-primary (#2f855a)', true);
+  assertAA('#ffffff', '#b45309', 'white text on Sunset light accent-primary (#b45309)');
+  assertAA('#ffffff', '#c2410c', 'white text on Sunset dark accent-primary (#c2410c)');
+  assertAA('#ffffff', '#be185d', 'white text on Pink light accent-primary (#be185d)');
+  assertAA('#ffffff', '#db2777', 'white text on Pink dark accent-primary (#db2777)');
+  assertAA('#ffffff', '#4b5563', 'white text on Spreadsheet Core light accent-primary (#4b5563)');
+  assertAA('#ffffff', '#64748b', 'white text on Spreadsheet Core dark accent-primary (#64748b)');
+});
+
+describe('Preset themes – readable text-accent colors', () => {
+  assertAA('#0f766e', '#ffffff', 'Ocean light text-accent (#0f766e) on bg-primary (#ffffff)');
+  assertAA('#2f6f4f', '#ffffff', 'Forest light text-accent (#2f6f4f) on bg-primary (#ffffff)');
+  assertAA('#b45309', '#ffffff', 'Sunset light text-accent (#b45309) on bg-primary (#ffffff)');
+  assertAA('#9d174d', '#ffffff', 'Pink light text-accent (#9d174d) on bg-primary (#ffffff)');
+  assertAA('#374151', '#ffffff', 'Spreadsheet Core light text-accent (#374151) on bg-primary (#ffffff)');
+  assertAA('#7dd3fc', '#1a1a1a', 'Ocean dark text-accent (#7dd3fc) on dark bg-primary (#1a1a1a)');
+  assertAA('#bbf7d0', '#1a1a1a', 'Forest dark text-accent (#bbf7d0) on dark bg-primary (#1a1a1a)');
+  assertAA('#fdba74', '#1a1a1a', 'Sunset dark text-accent (#fdba74) on dark bg-primary (#1a1a1a)');
+  assertAA('#f9a8d4', '#1a1a1a', 'Pink dark text-accent (#f9a8d4) on dark bg-primary (#1a1a1a)');
+  assertAA('#cbd5e1', '#1a1a1a', 'Spreadsheet Core dark text-accent (#cbd5e1) on dark bg-primary (#1a1a1a)');
+});
+
+describe('PillBadge text contrast on card surfaces', () => {
+  // Light theme badge text colors against common neutral card backgrounds.
+  assertAA('#4338ca', '#f3f4f6', 'PillBadge accent text (#4338ca) on light surface (#f3f4f6)');
+  assertAA('#166534', '#f3f4f6', 'PillBadge success text (#166534) on light surface (#f3f4f6)');
+  assertAA('#92400e', '#f3f4f6', 'PillBadge warning text (#92400e) on light surface (#f3f4f6)');
+  assertAA('#0369a1', '#f3f4f6', 'PillBadge info text (#0369a1) on light surface (#f3f4f6)');
+
+  // Dark theme badge text colors against dark card surfaces.
+  assertAA('#c084fc', '#2d2d2d', 'PillBadge accent text (#c084fc) on dark surface (#2d2d2d)');
+  assertAA('#86efac', '#2d2d2d', 'PillBadge success text (#86efac) on dark surface (#2d2d2d)');
+  assertAA('#fbbf24', '#2d2d2d', 'PillBadge warning text (#fbbf24) on dark surface (#2d2d2d)');
+  assertAA('#7dd3fc', '#2d2d2d', 'PillBadge info text (#7dd3fc) on dark surface (#2d2d2d)');
+});
+
+describe('Preset themes – blended alert/toast semantic state contrast', () => {
+  PRESET_ACCENTS.forEach((preset) => {
+    it(`${preset.name} light: blended alert text stays AA readable`, () => {
+      const palette = buildPresetStatePalette('light', preset.light);
+
+      expect(contrastRatio(palette.alertErrorText, palette.alertErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertWarningText, palette.alertWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertSuccessText, palette.alertSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertInfoText, palette.alertInfoBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${preset.name} dark: blended alert text stays AA readable`, () => {
+      const palette = buildPresetStatePalette('dark', preset.dark);
+
+      expect(contrastRatio(palette.alertErrorText, palette.alertErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertWarningText, palette.alertWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertSuccessText, palette.alertSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertInfoText, palette.alertInfoBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${preset.name} light: blended toast backgrounds keep white text readable`, () => {
+      const palette = buildPresetStatePalette('light', preset.light);
+
+      expect(contrastRatio('#ffffff', palette.toastSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${preset.name} dark: blended toast backgrounds keep white text readable`, () => {
+      const palette = buildPresetStatePalette('dark', preset.dark);
+
+      expect(contrastRatio('#ffffff', palette.toastSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+  });
+});
+
+describe('Color-vision modes – semantic token contrast', () => {
+  COLOR_VISION_MODES.forEach((modeConfig) => {
+    it(`${modeConfig.name} light: base semantic colors stay readable on light surfaces`, () => {
+      expect(contrastRatio(modeConfig.light.success, '#ffffff')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(modeConfig.light.warning, '#ffffff')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(modeConfig.light.error, '#ffffff')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(modeConfig.light.info, '#ffffff')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${modeConfig.name} dark: base semantic colors stay readable on dark surfaces`, () => {
+      expect(contrastRatio(modeConfig.dark.success, '#1a1a1a')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(modeConfig.dark.warning, '#1a1a1a')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(modeConfig.dark.error, '#1a1a1a')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(modeConfig.dark.info, '#1a1a1a')).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${modeConfig.name} light: derived alert and toast tokens stay accessible`, () => {
+      const palette = buildColorVisionStatePalette('light', modeConfig.light);
+
+      expect(contrastRatio(palette.alertSuccessText, palette.alertSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertWarningText, palette.alertWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertErrorText, palette.alertErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertInfoText, palette.alertInfoBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+
+    it(`${modeConfig.name} dark: derived alert and toast tokens stay accessible`, () => {
+      const palette = buildColorVisionStatePalette('dark', modeConfig.dark);
+
+      expect(contrastRatio(palette.alertSuccessText, palette.alertSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertWarningText, palette.alertWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertErrorText, palette.alertErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio(palette.alertInfoText, palette.alertInfoBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastSuccessBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastWarningBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+      expect(contrastRatio('#ffffff', palette.toastErrorBg)).toBeGreaterThanOrEqual(WCAG.AA_NORMAL_TEXT);
+    });
+  });
 });

@@ -12,22 +12,26 @@
 }
 
 .pill-badge--success {
-  color: var(--success-color);
+  color: var(--alert-success-text);
   background: color-mix(in srgb, var(--success-color) 18%, transparent);
 }
 
 .pill-badge--accent {
-  color: var(--accent-primary);
+  color: var(--link-hover);
   background: color-mix(in srgb, var(--accent-primary) 18%, transparent);
 }
 
+[data-theme="dark"] .pill-badge--accent {
+  color: var(--text-accent);
+}
+
 .pill-badge--info {
-  color: var(--info-color);
+  color: var(--alert-info-text);
   background: color-mix(in srgb, var(--info-color) 18%, transparent);
 }
 
 .pill-badge--warning {
-  color: var(--warning-color);
+  color: var(--alert-warning-text);
   background: color-mix(in srgb, var(--warning-color) 18%, transparent);
 }
 

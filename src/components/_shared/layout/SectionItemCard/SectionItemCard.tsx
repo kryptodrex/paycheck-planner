@@ -25,6 +25,8 @@ interface SectionItemCardProps {
   onDelete: () => void;
   /** Extra content rendered in the card body (notes, breakdown rows, etc.) */
   children?: React.ReactNode;
+  /** Optional DOM id used by plan search for exact scroll/highlight targeting. */
+  elementId?: string;
   className?: string;
 }
 
@@ -40,12 +42,14 @@ const SectionItemCard: React.FC<SectionItemCardProps> = ({
   onEdit,
   onDelete,
   children,
+  elementId,
   className,
 }) => {
   const pauseButtonLabel = pauseLabel ?? (isPaused ? 'Resume' : 'Pause');
 
   return (
     <div
+      id={elementId}
       className={['section-item-card', isPaused ? 'item-is-paused' : '', className || '']
         .filter(Boolean)
         .join(' ')}

@@ -3,44 +3,8 @@ import { APP_STORAGE_KEYS, STORAGE_KEYS } from '../constants/storage';
 import { FileStorageService } from './fileStorage';
 import { toAllocationDisplayAmount } from '../utils/allocationEditor';
 
-class LocalStorageMock {
-  private store = new Map<string, string>();
-
-  get length(): number {
-    return this.store.size;
-  }
-
-  getItem(key: string): string | null {
-    return this.store.has(key) ? this.store.get(key)! : null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-
-  key(index: number): string | null {
-    return Array.from(this.store.keys())[index] ?? null;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-}
-
 describe('FileStorageService', () => {
-  const localStorageMock = new LocalStorageMock();
-
   beforeEach(() => {
-    localStorageMock.clear();
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
-
     Object.defineProperty(globalThis, 'crypto', {
       value: {
         randomUUID: vi.fn(() => 'uuid-mock'),
@@ -100,7 +64,12 @@ describe('FileStorageService', () => {
       STORAGE_KEYS.settings,
       JSON.stringify({
         themeMode: 'invalid-theme',
+        appearanceMode: 'wildcard',
+        appearancePreset: 'neon-chaos',
+        customAppearance: { primaryAccent: 'bad', surfaceTint: '#fff' },
         highContrastMode: 'yes',
+        colorVisionMode: 'tetrachromacy',
+        stateCueMode: 'verbose',
         fontScale: 7,
       }),
     );
@@ -108,21 +77,45 @@ describe('FileStorageService', () => {
     const settings = FileStorageService.getAppSettings();
 
     expect(settings.themeMode).toBeUndefined();
+    expect(settings.appearanceMode).toBe('preset');
+    expect(settings.appearancePreset).toBe('default');
+    expect(settings.customAppearance).toEqual({
+      primaryAccent: '#667eea',
+      surfaceTint: '#eef2ff',
+    });
     expect(settings.highContrastMode).toBe(false);
+    expect(settings.colorVisionMode).toBe('normal');
+    expect(settings.stateCueMode).toBe('enhanced');
     expect(settings.fontScale).toBe(1.25);
   });
 
   it('normalizes appearance values before persisting app settings', () => {
     FileStorageService.saveAppSettings({
       themeMode: 'system',
+      appearanceMode: 'custom',
+      appearancePreset: 'forest',
+      customAppearance: {
+        primaryAccent: '#123456',
+        surfaceTint: '#abcdef',
+      },
       highContrastMode: false,
+      colorVisionMode: 'deuteranopia',
+      stateCueMode: 'minimal',
       fontScale: 0.1,
       glossaryTermsEnabled: true,
     });
 
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
     expect(stored.themeMode).toBe('system');
+    expect(stored.appearanceMode).toBe('custom');
+    expect(stored.appearancePreset).toBe('forest');
+    expect(stored.customAppearance).toEqual({
+      primaryAccent: '#123456',
+      surfaceTint: '#abcdef',
+    });
     expect(stored.highContrastMode).toBe(false);
+    expect(stored.colorVisionMode).toBe('deuteranopia');
+    expect(stored.stateCueMode).toBe('minimal');
     expect(stored.fontScale).toBe(0.9);
   });
 

@@ -1,5 +1,7 @@
 .view-mode-selector-wrap {
   display: inline-flex;
+  align-items: flex-start;
+  gap: 0.5rem;
   padding-bottom: 1.65rem;
 }
 
@@ -13,6 +15,7 @@
 }
 
 .view-mode-selector button {
+  margin: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -31,7 +34,7 @@
 
 .view-mode-selector button.active {
   background: var(--bg-primary);
-  color: var(--accent-primary);
+  color: var(--text-accent);
   box-shadow: var(--shadow-sm);
 }
 
@@ -50,6 +53,16 @@
   outline-offset: 2px;
 }
 
+.view-mode-selector button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.view-mode-selector button:disabled:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
 .view-mode-selector-cadence {
   position: absolute;
   top: calc(100% + 0.6rem);
@@ -61,9 +74,46 @@
   letter-spacing: 0.01em;
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
-  color: var(--accent-primary);
-  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, white 35%, transparent);
+  color: white;
+}
+
+.view-mode-settings-button {
+  margin: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.view-mode-settings-button:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.view-mode-settings-button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.view-mode-settings-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.view-mode-settings-button:disabled:hover {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
 }
 
 @media (max-width: 768px) {
@@ -80,5 +130,11 @@
     flex: 1;
     font-size: 0.85rem;
     padding: 0.5rem;
+  }
+
+  .view-mode-settings-button {
+    width: 1.85rem;
+    height: 1.85rem;
+    margin-top: 0.2rem;
   }
 }

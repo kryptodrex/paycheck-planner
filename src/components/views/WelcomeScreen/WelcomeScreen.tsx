@@ -12,7 +12,7 @@ interface WelcomeScreenProps {
   initialError?: string;
 }
 
-const DEMO_LAUNCH_DELAY_MS = 2200;
+const DEMO_LAUNCH_DELAY_MS = 1000; // 1s delay
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const { createNewBudget, createDemoBudget, loadBudget, loading } = useBudget();

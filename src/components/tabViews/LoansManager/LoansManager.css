@@ -322,6 +322,13 @@
   font-weight: 600;
 }
 
+.loans-manager .loans-manager-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
 @media (max-width: 768px) {
   .loans-manager .loan-stats {
     grid-template-columns: 1fr;

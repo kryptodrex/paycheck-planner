@@ -23,10 +23,14 @@ import ExportModal from '../modals/ExportModal';
 import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { MobileNavDrawer } from './MobileNav';
-import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel } from '../_shared';
+import PlanSearchOverlay from './PlanSearchOverlay';
+import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeSelector } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
 import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
+import { useGlobalKeyboardShortcuts } from '../../hooks';
+import type { SearchResult } from '../../utils/planSearch';
+import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
 import './PlanDashboard.css';
@@ -47,6 +51,45 @@ interface PlanDashboardProps {
 }
 
 const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
+
+/** Timing constants for the search-result scroll + highlight behaviour */
+const SEARCH_SCROLL_INITIAL_DELAY_MS = 80;
+const SEARCH_SCROLL_RETRY_DELAY_MS = 120;
+const SEARCH_SCROLL_MAX_RETRIES = 5;
+const SEARCH_SCROLL_SETTLE_DELAY_MS = 220;
+const SEARCH_HIGHLIGHT_DURATION_MS = 1800;
+
+const SCROLL_VISIBILITY_PADDING_PX = 12;
+
+const getNearestScrollableAncestor = (element: HTMLElement): HTMLElement | null => {
+  let current: HTMLElement | null = element.parentElement;
+
+  while (current) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    const isScrollable =
+      (overflowY === 'auto' || overflowY === 'scroll') &&
+      current.scrollHeight > current.clientHeight;
+
+    if (isScrollable) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+};
+
+const isElementVisibleInContainer = (element: HTMLElement, container: HTMLElement): boolean => {
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  return (
+    elementRect.top >= containerRect.top + SCROLL_VISIBILITY_PADDING_PX &&
+    elementRect.bottom <= containerRect.bottom - SCROLL_VISIBILITY_PADDING_PX
+  );
+};
 
 const getFirstVisibleFavoriteMode = (): ViewMode => {
   const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
@@ -91,6 +134,40 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined);
+  const [pendingPaySettingsFieldHighlight, setPendingPaySettingsFieldHighlight] = useState<string | undefined>(undefined);
+  const [paySettingsSearchRequestKey, setPaySettingsSearchRequestKey] = useState(0);
+  const [pendingBillsSearchAction, setPendingBillsSearchAction] = useState<
+    | 'add-bill'
+    | 'add-deduction'
+    | 'edit-bill'
+    | 'delete-bill'
+    | 'toggle-bill'
+    | 'edit-benefit'
+    | 'delete-benefit'
+    | 'toggle-benefit'
+    | undefined
+  >(undefined);
+  const [pendingBillsSearchTargetId, setPendingBillsSearchTargetId] = useState<string | undefined>(undefined);
+  const [billsSearchRequestKey, setBillsSearchRequestKey] = useState(0);
+  const [pendingLoansSearchAction, setPendingLoansSearchAction] = useState<'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan' | undefined>(undefined);
+  const [pendingLoansSearchTargetId, setPendingLoansSearchTargetId] = useState<string | undefined>(undefined);
+  const [loansSearchRequestKey, setLoansSearchRequestKey] = useState(0);
+  const [pendingSavingsSearchAction, setPendingSavingsSearchAction] = useState<
+    | 'add-contribution'
+    | 'add-retirement'
+    | 'edit-savings'
+    | 'delete-savings'
+    | 'toggle-savings'
+    | 'edit-retirement'
+    | 'delete-retirement'
+    | 'toggle-retirement'
+    | undefined
+  >(undefined);
+  const [pendingSavingsSearchTargetId, setPendingSavingsSearchTargetId] = useState<string | undefined>(undefined);
+  const [savingsSearchRequestKey, setSavingsSearchRequestKey] = useState(0);
+  const [taxSearchOpenSettingsRequestKey, setTaxSearchOpenSettingsRequestKey] = useState(0);
+  const [showSearch, setShowSearch] = useState(false);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -574,6 +651,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       handleTabDisplayModeChangeRef.current?.(newMode);
     });
 
+    const unsubscribeOpenSearch = window.electronAPI.onMenuEvent(MENU_EVENTS.openSearch, () => {
+      setShowSearch(true);
+    });
+
     return () => {
       unsubscribeNew();
       unsubscribeOpen();
@@ -587,6 +668,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeHistoryHome();
       unsubscribeSetTabPosition();
       unsubscribeToggleDisplayMode();
+      unsubscribeOpenSearch();
     };
   }, [activeTab, createNewBudget, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
 
@@ -896,6 +978,106 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [visibleTabs, handleTabClick]);
 
+  // Cmd/Ctrl+F — open plan-wide search (React capture-phase fallback)
+  useGlobalKeyboardShortcuts([
+    {
+      key: 'f',
+      mac: true,
+      windows: true,
+      callback: () => setShowSearch(true),
+    },
+    {
+      key: ',',
+      mac: true,
+      windows: true,
+      callback: () => {
+        setSettingsInitialSection(undefined);
+        setShowSettings(true);
+      },
+    },
+  ]);
+
+  // Handle navigation from search results
+  const handleSearchNavigate = useCallback(
+    (result: SearchResult) => {
+      const { action } = result;
+
+      // Try to find a registered handler for this action type
+      const registryHandler = getActionHandler(action.type);
+      if (registryHandler) {
+        // Build context for the handler with all state setters and navigation functions
+        // Cast state setters to SearchActionContext type since React's SetStateAction is compatible
+        const context: SearchActionContext = {
+          setPendingBillsSearchAction: setPendingBillsSearchAction as SearchActionContext['setPendingBillsSearchAction'],
+          setPendingBillsSearchTargetId: setPendingBillsSearchTargetId as SearchActionContext['setPendingBillsSearchTargetId'],
+          setBillsSearchRequestKey: setBillsSearchRequestKey as SearchActionContext['setBillsSearchRequestKey'],
+          setPendingLoansSearchAction: setPendingLoansSearchAction as SearchActionContext['setPendingLoansSearchAction'],
+          setPendingLoansSearchTargetId: setPendingLoansSearchTargetId as SearchActionContext['setPendingLoansSearchTargetId'],
+          setLoansSearchRequestKey: setLoansSearchRequestKey as SearchActionContext['setLoansSearchRequestKey'],
+          setPendingSavingsSearchAction: setPendingSavingsSearchAction as SearchActionContext['setPendingSavingsSearchAction'],
+          setPendingSavingsSearchTargetId: setPendingSavingsSearchTargetId as SearchActionContext['setPendingSavingsSearchTargetId'],
+          setSavingsSearchRequestKey: setSavingsSearchRequestKey as SearchActionContext['setSavingsSearchRequestKey'],
+          setTaxSearchOpenSettingsRequestKey: setTaxSearchOpenSettingsRequestKey as SearchActionContext['setTaxSearchOpenSettingsRequestKey'],
+          selectTab: selectTab as SearchActionContext['selectTab'],
+          setShowAccountsModal: setShowAccountsModal as SearchActionContext['setShowAccountsModal'],
+          setShowSettings: setShowSettings as SearchActionContext['setShowSettings'],
+          setSettingsInitialSection: setSettingsInitialSection as SearchActionContext['setSettingsInitialSection'],
+          setScrollToAccountId: setScrollToAccountId as SearchActionContext['setScrollToAccountId'],
+        };
+        registryHandler(action, context);
+        return;
+      }
+
+      // Fallback to built-in action handling for core actions (navigate-tab, open-settings, etc.)
+      if (action.type === 'navigate-tab') {
+        openTabFromLink(action.tabId);
+        // After tab switch, scroll to element and briefly highlight it
+        if (action.elementId) {
+          const elementId = action.elementId;
+          // Retry polling because the target tab may not be in the DOM yet immediately
+          const attemptScroll = (attemptsLeft: number) => {
+            const el = document.getElementById(elementId);
+            if (el) {
+              const scrollContainer = getNearestScrollableAncestor(el);
+              el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+              el.classList.add('plan-search-highlight');
+              window.setTimeout(
+                () => el.classList.remove('plan-search-highlight'),
+                SEARCH_HIGHLIGHT_DURATION_MS,
+              );
+
+              if (scrollContainer) {
+                window.setTimeout(() => {
+                  if (!isElementVisibleInContainer(el, scrollContainer) && attemptsLeft > 0) {
+                    attemptScroll(attemptsLeft - 1);
+                  }
+                }, SEARCH_SCROLL_SETTLE_DELAY_MS);
+              }
+            } else if (attemptsLeft > 0) {
+              window.setTimeout(() => attemptScroll(attemptsLeft - 1), SEARCH_SCROLL_RETRY_DELAY_MS);
+            }
+          };
+          window.setTimeout(() => attemptScroll(SEARCH_SCROLL_MAX_RETRIES), SEARCH_SCROLL_INITIAL_DELAY_MS);
+        }
+      } else if (action.type === 'open-pay-settings') {
+        setPendingPaySettingsFieldHighlight(action.fieldHighlight);
+        setPaySettingsSearchRequestKey((prev) => prev + 1);
+        selectTab('breakdown', { resetBillsAnchor: true, revealIfHidden: true });
+      } else if (action.type === 'open-accounts') {
+        setShowAccountsModal(true);
+      } else if (action.type === 'open-settings') {
+        setSettingsInitialSection(action.sectionId);
+        setShowSettings(true);
+      }
+    },
+    [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight, setPaySettingsSearchRequestKey],
+  );
+
+  const handleOpenViewModeSettings = useCallback(() => {
+    setSettingsInitialSection('app-data-reset');
+    setShowSettings(true);
+  }, []);
+
   if (showPlanLoadingScreen) {
     return (
       <div className="plan-loading-screen" role="status" aria-live="polite" aria-label="Loading plan">
@@ -1161,34 +1343,43 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             )}
           </div>
         </div>
-        <div className="header-right">
-          <Button
-            variant="secondary"
-            size="small"
-            className="header-btn-secondary"
-            onClick={() => setShowAccountsModal(true)}
-            title="Manage your financial accounts"
-          >
-            🏦 Accounts
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            className="header-btn-secondary"
-            onClick={() => setShowCopyModal(true)}
-            title="Copy this plan to another year"
-          >
-            📋 Copy Plan
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={handleSave}
-            disabled={loading || !!missingActiveFile || activeRelinkLoading}
-            className="header-btn-secondary"
-          >
-            💾 Save
-          </Button>
+        <div className="header-actions">
+          <ViewModeSelector
+            mode={displayMode}
+            onChange={handleDisplayModeChange}
+            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
+            disabled={activeTab === 'metrics'}
+          />
+          <div className="header-btn-group">
+            <Button
+              variant="secondary"
+              size="small"
+              className="header-btn-secondary"
+              onClick={() => setShowAccountsModal(true)}
+              title="Manage your financial accounts"
+            >
+              🏦 Accounts
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              className="header-btn-secondary"
+              onClick={() => setShowCopyModal(true)}
+              title="Copy this plan to another year"
+            >
+              📋 Copy Plan
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={handleSave}
+              disabled={loading || !!missingActiveFile || activeRelinkLoading}
+              className="header-btn-secondary"
+            >
+              💾 Save
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -1272,7 +1463,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <PayBreakdown 
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
+            searchPaySettingsRequestKey={paySettingsSearchRequestKey}
+            searchPaySettingsFieldHighlight={pendingPaySettingsFieldHighlight}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
@@ -1295,8 +1487,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <BillsManager 
             scrollToAccountId={scrollToAccountId}
+            searchActionRequestKey={billsSearchRequestKey}
+            searchActionType={pendingBillsSearchAction}
+            searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
         <div
@@ -1307,8 +1501,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <LoansManager 
             scrollToAccountId={scrollToAccountId}
+            searchActionRequestKey={loansSearchRequestKey}
+            searchActionType={pendingLoansSearchAction}
+            searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
         <div
@@ -1318,8 +1514,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           }}
         >
           <TaxBreakdown 
+            searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
         <div
@@ -1331,8 +1527,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <SavingsManager 
             shouldScrollToRetirement={shouldScrollToRetirement}
             onScrollToRetirementComplete={handleScrollToRetirementComplete}
+            searchActionRequestKey={savingsSearchRequestKey}
+            searchActionType={pendingSavingsSearchAction}
+            searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={handleDisplayModeChange}
           />
         </div>
       </div>
@@ -1593,7 +1791,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettings} 
-        onClose={() => setShowSettings(false)}
+        onClose={() => {
+          setShowSettings(false);
+          setSettingsInitialSection(undefined);
+        }}
+        initialSectionId={settingsInitialSection}
       />
 
       {/* Encryption Setup Modal */}
@@ -1701,6 +1903,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <ExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
+      />
+
+      {/* Plan-wide Search Overlay */}
+      <PlanSearchOverlay
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        budgetData={budgetData}
+        onNavigate={handleSearchNavigate}
       />
     </div>
   );

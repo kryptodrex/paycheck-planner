@@ -106,3 +106,37 @@ html, body {
 .app-drag-region .btn {
   -webkit-app-region: no-drag;
 }
+
+.zoom-indicator {
+  position: fixed;
+  z-index: 2400;
+  min-width: 8.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border-accent-soft);
+  background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  transform-origin: top right;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.zoom-indicator.limit {
+  border-color: var(--alert-warning-border);
+  background: color-mix(in srgb, var(--alert-warning-bg) 70%, var(--bg-primary) 30%);
+}
+
+@media (max-width: 768px) {
+  .zoom-indicator {
+    right: 0.75rem;
+    left: 0.75rem;
+    top: 2.15rem;
+    text-align: center;
+  }
+}

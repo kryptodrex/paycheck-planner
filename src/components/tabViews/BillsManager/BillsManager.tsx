@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
 import type { Bill } from '../../../types/obligations';
@@ -7,20 +7,30 @@ import type { BillFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
-import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } from '../../../utils/payPeriod';
+import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './BillsManager.css';
 
 interface BillsManagerProps {
   scrollToAccountId?: string;
+  searchActionRequestKey?: number;
+  searchActionType?:
+    | 'add-bill'
+    | 'add-deduction'
+    | 'edit-bill'
+    | 'delete-bill'
+    | 'toggle-bill'
+    | 'edit-benefit'
+    | 'delete-benefit'
+    | 'toggle-benefit';
+  searchActionTargetId?: string;
   displayMode: ViewMode;
-  onDisplayModeChange: (mode: ViewMode) => void;
 }
 
 type BillFieldErrors = {
@@ -35,7 +45,13 @@ type BenefitFieldErrors = {
   sourceAccountId?: string;
 };
 
-const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayMode, onDisplayModeChange }) => {
+const BillsManager: React.FC<BillsManagerProps> = ({
+  scrollToAccountId,
+  searchActionRequestKey,
+  searchActionType,
+  searchActionTargetId,
+  displayMode,
+}) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const billEditor = useModalEntityEditor<Bill>();
@@ -57,6 +73,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
   const [benefitSourceAccountId, setBenefitSourceAccountId] = useState('');
   const [benefitIsDiscretionary, setBenefitIsDiscretionary] = useState(false);
   const benefitErrors = useFieldErrors<BenefitFieldErrors>();
+  const lastHandledSearchActionKeyRef = useRef(0);
 
   useEffect(() => {
     if (scrollToAccountId) {
@@ -66,6 +83,133 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
       }
     }
   }, [scrollToAccountId]);
+
+  useEffect(() => {
+    if (!budgetData) {
+      return;
+    }
+
+    if (!searchActionRequestKey || searchActionRequestKey === lastHandledSearchActionKeyRef.current) {
+      return;
+    }
+
+    lastHandledSearchActionKeyRef.current = searchActionRequestKey;
+
+    const timeoutId = window.setTimeout(() => {
+      if (searchActionTargetId && searchActionType === 'toggle-bill') {
+        const bill = budgetData.bills.find((item) => item.id === searchActionTargetId);
+        if (bill) {
+          updateBill(bill.id, { enabled: bill.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-bill') {
+        const bill = budgetData.bills.find((item) => item.id === searchActionTargetId);
+        if (bill) {
+          openConfirmDialog({
+            title: 'Delete Bill',
+            message: 'Are you sure you want to delete this bill?',
+            confirmLabel: 'Delete Bill',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteBill(bill.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-bill') {
+        const bill = budgetData.bills.find((item) => item.id === searchActionTargetId);
+        if (bill) {
+          setBillName(bill.name);
+          setBillAmount(bill.amount.toString());
+          setBillFrequency(bill.frequency);
+          setBillAccountId(bill.accountId);
+          setBillNotes(bill.notes || '');
+          setBillIsDiscretionary(bill.discretionary === true);
+          billErrors.clearErrors();
+          billEditor.openForEdit(bill);
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'toggle-benefit') {
+        const benefit = budgetData.benefits.find((item) => item.id === searchActionTargetId);
+        if (benefit) {
+          updateBenefit(benefit.id, { enabled: benefit.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-benefit') {
+        const benefit = budgetData.benefits.find((item) => item.id === searchActionTargetId);
+        if (benefit) {
+          openConfirmDialog({
+            title: 'Delete Deduction',
+            message: 'Are you sure you want to delete this deduction?',
+            confirmLabel: 'Delete Deduction',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteBenefit(benefit.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-benefit') {
+        const benefit = budgetData.benefits.find((item) => item.id === searchActionTargetId);
+        if (benefit) {
+          setBenefitName(benefit.name);
+          setBenefitAmount(benefit.amount.toString());
+          setBenefitIsPercentage(benefit.isPercentage || false);
+          setBenefitSource(benefit.deductionSource || 'paycheck');
+          setBenefitSourceAccountId(benefit.sourceAccountId || '');
+          setBenefitIsTaxable((benefit.deductionSource || 'paycheck') === 'account' ? true : benefit.isTaxable);
+          setBenefitIsDiscretionary(benefit.discretionary === true);
+          benefitErrors.clearErrors();
+          benefitEditor.openForEdit(benefit);
+        }
+        return;
+      }
+
+      if (searchActionType === 'add-deduction') {
+        setBenefitName('');
+        setBenefitAmount('');
+        setBenefitIsPercentage(false);
+        setBenefitIsTaxable(false);
+        setBenefitSource('paycheck');
+        setBenefitSourceAccountId('');
+        setBenefitIsDiscretionary(false);
+        benefitErrors.clearErrors();
+        benefitEditor.openForCreate();
+        return;
+      }
+
+      setBillName('');
+      setBillAmount('');
+      setBillFrequency('monthly');
+      setBillAccountId(budgetData.accounts[0]?.id || '');
+      setBillNotes('');
+      setBillIsDiscretionary(false);
+      billErrors.clearErrors();
+      billEditor.openForCreate();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    benefitEditor,
+    benefitErrors,
+    billEditor,
+    billErrors,
+    budgetData,
+    searchActionRequestKey,
+    searchActionTargetId,
+    searchActionType,
+    deleteBenefit,
+    deleteBill,
+    openConfirmDialog,
+    updateBenefit,
+    updateBill,
+  ]);
 
   if (!budgetData) return null;
 
@@ -312,16 +456,9 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
         actions={
-          <div className="bills-header-actions">
-            <ViewModeSelector
-              mode={displayMode}
-              onChange={onDisplayModeChange}
-              payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-            />
-            <div className="bills-header-buttons">
-              <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
-              <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
-            </div>
+          <div className="bills-header-buttons">
+            <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
+            <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
           </div>
         }
       />
@@ -372,6 +509,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                   return (
                     <SectionItemCard
                       key={benefit.id}
+                      elementId={`benefit-${benefit.id}`}
                       title={benefit.name}
                       subtitle={`Deducted per paycheck: ${benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}`}
                       amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
@@ -425,6 +563,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                     return (
                       <SectionItemCard
                         key={benefit.id}
+                        elementId={`benefit-${benefit.id}`}
                         title={benefit.name}
                         subtitle={`From account per paycheck: ${benefit.isPercentage ? `${benefit.amount}%` : formatWithSymbol(perPaycheck, currency, { minimumFractionDigits: 2 })}`}
                         amount={formatWithSymbol(inDisplayMode, currency, { minimumFractionDigits: 2 })}
@@ -453,6 +592,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({ scrollToAccountId, displayM
                   .map((bill) => (
                     <SectionItemCard
                       key={bill.id}
+                      elementId={`bill-${bill.id}`}
                       title={bill.name}
                       subtitle={`Paid ${formatBillFrequency(bill.frequency)}: ${formatWithSymbol(bill.amount, currency, { minimumFractionDigits: 2 })}`}
                       amount={formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}

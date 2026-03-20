@@ -42,7 +42,7 @@
 }
 
 .tab-button.active {
-  color: var(--accent-primary);
+  color: var(--text-accent);
   border-bottom-color: var(--accent-primary);
   background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }

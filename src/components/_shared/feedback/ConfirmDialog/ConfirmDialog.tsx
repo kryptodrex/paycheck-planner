@@ -23,6 +23,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelLabel = 'Cancel',
   confirmVariant = 'primary',
 }) => {
+  const contextMeta = confirmVariant === 'danger'
+    ? { icon: '!', label: 'Destructive action' }
+    : { icon: 'i', label: 'Confirmation required' };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -40,6 +44,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </>
       }
     >
+      <p className="confirm-dialog-context" aria-label={contextMeta.label}>
+        <span className="confirm-dialog-context-icon" aria-hidden="true">{contextMeta.icon}</span>
+        <span className="confirm-dialog-context-label">{contextMeta.label}</span>
+      </p>
       <p className="confirm-dialog-message">{message}</p>
     </Modal>
   );

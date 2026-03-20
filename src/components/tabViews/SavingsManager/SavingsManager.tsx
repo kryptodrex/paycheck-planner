@@ -5,7 +5,7 @@ import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, getPayFrequencyViewMode } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getAccountNameById } from '../../../utils/accountGrouping';
@@ -13,7 +13,7 @@ import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -21,8 +21,18 @@ import './SavingsManager.css';
 interface SavingsManagerProps {
   shouldScrollToRetirement?: boolean;
   onScrollToRetirementComplete?: () => void;
+  searchActionRequestKey?: number;
+  searchActionType?:
+    | 'add-contribution'
+    | 'add-retirement'
+    | 'edit-savings'
+    | 'delete-savings'
+    | 'toggle-savings'
+    | 'edit-retirement'
+    | 'delete-retirement'
+    | 'toggle-retirement';
+  searchActionTargetId?: string;
   displayMode?: ViewMode;
-  onDisplayModeChange?: (mode: ViewMode) => void;
 }
 
 type SavingsFieldErrors = {
@@ -42,8 +52,10 @@ type RetirementFieldErrors = {
 const SavingsManager: React.FC<SavingsManagerProps> = ({
   shouldScrollToRetirement,
   onScrollToRetirementComplete,
+  searchActionRequestKey,
+  searchActionType,
+  searchActionTargetId,
   displayMode = 'paycheck',
-  onDisplayModeChange,
 }) => {
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const {
@@ -84,6 +96,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   const [retirementFormMessage, setRetirementFormMessage] = useState<{ type: 'warning' | 'error'; message: string } | null>(null);
 
   const scrollCompletedRef = useRef(false);
+  const lastHandledSearchActionKeyRef = useRef(0);
 
   useEffect(() => {
     if (shouldScrollToRetirement && !scrollCompletedRef.current) {
@@ -99,6 +112,143 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       scrollCompletedRef.current = false;
     }
   }, [shouldScrollToRetirement, onScrollToRetirementComplete]);
+
+  useEffect(() => {
+    if (!budgetData) {
+      return;
+    }
+
+    if (!searchActionRequestKey || searchActionRequestKey === lastHandledSearchActionKeyRef.current) {
+      return;
+    }
+
+    lastHandledSearchActionKeyRef.current = searchActionRequestKey;
+
+    const timeoutId = window.setTimeout(() => {
+      if (searchActionTargetId && searchActionType === 'toggle-savings') {
+        const item = (budgetData.savingsContributions || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          updateSavingsContribution(item.id, { enabled: item.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-savings') {
+        const item = (budgetData.savingsContributions || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          openConfirmDialog({
+            title: 'Delete Contribution',
+            message: 'Are you sure you want to delete this contribution?',
+            confirmLabel: 'Delete Contribution',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteSavingsContribution(item.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-savings') {
+        const item = (budgetData.savingsContributions || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          setEditingSavings(item);
+          setSavingsName(item.name);
+          setSavingsAmount(String(item.amount));
+          setSavingsFrequency(item.frequency);
+          setSavingsType(item.type);
+          setSavingsAccountId(item.accountId);
+          setSavingsNotes(item.notes || '');
+          setSavingsFieldErrors({});
+          setShowAddSavings(true);
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'toggle-retirement') {
+        const item = (budgetData.retirement || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          updateRetirementElection(item.id, { enabled: item.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-retirement') {
+        const item = (budgetData.retirement || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          openConfirmDialog({
+            title: 'Delete Retirement Election',
+            message: 'Are you sure you want to delete this retirement election?',
+            confirmLabel: 'Delete Election',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteRetirementElection(item.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-retirement') {
+        const election = (budgetData.retirement || []).find((entry) => entry.id === searchActionTargetId);
+        if (election) {
+          setEditingRetirement(election);
+          setRetirementType(election.type);
+          setRetirementCustomLabel(election.customLabel || '');
+          setEmployeeAmount(election.employeeContribution.toString());
+          setEmployeeIsPercentage(election.employeeContributionIsPercentage);
+          setRetirementSource(election.deductionSource || 'paycheck');
+          setRetirementSourceAccountId(election.sourceAccountId || '');
+          setRetirementIsPreTax(election.isPreTax !== false);
+          setEmployerMatchOption(election.hasEmployerMatch ? 'has-match' : 'no-match');
+          setEmployerMatchCap((election.employerMatchCap || 0).toString());
+          setEmployerMatchCapIsPercentage(election.employerMatchCapIsPercentage);
+          setYearlyLimit((election.yearlyLimit || '').toString());
+          setRetirementFieldErrors({});
+          setRetirementFormMessage(null);
+          setShowAddRetirement(true);
+        }
+        return;
+      }
+
+      if (searchActionType === 'add-retirement') {
+        setEditingRetirement(null);
+        setRetirementType('401k');
+        setRetirementCustomLabel('');
+        setEmployeeAmount('');
+        setEmployeeIsPercentage(true);
+        setRetirementSource('paycheck');
+        setRetirementSourceAccountId('');
+        setRetirementIsPreTax(true);
+        setEmployerMatchOption('no-match');
+        setEmployerMatchCap('');
+        setEmployerMatchCapIsPercentage(true);
+        setYearlyLimit('');
+        setRetirementFieldErrors({});
+        setRetirementFormMessage(null);
+        setShowAddRetirement(true);
+        return;
+      }
+
+      setEditingSavings(null);
+      setSavingsName('');
+      setSavingsAmount('');
+      setSavingsFrequency('monthly');
+      setSavingsType('savings');
+      setSavingsAccountId(budgetData.accounts[0]?.id || '');
+      setSavingsNotes('');
+      setSavingsFieldErrors({});
+      setShowAddSavings(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    budgetData,
+    deleteRetirementElection,
+    deleteSavingsContribution,
+    openConfirmDialog,
+    searchActionRequestKey,
+    searchActionTargetId,
+    searchActionType,
+    updateRetirementElection,
+    updateSavingsContribution,
+  ]);
 
   if (!budgetData) return null;
 
@@ -445,13 +595,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       <PageHeader
         title="Savings"
         subtitle="Manage savings/investment transfers and retirement contributions"
-        actions={(
-          <ViewModeSelector
-            mode={displayMode}
-            onChange={onDisplayModeChange || (() => {})}
-            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-          />
-        )}
       />
 
       <Banner
@@ -493,6 +636,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               return (
                 <SectionItemCard
                   key={item.id}
+                  elementId={`savings-${item.id}`}
                   title={item.name}
                   subtitle={`Saved ${formatBillFrequency(item.frequency)}: ${formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}`}
                   amount={formatWithSymbol(displayAmount, currency, { minimumFractionDigits: 2 })}
@@ -557,6 +701,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               return (
                 <SectionItemCard
                   key={retirement.id}
+                  elementId={`retirement-${retirement.id}`}
                   title={displayLabel}
                   subtitle={`${formatWithSymbol(employeePerPaycheck || 0, currency, { minimumFractionDigits: 2 })} per paycheck${retirement.employeeContributionIsPercentage ? ` (${retirement.employeeContribution}%)` : ''}`}
                   amount={formatWithSymbol(totalInDisplayMode, currency, { minimumFractionDigits: 2 })}

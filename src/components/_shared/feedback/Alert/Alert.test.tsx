@@ -11,6 +11,7 @@ describe('Alert', () => {
   it('defaults to info variant', () => {
     const { container } = render(<Alert>Info</Alert>);
     expect(container.firstChild).toHaveClass('alert-info');
+    expect(container.querySelector('.alert-label')).toHaveTextContent('Info');
   });
 
   it.each([
@@ -34,7 +35,18 @@ describe('Alert', () => {
         <strong>Bold warning</strong>
       </Alert>,
     );
+    expect(screen.getByText('Warning')).toBeInTheDocument();
     expect(screen.getByText('Bold warning').tagName).toBe('STRONG');
+  });
+
+  it.each([
+    ['error', 'Error'],
+    ['warning', 'Warning'],
+    ['success', 'Success'],
+    ['info', 'Info'],
+  ] as const)('renders a visible %s severity label', (type, label) => {
+    render(<Alert type={type}>message</Alert>);
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
 
   it('is not interactive', () => {

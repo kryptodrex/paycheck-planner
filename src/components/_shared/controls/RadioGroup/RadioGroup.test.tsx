@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { PointerEventsCheckLevel } from '@testing-library/user-event';
 import RadioGroup from './RadioGroup';
 
 const OPTIONS = [
@@ -51,7 +51,7 @@ describe('RadioGroup', () => {
       { value: 'b', label: 'B', disabled: true },
     ];
     render(<RadioGroup name="x" value="a" options={opts} onChange={handleChange} />);
-    await userEvent.click(screen.getByLabelText('B'), { skipPointerEventsCheck: true });
+    await userEvent.click(screen.getByLabelText('B'), { pointerEventsCheck: PointerEventsCheckLevel.Never });
     expect(handleChange).not.toHaveBeenCalled();
   });
 

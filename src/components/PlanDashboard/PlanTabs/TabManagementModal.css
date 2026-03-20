@@ -68,7 +68,7 @@
   font-size: 0.75rem;
   padding: 0.2rem 0.5rem;
   background: var(--surface-accent-soft);
-  color: var(--accent-primary);
+  color: var(--text-accent);
   border-radius: 4px;
   font-weight: 600;
   flex-shrink: 0;
@@ -150,13 +150,13 @@
   font-weight: 500;
   background: var(--surface-accent-soft);
   border-color: var(--border-accent-strong);
-  color: var(--accent-primary);
+  color: var(--text-accent);
 }
 
 .tab-action-show:hover {
   background: var(--surface-accent-soft-hover);
   border-color: var(--accent-primary);
-  color: var(--accent-hover);
+  color: var(--text-accent);
 }
 
 /* Arrow Button Fade Out */

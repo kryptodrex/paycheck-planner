@@ -105,8 +105,10 @@ const Button: React.FC<ButtonProps> = ({
   const variantClass = `btn-${variant}`;
   const sizeClass = size !== 'medium' ? `btn-${size}` : '';
   const iconModifierClass = variant === 'icon' || variant === 'remove' ? 'btn-icon' : '';
+  const isUnavailable = Boolean(disabled || isLoading);
+  const stateClass = isUnavailable ? 'btn-disabled-state' : '';
   const isIconButton = variant === 'icon' || variant === 'remove';
-  const allClasses = `btn ${iconModifierClass} ${variantClass} ${sizeClass} ${className || ''}`.trim();
+  const allClasses = `btn ${iconModifierClass} ${variantClass} ${sizeClass} ${stateClass} ${className || ''}`.trim();
 
   let label: React.ReactNode = children;
   if (isLoading) label = loadingText;
@@ -122,7 +124,8 @@ const Button: React.FC<ButtonProps> = ({
     <button
       ref={buttonRef}
       className={allClasses}
-      disabled={disabled || isLoading}
+      disabled={isUnavailable}
+      data-ui-state={isUnavailable ? 'disabled' : 'enabled'}
       onClick={handleClick}
       style={mergedStyle}
       {...props}
