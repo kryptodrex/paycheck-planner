@@ -15,6 +15,7 @@
   padding-top: 72px;
   /* Fade in */
   animation: plan-search-overlay-in 120ms ease-out both;
+  -webkit-app-region: no-drag;
 }
 
 @keyframes plan-search-overlay-in {
@@ -45,6 +46,7 @@
   max-height: calc(100vh - 120px);
   display: flex;
   flex-direction: column;
+  -webkit-app-region: no-drag;
 }
 
 @keyframes plan-search-panel-in {
