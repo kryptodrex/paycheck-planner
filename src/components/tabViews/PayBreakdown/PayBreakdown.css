@@ -227,8 +227,8 @@
 }
 
 .waterfall-account-row {
-  display: grid !important;
-  grid-template-columns: 1fr auto auto !important;
+  /* display: grid !important; */
+  /* grid-template-columns: 1fr auto auto !important; */
   font-weight: 600;
   color: var(--text-primary);
   font-size: 1.05rem;
@@ -237,6 +237,12 @@
   margin-top: 0.25rem;
   padding: 0.85rem 0.75rem;
   gap: 1rem;
+}
+
+.waterfall-account-row .waterfall-account-row-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .waterfall-category-row {
@@ -457,7 +463,7 @@
   background: var(--bg-primary);
   border-top: 1px dashed var(--border-color);
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 /* Bill Category Styles */
@@ -565,6 +571,8 @@
   display: flex;
   gap: 0.75rem;
   justify-content: flex-end;
+  border: none !important;
+  background: none !important;
 }
 
 .category-empty {

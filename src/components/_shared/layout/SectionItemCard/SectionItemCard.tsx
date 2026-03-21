@@ -98,14 +98,14 @@ const SectionItemCard: React.FC<SectionItemCardProps> = ({
               {pauseButtonLabel}
             </Button>
           )}
+          <Button className="item-card-btn-edit" variant="utility" onClick={onEdit}>
+            Edit
+          </Button>
           {onHistory && (
             <Button variant="utility" className="item-card-btn-history" onClick={onHistory}>
               {historyButtonLabel}
             </Button>
           )}
-          <Button variant="utility" onClick={onEdit}>
-            Edit
-          </Button>
           <Button variant="utility" className="item-card-btn-delete" onClick={onDelete}>
             Delete
           </Button>

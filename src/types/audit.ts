@@ -11,7 +11,7 @@ export type AuditEntityType =
   | 'tax-settings'
   | 'budget-settings';
 
-export type AuditChangeType = 'create' | 'update' | 'delete';
+export type AuditChangeType = 'create' | 'update' | 'delete' | 'restore';
 
 export interface AuditEntry {
   id: string;

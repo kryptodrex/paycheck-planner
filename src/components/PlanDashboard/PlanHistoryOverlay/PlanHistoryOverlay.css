@@ -93,6 +93,13 @@
   flex-shrink: 0;
 }
 
+.plan-history-entry-restore {
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .plan-history-timeline-content {
   flex: 1;
   min-width: 0;
@@ -269,6 +276,99 @@
   color: var(--accent-color);
   font-weight: 600;
   font-family: monospace;
+}
+
+.plan-history-delta-kind {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+}
+
+.plan-history-delta-kind.added {
+  color: var(--success-color);
+  background: color-mix(in srgb, var(--success-color) 18%, transparent);
+}
+
+.plan-history-delta-kind.removed {
+  color: var(--error-color);
+  background: color-mix(in srgb, var(--error-color) 18%, transparent);
+}
+
+.plan-history-payment-breakdown-deltas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.plan-history-payment-breakdown-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.plan-history-payment-breakdown-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 6rem;
+}
+
+.history-snapshot-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.history-snapshot-line-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.history-snapshot-line-label {
+  color: var(--text-secondary);
+}
+
+.history-snapshot-line-value {
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.plan-history-allocation-batch-count {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.45rem;
+}
+
+.plan-history-allocation-batch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.plan-history-allocation-batch-row {
+  border: 1px solid var(--border-color-light);
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 0.55rem;
+}
+
+.plan-history-allocation-batch-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.plan-history-allocation-batch-summary {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 /* Read-only snapshot cards inside history entries — no hover lift */

@@ -872,18 +872,21 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       <span className="account-icon-small">{fundingItem.account.icon || getDefaultAccountIcon(fundingItem.account.type)}</span>
                       Amount from {fundingItem.account.name}
                     </span>
-                    {!isEditing ? (
-                      <>
-                        {onViewHistory && (
-                          <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => onViewHistory({ entityType: 'allocation-item', entityId: fundingItem.account.id, title: `${fundingItem.account.name} Allocations` })}>
-                            View History
-                          </Button>
-                        )}
-                        <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
-                      </>
-                    ) : null
-                    }
-                    <span className="waterfall-amount">{formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <div className="waterfall-account-row-right">
+                      {!isEditing ? (
+                        <>
+                          
+                            {onViewHistory && (
+                              <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => onViewHistory({ entityType: 'allocation-item', entityId: fundingItem.account.id, title: `${fundingItem.account.name} Allocations` })}>
+                                View History
+                              </Button>
+                            )}
+                            <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
+                        </>
+                      ) : null
+                      }
+                      <span className="waterfall-amount">{formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
 
                   {isEditing ? (
@@ -955,10 +958,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
                       <div className="waterfall-row waterfall-category-row category-actions-row">
                         <Button style={{ flexGrow: 1 }} className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
-                        <div className="allocation-edit-actions">
+                        <div className="allocation-edit-actions bill-amount-display">
                           <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
                           <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>
                         </div>
+                        <div className="category-spacer"></div>
                       </div>
 
                       {validationMessages.has(displayAccount.id) && (

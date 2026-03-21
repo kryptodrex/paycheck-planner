@@ -1,6 +1,7 @@
 import React from 'react';
 import type { AuditEntityType } from '../../../types/audit';
 import SectionItemCard from '../../_shared/layout/SectionItemCard';
+import AmountBreakdown from '../../_shared/layout/AmountBreakdown';
 import PillBadge from '../../_shared/controls/PillBadge';
 
 const NOOP = () => {};
@@ -56,6 +57,28 @@ type SnapshotMapper = (
   entityNames: Record<string, string>,
 ) => Omit<CardProps, 'onEdit' | 'onDelete' | 'hideActions'> | null;
 
+type PaymentLine = {
+  id?: string;
+  label: string;
+  amount: number;
+  frequency?: string;
+};
+
+const parsePaymentLines = (value: unknown): PaymentLine[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((line) => line && typeof line === 'object')
+    .map((line) => {
+      const item = line as Record<string, unknown>;
+      return {
+        id: typeof item.id === 'string' ? item.id : undefined,
+        label: typeof item.label === 'string' && item.label.length > 0 ? item.label : 'Line Item',
+        amount: typeof item.amount === 'number' ? item.amount : 0,
+        frequency: typeof item.frequency === 'string' ? item.frequency : undefined,
+      };
+    });
+};
+
 const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
   'bill': (s) => {
     const amount = Number(s.amount ?? 0);
@@ -74,12 +97,27 @@ const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
   'loan': (s) => {
     const monthlyPayment = Number(s.monthlyPayment ?? 0);
     const loanType = String(s.type ?? 'other');
+    const paymentLines = parsePaymentLines(s.paymentBreakdown);
     return {
       title: String(s.name ?? '(unnamed)'),
       subtitle: `Monthly payment: ${fmt(monthlyPayment)}`,
       amount: fmt(monthlyPayment),
       amountLabel: 'Monthly',
       badges: <PillBadge variant="outline">{LOAN_TYPE_LABELS[loanType] ?? loanType}</PillBadge>,
+      children: paymentLines.length > 0 ? (
+        <AmountBreakdown
+          items={paymentLines.map((line, index) => {
+            const freqLabel = line.frequency ? (FREQ_LABELS[line.frequency] ?? line.frequency) : '';
+            const label = freqLabel ? `${line.label} (${freqLabel})` : line.label;
+            return {
+              id: line.id || `${line.label}-${index}`,
+              label,
+              amount: line.amount,
+            };
+          })}
+          formatAmount={fmt}
+        />
+      ) : undefined,
       isPaused: s.enabled === false,
     };
   },

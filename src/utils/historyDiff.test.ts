@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  summarizePaymentBreakdownDiff,
   extractFieldDiffs,
   formatDiffValue,
   formatDiffValueForField,
@@ -100,6 +101,45 @@ describe('historyDiff utilities', () => {
 
     it('should fallback to generic formatting for unknown keys', () => {
       expect(formatDiffValueForField('amount', 1000)).toBe('1,000');
+    });
+  });
+
+  describe('summarizePaymentBreakdownDiff', () => {
+    it('should detect added, removed, and changed payment lines', () => {
+      const oldValue = [
+        { id: 'principal', label: 'Principal', amount: 900, frequency: 'monthly' },
+        { id: 'interest', label: 'Interest', amount: 450, frequency: 'monthly' },
+      ];
+      const newValue = [
+        { id: 'principal', label: 'Principal', amount: 950, frequency: 'monthly' },
+        { id: 'insurance', label: 'Insurance', amount: 80, frequency: 'monthly' },
+      ];
+
+      const deltas = summarizePaymentBreakdownDiff(oldValue, newValue);
+
+      expect(deltas).toEqual([
+        {
+          kind: 'changed',
+          label: 'Principal',
+          before: '900 (Monthly)',
+          after: '950 (Monthly)',
+        },
+        {
+          kind: 'removed',
+          label: 'Interest',
+          before: '450 (Monthly)',
+        },
+        {
+          kind: 'added',
+          label: 'Insurance',
+          after: '80 (Monthly)',
+        },
+      ]);
+    });
+
+    it('should return empty for equal payment breakdowns', () => {
+      const lines = [{ id: 'p', label: 'Principal', amount: 900, frequency: 'monthly' }];
+      expect(summarizePaymentBreakdownDiff(lines, lines)).toEqual([]);
     });
   });
 

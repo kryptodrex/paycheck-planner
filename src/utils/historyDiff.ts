@@ -8,8 +8,15 @@ export interface FieldDiff {
   newValue: unknown;
 }
 
+export interface PaymentBreakdownDelta {
+  kind: 'added' | 'removed' | 'changed';
+  label: string;
+  before?: string;
+  after?: string;
+}
+
 export interface DiffResult {
-  type: 'create' | 'update' | 'delete';
+  type: 'create' | 'update' | 'delete' | 'restore';
   fields: FieldDiff[];
   snapshot: unknown;
 }
@@ -103,6 +110,86 @@ const formatPaymentBreakdown = (value: unknown): string => {
   return lines.join(' | ');
 };
 
+const toPaymentLineKey = (line: Record<string, unknown>): string => {
+  if (typeof line.id === 'string' && line.id.length > 0) return line.id;
+  const label = typeof line.label === 'string' ? line.label : 'line';
+  const freq = typeof line.frequency === 'string' ? line.frequency : '';
+  return `${label}:${freq}`;
+};
+
+const toPaymentLineValue = (line: Record<string, unknown>): string => {
+  const amount = typeof line.amount === 'number'
+    ? line.amount.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    : formatDiffValue(line.amount);
+  const rawFreq = typeof line.frequency === 'string' ? line.frequency : '';
+  const freq = rawFreq ? PAYMENT_FREQ_LABELS[rawFreq] ?? rawFreq : '';
+  return freq ? `${amount} (${freq})` : `${amount}`;
+};
+
+/**
+ * Build human-readable added/removed/changed rows for loan payment breakdown diffs.
+ */
+export const summarizePaymentBreakdownDiff = (
+  oldValue: unknown,
+  newValue: unknown,
+): PaymentBreakdownDelta[] => {
+  const oldLines = Array.isArray(oldValue)
+    ? oldValue.filter((line) => line && typeof line === 'object') as Record<string, unknown>[]
+    : [];
+  const newLines = Array.isArray(newValue)
+    ? newValue.filter((line) => line && typeof line === 'object') as Record<string, unknown>[]
+    : [];
+
+  const oldByKey = new Map(oldLines.map((line) => [toPaymentLineKey(line), line]));
+  const newByKey = new Map(newLines.map((line) => [toPaymentLineKey(line), line]));
+
+  const allKeys = new Set([...oldByKey.keys(), ...newByKey.keys()]);
+  const deltas: PaymentBreakdownDelta[] = [];
+
+  for (const key of allKeys) {
+    const oldLine = oldByKey.get(key);
+    const newLine = newByKey.get(key);
+
+    if (!oldLine && newLine) {
+      const label = typeof newLine.label === 'string' && newLine.label.length > 0 ? newLine.label : 'Line';
+      deltas.push({
+        kind: 'added',
+        label,
+        after: toPaymentLineValue(newLine),
+      });
+      continue;
+    }
+
+    if (oldLine && !newLine) {
+      const label = typeof oldLine.label === 'string' && oldLine.label.length > 0 ? oldLine.label : 'Line';
+      deltas.push({
+        kind: 'removed',
+        label,
+        before: toPaymentLineValue(oldLine),
+      });
+      continue;
+    }
+
+    if (oldLine && newLine) {
+      const before = toPaymentLineValue(oldLine);
+      const after = toPaymentLineValue(newLine);
+      const oldLabel = typeof oldLine.label === 'string' && oldLine.label.length > 0 ? oldLine.label : 'Line';
+      const newLabel = typeof newLine.label === 'string' && newLine.label.length > 0 ? newLine.label : oldLabel;
+
+      if (before !== after || oldLabel !== newLabel) {
+        deltas.push({
+          kind: 'changed',
+          label: newLabel,
+          before,
+          after,
+        });
+      }
+    }
+  }
+
+  return deltas;
+};
+
 /**
  * Format a value for display with field-specific handling.
  */
@@ -144,6 +231,22 @@ export const formatFieldName = (key: string): string => {
 
 /** Fields whose values are entity IDs that should be resolved to display names */
 export const ID_FIELD_KEYS = new Set(['accountId', 'sourceAccountId']);
+
+/** Allocation-item fields that are internal metadata/noise in timeline diffs. */
+export const ALLOCATION_NOISE_FIELDS = new Set([
+  'id',
+  'accountId',
+  'isBill',
+  'billCount',
+  'isBenefit',
+  'benefitCount',
+  'isRetirement',
+  'retirementCount',
+  'isLoan',
+  'loanCount',
+  'isSavings',
+  'savingsCount',
+]);
 
 /**
  * Get a user-friendly summary of the snapshot

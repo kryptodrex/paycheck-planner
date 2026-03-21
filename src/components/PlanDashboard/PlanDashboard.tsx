@@ -33,7 +33,8 @@ import type { SearchResult } from '../../utils/planSearch';
 import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
-import type { AuditHistoryTarget } from '../../types/audit';
+import type { AuditEntry, AuditHistoryTarget } from '../../types/audit';
+import type { AccountAllocationCategory } from '../../types/accounts';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
@@ -1210,6 +1211,172 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     [budgetData, openConfirmDialog, updateBudgetData],
   );
 
+  const handleRestoreHistoryEntries = useCallback(
+    (entryIds: string[]) => {
+      if (!budgetData || entryIds.length === 0) return;
+
+      const auditHistory = budgetData.metadata?.auditHistory || [];
+      const entriesToRestore = entryIds
+        .map((id) => auditHistory.find((entry) => entry.id === id))
+        .filter((entry): entry is AuditEntry => Boolean(entry));
+
+      if (entriesToRestore.length === 0) return;
+
+      const upsertById = <T extends { id: string }>(items: T[], item: T): T[] => {
+        const idx = items.findIndex((existing) => existing.id === item.id);
+        if (idx === -1) return [...items, item];
+        return items.map((existing, i) => (i === idx ? item : existing));
+      };
+
+      const applyEntryRestore = (current: typeof budgetData, entry: AuditEntry): typeof budgetData => {
+        if (!current || !entry.snapshot || typeof entry.snapshot !== 'object') return current;
+
+        const snapshot = entry.snapshot as Record<string, unknown>;
+
+        switch (entry.entityType) {
+          case 'bill':
+            return {
+              ...current,
+              bills: upsertById(current.bills, snapshot as unknown as typeof current.bills[number]),
+            };
+          case 'deduction':
+            return {
+              ...current,
+              preTaxDeductions: upsertById(
+                current.preTaxDeductions,
+                snapshot as unknown as typeof current.preTaxDeductions[number],
+              ),
+            };
+          case 'savings-contribution':
+            return {
+              ...current,
+              savingsContributions: upsertById(
+                current.savingsContributions || [],
+                snapshot as unknown as NonNullable<typeof current.savingsContributions>[number],
+              ),
+            };
+          case 'retirement-election':
+            return {
+              ...current,
+              retirement: upsertById(current.retirement, snapshot as unknown as typeof current.retirement[number]),
+            };
+          case 'loan':
+            return {
+              ...current,
+              loans: upsertById(current.loans, snapshot as unknown as typeof current.loans[number]),
+            };
+          case 'benefit':
+            return {
+              ...current,
+              benefits: upsertById(current.benefits, snapshot as unknown as typeof current.benefits[number]),
+            };
+          case 'account':
+            return {
+              ...current,
+              accounts: upsertById(current.accounts, snapshot as unknown as typeof current.accounts[number]),
+            };
+          case 'allocation-item': {
+            const accountId = typeof snapshot.accountId === 'string'
+              ? snapshot.accountId
+              : entry.entityId.split(':')[0];
+            const categoryId = entry.entityId.includes(':')
+              ? entry.entityId.split(':')[1]
+              : String(snapshot.id || '');
+
+            const restoredCategory: AccountAllocationCategory = {
+              ...(snapshot as unknown as AccountAllocationCategory),
+              id: categoryId,
+            };
+
+            return {
+              ...current,
+              accounts: current.accounts.map((account) => {
+                if (account.id !== accountId) return account;
+                const categories = account.allocationCategories || [];
+                return {
+                  ...account,
+                  allocationCategories: upsertById(categories, restoredCategory),
+                };
+              }),
+            };
+          }
+          case 'pay-settings':
+            return {
+              ...current,
+              paySettings: snapshot as unknown as typeof current.paySettings,
+            };
+          case 'tax-settings':
+            return {
+              ...current,
+              taxSettings: snapshot as unknown as typeof current.taxSettings,
+            };
+          case 'budget-settings':
+            return {
+              ...current,
+              settings: snapshot as unknown as typeof current.settings,
+            };
+          default:
+            return current;
+        }
+      };
+
+      const allDeletes = entriesToRestore.every((e) => e.changeType === 'delete');
+      const count = entriesToRestore.length;
+      const actionVerb = allDeletes ? 'Restore' : 'Rewind';
+
+      openConfirmDialog({
+        title: allDeletes ? 'Restore Deleted Entry' : 'Rewind to Previous State',
+        message: count > 1
+          ? allDeletes
+            ? `Restore ${count} deleted entries back to the plan?`
+            : `Rewind ${count} entries back to this previous state?`
+          : allDeletes
+            ? 'Restore this deleted entry back to the plan?'
+            : 'Rewind this entry back to this previous state?',
+        confirmLabel: count > 1 ? `${actionVerb} Entries` : actionVerb,
+        confirmVariant: 'primary',
+        onConfirm: () => {
+          const restored = entriesToRestore.reduce((acc, entry) => applyEntryRestore(acc, entry), budgetData);
+          if (!restored) return;
+
+          const now = new Date().toISOString();
+          const sourceAction = allDeletes ? 'Restore deleted entry' : 'Rewind to previous state';
+          const restoredAuditEntries: AuditEntry[] = entriesToRestore.map((entry) => ({
+            id: crypto.randomUUID(),
+            timestamp: now,
+            entityType: entry.entityType,
+            entityId: entry.entityId,
+            changeType: 'restore',
+            sourceAction,
+            snapshot: entry.snapshot,
+            note: `Restored from history entry ${entry.id}`,
+          }));
+
+          const nextAudit = [
+            ...(restored.metadata?.auditHistory || []),
+            ...restoredAuditEntries,
+          ];
+
+          updateBudgetData(
+            {
+              ...restored,
+              metadata: {
+                auditHistory: nextAudit,
+              },
+            },
+            {
+              trackAudit: false,
+              description: count > 1
+                ? allDeletes ? 'Restore deleted entries' : 'Rewind entries to previous state'
+                : allDeletes ? 'Restore deleted entry' : 'Rewind to previous state',
+            },
+          );
+        },
+      });
+    },
+    [budgetData, openConfirmDialog, updateBudgetData],
+  );
+
   if (showPlanLoadingScreen) {
     return (
       <div className="plan-loading-screen" role="status" aria-live="polite" aria-label="Loading plan">
@@ -2027,6 +2194,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         target={historyTarget}
         auditHistory={budgetData.metadata?.auditHistory || []}
         entityNames={Object.fromEntries((budgetData.accounts || []).map((a) => [a.id, a.name]))}
+        onRestoreEntries={handleRestoreHistoryEntries}
         onClose={handleCloseObjectHistory}
         onDeleteEntry={handleDeleteHistoryEntry}
       />
