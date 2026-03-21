@@ -135,4 +135,65 @@ describe('HistoryEngine', () => {
     expect(redoState).toEqual(state3);
     expect(engine.canRedo()).toBe(true);
   });
+
+  describe('batch mode', () => {
+    it('coalesces multiple pushes into one undo step', () => {
+      const engine = new HistoryEngine<{ count: number }>(100);
+      const stateA = createTestState(1);
+      const stateB = createTestState(2);
+      const stateC = createTestState(3);
+
+      engine.beginBatch();
+      engine.push(stateA); // pre-batch state captured
+      engine.push(stateB); // suppressed
+      engine.commitBatch('batch operation');
+
+      expect(engine.getUndoDepth()).toBe(1);
+      // Undoing should restore stateA (the pre-batch snapshot)
+      const undone = engine.undo(stateC);
+      expect(undone).toEqual(stateA);
+    });
+
+    it('does not push to undo stack when batch has no mutations', () => {
+      const engine = new HistoryEngine<{ count: number }>(100);
+
+      engine.beginBatch();
+      engine.commitBatch('empty batch');
+
+      expect(engine.getUndoDepth()).toBe(0);
+    });
+
+    it('discardBatch cancels without pushing any snapshot', () => {
+      const engine = new HistoryEngine<{ count: number }>(100);
+      const stateA = createTestState(1);
+
+      engine.beginBatch();
+      engine.push(stateA);
+      engine.discardBatch();
+
+      expect(engine.getUndoDepth()).toBe(0);
+      expect(engine.canUndo()).toBe(false);
+    });
+
+    it('normal pushes after commitBatch work correctly', () => {
+      const engine = new HistoryEngine<{ count: number }>(100);
+      const stateA = createTestState(1);
+      const stateB = createTestState(2);
+      const stateC = createTestState(3);
+      const stateD = createTestState(4);
+
+      engine.beginBatch();
+      engine.push(stateA);
+      engine.push(stateB);
+      engine.commitBatch('batch');
+
+      engine.push(stateC); // normal push after batch
+
+      expect(engine.getUndoDepth()).toBe(2);
+      const undone1 = engine.undo(stateD);
+      expect(undone1).toEqual(stateC);
+      const undone2 = engine.undo(stateC);
+      expect(undone2).toEqual(stateA);
+    });
+  });
 });

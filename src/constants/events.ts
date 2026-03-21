@@ -29,6 +29,7 @@ export const APP_CUSTOM_EVENTS = {
   appearanceSettingsChanged: 'appearance-settings-changed',
   glossaryTermsChanged: 'glossary-terms-changed',
   viewModeFavoritesChanged: 'view-mode-favorites-changed',
+  undoRedoStatus: 'app:undo-redo-status',
 } as const;
 
 export const menuChannel = (event: MenuEventName) => `menu:${event}`;

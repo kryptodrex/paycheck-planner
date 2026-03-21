@@ -23,11 +23,66 @@ export class HistoryEngine<T> {
     this.maxDepth = maxDepth;
   }
 
+  private batchMode: boolean = false;
+  private batchPreState: T | undefined = undefined;
+
+  /**
+   * Begin a batch: multiple applyBudgetMutation calls will be coalesced into one undo step.
+   * Call commitBatch() after all mutations to push a single snapshot.
+   * Call discardBatch() to cancel without pushing.
+   */
+  beginBatch(): void {
+    if (!this.batchMode) {
+      this.batchMode = true;
+      this.batchPreState = undefined;
+    }
+  }
+
+  /**
+   * Commit a batch: pushes the pre-batch state as a single undo snapshot.
+   * No-op if no pushes occurred during the batch.
+   */
+  commitBatch(description?: string): void {
+    const preState = this.batchPreState;
+    this.batchMode = false;
+    this.batchPreState = undefined;
+
+    if (preState !== undefined) {
+      const snapshot: HistorySnapshot<T> = {
+        state: preState,
+        timestamp: Date.now(),
+        description,
+      };
+      this.undoStack.push(snapshot);
+      this.redoStack = [];
+      if (this.undoStack.length > this.maxDepth) {
+        this.undoStack.shift();
+      }
+    }
+  }
+
+  /**
+   * Discard a batch without pushing any snapshot.
+   * Use this if a compound operation is cancelled.
+   */
+  discardBatch(): void {
+    this.batchMode = false;
+    this.batchPreState = undefined;
+  }
+
   /**
    * Push current state onto undo stack (called when user makes a tracked change)
    * Automatically clears redo stack when new edit is made
    */
   push(state: T, description?: string): void {
+    if (this.batchMode) {
+      // Capture the state before the first mutation in the batch
+      if (this.batchPreState === undefined) {
+        this.batchPreState = state;
+      }
+      return;
+    }
+
     const snapshot: HistorySnapshot<T> = {
       state,
       timestamp: Date.now(),
