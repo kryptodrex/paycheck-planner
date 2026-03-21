@@ -12,6 +12,7 @@ import type { Account } from '../../../types/accounts';
 import type { Bill, Loan, SavingsContribution } from '../../../types/obligations';
 import type { Benefit, RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
 import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
@@ -89,6 +90,7 @@ interface PayBreakdownProps {
   onNavigateToSavings?: (accountId: string) => void;
   onNavigateToRetirement?: (accountId: string) => void;
   onNavigateToLoans?: (accountId: string) => void;
+  onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
@@ -99,6 +101,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   onNavigateToSavings,
   onNavigateToRetirement,
   onNavigateToLoans,
+  onViewHistory,
 }) => {
   const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -739,6 +742,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
           setPaySettingsFieldHighlight(undefined);
         }}
         searchFieldHighlight={paySettingsFieldHighlight}
+        onViewHistory={onViewHistory}
       />
 
       {/* Gross to Net Table */}
@@ -869,7 +873,14 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       Amount from {fundingItem.account.name}
                     </span>
                     {!isEditing ? (
-                      <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
+                      <>
+                        {onViewHistory && (
+                          <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => onViewHistory({ entityType: 'allocation-item', entityId: fundingItem.account.id, title: `${fundingItem.account.name} Allocations` })}>
+                            View History
+                          </Button>
+                        )}
+                        <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
+                      </>
                     ) : null
                     }
                     <span className="waterfall-amount">{formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>

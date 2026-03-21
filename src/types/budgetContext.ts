@@ -11,6 +11,9 @@ export interface BudgetContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  beginBatch: () => void;
+  commitBatch: (description?: string) => void;
+  discardBatch: () => void;
   saveBudget: (activeTab?: string, budgetOverride?: Partial<BudgetData>) => Promise<boolean>;
   saveWindowState: (width: number, height: number, x: number, y: number, activeTab?: string) => Promise<void>;
   loadBudget: (filePath?: string) => Promise<void>;
@@ -21,7 +24,7 @@ export interface BudgetContextType {
   copyPlanToNewYear: (newYear: number) => Promise<void>;
   updateBudgetData: (
     data: Partial<BudgetData>,
-    options?: { trackHistory?: boolean; description?: string }
+    options?: { trackHistory?: boolean; trackAudit?: boolean; description?: string; note?: string }
   ) => void;
   updatePaySettings: (settings: PaySettings) => void;
   addDeduction: (deduction: Omit<Deduction, 'id'>) => void;

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import type { Bill } from '../../../types/obligations';
 import type { Benefit } from '../../../types/payroll';
 import type { BillFrequency } from '../../../types/frequencies';
@@ -31,6 +32,7 @@ interface BillsManagerProps {
     | 'toggle-benefit';
   searchActionTargetId?: string;
   displayMode: ViewMode;
+  onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 type BillFieldErrors = {
@@ -51,6 +53,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode,
+  onViewHistory,
 }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -450,6 +453,16 @@ const BillsManager: React.FC<BillsManagerProps> = ({
     updateBenefit(benefit.id, { enabled: benefit.enabled === false });
   };
 
+  const handleOpenHistory = (target: { type: 'bill' | 'benefit'; id: string; name: string }) => {
+    if (!onViewHistory) return;
+
+    onViewHistory({
+      entityType: target.type,
+      entityId: target.id,
+      title: target.name,
+    });
+  };
+
   return (
     <div className="tab-view bills-manager">
       <PageHeader
@@ -524,6 +537,8 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                       }
                       isPaused={!isBenefitEnabled(benefit)}
                       onPauseToggle={() => handleToggleBenefitEnabled(benefit)}
+                      onHistory={() => handleOpenHistory({ type: 'benefit', id: benefit.id, name: benefit.name })}
+                      historyLabel="View History"
                       onEdit={() => handleEditBenefit(benefit)}
                       onDelete={() => handleDeleteBenefit(benefit.id)}
                     />
@@ -576,6 +591,8 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                         }
                         isPaused={!isBenefitEnabled(benefit)}
                         onPauseToggle={() => handleToggleBenefitEnabled(benefit)}
+                        onHistory={() => handleOpenHistory({ type: 'benefit', id: benefit.id, name: benefit.name })}
+                        historyLabel="View History"
                         onEdit={() => handleEditBenefit(benefit)}
                         onDelete={() => handleDeleteBenefit(benefit.id)}
                       />
@@ -600,6 +617,8 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                       badges={bill.discretionary ? <PillBadge variant="warning">Discretionary</PillBadge> : undefined}
                       isPaused={!isBillEnabled(bill)}
                       onPauseToggle={() => handleToggleBillEnabled(bill)}
+                      onHistory={() => handleOpenHistory({ type: 'bill', id: bill.id, name: bill.name })}
+                      historyLabel="View History"
                       onEdit={() => handleEditBill(bill)}
                       onDelete={() => handleDeleteBill(bill.id)}
                     >

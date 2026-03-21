@@ -6,6 +6,7 @@ import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, TaxLinesEditor, 
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import type { TaxLine } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import {
     type EditableTaxLineValues,
     getTaxableIncomeForTaxLine,
@@ -21,9 +22,10 @@ import './TaxBreakdown.css';
 interface TaxBreakdownProps {
     searchOpenSettingsRequestKey?: number;
     displayMode: ViewMode;
+    onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
-const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode }) => {
+const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode, onViewHistory }) => {
     const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
     const [showEditModal, setShowEditModal] = useState(false);
     const [editLines, setEditLines] = useState<EditableTaxLineValues[]>([]);
@@ -190,6 +192,11 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
                 subtitle="View and manage your tax withholding information"
                 actions={
                     <>
+                        {onViewHistory && (
+                            <Button variant="secondary" onClick={() => onViewHistory({ entityType: 'tax-settings', entityId: 'tax-settings', title: 'Tax Settings' })}>
+                                View History
+                            </Button>
+                        )}
                         <Button variant="primary" onClick={handleEditStart}>
                             Edit Tax Settings
                         </Button>

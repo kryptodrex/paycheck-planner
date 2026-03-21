@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import type { Loan, LoanPaymentLine } from '../../../types/obligations';
 import type { LoanPaymentFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
@@ -20,6 +21,7 @@ interface LoansManagerProps {
     searchActionType?: 'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan';
     searchActionTargetId?: string;
     displayMode: ViewMode;
+    onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 type LoanFieldErrors = {
@@ -110,6 +112,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
     searchActionType,
     searchActionTargetId,
     displayMode,
+    onViewHistory,
 }) => {
     const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
     const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -439,6 +442,16 @@ const LoansManager: React.FC<LoansManagerProps> = ({
         updateLoan(loan.id, { enabled: !isLoanEnabled(loan) });
     };
 
+    const handleOpenHistory = (loan: Loan) => {
+        if (!onViewHistory) return;
+
+        onViewHistory({
+            entityType: 'loan',
+            entityId: loan.id,
+            title: loan.name,
+        });
+    };
+
     const loansList = budgetData.loans ?? [];
     const loansByAccount = groupByAccountId(loansList);
 
@@ -546,6 +559,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                                     onPauseToggle={() => handleToggleLoanEnabled(loan)}
                                                     onEdit={() => handleEditLoan(loan)}
                                                     onDelete={() => handleDeleteLoan(loan.id)}
+                                                    onHistory={() => handleOpenHistory(loan)}
                                                 >
                                                     {lineItems.length > 0 && (
                                                         <AmountBreakdown

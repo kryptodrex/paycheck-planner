@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
@@ -33,6 +34,7 @@ interface SavingsManagerProps {
     | 'toggle-retirement';
   searchActionTargetId?: string;
   displayMode?: ViewMode;
+  onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 type SavingsFieldErrors = {
@@ -56,6 +58,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode = 'paycheck',
+  onViewHistory,
 }) => {
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const {
@@ -590,6 +593,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     updateRetirementElection(retirement.id, { enabled: retirement.enabled === false });
   };
 
+  const handleOpenHistory = (
+    target: { type: 'savings-contribution' | 'retirement-election'; id: string; name: string },
+  ) => {
+    if (!onViewHistory) return;
+
+    onViewHistory({
+      entityType: target.type,
+      entityId: target.id,
+      title: target.name,
+    });
+  };
+
   return (
     <div className="tab-view savings-manager">
       <PageHeader
@@ -653,6 +668,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   onPauseToggle={() => handleToggleSavingsEnabled(item)}
                   onEdit={() => handleEditSavings(item)}
                   onDelete={() => handleDeleteSavings(item.id)}
+                  onHistory={() => handleOpenHistory({ type: 'savings-contribution', id: item.id, name: item.name })}
                 >
                   {item.notes && <div className="savings-notes">{item.notes}</div>}
                 </SectionItemCard>
@@ -718,6 +734,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   onPauseToggle={() => handleToggleRetirementEnabled(retirement)}
                   onEdit={() => handleEditRetirement(retirement)}
                   onDelete={() => handleDeleteRetirement(retirement.id)}
+                  onHistory={() => handleOpenHistory({ type: 'retirement-election', id: retirement.id, name: displayLabel })}
                 >
                   <div className="retirement-details">
                     <div className="detail">

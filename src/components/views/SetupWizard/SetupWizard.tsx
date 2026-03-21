@@ -40,7 +40,7 @@ const getDefaultTaxLinesForCurrency = (currencyCode: string): EditableTaxLineVal
 };
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
-  const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData } = useBudget();
+  const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData, beginBatch, commitBatch } = useBudget();
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   
   const [step, setStep] = useState(1);
@@ -149,6 +149,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     }
 
     // Save currency setting
+    beginBatch();
     if (budgetData) {
       updateBudgetSettings({
         ...budgetData.settings,
@@ -187,6 +188,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
     // Save accounts configured during setup
     updateBudgetData({ accounts });
+    commitBatch('Initial plan setup');
 
     onComplete();
   };

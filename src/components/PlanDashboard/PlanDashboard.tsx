@@ -23,7 +23,8 @@ import ExportModal from '../modals/ExportModal';
 import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import PlanSearchOverlay from './PlanSearchOverlay';
-import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeSelector } from '../_shared';
+import PlanHistoryOverlay from './PlanHistoryOverlay';
+import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeSelector } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
 import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
@@ -32,6 +33,7 @@ import type { SearchResult } from '../../utils/planSearch';
 import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
+import type { AuditHistoryTarget } from '../../types/audit';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
@@ -47,6 +49,7 @@ interface PlanHistoryState {
 interface PlanDashboardProps {
   onResetSetup?: () => void;
   viewMode?: string | null; // If set, this is a view-only window
+  onUndoRedoSuccess?: (action: 'undo' | 'redo') => void;
 }
 
 const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
@@ -108,7 +111,7 @@ const isEditableTarget = (target: EventTarget | null): boolean => {
   );
 };
 
-const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
+const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, onUndoRedoSuccess }) => {
   const {
     budgetData,
     saveBudget,
@@ -194,6 +197,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [savingsSearchRequestKey, setSavingsSearchRequestKey] = useState(0);
   const [taxSearchOpenSettingsRequestKey, setTaxSearchOpenSettingsRequestKey] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<AuditHistoryTarget | null>(null);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -221,8 +225,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
     if (canUndo) {
       undo();
+      onUndoRedoSuccess?.('undo');
     }
-  }, [canUndo, undo]);
+  }, [canUndo, onUndoRedoSuccess, undo]);
 
   const handleRedoAction = useCallback(() => {
     if (isEditableTarget(document.activeElement)) {
@@ -232,8 +237,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
     if (canRedo) {
       redo();
+      onUndoRedoSuccess?.('redo');
     }
-  }, [canRedo, redo]);
+  }, [canRedo, onUndoRedoSuccess, redo]);
 
   const {
     encryptionEnabled,
@@ -266,7 +272,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const historyStateKeyRef = useRef<string | null>(null);
   const suppressHistoryPushRef = useRef(false);
   const lastMissingPathPromptRef = useRef<string | null>(null);
-  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
+  const {
+    confirmDialog,
+    errorDialog,
+    openConfirmDialog,
+    confirmCurrentDialog,
+    closeConfirmDialog,
+    openErrorDialog,
+    closeErrorDialog,
+  } = useAppDialogs();
   const {
     missingFile: missingActiveFile,
     relinkMismatchMessage: activeRelinkMismatchMessage,
@@ -1060,11 +1074,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       mac: true,
       windows: true,
       shouldHandle: (e) => !isEditableTarget(e.target),
-      callback: () => {
-        if (canUndo) {
-          undo();
-        }
-      },
+      callback: handleUndoAction,
     },
     {
       key: 'z',
@@ -1072,21 +1082,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       windows: true,
       shift: true,
       shouldHandle: (e) => !isEditableTarget(e.target),
-      callback: () => {
-        if (canRedo) {
-          redo();
-        }
-      },
+      callback: handleRedoAction,
     },
     {
       key: 'y',
       windows: true,
       shouldHandle: (e) => !isEditableTarget(e.target),
-      callback: () => {
-        if (canRedo) {
-          redo();
-        }
-      },
+      callback: handleRedoAction,
     },
   ]);
 
@@ -1170,6 +1172,43 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     setSettingsInitialSection('app-data-reset');
     setShowSettings(true);
   }, []);
+
+  const handleOpenObjectHistory = useCallback((target: AuditHistoryTarget) => {
+    setHistoryTarget(target);
+  }, []);
+
+  const handleCloseObjectHistory = useCallback(() => {
+    setHistoryTarget(null);
+  }, []);
+
+  const handleDeleteHistoryEntry = useCallback(
+    (entryId: string) => {
+      if (!budgetData) return;
+
+      openConfirmDialog({
+        title: 'Delete History Entry',
+        message: 'Remove this history snapshot from the timeline?',
+        confirmLabel: 'Delete Entry',
+        confirmVariant: 'danger',
+        onConfirm: () => {
+          const nextAudit = (budgetData.metadata?.auditHistory || []).filter((entry) => entry.id !== entryId);
+          updateBudgetData(
+            {
+              metadata: {
+                auditHistory: nextAudit,
+              },
+            },
+            {
+              trackHistory: false,
+              trackAudit: false,
+              description: 'Delete history entry',
+            },
+          );
+        },
+      });
+    },
+    [budgetData, openConfirmDialog, updateBudgetData],
+  );
 
   if (showPlanLoadingScreen) {
     return (
@@ -1555,6 +1594,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             onNavigateToLoans={(accountId) => {
               openTabFromLink('loans', { scrollToAccountId: accountId, scrollToRetirement: false });
             }} 
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1569,6 +1609,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionType={pendingBillsSearchAction}
             searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={displayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1583,6 +1624,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionType={pendingLoansSearchAction}
             searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={displayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1594,6 +1636,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <TaxBreakdown 
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={displayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1609,6 +1652,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             searchActionType={pendingSavingsSearchAction}
             searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={displayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
       </div>
@@ -1975,6 +2019,27 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         onClose={() => setShowSearch(false)}
         budgetData={budgetData}
         onNavigate={handleSearchNavigate}
+      />
+
+      <PlanHistoryOverlay
+        key={historyTarget ? `${historyTarget.entityType}:${historyTarget.entityId}` : 'no-history-target'}
+        isOpen={!!historyTarget}
+        target={historyTarget}
+        auditHistory={budgetData.metadata?.auditHistory || []}
+        entityNames={Object.fromEntries((budgetData.accounts || []).map((a) => [a.id, a.name]))}
+        onClose={handleCloseObjectHistory}
+        onDeleteEntry={handleDeleteHistoryEntry}
+      />
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmCurrentDialog}
+        title={confirmDialog?.title || 'Confirm'}
+        message={confirmDialog?.message || ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={confirmDialog?.cancelLabel}
+        confirmVariant={confirmDialog?.confirmVariant}
       />
     </div>
   );

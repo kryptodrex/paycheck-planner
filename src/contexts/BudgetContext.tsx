@@ -37,6 +37,7 @@ import { getPlanNameFromPath } from '../utils/filePath';
 import { getPaychecksPerYear } from '../utils/payPeriod';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
 import { HistoryEngine } from '../utils/historyEngine';
+import { buildAuditEntries } from '../utils/auditHistory';
 
 // Create the context - this is the "container" for our global state
 // Initially undefined, we'll provide the actual value in the Provider
@@ -90,6 +91,12 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
   // History stacks for app-level undo/redo
   const historyEngineRef = useRef(new HistoryEngine<BudgetData>(HISTORY_MAX_DEPTH));
+  const batchStateRef = useRef({
+    active: false,
+    pendingMutations: 0,
+    commitRequested: false,
+    commitDescription: undefined as string | undefined,
+  });
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
@@ -100,22 +107,96 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
   const clearHistory = useCallback(() => {
     historyEngineRef.current.clear();
+    batchStateRef.current = {
+      active: false,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
     syncHistoryAvailability();
   }, [syncHistoryAvailability]);
+
+  const finalizeBatchCommitIfReady = useCallback(() => {
+    const batch = batchStateRef.current;
+    if (!batch.active || !batch.commitRequested || batch.pendingMutations > 0) {
+      return;
+    }
+
+    historyEngineRef.current.commitBatch(batch.commitDescription);
+    batchStateRef.current = {
+      active: false,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
+    syncHistoryAvailability();
+  }, [syncHistoryAvailability]);
+
+  const beginBatch = useCallback(() => {
+    if (batchStateRef.current.active) return;
+
+    batchStateRef.current = {
+      active: true,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
+    historyEngineRef.current.beginBatch();
+  }, []);
+
+  const commitBatch = useCallback((description?: string) => {
+    if (!batchStateRef.current.active) return;
+
+    batchStateRef.current = {
+      ...batchStateRef.current,
+      commitRequested: true,
+      commitDescription: description,
+    };
+
+    finalizeBatchCommitIfReady();
+  }, [finalizeBatchCommitIfReady]);
+
+  const discardBatch = useCallback(() => {
+    historyEngineRef.current.discardBatch();
+    batchStateRef.current = {
+      active: false,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
+  }, []);
 
   const applyBudgetMutation = useCallback(
     (
       mutate: (current: BudgetData) => BudgetData,
-      options?: { trackHistory?: boolean; description?: string; touchUpdatedAt?: boolean }
+      options?: { trackHistory?: boolean; trackAudit?: boolean; description?: string; touchUpdatedAt?: boolean; note?: string }
     ) => {
       const trackHistory = options?.trackHistory ?? true;
+      const trackAudit = options?.trackAudit ?? trackHistory;
       const touchUpdatedAt = options?.touchUpdatedAt ?? true;
+      const shouldTrackInBatch = trackHistory && batchStateRef.current.active;
+
+      if (shouldTrackInBatch) {
+        batchStateRef.current.pendingMutations += 1;
+      }
 
       setBudgetData((prev) => {
-        if (!prev) return prev;
+        if (!prev) {
+          if (shouldTrackInBatch) {
+            batchStateRef.current.pendingMutations = Math.max(0, batchStateRef.current.pendingMutations - 1);
+            finalizeBatchCommitIfReady();
+          }
+          return prev;
+        }
 
         const nextBase = mutate(prev);
-        if (nextBase === prev) return prev;
+        if (nextBase === prev) {
+          if (shouldTrackInBatch) {
+            batchStateRef.current.pendingMutations = Math.max(0, batchStateRef.current.pendingMutations - 1);
+            finalizeBatchCommitIfReady();
+          }
+          return prev;
+        }
 
         const next = touchUpdatedAt
           ? {
@@ -124,15 +205,40 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
             }
           : nextBase;
 
+        const auditEntries = trackAudit
+          ? buildAuditEntries({
+              prev,
+              next,
+              sourceAction: options?.description || 'Update plan data',
+              note: options?.note,
+            })
+          : [];
+
+        const nextWithAudit = auditEntries.length > 0
+          ? {
+              ...next,
+              metadata: {
+                auditHistory: [...(next.metadata?.auditHistory || []), ...auditEntries],
+              },
+            }
+          : next;
+
         if (trackHistory) {
           historyEngineRef.current.push(prev, options?.description);
         }
 
+        if (shouldTrackInBatch) {
+          batchStateRef.current.pendingMutations = Math.max(0, batchStateRef.current.pendingMutations - 1);
+        }
+
         syncHistoryAvailability();
-        return next;
+        if (shouldTrackInBatch) {
+          finalizeBatchCommitIfReady();
+        }
+        return nextWithAudit;
       });
     },
-    [syncHistoryAvailability],
+    [finalizeBatchCommitIfReady, syncHistoryAvailability],
   );
 
   const undo = useCallback(() => {
@@ -546,7 +652,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
    * Generic update function for bulk changes (e.g., reordering accounts)
    */
   const updateBudgetData = useCallback(
-    (updates: Partial<BudgetData>, options?: { trackHistory?: boolean; description?: string }) => {
+    (updates: Partial<BudgetData>, options?: { trackHistory?: boolean; trackAudit?: boolean; description?: string; note?: string }) => {
       applyBudgetMutation(
         (current) => ({
           ...current,
@@ -554,7 +660,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         }),
         {
           trackHistory: options?.trackHistory,
+          trackAudit: options?.trackAudit,
           description: options?.description ?? 'Update plan data',
+          note: options?.note,
         },
       );
     },
@@ -1051,6 +1159,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     redo,
     canUndo,
     canRedo,
+    beginBatch,
+    commitBatch,
+    discardBatch,
     saveBudget,
     saveWindowState,
     loadBudget,
