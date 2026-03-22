@@ -19,16 +19,29 @@ export default async function notarizeApp(context) {
   }
 
   const appName = packager.appInfo.productFilename;
+  const appPath = `${appOutDir}/${appName}.app`;
 
   console.log(`[notarize] Notarizing ${appName}.app`);
 
-  await notarize({
-    appBundleId: packager.appInfo.id,
-    appPath: `${appOutDir}/${appName}.app`,
-    appleId,
-    appleIdPassword,
-    teamId,
-  });
+  try {
+    await notarize({
+      appBundleId: packager.appInfo.id,
+      appPath,
+      appleId,
+      appleIdPassword,
+      teamId,
+    });
 
-  console.log(`[notarize] Notarization complete for ${appName}.app`);
+    console.log(`[notarize] Notarization complete for ${appName}.app`);
+  } catch (error) {
+    // Skip notarization if app is not signed (common in PR builds with CSC_FOR_PULL_REQUEST=false)
+    if (error.message && error.message.includes('code object is not signed')) {
+      console.log(
+        '[notarize] Skipping notarization: app is not signed. This is expected in PR builds where code signing is disabled.'
+      );
+      return;
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }
