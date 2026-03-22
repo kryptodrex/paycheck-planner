@@ -175,7 +175,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 
 ### macOS: "App is damaged and can't be opened"
 
-If you see this error on macOS, it's because the app is not code-signed with an Apple Developer certificate. This is normal for open-source apps. To open the app:
+Official release builds are signed and notarized for macOS. If you still see this warning, it is usually due to a stale or partially downloaded artifact, or because you are running a local unsigned build. To open the app:
 
 **Option 1: Terminal command (remove quarantine flag)**
 1. Open Terminal
