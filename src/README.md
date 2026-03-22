@@ -183,6 +183,10 @@ This repository uses GitHub Actions workflows in `.github/workflows/`.
   - encrypted `payload`
 - Encryption uses AES via `crypto-js`.
 - Encryption keys are **not** stored inside plan files or localStorage; they are saved in system keychain via `keytar`.
+- Cross-mode display storage is domain-specific rather than globally yearly-normalized.
+  - Manual Pay Breakdown allocation categories are stored as normalized per-paycheck amounts.
+  - Bills, loans, savings, and other recurring items keep their existing native/monthly/frequency-based storage models.
+  - Display-mode helpers are expected to round-trip user-entered monthly/yearly values without save/reopen drift.
 
 ## Architecture (Current)
 
@@ -235,6 +239,7 @@ Utilities
   ├─ frequency.ts (general frequency conversion helpers)
   ├─ accountDefaults.ts (default account configurations)
   ├─ accountGrouping.ts (group and sort accounts by type)
+  ├─ allocationEditor.ts (stable round-trip conversion for editable allocation amounts)
   ├─ tabManagement.ts (tab visibility and ordering)
   ├─ displayAmounts.ts (format amounts for display with period normalization)
   ├─ filePath.ts (file path utilities for platform-safe path handling)
@@ -410,6 +415,34 @@ If version validation workflow fails on PRs to `develop`:
 - Increment the `version` file in your PR branch
 - Format: `MAJOR.MINOR.PATCH` (e.g., `0.1.0` → `0.1.1`)
 - Workflow gracefully skips if `version` file doesn't exist on either branch
+
+### macOS signing and notarization (release automation)
+
+Production-quality macOS builds require both code signing and notarization.
+
+#### Required GitHub Secrets for Release Workflows
+
+**macOS Code Signing & Notarization:**
+- `CSC_LINK`: Base64-encoded `.p12` certificate payload (Developer ID Application)
+- `CSC_KEY_PASSWORD`: Password for the `.p12` certificate
+- `APPLE_ID`: Apple ID email used for notarization
+- `APPLE_APP_SPECIFIC_PASSWORD`: App-specific password for the Apple ID
+- `APPLE_TEAM_ID`: Apple Developer Team ID
+
+**Feedback Form Configuration:**
+- `FEEDBACK_FORM_URL`: Google Form prefill URL (e.g., `https://docs.google.com/forms/d/e/FORM_ID/viewform`)
+- `FEEDBACK_FORM_ENTRY_EMAIL`: Google Form entry ID for email field
+- `FEEDBACK_FORM_ENTRY_CATEGORY`: Google Form entry ID for feedback category
+- `FEEDBACK_FORM_ENTRY_SUBJECT`: Google Form entry ID for subject line
+- `FEEDBACK_FORM_ENTRY_DETAILS`: Google Form entry ID for message body
+
+See `.env.example` for local development setup and how to extract Google Form entry IDs.
+
+#### Build Configuration
+
+- Build config uses hardened runtime + Electron entitlements and runs notarization in `scripts/notarize.mjs`.
+- If notarization env vars are missing, local mac builds still complete but notarization is skipped.
+- Feedback form configuration is optional for local builds; if omitted, the feedback modal will display a config error.
 
 ## Keeping This README Updated
 

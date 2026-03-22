@@ -6,6 +6,7 @@ export interface ShortcutConfig {
   windows?: boolean;    // Trigger on Windows/Linux with Ctrl key
   shift?: boolean;      // Shift modifier required
   alt?: boolean;        // Alt modifier required
+  shouldHandle?: (e: KeyboardEvent) => boolean;
   callback: (e: KeyboardEvent) => void;
 }
 
@@ -49,6 +50,9 @@ export const useGlobalKeyboardShortcuts = (shortcuts: ShortcutConfig[]) => {
         // Check alt key
         const altMatches = (shortcut.alt ? e.altKey : !e.altKey);
         if (!altMatches) return;
+
+        // Optional contextual guard (for example, skip when typing in text fields)
+        if (shortcut.shouldHandle && !shortcut.shouldHandle(e)) return;
         
         // All conditions matched - trigger the shortcut
         e.preventDefault();

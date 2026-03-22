@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
 import type { Account } from '../../../../types/accounts';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../../utils/accountDefaults';
-import { Button, InfoBox } from '../../';
+import { getIconComponent } from '../../../../utils/iconNameToComponent';
+import AccountIconPicker from '../../controls/AccountIconPicker/AccountIconPicker';
+import { Button, Dropdown, InfoBox } from '../../';
 import './AccountsEditor.css';
 
 interface AccountsEditorProps {
@@ -157,44 +159,52 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                 {editingId === account.id ? (
                   <>
                     <div className="account-edit-form">
-                      <input
-                        type="text"
-                        className="account-icon-input"
-                        value={editingIcon}
-                        onChange={(e) => setEditingIcon(e.target.value)}
-                        placeholder="💰"
-                        maxLength={2}
-                      />
-                      <input
-                        autoFocus
-                        type="text"
-                        className="account-name-input"
-                        value={editingName}
-                        onChange={(e) => setEditingName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleSaveEdit(account);
-                          } else if (e.key === 'Escape') {
-                            handleCancelEdit();
-                          }
-                        }}
-                      />
-                      <select
-                        className="account-type-select"
-                        value={editingType}
-                        onChange={(e) => {
-                          const newType = e.target.value as Account['type'];
-                          setEditingType(newType);
-                          if (!editingIcon || editingIcon === getDefaultAccountIcon(account.type)) {
-                            setEditingIcon(getDefaultAccountIcon(newType));
-                          }
-                        }}
-                      >
-                        <option value="checking">Checking</option>
-                        <option value="savings">Savings</option>
-                        <option value="investment">Investment</option>
-                        <option value="other">Other</option>
-                      </select>
+                      <div className="account-edit-row">
+                        <div className="account-edit-field account-edit-icon-field">
+                          <label className="add-account-label">Icon</label>
+                          <AccountIconPicker
+                            value={editingIcon}
+                            onChange={setEditingIcon}
+                            className="account-edit-icon-picker"
+                          />
+                        </div>
+                        <div className="account-edit-field account-edit-name-field">
+                          <label className="add-account-label">Account Name</label>
+                          <input
+                            autoFocus
+                            type="text"
+                            className="account-name-input account-edit-name-input"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleSaveEdit(account);
+                              } else if (e.key === 'Escape') {
+                                handleCancelEdit();
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="account-edit-field account-edit-type-field">
+                          <label className="add-account-label">Type</label>
+                          <Dropdown
+                            className="account-type-select"
+                            value={editingType}
+                            onChange={(e) => {
+                              const newType = e.target.value as Account['type'];
+                              setEditingType(newType);
+                              if (!editingIcon || editingIcon === getDefaultAccountIcon(account.type)) {
+                                setEditingIcon(getDefaultAccountIcon(newType));
+                              }
+                            }}
+                          >
+                            <option value="checking">Checking</option>
+                            <option value="savings">Savings</option>
+                            <option value="investment">Investment</option>
+                            <option value="other">Other</option>
+                          </Dropdown>
+                        </div>
+                      </div>
                       <div className="account-edit-actions">
                         <Button variant="secondary" size="small" onClick={handleCancelEdit}>
                           Cancel
@@ -208,7 +218,11 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                 ) : (
                   <div className="account-name-display">
                     <span className="account-icon-display">
-                      {account.icon || getDefaultAccountIcon(account.type)}
+                      {(() => {
+                        const iconName = account.icon || getDefaultAccountIcon(account.type);
+                        const IconComponent = getIconComponent(iconName);
+                        return IconComponent ? <IconComponent className="ui-icon ui-icon-lg" /> : iconName;
+                      })()}
                     </span>
                     <div className="account-info-text">
                       <h4>{account.name}</h4>
@@ -282,14 +296,10 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
             <div className="add-account-row">
               <div className="add-account-field add-account-icon-field">
                 <label className="add-account-label">Icon</label>
-                <input
-                  type="text"
-                  className="account-icon-input"
-                  placeholder="💰"
+                <AccountIconPicker
                   value={newAccountIcon}
-                  onChange={(e) => setNewAccountIcon(e.target.value)}
-                  maxLength={2}
-                  title="Icon (emoji)"
+                  onChange={setNewAccountIcon}
+                  className="add-account-icon-picker"
                 />
               </div>
               <div className="add-account-field add-account-name-field">
@@ -298,7 +308,7 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
                   ref={addAccountNameInputRef}
                   type="text"
                   className="account-name-input"
-                  placeholder="e.g., Emergency Fund, Checking"
+                  placeholder="Enter a name"
                   value={newAccountName}
                   onChange={(e) => setNewAccountName(e.target.value)}
                   onKeyDown={(e) => {
@@ -310,20 +320,26 @@ const AccountsEditor: React.FC<AccountsEditorProps> = ({
               </div>
               <div className="add-account-field add-account-type-field">
                 <label className="add-account-label">Type</label>
-                <select
+                <Dropdown
                   className="account-type-select"
                   value={newAccountType}
                   onChange={(e) => {
+                    const previousType = newAccountType;
                     const newType = e.target.value as Account['type'];
                     setNewAccountType(newType);
-                    setNewAccountIcon(getDefaultAccountIcon(newType));
+
+                    // Only auto-switch icons when the current icon matches the previous type default.
+                    setNewAccountIcon((currentIcon) => {
+                      const previousDefaultIcon = getDefaultAccountIcon(previousType);
+                      return currentIcon === previousDefaultIcon ? getDefaultAccountIcon(newType) : currentIcon;
+                    });
                   }}
                 >
                   <option value="checking">Checking</option>
                   <option value="savings">Savings</option>
                   <option value="investment">Investment</option>
                   <option value="other">Other</option>
-                </select>
+                </Dropdown>
               </div>
             </div>
             <Button

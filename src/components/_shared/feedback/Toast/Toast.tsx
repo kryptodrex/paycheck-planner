@@ -1,5 +1,12 @@
 import React, { useEffect } from 'react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 import './Toast.css';
+
+const TOAST_ICONS: Record<'success' | 'warning' | 'error', React.ReactNode> = {
+  success: <Check className="ui-icon" aria-hidden="true" />,
+  warning: <AlertTriangle className="ui-icon" aria-hidden="true" />,
+  error:   <X className="ui-icon" aria-hidden="true" />,
+};
 
 interface ToastProps {
   /** The message to display in the toast */
@@ -27,6 +34,7 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'success', duration = 250
 
   return (
     <div className={`toast toast-${type}`} role="status" aria-live="polite">
+      <span className="toast-icon-wrap" aria-hidden="true">{TOAST_ICONS[type]}</span>
       {message}
     </div>
   );

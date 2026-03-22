@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Button, FormGroup, Modal } from '../../_shared';
+import { Button, Dropdown, FormGroup, Modal } from '../../_shared';
 import './FeedbackModal.css';
 
 type FeedbackCategory = 'bug' | 'feature' | 'ui' | 'performance' | 'other';
@@ -213,13 +213,13 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
         </FormGroup>
 
         <FormGroup label="Category" required>
-          <select value={category} onChange={(event) => setCategory(event.target.value as FeedbackCategory)}>
+          <Dropdown value={category} onChange={(event) => setCategory(event.target.value as FeedbackCategory)}>
             <option value="bug">Bug</option>
             <option value="feature">Feature request</option>
             <option value="ui">UI improvement</option>
             <option value="performance">Performance issue</option>
             <option value="other">Other</option>
-          </select>
+          </Dropdown>
         </FormGroup>
 
         <FormGroup label="Subject" required>

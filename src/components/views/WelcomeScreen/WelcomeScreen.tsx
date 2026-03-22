@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AlertTriangle, FolderOpen, Plus, Settings, Sparkles, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFileRelinkFlow } from '../../../hooks';
 import { FileStorageService } from '../../../services/fileStorage';
@@ -12,7 +13,7 @@ interface WelcomeScreenProps {
   initialError?: string;
 }
 
-const DEMO_LAUNCH_DELAY_MS = 2200;
+const DEMO_LAUNCH_DELAY_MS = 1000; // 1s delay
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
   const { createNewBudget, createDemoBudget, loadBudget, loading } = useBudget();
@@ -181,7 +182,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
       {initialError && !dismissedError && (
         <div className="error-banner">
           <div className="error-content">
-            <span className="error-icon">⚠️</span>
+            <span className="error-icon" aria-hidden="true">
+              <AlertTriangle className="ui-icon" />
+            </span>
             <div className="error-message">
               <strong>Session Error</strong>
               <p>{initialError}</p>
@@ -191,7 +194,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
               onClick={() => setDismissedError(true)}
               title="Dismiss"
             >
-              ✕
+              <X className="ui-icon ui-icon-sm" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -209,7 +212,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             title="Try Demo"
             aria-label="Try demo plan"
           >
-            ✨ Try Demo
+            <Sparkles className="ui-icon ui-icon-sm" aria-hidden="true" />
+            Try Demo
           </Button>
 
           <Button
@@ -220,7 +224,8 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             title="Settings"
             aria-label="Open settings"
           >
-            ⚙️ Settings
+            <Settings className="ui-icon ui-icon-sm" aria-hidden="true" />
+            Settings
           </Button>
         </div>
         <h1>Paycheck Planner</h1>
@@ -233,7 +238,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             disabled={isBusy}
             className="btn-large btn-large-main"
           >
-            <span className="icon">+</span>
+            <span className="icon" aria-hidden="true">
+              <Plus className="ui-icon" />
+            </span>
             Create New Plan
           </Button>
           <Button
@@ -243,7 +250,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
             disabled={isBusy}
             className="btn-large btn-large-main"
           >
-            <span className="icon">📂</span>
+            <span className="icon" aria-hidden="true">
+              <FolderOpen className="ui-icon" />
+            </span>
             Open Existing Plan
           </Button>
         </div>
@@ -281,7 +290,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ initialError }) => {
                     disabled={isBusy}
                     type="button"
                   >
-                    ✕
+                    <X className="ui-icon ui-icon-sm" aria-hidden="true" />
                   </Button>
                 </div>
               ))}

@@ -44,6 +44,16 @@
   font-size: 1.3rem;
 }
 
+.wizard-step-title-with-icon {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wizard-step-title-with-icon .ui-icon {
+  color: var(--icon-color-accent);
+}
+
 .step-description {
   color: var(--text-secondary);
   margin-bottom: 1.25rem;

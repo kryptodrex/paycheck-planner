@@ -1,13 +1,28 @@
 // Theme Context - Manages light/dark mode preference
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { DEFAULT_APPEARANCE_PRESET } from '../constants/appearancePresets';
 import { APP_CUSTOM_EVENTS } from '../constants/events';
 import { STORAGE_KEYS } from '../constants/storage';
+import {
+  normalizeAppearanceMode,
+  normalizeAppearancePreset,
+  normalizeColorVisionMode,
+  normalizeCustomAppearance,
+  normalizeFontScale,
+  normalizeHighContrastMode,
+  normalizeStateCueMode,
+  normalizeThemeMode,
+} from '../utils/appearanceSettings';
+import { CUSTOM_THEME_VARIABLES, generateCustomThemeTokens } from '../utils/customTheme';
+import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from '../types/appearance';
 import type { ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
+  appearanceMode: AppearanceMode;
+  appearancePreset: AppearancePreset;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
 }
@@ -28,24 +43,66 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const getCurrentSettings = () => {
+    const settingsStr = localStorage.getItem(STORAGE_KEYS.settings);
+    if (!settingsStr) {
+      return {
+        themeMode: 'light' as const,
+        appearanceMode: 'preset' as const,
+        appearancePreset: DEFAULT_APPEARANCE_PRESET,
+        customAppearance: normalizeCustomAppearance(undefined),
+        highContrastMode: false,
+        colorVisionMode: 'normal' as const,
+        stateCueMode: 'enhanced' as const,
+        fontScale: 1,
+      };
+    }
+
+    try {
+      const settings = JSON.parse(settingsStr) as {
+        themeMode?: ThemeMode;
+        appearanceMode?: AppearanceMode;
+        appearancePreset?: AppearancePreset;
+        customAppearance?: CustomAppearanceSettings;
+        highContrastMode?: boolean;
+        colorVisionMode?: ColorVisionMode;
+        stateCueMode?: StateCueMode;
+        fontScale?: number;
+      };
+
+      return {
+        themeMode: normalizeThemeMode(settings.themeMode) || 'light',
+        appearanceMode: normalizeAppearanceMode(settings.appearanceMode),
+        appearancePreset: normalizeAppearancePreset(settings.appearancePreset),
+        customAppearance: normalizeCustomAppearance(settings.customAppearance),
+        highContrastMode: normalizeHighContrastMode(settings.highContrastMode),
+        colorVisionMode: normalizeColorVisionMode(settings.colorVisionMode),
+        stateCueMode: normalizeStateCueMode(settings.stateCueMode),
+        fontScale: normalizeFontScale(settings.fontScale),
+      };
+    } catch {
+      return {
+        themeMode: 'light' as const,
+        appearanceMode: 'preset' as const,
+        appearancePreset: DEFAULT_APPEARANCE_PRESET,
+        customAppearance: normalizeCustomAppearance(undefined),
+        highContrastMode: false,
+        colorVisionMode: 'normal' as const,
+        stateCueMode: 'enhanced' as const,
+        fontScale: 1,
+      };
+    }
+  };
+
   // Initialize theme from localStorage or system preference
   const [theme, setTheme] = useState<Theme>(() => {
-    // Check if user has selected system mode
-    const settingsStr = localStorage.getItem(STORAGE_KEYS.settings);
-    if (settingsStr) {
-      try {
-        const settings = JSON.parse(settingsStr);
-        if (settings.themeMode === 'system') {
-          // Use system preference
-          const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          return systemPrefersDark ? 'dark' : 'light';
-        }
-        if (settings.themeMode === 'light' || settings.themeMode === 'dark') {
-          return settings.themeMode;
-        }
-      } catch {
-        // If parsing fails, fall through to default behavior
-      }
+    const settings = getCurrentSettings();
+    if (settings.themeMode === 'system') {
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return systemPrefersDark ? 'dark' : 'light';
+    }
+    if (settings.themeMode === 'light' || settings.themeMode === 'dark') {
+      return settings.themeMode;
     }
     
     // Fallback: check stored theme
@@ -57,25 +114,59 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return 'light';
   });
 
+  const [appearancePreset, setAppearancePreset] = useState<AppearancePreset>(() => getCurrentSettings().appearancePreset);
+  const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>(() => getCurrentSettings().appearanceMode);
+  const [customAppearance, setCustomAppearance] = useState<CustomAppearanceSettings>(() => getCurrentSettings().customAppearance);
+  const [highContrastMode, setHighContrastMode] = useState<boolean>(() => getCurrentSettings().highContrastMode);
+  const [colorVisionMode, setColorVisionMode] = useState<ColorVisionMode>(() => getCurrentSettings().colorVisionMode);
+  const [stateCueMode, setStateCueMode] = useState<StateCueMode>(() => getCurrentSettings().stateCueMode);
+  const [fontScale, setFontScale] = useState<number>(() => getCurrentSettings().fontScale);
+
   // Apply theme to document element
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    const root = document.documentElement;
+
+    root.setAttribute('data-theme', theme);
+    if (appearanceMode === 'preset') {
+      root.setAttribute('data-theme-preset', appearancePreset);
+      CUSTOM_THEME_VARIABLES.forEach((variable) => {
+        root.style.removeProperty(variable);
+      });
+    } else {
+      root.removeAttribute('data-theme-preset');
+      const customTokens = generateCustomThemeTokens(theme, customAppearance);
+      CUSTOM_THEME_VARIABLES.forEach((variable) => {
+        root.style.setProperty(variable, customTokens[variable]);
+      });
+    }
+
+    root.setAttribute('data-contrast', highContrastMode ? 'high' : 'normal');
+    root.setAttribute('data-color-vision', colorVisionMode);
+    root.setAttribute('data-state-cues', stateCueMode);
+    root.style.fontSize = `${Math.round(fontScale * 100)}%`;
     localStorage.setItem(STORAGE_KEYS.theme, theme);
-  }, [theme]);
+  }, [theme, appearanceMode, appearancePreset, customAppearance, highContrastMode, colorVisionMode, stateCueMode, fontScale]);
 
   // Listen for system theme changes when in System mode
   useEffect(() => {
-    const getCurrentThemeMode = () => {
-      const settingsStr = localStorage.getItem(STORAGE_KEYS.settings);
-      if (settingsStr) {
-        try {
-          const settings = JSON.parse(settingsStr);
-          return settings.themeMode || 'light';
-        } catch {
-          return 'light';
-        }
+    const getCurrentThemeMode = () => getCurrentSettings().themeMode;
+
+    const syncAppearanceFromSettings = () => {
+      const settings = getCurrentSettings();
+      setAppearanceMode(settings.appearanceMode);
+      setAppearancePreset(settings.appearancePreset);
+      setCustomAppearance(settings.customAppearance);
+      setHighContrastMode(settings.highContrastMode);
+      setColorVisionMode(settings.colorVisionMode);
+      setStateCueMode(settings.stateCueMode);
+      setFontScale(settings.fontScale);
+
+      if (settings.themeMode === 'light' || settings.themeMode === 'dark') {
+        setTheme(settings.themeMode);
+      } else {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(systemPrefersDark ? 'dark' : 'light');
       }
-      return 'light';
     };
 
     let cleanup: (() => void) | null = null;
@@ -104,17 +195,21 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
     // Setup initial listener
     setupSystemListener();
+    syncAppearanceFromSettings();
 
-    // Listen for custom event when theme mode changes
-    const handleThemeModeChange = () => {
+    // Listen for custom events when appearance settings change
+    const handleAppearanceSettingsChanged = () => {
+      syncAppearanceFromSettings();
       setupSystemListener();
     };
 
-    window.addEventListener(APP_CUSTOM_EVENTS.themeModeChanged, handleThemeModeChange);
+    window.addEventListener(APP_CUSTOM_EVENTS.themeModeChanged, handleAppearanceSettingsChanged);
+    window.addEventListener(APP_CUSTOM_EVENTS.appearanceSettingsChanged, handleAppearanceSettingsChanged);
 
     return () => {
       if (cleanup) cleanup();
-      window.removeEventListener(APP_CUSTOM_EVENTS.themeModeChanged, handleThemeModeChange);
+      window.removeEventListener(APP_CUSTOM_EVENTS.themeModeChanged, handleAppearanceSettingsChanged);
+      window.removeEventListener(APP_CUSTOM_EVENTS.appearanceSettingsChanged, handleAppearanceSettingsChanged);
     };
   }, []);
 
@@ -124,6 +219,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const value: ThemeContextType = {
     theme,
+    appearanceMode,
+    appearancePreset,
     toggleTheme,
     setTheme,
   };

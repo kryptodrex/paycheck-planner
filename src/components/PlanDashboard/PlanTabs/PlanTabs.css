@@ -42,13 +42,15 @@
 }
 
 .tab-button.active {
-  color: var(--accent-primary);
+  color: var(--text-accent);
   border-bottom-color: var(--accent-primary);
   background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }
 
 .tab-icon {
-  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  font-size: 1.3rem;
 }
 
 /* Display Mode Toggle Button */
@@ -390,14 +392,15 @@
 
 /* Icons with Labels (Default for all, required for top/bottom) */
 .tab-navigation .tab-label {
-  display: inline;
-  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
 }
 
 /* Icons Only Mode (only for left/right sidebars) */
 .tab-navigation.tab-position-left.tab-display-icons-only,
 .tab-navigation.tab-position-right.tab-display-icons-only {
-  width: 60px;
+  width: 3.75rem;
 }
 
 .tab-navigation.tab-display-icons-only .tab-label {
@@ -419,7 +422,9 @@
 /* Icons with Labels Mode for sidebars */
 .tab-navigation.tab-position-left.tab-display-icons-with-labels,
 .tab-navigation.tab-position-right.tab-display-icons-with-labels {
-  width: 200px;
+  width: fit-content;
+  min-width: 13rem;
+  max-width: 18rem;
 }
 
 /* ============================

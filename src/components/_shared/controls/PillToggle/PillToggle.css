@@ -26,12 +26,8 @@
   background: var(--accent-primary);
   border-radius: 0.8rem;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: var(--shadow-accent-soft);
   z-index: 0;
-}
-
-[data-theme='dark'] .pill-toggle-slider {
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
 }
 
 .pill-toggle-slider.active {

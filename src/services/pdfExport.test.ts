@@ -147,6 +147,30 @@ describe('pdfExport', () => {
     expect(autoTableMock).toHaveBeenCalled();
   });
 
+  it('labels fixed tax lines as fixed amounts in the tax table', async () => {
+    const budget = createBudgetFixture();
+    budget.taxSettings.taxLines = [
+      { id: 'tax-1', label: 'Federal Tax', rate: 10, amount: 0, calculationType: 'percentage' },
+      { id: 'tax-2', label: 'Local Tax', rate: 0, amount: 45, calculationType: 'fixed' },
+    ];
+
+    await exportToPDF(budget, { includeTaxes: true });
+
+    const taxCall = autoTableMock.mock.calls.find(([, options]) => {
+      const tableOptions = options as { head?: string[][]; body?: string[][] };
+      return Array.isArray(tableOptions.head) && tableOptions.head[0]?.[0] === 'Tax Type';
+    });
+
+    const taxOptions = taxCall?.[1] as { body?: string[][] } | undefined;
+
+    expect(taxCall).toBeTruthy();
+    expect(taxOptions?.body).toEqual([
+      ['Federal Tax', '10%', '$482.50'],
+      ['Local Tax', '$45.00 fixed', '$45.00'],
+      ['Additional Withholding', '-', '$25.00'],
+    ]);
+  });
+
   it('supports excluding all sections (no auto tables rendered)', async () => {
     await exportToPDF(createBudgetFixture(), {
       includeMetrics: false,

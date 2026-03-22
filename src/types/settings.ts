@@ -1,4 +1,7 @@
 import type { TabConfig, TabDisplayMode, TabPosition } from './tabs';
+import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from './appearance';
+import type { SelectableViewMode } from './viewMode';
+import type { ViewMode } from './viewMode';
 
 export type KeyMetricsBreakdownView = 'flow' | 'stacked' | 'pie';
 
@@ -12,6 +15,7 @@ export interface BudgetSettings {
   tabConfigs?: TabConfig[];
   tabPosition?: TabPosition;
   tabDisplayMode?: TabDisplayMode;
+  displayMode?: ViewMode;
   windowSize?: {
     width: number;
     height: number;
@@ -26,6 +30,14 @@ export interface AppSettings {
   encryptionEnabled?: boolean;
   encryptionKey?: string;
   lastOpenedFile?: string;
-  themeMode?: 'light' | 'dark' | 'system';
+  themeMode?: ThemeMode;
+  appearanceMode?: AppearanceMode;
+  appearancePreset?: AppearancePreset;
+  customAppearance?: CustomAppearanceSettings;
+  highContrastMode?: boolean;
+  colorVisionMode?: ColorVisionMode;
+  stateCueMode?: StateCueMode;
+  fontScale?: number;
   glossaryTermsEnabled?: boolean;
+  viewModeFavorites?: SelectableViewMode[];
 }

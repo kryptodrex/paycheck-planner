@@ -1,19 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ChartNoAxesCombined, PiggyBank, Plus } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck, formatPayFrequencyLabel } from '../../../utils/payPeriod';
+import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
-import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getAccountNameById } from '../../../utils/accountGrouping';
 import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Banner, Button, ConfirmDialog, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, ViewModeSelector } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -21,8 +22,19 @@ import './SavingsManager.css';
 interface SavingsManagerProps {
   shouldScrollToRetirement?: boolean;
   onScrollToRetirementComplete?: () => void;
+  searchActionRequestKey?: number;
+  searchActionType?:
+    | 'add-contribution'
+    | 'add-retirement'
+    | 'edit-savings'
+    | 'delete-savings'
+    | 'toggle-savings'
+    | 'edit-retirement'
+    | 'delete-retirement'
+    | 'toggle-retirement';
+  searchActionTargetId?: string;
   displayMode?: ViewMode;
-  onDisplayModeChange?: (mode: ViewMode) => void;
+  onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 type SavingsFieldErrors = {
@@ -42,8 +54,11 @@ type RetirementFieldErrors = {
 const SavingsManager: React.FC<SavingsManagerProps> = ({
   shouldScrollToRetirement,
   onScrollToRetirementComplete,
+  searchActionRequestKey,
+  searchActionType,
+  searchActionTargetId,
   displayMode = 'paycheck',
-  onDisplayModeChange,
+  onViewHistory,
 }) => {
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const {
@@ -84,6 +99,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   const [retirementFormMessage, setRetirementFormMessage] = useState<{ type: 'warning' | 'error'; message: string } | null>(null);
 
   const scrollCompletedRef = useRef(false);
+  const lastHandledSearchActionKeyRef = useRef(0);
 
   useEffect(() => {
     if (shouldScrollToRetirement && !scrollCompletedRef.current) {
@@ -100,11 +116,147 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     }
   }, [shouldScrollToRetirement, onScrollToRetirementComplete]);
 
+  useEffect(() => {
+    if (!budgetData) {
+      return;
+    }
+
+    if (!searchActionRequestKey || searchActionRequestKey === lastHandledSearchActionKeyRef.current) {
+      return;
+    }
+
+    lastHandledSearchActionKeyRef.current = searchActionRequestKey;
+
+    const timeoutId = window.setTimeout(() => {
+      if (searchActionTargetId && searchActionType === 'toggle-savings') {
+        const item = (budgetData.savingsContributions || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          updateSavingsContribution(item.id, { enabled: item.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-savings') {
+        const item = (budgetData.savingsContributions || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          openConfirmDialog({
+            title: 'Delete Contribution',
+            message: 'Are you sure you want to delete this contribution?',
+            confirmLabel: 'Delete Contribution',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteSavingsContribution(item.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-savings') {
+        const item = (budgetData.savingsContributions || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          setEditingSavings(item);
+          setSavingsName(item.name);
+          setSavingsAmount(String(item.amount));
+          setSavingsFrequency(item.frequency);
+          setSavingsType(item.type);
+          setSavingsAccountId(item.accountId);
+          setSavingsNotes(item.notes || '');
+          setSavingsFieldErrors({});
+          setShowAddSavings(true);
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'toggle-retirement') {
+        const item = (budgetData.retirement || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          updateRetirementElection(item.id, { enabled: item.enabled === false });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'delete-retirement') {
+        const item = (budgetData.retirement || []).find((entry) => entry.id === searchActionTargetId);
+        if (item) {
+          openConfirmDialog({
+            title: 'Delete Retirement Election',
+            message: 'Are you sure you want to delete this retirement election?',
+            confirmLabel: 'Delete Election',
+            confirmVariant: 'danger',
+            onConfirm: () => deleteRetirementElection(item.id),
+          });
+        }
+        return;
+      }
+
+      if (searchActionTargetId && searchActionType === 'edit-retirement') {
+        const election = (budgetData.retirement || []).find((entry) => entry.id === searchActionTargetId);
+        if (election) {
+          setEditingRetirement(election);
+          setRetirementType(election.type);
+          setRetirementCustomLabel(election.customLabel || '');
+          setEmployeeAmount(election.employeeContribution.toString());
+          setEmployeeIsPercentage(election.employeeContributionIsPercentage);
+          setRetirementSource(election.deductionSource || 'paycheck');
+          setRetirementSourceAccountId(election.sourceAccountId || '');
+          setRetirementIsPreTax(election.isPreTax !== false);
+          setEmployerMatchOption(election.hasEmployerMatch ? 'has-match' : 'no-match');
+          setEmployerMatchCap((election.employerMatchCap || 0).toString());
+          setEmployerMatchCapIsPercentage(election.employerMatchCapIsPercentage);
+          setYearlyLimit((election.yearlyLimit || '').toString());
+          setRetirementFieldErrors({});
+          setRetirementFormMessage(null);
+          setShowAddRetirement(true);
+        }
+        return;
+      }
+
+      if (searchActionType === 'add-retirement') {
+        setEditingRetirement(null);
+        setRetirementType('401k');
+        setRetirementCustomLabel('');
+        setEmployeeAmount('');
+        setEmployeeIsPercentage(true);
+        setRetirementSource('paycheck');
+        setRetirementSourceAccountId('');
+        setRetirementIsPreTax(true);
+        setEmployerMatchOption('no-match');
+        setEmployerMatchCap('');
+        setEmployerMatchCapIsPercentage(true);
+        setYearlyLimit('');
+        setRetirementFieldErrors({});
+        setRetirementFormMessage(null);
+        setShowAddRetirement(true);
+        return;
+      }
+
+      setEditingSavings(null);
+      setSavingsName('');
+      setSavingsAmount('');
+      setSavingsFrequency('monthly');
+      setSavingsType('savings');
+      setSavingsAccountId(budgetData.accounts[0]?.id || '');
+      setSavingsNotes('');
+      setSavingsFieldErrors({});
+      setShowAddSavings(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    budgetData,
+    deleteRetirementElection,
+    deleteSavingsContribution,
+    openConfirmDialog,
+    searchActionRequestKey,
+    searchActionTargetId,
+    searchActionType,
+    updateRetirementElection,
+    updateSavingsContribution,
+  ]);
+
   if (!budgetData) return null;
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
-  const payFrequencyLabel = formatPayFrequencyLabel(budgetData.paySettings.payFrequency);
   const grossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
 
   const frequencyMatchesPaySchedule = (itemFrequency: string): boolean => {
@@ -264,54 +416,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     updateSavingsContribution(item.id, { enabled: item.enabled === false });
   };
 
-  const calculateYearlyRetirementContribution = (
-    employeeContribAmount: number,
-    isPercentage: boolean,
-    hasEmployerMatch: boolean,
-    employerCapAmount: number,
-    employerCapIsPercentage: boolean
-  ): number => {
-    let employeePerPaycheck = 0;
-    if (isPercentage) {
-      employeePerPaycheck = (grossPayPerPaycheck * employeeContribAmount) / 100;
-    } else {
-      employeePerPaycheck = employeeContribAmount;
-    }
-
-    let employerPerPaycheck = 0;
-    if (hasEmployerMatch) {
-      const employeePercentage = (employeePerPaycheck / grossPayPerPaycheck) * 100;
-      if (employerCapIsPercentage) {
-        const matchPercentage = Math.min(employeePercentage, employerCapAmount);
-        employerPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
-      } else {
-        employerPerPaycheck = Math.min(employeePerPaycheck, employerCapAmount);
-      }
-    }
-
-    return (employeePerPaycheck + employerPerPaycheck) * paychecksPerYear;
-  };
-
   const checkYearlyLimitExceeded = (
     limit: number,
     employeeContribAmount: number,
     isPercentage: boolean,
-    hasEmployerMatch: boolean,
-    employerCapAmount: number,
-    employerCapIsPercentage: boolean
   ): { exceeded: boolean; total: number; overage: number } => {
-    const total = calculateYearlyRetirementContribution(
-      employeeContribAmount,
-      isPercentage,
-      hasEmployerMatch,
-      employerCapAmount,
-      employerCapIsPercentage
-    );
+    const employeePerPaycheck = isPercentage
+      ? (grossPayPerPaycheck * employeeContribAmount) / 100
+      : employeeContribAmount;
+    const total = roundToCent(employeePerPaycheck * paychecksPerYear);
+    const overage = roundToCent(Math.max(0, total - limit));
     return {
-      exceeded: total > limit,
+      exceeded: overage > 0,
       total,
-      overage: Math.max(0, total - limit),
+      overage,
     };
+  };
+
+  const floorToDecimals = (value: number, decimals: number): number => {
+    const factor = 10 ** decimals;
+    return Math.floor(value * factor) / factor;
   };
 
   const handleAutoCalculateYearlyAmount = () => {
@@ -320,44 +444,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       return;
     }
 
-    const yearlyLimitAmount = parseFloat(yearlyLimit);
-
-    if (employerMatchOption === 'has-match') {
-      const employerCapAmount = parseFloat(employerMatchCap) || 0;
-      let employeePerPaycheck = yearlyLimitAmount / paychecksPerYear * 0.9;
-
-      for (let i = 0; i < 10; i += 1) {
-        const employeePercentage = (employeePerPaycheck / grossPayPerPaycheck) * 100;
-        let employerPerPaycheck = 0;
-        if (employerMatchCapIsPercentage) {
-          const matchPercentage = Math.min(employeePercentage, employerCapAmount);
-          employerPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
-        } else {
-          employerPerPaycheck = Math.min(employeePerPaycheck, employerCapAmount);
-        }
-
-        const totalYearly = (employeePerPaycheck + employerPerPaycheck) * paychecksPerYear;
-        if (Math.abs(totalYearly - yearlyLimitAmount) < 0.01) {
-          if (employeeIsPercentage) {
-            setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
-          } else {
-            setEmployeeAmount(employeePerPaycheck.toFixed(2));
-          }
-          setRetirementFormMessage(null);
-          return;
-        }
-
-        employeePerPaycheck = employeePerPaycheck * (yearlyLimitAmount / totalYearly);
-      }
-    } else {
-      const employeePerPaycheck = yearlyLimitAmount / paychecksPerYear;
-      if (employeeIsPercentage) {
-        setEmployeeAmount(((employeePerPaycheck / grossPayPerPaycheck) * 100).toFixed(2));
-      } else {
-        setEmployeeAmount(employeePerPaycheck.toFixed(2));
-      }
-      setRetirementFormMessage(null);
+    if (grossPayPerPaycheck <= 0 || paychecksPerYear <= 0) {
+      setRetirementFormMessage({
+        type: 'warning',
+        message: 'Gross pay must be greater than zero before auto-calculating to yearly limit.',
+      });
+      return;
     }
+
+    const yearlyLimitAmount = parseFloat(yearlyLimit);
+    const employeePerPaycheck = yearlyLimitAmount / paychecksPerYear;
+
+    if (employeeIsPercentage) {
+      const annualGrossPay = grossPayPerPaycheck * paychecksPerYear;
+      const maxSafePercent = floorToDecimals((yearlyLimitAmount / annualGrossPay) * 100, 2);
+      setEmployeeAmount(maxSafePercent.toFixed(2));
+    } else {
+      const maxSafePerPaycheck = floorToDecimals(employeePerPaycheck, 2);
+      setEmployeeAmount(maxSafePerPaycheck.toFixed(2));
+    }
+    setRetirementFormMessage(null);
   };
 
   const handleAddRetirement = () => {
@@ -435,9 +541,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         parsedYearlyLimit,
         parsedEmployeeContribution,
         employeeIsPercentage,
-        hasEmployerMatch,
-        parsedMatchCap || 0,
-        employerMatchCapIsPercentage
       );
 
       if (limitCheck.exceeded) {
@@ -490,20 +593,23 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     updateRetirementElection(retirement.id, { enabled: retirement.enabled === false });
   };
 
+  const handleOpenHistory = (
+    target: { type: 'savings-contribution' | 'retirement-election'; id: string; name: string },
+  ) => {
+    if (!onViewHistory) return;
+
+    onViewHistory({
+      entityType: target.type,
+      entityId: target.id,
+      title: target.name,
+    });
+  };
+
   return (
     <div className="tab-view savings-manager">
       <PageHeader
         title="Savings"
         subtitle="Manage savings/investment transfers and retirement contributions"
-        actions={(
-          <ViewModeSelector
-            mode={displayMode}
-            onChange={onDisplayModeChange || (() => {})}
-            hintText={`Current setting: ${payFrequencyLabel}`}
-            hintVisibleModes={['paycheck']}
-            reserveHintSpace
-          />
-        )}
       />
 
       <Banner
@@ -524,13 +630,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 {formatWithSymbol(toDisplayAmount(savingsTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <Button variant="primary" onClick={handleAddSavings}>+ Add Contribution</Button>
+            <Button variant="primary" onClick={handleAddSavings}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Contribution
+            </Button>
           </div>
         </div>
 
         {sortedSavings.length === 0 ? (
           <div className="empty-state empty-state--dashed empty-state--compact">
-            <div className="empty-icon">💰</div>
+            <div className="empty-icon" aria-hidden="true">
+              <PiggyBank className="ui-icon" />
+            </div>
             <h3>No Savings Contributions Yet</h3>
             <p>Add regular savings or investment transfers to get started</p>
           </div>
@@ -545,6 +656,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               return (
                 <SectionItemCard
                   key={item.id}
+                  elementId={`savings-${item.id}`}
                   title={item.name}
                   subtitle={`Saved ${formatBillFrequency(item.frequency)}: ${formatWithSymbol(item.amount, currency, { minimumFractionDigits: 2 })}`}
                   amount={formatWithSymbol(displayAmount, currency, { minimumFractionDigits: 2 })}
@@ -561,6 +673,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   onPauseToggle={() => handleToggleSavingsEnabled(item)}
                   onEdit={() => handleEditSavings(item)}
                   onDelete={() => handleDeleteSavings(item.id)}
+                  onHistory={() => handleOpenHistory({ type: 'savings-contribution', id: item.id, name: item.name })}
                 >
                   {item.notes && <div className="savings-notes">{item.notes}</div>}
                 </SectionItemCard>
@@ -583,13 +696,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <Button variant="primary" onClick={handleAddRetirement}>+ Add Retirement Plan</Button>
+            <Button variant="primary" onClick={handleAddRetirement}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Retirement Plan
+            </Button>
           </div>
         </div>
 
         {sortedRetirement.length === 0 ? (
           <div className="empty-state empty-state--dashed empty-state--compact">
-            <div className="empty-icon">🏦</div>
+            <div className="empty-icon" aria-hidden="true">
+              <ChartNoAxesCombined className="ui-icon" />
+            </div>
             <h3>No Retirement Plans Yet</h3>
             <p>Add your retirement plans to get started</p>
           </div>
@@ -609,6 +727,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               return (
                 <SectionItemCard
                   key={retirement.id}
+                  elementId={`retirement-${retirement.id}`}
                   title={displayLabel}
                   subtitle={`${formatWithSymbol(employeePerPaycheck || 0, currency, { minimumFractionDigits: 2 })} per paycheck${retirement.employeeContributionIsPercentage ? ` (${retirement.employeeContribution}%)` : ''}`}
                   amount={formatWithSymbol(totalInDisplayMode, currency, { minimumFractionDigits: 2 })}
@@ -625,6 +744,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   onPauseToggle={() => handleToggleRetirementEnabled(retirement)}
                   onEdit={() => handleEditRetirement(retirement)}
                   onDelete={() => handleDeleteRetirement(retirement.id)}
+                  onHistory={() => handleOpenHistory({ type: 'retirement-election', id: retirement.id, name: displayLabel })}
                 >
                   <div className="retirement-details">
                     <div className="detail">
@@ -720,26 +840,26 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             />
           </FormGroup>
           <FormGroup label="Frequency" required>
-            <select value={savingsFrequency} onChange={(e) => setSavingsFrequency(e.target.value as SavingsContribution['frequency'])}>
+            <Dropdown value={savingsFrequency} onChange={(e) => setSavingsFrequency(e.target.value as SavingsContribution['frequency'])}>
               <option value="weekly">Weekly</option>
               <option value="bi-weekly">Bi-weekly</option>
               <option value="monthly">Monthly</option>
               <option value="quarterly">Quarterly</option>
               <option value="semi-annual">Semi-annual</option>
               <option value="yearly">Yearly</option>
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
         <div className="form-row">
           <FormGroup label="Category" required>
-            <select value={savingsType} onChange={(e) => setSavingsType(e.target.value as SavingsContribution['type'])}>
+            <Dropdown value={savingsType} onChange={(e) => setSavingsType(e.target.value as SavingsContribution['type'])}>
               <option value="savings">Savings</option>
               <option value="investment">Investment</option>
-            </select>
+            </Dropdown>
           </FormGroup>
           <FormGroup label="Paid from Account" required error={savingsFieldErrors.accountId}>
-            <select
+            <Dropdown
               value={savingsAccountId}
               className={savingsFieldErrors.accountId ? 'field-error' : ''}
               onChange={(e) => {
@@ -752,10 +872,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             >
               {budgetData.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                  {account.name}
                 </option>
               ))}
-            </select>
+            </Dropdown>
           </FormGroup>
         </div>
 
@@ -793,11 +913,11 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         )}
       >
         <FormGroup label={<><GlossaryTerm termId="retirement-contribution">Plan Type</GlossaryTerm></>} required>
-          <select value={retirementType} onChange={(e) => setRetirementType(e.target.value as RetirementElection['type'])} required>
+          <Dropdown value={retirementType} onChange={(e) => setRetirementType(e.target.value as RetirementElection['type'])} required>
             {RETIREMENT_PLAN_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
-          </select>
+          </Dropdown>
         </FormGroup>
 
         {retirementType === 'other' && (
@@ -822,7 +942,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           <h4><GlossaryTerm termId="retirement-contribution">Your Contribution</GlossaryTerm></h4>
 
           <FormGroup label="Deduction Source" error={retirementFieldErrors.sourceAccountId}>
-            <select
+            <Dropdown
               className={retirementFieldErrors.sourceAccountId ? 'field-error' : ''}
               value={retirementSource === 'account' ? retirementSourceAccountId : 'paycheck'}
               onChange={(e) => {
@@ -843,10 +963,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               <option value="paycheck">Paid from Paycheck</option>
               {budgetData.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                  {account.name}
                 </option>
               ))}
-            </select>
+            </Dropdown>
           </FormGroup>
 
           <div className="form-row">
@@ -870,10 +990,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               />
             </FormGroup>
             <FormGroup label="Type">
-              <select value={employeeIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployeeIsPercentage(e.target.value === 'percentage')}>
+              <Dropdown value={employeeIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployeeIsPercentage(e.target.value === 'percentage')}>
                 <option value="amount">Fixed Amount</option>
                 <option value="percentage">Percentage of Gross</option>
-              </select>
+              </Dropdown>
             </FormGroup>
           </div>
 
@@ -956,10 +1076,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 />
               </FormGroup>
               <FormGroup label={<><GlossaryTerm termId="employer-match">Cap Type</GlossaryTerm></>}>
-                <select value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
+                <Dropdown value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
                   <option value="percentage">% of Gross Pay</option>
                   <option value="amount">Fixed Amount</option>
-                </select>
+                </Dropdown>
               </FormGroup>
             </div>
           )}

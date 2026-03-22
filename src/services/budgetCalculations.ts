@@ -2,7 +2,8 @@ import type { BudgetData } from '../types/budget';
 import type { PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
 import { roundUpToCent } from '../utils/money';
-import { getPaychecksPerYear } from '../utils/payPeriod';
+import { getDisplayModeOccurrencesPerYear, getPaychecksPerYear } from '../utils/payPeriod';
+import { calculateTaxLineAmount } from '../utils/taxLines';
 
 type BudgetCalculationInput = Pick<
   BudgetData,
@@ -43,11 +44,11 @@ function calculateGrossPayPerPaycheck(input: BudgetCalculationInput): number {
 
   if (paySettings.payType === 'salary' && paySettings.annualSalary) {
     const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
-    return roundUpToCent(paySettings.annualSalary / paychecksPerYear);
+    return paySettings.annualSalary / paychecksPerYear;
   }
 
   if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
-    return roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
+    return paySettings.hourlyRate * paySettings.hoursPerPayPeriod;
   }
 
   return 0;
@@ -95,7 +96,7 @@ export function calculatePaycheckBreakdown(input?: BudgetCalculationInput | null
   const taxLineAmounts: TaxLineAmount[] = (input.taxSettings.taxLines || []).map((line) => ({
     id: line.id,
     label: line.label,
-    amount: roundUpToCent((taxableIncome * line.rate) / 100),
+    amount: calculateTaxLineAmount(taxableIncome, line),
   }));
 
   const additionalWithholding = roundUpToCent(input.taxSettings.additionalWithholding || 0);
@@ -196,7 +197,7 @@ export function calculateDisplayPayBreakdown(
   mode: ViewMode,
   paychecksPerYear: number,
 ): PayBreakdownSummary {
-  const divisor = mode === 'paycheck' ? paychecksPerYear : mode === 'monthly' ? 12 : 1;
+  const divisor = getDisplayModeOccurrencesPerYear(mode, paychecksPerYear);
 
   return {
     grossPay: roundUpToCent(annualBreakdown.grossPay / divisor),

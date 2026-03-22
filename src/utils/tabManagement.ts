@@ -1,4 +1,5 @@
 // Utility functions for managing dashboard tabs
+import { Banknote, ChartPie, ClipboardList, Landmark, PiggyBank, Scale } from 'lucide-react';
 import type { TabConfig } from '../types/tabs';
 
 export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
@@ -21,7 +22,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'metrics',
       label: 'Key Metrics',
-      icon: '📊',
+      icon: ChartPie,
       visible: true,
       order: 0,
       pinned: false,
@@ -29,7 +30,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'breakdown',
       label: 'Pay Breakdown',
-      icon: '💵',
+      icon: Banknote,
       visible: true,
       order: 1,
       pinned: false,
@@ -37,7 +38,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'bills',
       label: 'Bills',
-      icon: '📋',
+      icon: ClipboardList,
       visible: true,
       order: 2,
       pinned: false,
@@ -45,7 +46,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'savings',
       label: 'Savings',
-      icon: '💰',
+      icon: PiggyBank,
       visible: true,
       order: 3,
       pinned: false,
@@ -53,7 +54,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'loans',
       label: 'Loans',
-      icon: '🏦',
+      icon: Landmark,
       visible: true,
       order: 4,
       pinned: false,
@@ -61,7 +62,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'taxes',
       label: 'Taxes',
-      icon: '🏛️',
+      icon: Scale,
       visible: true,
       order: 5,
       pinned: false,

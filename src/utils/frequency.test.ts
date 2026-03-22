@@ -20,6 +20,9 @@ describe('frequency utilities', () => {
     expect(getPayFrequencyOccurrencesPerYear('semi-monthly')).toBe(24);
     expect(getPayFrequencyOccurrencesPerYear('twice a month')).toBe(24);
     expect(getPayFrequencyOccurrencesPerYear('monthly')).toBe(12);
+    expect(getPayFrequencyOccurrencesPerYear('quarterly')).toBe(4);
+    expect(getPayFrequencyOccurrencesPerYear('yearly')).toBe(1);
+    expect(getPayFrequencyOccurrencesPerYear('annually')).toBe(1);
     expect(getPayFrequencyOccurrencesPerYear('unknown')).toBe(26);
   });
 

@@ -27,7 +27,7 @@
 .loans-manager .total-amount {
   font-size: 1.4rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .loans-manager .loans-list {
@@ -278,7 +278,7 @@
 
 .loans-manager .loan-line-error {
   font-size: 0.78rem;
-  color: var(--error-color, #b42318);
+  color: var(--error-color);
   padding-left: 0.15rem;
 }
 
@@ -320,6 +320,13 @@
 .loans-manager .loan-line-items-preview-row span:last-child {
   color: var(--text-primary);
   font-weight: 600;
+}
+
+.loans-manager .loans-manager-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: flex-end;
 }
 
 @media (max-width: 768px) {
