@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ChartNoAxesCombined, PiggyBank, Plus } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
-import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getAccountNameById } from '../../../utils/accountGrouping';
 import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
@@ -33,6 +34,7 @@ interface SavingsManagerProps {
     | 'toggle-retirement';
   searchActionTargetId?: string;
   displayMode?: ViewMode;
+  onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 type SavingsFieldErrors = {
@@ -56,6 +58,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode = 'paycheck',
+  onViewHistory,
 }) => {
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
   const {
@@ -590,6 +593,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     updateRetirementElection(retirement.id, { enabled: retirement.enabled === false });
   };
 
+  const handleOpenHistory = (
+    target: { type: 'savings-contribution' | 'retirement-election'; id: string; name: string },
+  ) => {
+    if (!onViewHistory) return;
+
+    onViewHistory({
+      entityType: target.type,
+      entityId: target.id,
+      title: target.name,
+    });
+  };
+
   return (
     <div className="tab-view savings-manager">
       <PageHeader
@@ -615,13 +630,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 {formatWithSymbol(toDisplayAmount(savingsTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <Button variant="primary" onClick={handleAddSavings}>+ Add Contribution</Button>
+            <Button variant="primary" onClick={handleAddSavings}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Contribution
+            </Button>
           </div>
         </div>
 
         {sortedSavings.length === 0 ? (
           <div className="empty-state empty-state--dashed empty-state--compact">
-            <div className="empty-icon">💰</div>
+            <div className="empty-icon" aria-hidden="true">
+              <PiggyBank className="ui-icon" />
+            </div>
             <h3>No Savings Contributions Yet</h3>
             <p>Add regular savings or investment transfers to get started</p>
           </div>
@@ -653,6 +673,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   onPauseToggle={() => handleToggleSavingsEnabled(item)}
                   onEdit={() => handleEditSavings(item)}
                   onDelete={() => handleDeleteSavings(item.id)}
+                  onHistory={() => handleOpenHistory({ type: 'savings-contribution', id: item.id, name: item.name })}
                 >
                   {item.notes && <div className="savings-notes">{item.notes}</div>}
                 </SectionItemCard>
@@ -675,13 +696,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <Button variant="primary" onClick={handleAddRetirement}>+ Add Retirement Plan</Button>
+            <Button variant="primary" onClick={handleAddRetirement}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Retirement Plan
+            </Button>
           </div>
         </div>
 
         {sortedRetirement.length === 0 ? (
           <div className="empty-state empty-state--dashed empty-state--compact">
-            <div className="empty-icon">🏦</div>
+            <div className="empty-icon" aria-hidden="true">
+              <ChartNoAxesCombined className="ui-icon" />
+            </div>
             <h3>No Retirement Plans Yet</h3>
             <p>Add your retirement plans to get started</p>
           </div>
@@ -718,6 +744,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                   onPauseToggle={() => handleToggleRetirementEnabled(retirement)}
                   onEdit={() => handleEditRetirement(retirement)}
                   onDelete={() => handleDeleteRetirement(retirement.id)}
+                  onHistory={() => handleOpenHistory({ type: 'retirement-election', id: retirement.id, name: displayLabel })}
                 >
                   <div className="retirement-details">
                     <div className="detail">
@@ -845,7 +872,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             >
               {budgetData.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                  {account.name}
                 </option>
               ))}
             </Dropdown>
@@ -936,7 +963,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               <option value="paycheck">Paid from Paycheck</option>
               {budgetData.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                  {account.name}
                 </option>
               ))}
             </Dropdown>

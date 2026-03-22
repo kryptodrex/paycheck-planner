@@ -145,6 +145,10 @@
   background: color-mix(in srgb, var(--error-color) 12%, var(--bg-secondary));
 }
 
+.item-card-actions .item-card-btn-history {
+  margin-right: auto;
+}
+
 @media (max-width: 600px) {
   .item-card-header {
     flex-direction: column;

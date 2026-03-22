@@ -6,6 +6,7 @@
  * the user to the matching item (switch tab, scroll to element, open a modal, etc.).
  */
 
+import type { LucideIcon } from 'lucide-react';
 import type { BudgetData } from '../types/budget';
 import type { TabId } from './tabManagement';
 import { getAllSearchResults } from './searchRegistry';
@@ -110,8 +111,8 @@ export interface SearchResult {
   subtitle?: string;
   /** Grouping label shown in the results list (e.g. "Bills", "Savings") */
   category: string;
-  /** Emoji icon for the category */
-  categoryIcon: string;
+  /** Lucide icon component for the category */
+  categoryIcon: LucideIcon;
   /** Optional badge text (e.g. disabled, paused) */
   badge?: string;
   /** Inline action buttons shown directly on an item result row. */

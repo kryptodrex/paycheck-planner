@@ -25,7 +25,10 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Estimated taxes**: View federal, state, Social Security, Medicare, and additional withholdings
 - **Deductions tracking**: Monitor pre-tax and post-tax deductions
 - **Multiple views**: Switch between per-paycheck, monthly, and yearly perspectives
+- **Expanded cadence views**: Use weekly, bi-weekly, semi-monthly, monthly, quarterly, and yearly modes
+- **Paycheck-cadence defaults**: Automatically start in your paycheck cadence view with visible cadence cues
 - **Key metrics dashboard**: High-level summary of income, deductions, bills, and remaining funds
+- **Plan-wide search**: Jump directly to settings, sections, and common actions from one searchable overlay
 - **Customizable tabs**: Show/hide dashboard tabs, reorder tabs, manage your view
   - Manage Tabs button for tab customization
   - All tabs can be shown/hidden (at least one must remain visible)
@@ -47,6 +50,12 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - Assign bills to specific accounts
 - Automatic calculation of per-paycheck and annual impact
 - View total bill allocation vs. remaining funds
+- Mark items as discretionary to control what is eligible for automated reallocation
+
+#### Smart Reallocation
+- Automatically rebalance eligible spending categories when Remaining falls below target
+- Uses safe-source guardrails (for example discretionary items and configurable contribution categories)
+- Review a clear summary of all amount changes after each automated reallocation
 
 #### Benefits & Deductions
 - Add any employer-provided benefits (health insurance, FSA, HSA, etc.)
@@ -77,6 +86,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
   - Social Security (6.2% default)
   - Medicare (1.45% default)
   - Additional withholding amounts
+- Configure tax lines as either percentages or fixed dollar amounts to match pay-stub behavior
 - Instant recalculation of net pay as you adjust rates
 
 ### 5) Plan Management
@@ -94,6 +104,10 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Recent files**: Automatic tracking of recently opened plans
 - **Session persistence**: Window size, position, and active tab saved and restored
 
+#### Change Recovery & Audit History
+- **Undo/Redo support**: Reverse or reapply plan edits across core workflows
+- **Audit history overlay**: Review notable changes and roll back targeted edits when needed
+
 #### Export & Sharing
 - **PDF export**: Generate comprehensive PDF reports
   - Optional password protection for PDFs
@@ -107,6 +121,12 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Cmd+N / Ctrl+N**: New budget plan
 - **Cmd+O / Ctrl+O**: Open existing plan
 - **Cmd+S / Ctrl+S**: Save current plan
+- **Cmd+Z / Ctrl+Z**: Undo
+- **Cmd+Shift+Z / Ctrl+Y**: Redo
+- **Cmd+F / Ctrl+F**: Open plan search
+- **Cmd+Plus / Ctrl+Plus**: Zoom in
+- **Cmd+Minus / Ctrl+Minus**: Zoom out
+- **Cmd+0 / Ctrl+0**: Reset zoom
 - **Keyboard shortcuts reference**: View a full list of all available shortcuts from the Help menu
 
 #### Native Menus
@@ -117,7 +137,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Help menu**: Glossary, keyboard shortcuts reference, support/feedback
 
 #### Application Features
-- **Settings panel**: Configure theme (light/dark/system), enable/disable glossary tooltips
+- **Settings panel**: Configure appearance presets, dark-mode behavior, high-contrast mode, zoom/font scaling, and glossary tooltips
 - **Glossary**: Built-in financial terms reference accessible from Help menu or inline tooltips
 - **Keyboard shortcuts reference**: View all available shortcuts in a dedicated in-app dialog, accessible from the Help menu
 - **In-app feedback**: Submit bug reports and feature requests directly from within the app via the Help menu
@@ -128,10 +148,14 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 ### 7) User Interface & Experience
 
 #### Theme Support
-- **Light mode**: Clean, professional light theme
-- **Dark mode**: Eye-friendly dark theme
-- **System theme**: Automatically match your OS preference
-- **Persistent preference**: Theme choice saved across sessions
+- **Curated preset pairs**: Choose from more polished light/dark appearance presets
+- **Manual dark-mode overrides**: Adjust dark behavior independently when preferred
+- **High-contrast mode**: Boost readability and separation for accessibility-sensitive workflows
+- **Persistent preference**: Appearance choices saved across sessions
+
+#### Visual Refresh
+- App-wide Lucide iconography replaces legacy emoji indicators
+- Account icon picker lets you choose from a larger icon catalog per account
 
 #### Glossary & Help
 - **Interactive tooltips**: Hover over or click glossary terms for definitions
@@ -175,7 +199,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 
 ### macOS: "App is damaged and can't be opened"
 
-If you see this error on macOS, it's because the app is not code-signed with an Apple Developer certificate. This is normal for open-source apps. To open the app:
+Official release builds are signed and notarized for macOS. If you still see this warning, it is usually due to a stale or partially downloaded artifact, or because you are running a local unsigned build. To open the app:
 
 **Option 1: Terminal command (remove quarantine flag)**
 1. Open Terminal

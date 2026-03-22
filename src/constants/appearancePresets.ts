@@ -73,12 +73,12 @@ export const APPEARANCE_PRESET_OPTIONS: AppearancePresetMeta[] = [
   {
     value: 'spreadsheet-core',
     label: 'Spreadsheet Core',
-    description: 'Neutral slate-gray with minimal color for a quieter, utilitarian workspace.',
+    description: 'Neutral grays with a plain, low-distraction desktop look.',
     preview: {
-      accent: '#4b5563',
-      accentAlt: '#64748b',
-      surface: '#f3f4f6',
-      text: '#111827',
+      accent: '#9aa1aa',
+      accentAlt: '#b3bac4',
+      surface: '#f5f5f7',
+      text: '#1f2328',
     },
   },
 ];

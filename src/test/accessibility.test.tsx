@@ -368,7 +368,7 @@ describe('Semantic structure and ARIA attributes', () => {
     });
 
     it('forwarded aria-label is accessible to screen readers', () => {
-      render(<Button variant="icon" aria-label="Delete item">🗑</Button>);
+      render(<Button variant="icon" aria-label="Delete item">X</Button>);
       expect(screen.getByRole('button', { name: 'Delete item' })).toBeInTheDocument();
     });
 

@@ -11,9 +11,9 @@ describe('accountDefaults utilities', () => {
   });
 
   it('returns expected default icons by account type', () => {
-    expect(getDefaultAccountIcon('checking')).toBe('💳');
-    expect(getDefaultAccountIcon('savings')).toBe('💰');
-    expect(getDefaultAccountIcon('investment')).toBe('📈');
-    expect(getDefaultAccountIcon('other')).toBe('💵');
+    expect(getDefaultAccountIcon('checking')).toBe('CreditCard');
+    expect(getDefaultAccountIcon('savings')).toBe('PiggyBank');
+    expect(getDefaultAccountIcon('investment')).toBe('TrendingUp');
+    expect(getDefaultAccountIcon('other')).toBe('Wallet');
   });
 });

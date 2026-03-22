@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Settings } from 'lucide-react';
 import { APP_CUSTOM_EVENTS } from '../../../../constants/events';
 import { FileStorageService } from '../../../../services/fileStorage';
 import type { ViewMode } from '../../../../types/viewMode';
@@ -26,7 +27,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   onChange,
   options,
   payCadenceMode,
-  payCadenceLabel = 'Pay cadence',
+  payCadenceLabel = 'Your Pay Frequency',
   onOpenViewModeSettings,
   disabled = false,
 }: ViewModeSelectorProps<T>) => {
@@ -98,7 +99,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
           aria-label="Open view mode settings"
           title="Open view mode settings"
         >
-          ⚙
+          <Settings className="ui-icon ui-icon-sm" aria-hidden="true" />
         </button>
       )}
       </div>

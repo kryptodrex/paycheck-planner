@@ -45,17 +45,22 @@
   gap: 0.5rem;
 }
 
-.add-account-icon-field {
-  flex-shrink: 0;
-}
-
 .add-account-name-field {
   flex: 1;
   min-width: 180px;
 }
 
 .add-account-type-field {
-  min-width: 120px;
+  min-width: 140px;
+}
+
+.add-account-icon-field {
+  min-width: 3.75rem;
+}
+
+.add-account-icon-field .account-icon-picker {
+  width: 3.25rem;
+  max-width: 3.25rem;
 }
 
 .add-account-label {
@@ -184,41 +189,54 @@
   text-transform: capitalize;
 }
 
-.account-edit-form {
+.accounts-editor .account-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+.accounts-editor .account-edit-row {
   display: flex;
   gap: 0.75rem;
-  align-items: stretch;
-  width: 100%;
+  align-items: flex-end;
   flex-wrap: wrap;
+  width: 100%;
 }
 
-.account-edit-form .account-icon-input {
-  width: 3.5rem;
-  height: 3.5rem;
-  padding: 0.5rem;
-  background: var(--bg-primary);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1.5rem;
-  color: var(--text-primary);
-  text-align: center;
-  flex-shrink: 0;
+.accounts-editor .account-edit-field {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.account-edit-form .account-icon-input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: var(--focus-ring-accent-soft);
-}
-
-.account-edit-form .account-name-input {
+.accounts-editor .account-edit-name-field {
   flex: 1;
+  min-width: 180px;
+}
+
+.accounts-editor .account-edit-type-field {
   min-width: 140px;
-  padding: 0.75rem;
+}
+
+.accounts-editor .account-edit-icon-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 3.75rem;
+  gap: 0.5rem;
+}
+
+.accounts-editor .account-edit-icon-field .account-icon-picker {
+  width: 3.25rem;
+  max-width: 3.25rem;
+}
+
+.accounts-editor .account-edit-form .account-name-input {
+  width: 100%;
+  height: 3.5rem;
+  min-height: 3.5rem;
+  padding: 0 0.75rem;
   background: var(--bg-primary);
   border: 2px solid var(--border-color);
   border-radius: 8px;
@@ -226,17 +244,30 @@
   color: var(--text-primary);
   font-weight: 600;
   transition: all 0.2s;
+  display: block;
+  box-sizing: border-box;
 }
 
-.account-edit-form .account-name-input:focus {
+/* Dedicated edit-field selector to prevent cross-screen CSS collisions. */
+.accounts-editor .account-edit-name-input {
+  height: 3.5rem;
+  min-height: 3.5rem;
+  padding: 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+.accounts-editor .account-edit-form .account-name-input:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: var(--focus-ring-accent-soft);
 }
 
-.account-edit-form .account-type-select {
-  min-width: 120px;
-  padding: 0.75rem;
+.accounts-editor .account-edit-form .account-type-select {
+  width: 100%;
+  height: 3.5rem;
+  padding: 0 0.75rem;
   background: var(--bg-primary);
   border: 2px solid var(--border-color);
   border-radius: 8px;
@@ -244,31 +275,10 @@
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.account-edit-form .account-type-select:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: var(--focus-ring-accent-soft);
-}
-
-/* Add Account Form Inputs */
-.add-account-form .account-icon-input {
-  width: 3.5rem;
-  height: 3.5rem;
-  padding: 0.5rem;
-  background: var(--bg-primary);
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1.5rem;
-  color: var(--text-primary);
-  text-align: center;
-  flex-shrink: 0;
-  transition: all 0.2s;
   display: block;
 }
 
-.add-account-form .account-icon-input:focus {
+.accounts-editor .account-edit-form .account-type-select:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: var(--focus-ring-accent-soft);

@@ -27,7 +27,7 @@
 .loans-manager .total-amount {
   font-size: 1.4rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-inverse);
 }
 
 .loans-manager .loans-list {

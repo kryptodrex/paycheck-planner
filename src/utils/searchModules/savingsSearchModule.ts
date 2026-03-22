@@ -1,3 +1,4 @@
+import { PiggyBank, Umbrella } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { OpenSavingsAction, SearchResult } from '../planSearch';
 import type { SearchActionContext, SearchModule } from '../searchRegistry';
@@ -19,7 +20,7 @@ function buildSavingsResults(budgetData: BudgetData): SearchResult[] {
       title: contribution.name,
       subtitle: `${formatSearchCurrency(contribution.amount, currency)} · ${freqLabel} · ${typeLabel}`,
       category: 'Savings',
-      categoryIcon: '🏦',
+      categoryIcon: PiggyBank,
       badge: paused ? 'Paused' : undefined,
       inlineActions: [
         {
@@ -60,7 +61,7 @@ function buildSavingsResults(budgetData: BudgetData): SearchResult[] {
       title: label,
       subtitle: `Employee contribution: ${contribLabel}${election.hasEmployerMatch ? ' · Employer match' : ''}`,
       category: 'Retirement',
-      categoryIcon: '🏖️',
+      categoryIcon: Umbrella,
       badge: paused ? 'Paused' : undefined,
       inlineActions: [
         {

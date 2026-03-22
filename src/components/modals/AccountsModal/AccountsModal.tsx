@@ -135,7 +135,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
         isOpen={true}
         onClose={onClose}
         contentClassName="accounts-modal"
-        header="Manage Accounts"
+        header="Manage Your Accounts"
         footer={
           <Button variant="primary" onClick={onClose}>
             Done
@@ -149,7 +149,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
           onDelete={handleDeleteAccount}
           onMove={handleMoveAccount}
           showToggleButton={true}
-          infoMessage="These accounts are specific to this plan. Changes will only affect this plan file."
+          infoMessage="These accounts are specific to this plan, so any changes will only affect this plan file."
         />
       </Modal>
 

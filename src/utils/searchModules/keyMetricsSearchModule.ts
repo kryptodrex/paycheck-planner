@@ -1,3 +1,4 @@
+import { ChartPie, ClipboardList, HandCoins, PiggyBank, Scale, TrendingUp, Wallet } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import { calculateAnnualizedPaySummary, calculatePaycheckBreakdown } from '../../services/budgetCalculations';
 import { convertBillToYearly } from '../billFrequency';
@@ -23,7 +24,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Total Income',
       subtitle: `${formatSearchCurrency(annualizedSummary.annualGross, currency)} yearly`,
       category: 'Key Metrics',
-      categoryIcon: '📈',
+      categoryIcon: TrendingUp,
       action: {
         type: 'navigate-tab',
         tabId: 'metrics',
@@ -35,7 +36,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Total Taxes',
       subtitle: `${formatSearchCurrency(annualizedSummary.annualTaxes, currency)} yearly`,
       category: 'Key Metrics',
-      categoryIcon: '🏛️',
+      categoryIcon: Scale,
       action: {
         type: 'navigate-tab',
         tabId: 'metrics',
@@ -47,7 +48,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Total Bills',
       subtitle: `${formatSearchCurrency(annualBills, currency)} yearly`,
       category: 'Key Metrics',
-      categoryIcon: '📋',
+      categoryIcon: ClipboardList,
       action: {
         type: 'navigate-tab',
         tabId: 'metrics',
@@ -59,7 +60,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Savings Rate',
       subtitle: 'Savings and investment progress',
       category: 'Key Metrics',
-      categoryIcon: '🏦',
+      categoryIcon: PiggyBank,
       action: {
         type: 'navigate-tab',
         tabId: 'metrics',
@@ -71,7 +72,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Take Home Pay',
       subtitle: `${formatSearchCurrency(annualizedSummary.annualNet, currency)} yearly`,
       category: 'Key Metrics',
-      categoryIcon: '✅',
+      categoryIcon: HandCoins,
       action: {
         type: 'navigate-tab',
         tabId: 'metrics',
@@ -83,7 +84,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Remaining for Spending',
       subtitle: `${formatSearchCurrency(annualRemainingForSpending, currency)} yearly`,
       category: 'Key Metrics',
-      categoryIcon: '💵',
+      categoryIcon: Wallet,
       action: {
         type: 'navigate-tab',
         tabId: 'metrics',
@@ -95,7 +96,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Yearly Pay Breakdown',
       subtitle: 'Bar, stacked, and pie summary views',
       category: 'Key Metrics',
-      categoryIcon: '📊',
+      categoryIcon: ChartPie,
       action: {
         type: 'navigate-tab',
         tabId: 'metrics',

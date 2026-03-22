@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Building2, ClipboardList, Plus, ReceiptText } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import type { Bill } from '../../../types/obligations';
 import type { Benefit } from '../../../types/payroll';
 import type { BillFrequency } from '../../../types/frequencies';
@@ -8,7 +10,7 @@ import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundUpToCent } from '../../../utils/money';
 import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear } from '../../../utils/payPeriod';
-import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
+import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
@@ -31,6 +33,7 @@ interface BillsManagerProps {
     | 'toggle-benefit';
   searchActionTargetId?: string;
   displayMode: ViewMode;
+  onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 type BillFieldErrors = {
@@ -51,6 +54,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode,
+  onViewHistory,
 }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -450,6 +454,16 @@ const BillsManager: React.FC<BillsManagerProps> = ({
     updateBenefit(benefit.id, { enabled: benefit.enabled === false });
   };
 
+  const handleOpenHistory = (target: { type: 'bill' | 'benefit'; id: string; name: string }) => {
+    if (!onViewHistory) return;
+
+    onViewHistory({
+      entityType: target.type,
+      entityId: target.id,
+      title: target.name,
+    });
+  };
+
   return (
     <div className="tab-view bills-manager">
       <PageHeader
@@ -457,8 +471,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
         actions={
           <div className="bills-header-buttons">
-            <Button variant="secondary" onClick={handleAddBenefit}>+ Add Deduction</Button>
-            <Button variant="primary" onClick={handleAddBill}>+ Add Bill</Button>
+            <Button variant="secondary" onClick={handleAddBenefit}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Deduction
+            </Button>
+            <Button variant="primary" onClick={handleAddBill}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Bill
+            </Button>
           </div>
         }
       />
@@ -470,13 +490,17 @@ const BillsManager: React.FC<BillsManagerProps> = ({
 
       {budgetData.accounts.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">🏦</div>
+          <div className="empty-icon" aria-hidden="true">
+            <Building2 className="ui-icon" />
+          </div>
           <h3>No Accounts Set Up</h3>
           <p>Accounts are created during the initial setup wizard. Run the setup wizard to create your first account.</p>
         </div>
       ) : !hasAnyItems ? (
         <div className="empty-state">
-          <div className="empty-icon">📋</div>
+          <div className="empty-icon" aria-hidden="true">
+            <ClipboardList className="ui-icon" />
+          </div>
           <h3>No Bills or Deductions Yet</h3>
           <p>Add recurring bills or paycheck/account deductions to get started</p>
           <div className="empty-state-actions">
@@ -490,7 +514,9 @@ const BillsManager: React.FC<BillsManagerProps> = ({
             <div id="account-paycheck" className="account-section">
               <div className="account-header">
                 <div className="account-info">
-                  <span className="account-icon">🧾</span>
+                  <span className="account-icon" aria-hidden="true">
+                    <ReceiptText className="ui-icon" />
+                  </span>
                   <div>
                     <h3>Paycheck Deductions</h3>
                     <span className="account-type">paycheck source</span>
@@ -524,6 +550,8 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                       }
                       isPaused={!isBenefitEnabled(benefit)}
                       onPauseToggle={() => handleToggleBenefitEnabled(benefit)}
+                      onHistory={() => handleOpenHistory({ type: 'benefit', id: benefit.id, name: benefit.name })}
+                      historyLabel="View History"
                       onEdit={() => handleEditBenefit(benefit)}
                       onDelete={() => handleDeleteBenefit(benefit.id)}
                     />
@@ -537,7 +565,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({
             <div key={account.id} id={`account-${account.id}`} className="account-section">
               <div className="account-header">
                 <div className="account-info">
-                  <span className="account-icon">{account.icon || getDefaultAccountIcon(account.type)}</span>
+                  <span className="account-icon">{
+                    (() => {
+                      const iconName = account.icon || getDefaultAccountIcon(account.type);
+                      const IconComponent = getIconComponent(iconName);
+                      return IconComponent ? <IconComponent className="ui-icon" /> : iconName;
+                    })()
+                  }</span>
                   <div>
                     <h3>{account.name}</h3>
                     <span className="account-type">{account.type}</span>
@@ -576,6 +610,8 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                         }
                         isPaused={!isBenefitEnabled(benefit)}
                         onPauseToggle={() => handleToggleBenefitEnabled(benefit)}
+                        onHistory={() => handleOpenHistory({ type: 'benefit', id: benefit.id, name: benefit.name })}
+                        historyLabel="View History"
                         onEdit={() => handleEditBenefit(benefit)}
                         onDelete={() => handleDeleteBenefit(benefit.id)}
                       />
@@ -600,6 +636,8 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                       badges={bill.discretionary ? <PillBadge variant="warning">Discretionary</PillBadge> : undefined}
                       isPaused={!isBillEnabled(bill)}
                       onPauseToggle={() => handleToggleBillEnabled(bill)}
+                      onHistory={() => handleOpenHistory({ type: 'bill', id: bill.id, name: bill.name })}
+                      historyLabel="View History"
                       onEdit={() => handleEditBill(bill)}
                       onDelete={() => handleDeleteBill(bill.id)}
                     >
@@ -687,7 +725,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           >
             {budgetData.accounts.map((account) => (
               <option key={account.id} value={account.id}>
-                {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                {account.name}
               </option>
             ))}
           </Dropdown>
@@ -760,7 +798,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
             <option value="paycheck">Deduct from Paycheck</option>
             {budgetData.accounts.map((account) => (
               <option key={account.id} value={account.id}>
-                {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                {account.name}
               </option>
             ))}
           </Dropdown>

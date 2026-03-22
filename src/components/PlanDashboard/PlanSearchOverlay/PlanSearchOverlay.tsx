@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Search, X } from 'lucide-react';
 import { searchPlan } from '../../../utils/planSearch';
 import type { SearchResult } from '../../../utils/planSearch';
 import type { SearchResultAction } from '../../../utils/planSearch';
@@ -194,7 +195,9 @@ const PlanSearchOverlay: React.FC<PlanSearchOverlayProps> = ({
       >
         {/* Search input */}
         <div className="plan-search-input-row">
-          <span className="plan-search-icon" aria-hidden="true">🔍</span>
+          <span className="plan-search-icon" aria-hidden="true">
+            <Search className="ui-icon ui-icon-sm" />
+          </span>
           <input
             ref={inputRef}
             type="text"
@@ -227,7 +230,7 @@ const PlanSearchOverlay: React.FC<PlanSearchOverlayProps> = ({
               }}
               aria-label="Clear search"
             >
-              ✕
+              <X className="ui-icon ui-icon-sm" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -261,7 +264,7 @@ const PlanSearchOverlay: React.FC<PlanSearchOverlayProps> = ({
                     aria-selected={index === clampedActiveIndex}
                   >
                     <span className="plan-search-result-icon" aria-hidden="true">
-                      {result.categoryIcon}
+                      <result.categoryIcon className="ui-icon" />
                     </span>
                     <div className="plan-search-result-body">
                       <div className="plan-search-result-title-row">

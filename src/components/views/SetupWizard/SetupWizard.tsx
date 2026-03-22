@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, ShieldCheck } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow } from '../../../hooks';
 import { getCurrencySymbol, CURRENCIES } from '../../../utils/currency';
@@ -40,7 +41,7 @@ const getDefaultTaxLinesForCurrency = (currencyCode: string): EditableTaxLineVal
 };
 
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
-  const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData } = useBudget();
+  const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData, beginBatch, commitBatch } = useBudget();
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   
   const [step, setStep] = useState(1);
@@ -149,6 +150,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     }
 
     // Save currency setting
+    beginBatch();
     if (budgetData) {
       updateBudgetSettings({
         ...budgetData.settings,
@@ -187,6 +189,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
     // Save accounts configured during setup
     updateBudgetData({ accounts });
+    commitBatch('Initial plan setup');
 
     onComplete();
   };
@@ -415,7 +418,10 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
           {step === 6 && (
             <div className="wizard-step">
-              <h2>🔐 Security Setup</h2>
+              <h2 className="wizard-step-title-with-icon">
+                <ShieldCheck className="ui-icon" aria-hidden="true" />
+                Security Setup
+              </h2>
               <p className="step-description">
                 Choose how you want to protect your budget files
               </p>
@@ -635,7 +641,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 variant="secondary"
                 onClick={onCancel}
               >
-                ← Back
+                <ArrowLeft className="ui-icon ui-icon-sm" aria-hidden="true" />
+                Back
               </Button>
             ) : null
           ) : (
@@ -643,7 +650,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               variant="secondary"
               onClick={handlePrevious}
             >
-              ← Previous
+              <ArrowLeft className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Previous
             </Button>
           )}
           
@@ -653,7 +661,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               onClick={handleNext}
               disabled={!canProceed()}
             >
-              Next →
+              Next
+              <ArrowRight className="ui-icon ui-icon-sm" aria-hidden="true" />
             </Button>
           ) : (
             <Button
@@ -661,7 +670,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               onClick={handleComplete}
               disabled={!canProceed()}
             >
-              Complete Setup ✓
+              Complete Setup
+              <Check className="ui-icon ui-icon-sm" aria-hidden="true" />
             </Button>
           )}
         </div>

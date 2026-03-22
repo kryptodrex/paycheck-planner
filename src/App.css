@@ -27,7 +27,7 @@ html, body {
   align-items: center;
   min-height: 100vh;
   background: var(--header-gradient);
-  color: white;
+  color: var(--text-inverse);
   font-size: clamp(1.1rem, 3vw, 1.5rem);
   padding: 1rem;
 }
@@ -132,8 +132,51 @@ html, body {
   background: color-mix(in srgb, var(--alert-warning-bg) 70%, var(--bg-primary) 30%);
 }
 
+.undo-redo-indicator {
+  position: fixed;
+  z-index: 2400;
+  min-width: 7rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border-accent-soft);
+  background: color-mix(in srgb, var(--bg-primary) 86%, transparent);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  transform-origin: top right;
+  white-space: nowrap;
+  text-align: center;
+  border-color: color-mix(in srgb, var(--accent-primary) 45%, var(--border-accent-soft));
+  animation: undo-redo-indicator-in 150ms ease-out, undo-redo-indicator-out 180ms ease-in 1320ms;
+}
+
+@keyframes undo-redo-indicator-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes undo-redo-indicator-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 768px) {
-  .zoom-indicator {
+  .zoom-indicator,
+  .undo-redo-indicator {
     right: 0.75rem;
     left: 0.75rem;
     top: 2.15rem;

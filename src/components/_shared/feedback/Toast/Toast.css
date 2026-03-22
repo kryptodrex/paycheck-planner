@@ -13,6 +13,15 @@
   text-align: center;
   animation: slideDown 0.3s ease-out, fadeOut 0.5s ease-out 2s forwards;
   max-width: 90vw;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toast-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .toast-success {

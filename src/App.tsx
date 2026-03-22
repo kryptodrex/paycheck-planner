@@ -1,5 +1,5 @@
 // Main App component - decides whether to show setup, welcome screen, or dashboard
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from './constants/events'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
@@ -45,6 +45,8 @@ function App() {
   const [zoomIndicatorAtLimit, setZoomIndicatorAtLimit] = useState(false)
   const [currentZoomFactor, setCurrentZoomFactor] = useState(1)
   const zoomIndicatorTimeoutRef = useRef<number | null>(null)
+  const [undoRedoMessage, setUndoRedoMessage] = useState<string | null>(null)
+  const undoRedoTimeoutRef = useRef<number | null>(null)
   // Track requested glossary term when opened from inline tooltips
   const [initialGlossaryTermId, setInitialGlossaryTermId] = useState<string | null>(null)
 
@@ -121,6 +123,27 @@ function App() {
       unsubscribe()
       if (zoomIndicatorTimeoutRef.current !== null) {
         window.clearTimeout(zoomIndicatorTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const handleUndoRedoSuccess = useCallback((action: 'undo' | 'redo') => {
+    const message = action === 'undo' ? 'Undo successful' : 'Redo successful'
+    setUndoRedoMessage(message)
+
+    if (undoRedoTimeoutRef.current !== null) {
+      window.clearTimeout(undoRedoTimeoutRef.current)
+    }
+
+    undoRedoTimeoutRef.current = window.setTimeout(() => {
+      setUndoRedoMessage(null)
+    }, 1500)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (undoRedoTimeoutRef.current !== null) {
+        window.clearTimeout(undoRedoTimeoutRef.current)
       }
     }
   }, [])
@@ -249,7 +272,11 @@ function App() {
     <>
       <div className="drag-bar" />
       {budgetData ? (
-        <PlanDashboard onResetSetup={handleResetSetup} viewMode={viewMode} />
+        <PlanDashboard
+          onResetSetup={handleResetSetup}
+          onUndoRedoSuccess={handleUndoRedoSuccess}
+          viewMode={viewMode}
+        />
       ) : (
         <>
           <WelcomeScreen />
@@ -281,6 +308,20 @@ function App() {
           }}
         >
           {zoomIndicatorMessage}
+        </div>
+      )}
+      {undoRedoMessage && (
+        <div
+          className="zoom-indicator"
+          role="status"
+          aria-live="polite"
+          style={{
+            top: `${2.35 / currentZoomFactor}rem`,
+            right: `${1 / currentZoomFactor}rem`,
+            transform: `scale(${1 / currentZoomFactor})`,
+          }}
+        >
+          {undoRedoMessage}
         </div>
       )}
     </>

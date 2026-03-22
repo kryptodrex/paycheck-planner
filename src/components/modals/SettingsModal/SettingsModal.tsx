@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Monitor, Moon, Sun } from 'lucide-react';
 import { APPEARANCE_PRESET_MAP, APPEARANCE_PRESET_OPTIONS } from '../../../constants/appearancePresets';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
@@ -501,21 +502,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
                     onClick={() => handleThemeModeChange('light')}
                     title="Light theme"
                   >
-                    ☀️ Light
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                      <Sun className="ui-icon ui-icon-sm" aria-hidden="true" />
+                      Light
+                    </span>
                   </button>
                   <button
                     className={`theme-option ${settings.themeMode === 'dark' ? 'active' : ''}`}
                     onClick={() => handleThemeModeChange('dark')}
                     title="Dark theme"
                   >
-                    🌙 Dark
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                      <Moon className="ui-icon ui-icon-sm" aria-hidden="true" />
+                      Dark
+                    </span>
                   </button>
                   <button
                     className={`theme-option ${settings.themeMode === 'system' ? 'active' : ''}`}
                     onClick={() => handleThemeModeChange('system')}
                     title="Follow system preference"
                   >
-                    💻 System
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}>
+                      <Monitor className="ui-icon ui-icon-sm" aria-hidden="true" />
+                      System
+                    </span>
                   </button>
                 </div>
               </div>
@@ -784,7 +794,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
               loadingText="Backing up…"
               disabled={resettingMemory}
             >
-              {backedUp ? '✓ Backed up' : 'Back Up First'}
+              {backedUp ? (
+                <>
+                  <Check className="ui-icon ui-icon-sm" aria-hidden="true" />
+                  Backed up
+                </>
+              ) : (
+                'Back Up First'
+              )}
             </Button>
             <Button
               variant="danger"

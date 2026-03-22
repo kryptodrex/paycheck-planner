@@ -48,7 +48,7 @@
 /* Primary button */
 .btn-primary {
   background: var(--accent-primary);
-  color: white;
+  color: var(--button-primary-text, white);
 }
 
 .btn-primary:hover:not(:disabled) {

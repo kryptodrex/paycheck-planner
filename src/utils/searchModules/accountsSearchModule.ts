@@ -1,3 +1,4 @@
+import { Building2 } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
@@ -15,7 +16,7 @@ function buildAccountsResults(budgetData: BudgetData): SearchResult[] {
       title: account.name,
       subtitle: typeLabel,
       category: 'Accounts',
-      categoryIcon: '🏛️',
+      categoryIcon: Building2,
       action: { type: 'open-accounts', scrollToAccountId: account.id },
     });
   }

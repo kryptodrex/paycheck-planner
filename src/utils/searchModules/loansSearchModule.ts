@@ -1,3 +1,4 @@
+import { CreditCard } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { OpenLoansAction, SearchResult } from '../planSearch';
 import type { SearchActionContext, SearchModule } from '../searchRegistry';
@@ -18,7 +19,7 @@ function buildLoansResults(budgetData: BudgetData): SearchResult[] {
       title: loan.name,
       subtitle: `${formatSearchCurrency(loan.currentBalance, currency)} balance · ${typeLabel} · ${loan.interestRate}% APR`,
       category: 'Loans',
-      categoryIcon: '💳',
+      categoryIcon: CreditCard,
       badge: paused ? 'Paused' : undefined,
       inlineActions: [
         {

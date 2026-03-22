@@ -48,7 +48,9 @@
 }
 
 .tab-icon {
-  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  font-size: 1.3rem;
 }
 
 /* Display Mode Toggle Button */
@@ -390,8 +392,9 @@
 
 /* Icons with Labels (Default for all, required for top/bottom) */
 .tab-navigation .tab-label {
-  display: inline;
-  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
 }
 
 /* Icons Only Mode (only for left/right sidebars) */

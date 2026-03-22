@@ -119,6 +119,12 @@ function normalizeAppSettingsValue(
 function migrateBudgetData(budgetData: BudgetData): BudgetData {
   const migrated = { ...budgetData };
 
+  if (!migrated.metadata) {
+    migrated.metadata = { auditHistory: [] };
+  } else if (!Array.isArray(migrated.metadata.auditHistory)) {
+    migrated.metadata.auditHistory = [];
+  }
+
   // Ensure taxSettings exists with default values
   if (!migrated.taxSettings) {
     migrated.taxSettings = {
@@ -1204,6 +1210,9 @@ export class FileStorageService {
       benefits: [],
       retirement: [],
       savingsContributions: [],
+      metadata: {
+        auditHistory: [],
+      },
       settings: {
         currency,
         locale: 'en-US',

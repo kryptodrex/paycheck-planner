@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 import { Button } from '../../';
 import './Modal.css';
 
@@ -55,7 +56,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, contentClassName, childr
                 title="Close modal"
                 aria-label="Close modal"
               >
-                ✕
+                <X className="ui-icon" aria-hidden="true" />
               </Button>
             )}
           </div>

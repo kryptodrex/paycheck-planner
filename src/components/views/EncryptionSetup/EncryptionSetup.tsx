@@ -1,6 +1,7 @@
 // Encryption Setup Component - Shown on first launch
 // Allows users to configure encryption or skip it
 import React from 'react';
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useAppDialogs, useEncryptionSetupFlow } from '../../../hooks';
 import { Button, EncryptionConfigPanel, ErrorDialog } from '../../_shared';
 import '../views.shared.css';
@@ -49,7 +50,10 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
   return (
     <div className="view-screen encryption-setup">
       <div className="view-screen-card setup-card">
-        <h1>{encryptionEnabled ? '🔐 Encryption Key Setup' : '🔐 Security Setup'}</h1>
+        <h1 className="encryption-title-with-icon">
+          <ShieldCheck className="ui-icon" aria-hidden="true" />
+          {encryptionEnabled ? 'Encryption Key Setup' : 'Security Setup'}
+        </h1>
         <p className="subtitle">
           {encryptionEnabled ? 'This key will be used to encrypt and decrypt your budget files' : 'Choose how you want to protect your budget files'}
         </p>
@@ -73,7 +77,8 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
                 onClick={onCancel}
                 disabled={isSaving}
               >
-                ← Cancel
+                <ArrowLeft className="ui-icon ui-icon-sm" aria-hidden="true" />
+                Cancel
               </Button>
             )
           ) : (
@@ -82,7 +87,8 @@ const EncryptionSetup: React.FC<EncryptionSetupProps> = ({ onComplete, onCancel,
               onClick={goBackToSelection}
               disabled={isSaving}
             >
-              ← Back
+              <ArrowLeft className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Back
             </Button>
           )}
           <Button 

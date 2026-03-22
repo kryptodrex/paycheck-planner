@@ -44,8 +44,16 @@
 }
 
 .about-feature-icon {
-  font-size: 2rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  --icon-color: color-mix(in srgb, var(--accent-primary) 84%, var(--text-primary) 16%);
 }
 
 .about-feature-content {
@@ -97,7 +105,9 @@
   }
 
   .about-feature-icon {
-    font-size: 1.75rem;
+    font-size: 1.35rem;
+    width: 1.9rem;
+    height: 1.9rem;
   }
 
   .about-feature-content h4 {

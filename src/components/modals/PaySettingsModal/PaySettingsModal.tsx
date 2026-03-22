@@ -4,6 +4,7 @@ import { useAppDialogs } from '../../../hooks';
 import type { BudgetData } from '../../../types/budget';
 import type { PayFrequency } from '../../../types/frequencies';
 import type { PaySettings } from '../../../types/payroll';
+import type { AuditHistoryTarget } from '../../../types/audit';
 import { convertBudgetAmounts } from '../../../services/budgetCurrencyConversion';
 import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
@@ -17,6 +18,7 @@ interface PaySettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   searchFieldHighlight?: string;
+  onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
 type PaySettingsFieldErrors = {
@@ -31,7 +33,7 @@ const SEARCH_FOCUS_RETRY_DELAY_MS = 120;
 const SEARCH_FOCUS_MAX_RETRIES = 6;
 const SEARCH_HIGHLIGHT_DURATION_MS = 1800;
 
-const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, searchFieldHighlight }) => {
+const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, searchFieldHighlight, onViewHistory }) => {
   const { budgetData, updateBudgetData } = useBudget();
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   
@@ -260,6 +262,15 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       header="Edit Pay Breakdown Settings"
       footer={
         <>
+          {onViewHistory && (
+            <Button 
+              variant="utility" 
+              onClick={() => onViewHistory({ entityType: 'pay-settings', entityId: 'pay-settings', title: 'Pay Settings' })}
+            >
+              View History
+            </Button>
+          )}
+          <div style={{ flex: 1 }} />
           <Button variant="secondary" onClick={() => {
             setFieldErrors({});
             setExchangeRate('');

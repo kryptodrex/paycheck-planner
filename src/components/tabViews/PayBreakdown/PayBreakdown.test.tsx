@@ -153,12 +153,11 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
-    await user.click(screen.getByRole('button', { name: '+ Add Item' }));
+    await user.click(screen.getByRole('button', { name: 'Add Item' }));
   }
 
   it('shows an error and blocks save when a custom allocation amount has no name', async () => {
@@ -206,7 +205,6 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
       />,
     );
 
@@ -226,7 +224,6 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
       />,
     );
 
@@ -238,7 +235,6 @@ describe('PayBreakdown custom allocation validation', () => {
     render(
       <PayBreakdown
         displayMode="monthly"
-        onDisplayModeChange={vi.fn()}
         searchPaySettingsRequestKey={1}
         searchPaySettingsFieldHighlight="payFrequency"
       />,

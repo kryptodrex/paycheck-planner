@@ -1,3 +1,4 @@
+import { TrendingDown } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
@@ -15,7 +16,7 @@ function buildPreTaxDeductionsResults(budgetData: BudgetData): SearchResult[] {
         ? `${deduction.amount}% of gross pay`
         : formatSearchCurrency(deduction.amount, currency) + ' per paycheck',
       category: 'Pre-Tax Deductions',
-      categoryIcon: '📉',
+      categoryIcon: TrendingDown,
       action: { type: 'navigate-tab', tabId: 'breakdown' },
     });
   }
