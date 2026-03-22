@@ -26,7 +26,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   onChange,
   options,
   payCadenceMode,
-  payCadenceLabel = 'Pay cadence',
+  payCadenceLabel = 'Your Pay Frequency',
   onOpenViewModeSettings,
   disabled = false,
 }: ViewModeSelectorProps<T>) => {
