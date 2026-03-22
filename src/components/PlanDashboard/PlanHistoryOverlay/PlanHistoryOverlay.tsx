@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { AuditEntry, AuditHistoryTarget } from '../../../types/audit';
 import Button from '../../_shared/controls/Button';
-import FormGroup from '../../_shared/controls/FormGroup';
 import PillBadge from '../../_shared/controls/PillBadge';
 import {
   ALLOCATION_NOISE_FIELDS,
@@ -52,8 +51,8 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
     }
     return formatDiffValueForField(key, value);
   };
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom] = useState('');
+  const [dateTo] = useState('');
 
   // The most recent audit timestamp for this target entity (across all history, pre-filter).
   // Used to hide the action button on the entry that represents the current state.

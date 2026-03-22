@@ -53,8 +53,8 @@ const MOCK_BUDGET: BudgetData = {
     additionalWithholding: 0,
   },
   accounts: [
-    { id: 'acc1', name: 'Chase Checking', type: 'checking', color: '#667eea', icon: '🏦' },
-    { id: 'acc2', name: 'Savings Account', type: 'savings', color: '#10b981', icon: '🏦' },
+    { id: 'acc1', name: 'Chase Checking', type: 'checking', color: '#667eea', icon: 'CreditCard' },
+    { id: 'acc2', name: 'Savings Account', type: 'savings', color: '#10b981', icon: 'PiggyBank' },
   ],
   bills: [
     {
