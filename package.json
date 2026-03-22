@@ -66,7 +66,6 @@
       "darkModeSupport": true,
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "gatekeeperAssess": true
     },
     "win": {
