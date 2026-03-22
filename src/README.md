@@ -420,16 +420,29 @@ If version validation workflow fails on PRs to `develop`:
 
 Production-quality macOS builds require both code signing and notarization.
 
-Required CI secrets for signed mac builds:
+#### Required GitHub Secrets for Release Workflows
+
+**macOS Code Signing & Notarization:**
 - `CSC_LINK`: Base64-encoded `.p12` certificate payload (Developer ID Application)
 - `CSC_KEY_PASSWORD`: Password for the `.p12` certificate
 - `APPLE_ID`: Apple ID email used for notarization
 - `APPLE_APP_SPECIFIC_PASSWORD`: App-specific password for the Apple ID
 - `APPLE_TEAM_ID`: Apple Developer Team ID
 
-Notes:
+**Feedback Form Configuration:**
+- `FEEDBACK_FORM_URL`: Google Form prefill URL (e.g., `https://docs.google.com/forms/d/e/FORM_ID/viewform`)
+- `FEEDBACK_FORM_ENTRY_EMAIL`: Google Form entry ID for email field
+- `FEEDBACK_FORM_ENTRY_CATEGORY`: Google Form entry ID for feedback category
+- `FEEDBACK_FORM_ENTRY_SUBJECT`: Google Form entry ID for subject line
+- `FEEDBACK_FORM_ENTRY_DETAILS`: Google Form entry ID for message body
+
+See `.env.example` for local development setup and how to extract Google Form entry IDs.
+
+#### Build Configuration
+
 - Build config uses hardened runtime + Electron entitlements and runs notarization in `scripts/notarize.mjs`.
 - If notarization env vars are missing, local mac builds still complete but notarization is skipped.
+- Feedback form configuration is optional for local builds; if omitted, the feedback modal will display a config error.
 
 ## Keeping This README Updated
 
