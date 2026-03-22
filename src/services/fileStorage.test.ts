@@ -425,6 +425,122 @@ describe('FileStorageService', () => {
     expect(FileStorageService.getKnownPlanIdForFile('/tmp/moved-plan.budget')).toBe('plan-1');
   });
 
+  describe('migrateBudgetData — legacy plan file migration', () => {
+    // Minimal object that passes isBudgetData() but may be missing newer fields.
+    // Intentionally does NOT include metadata so we can test that migration adds it.
+    function makeLegacyPlanBase(): Record<string, unknown> {
+      return {
+        id: 'legacy-plan-1',
+        name: 'Legacy Plan',
+        year: 2024,
+        paySettings: { annualSalary: 0, hourlyRate: 0, payFrequency: 'biweekly' },
+        accounts: [],
+        bills: [],
+        preTaxDeductions: [],
+        taxSettings: {
+          taxLines: [
+            { id: 'tl-1', label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+          ],
+          additionalWithholding: 0,
+        },
+        settings: { encryptionEnabled: false, currency: 'USD' },
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+    }
+
+    it('initializes auditHistory to empty array for old plans without metadata', async () => {
+      const oldPlan = makeLegacyPlanBase();
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(oldPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/legacy.ppb');
+
+      expect(loaded?.metadata).toBeDefined();
+      expect(loaded?.metadata?.auditHistory).toEqual([]);
+    });
+
+    it('resets auditHistory to empty array when metadata exists but auditHistory is not an array', async () => {
+      const badPlan = { ...makeLegacyPlanBase(), metadata: { auditHistory: 'corrupted string' } };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(badPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/corrupt-metadata.ppb');
+
+      expect(loaded?.metadata?.auditHistory).toEqual([]);
+    });
+
+    it('preserves existing auditHistory when loading a plan that already has entries', async () => {
+      const existingEntry = {
+        id: 'entry-1',
+        timestamp: '2025-06-01T00:00:00.000Z',
+        entityType: 'bill',
+        entityId: 'bill-1',
+        changeType: 'create',
+        sourceAction: 'AddBillModal',
+        snapshot: { id: 'bill-1', name: 'Rent', amount: 1500 },
+      };
+      const planWithHistory = {
+        ...makeLegacyPlanBase(),
+        metadata: { auditHistory: [existingEntry] },
+      };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(planWithHistory) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/plan-with-history.ppb');
+
+      expect(loaded?.metadata?.auditHistory).toHaveLength(1);
+      expect(loaded?.metadata?.auditHistory?.[0].id).toBe('entry-1');
+    });
+
+    it('migrates old fixed-field taxSettings format (federalTaxRate) to taxLines', async () => {
+      const legacyTaxPlan = {
+        ...makeLegacyPlanBase(),
+        taxSettings: {
+          federalTaxRate: 12,
+          stateTaxRate: 5,
+          socialSecurityRate: 6.2,
+          medicareRate: 1.45,
+          additionalWithholding: 50,
+        },
+      };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(legacyTaxPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/legacy-tax.ppb');
+
+      expect(Array.isArray(loaded?.taxSettings.taxLines)).toBe(true);
+      expect(loaded?.taxSettings.taxLines).toHaveLength(4);
+      expect(loaded?.taxSettings.taxLines[0]).toMatchObject({
+        label: 'Federal Tax',
+        rate: 12,
+        calculationType: 'percentage',
+      });
+      expect(loaded?.taxSettings.taxLines[1]).toMatchObject({ label: 'State Tax', rate: 5 });
+      expect(loaded?.taxSettings.additionalWithholding).toBe(50);
+    });
+
+    it('initializes missing optional arrays (benefits, retirement, savingsContributions) in old plans', async () => {
+      const strippedPlan = {
+        ...makeLegacyPlanBase(),
+        // omit benefits, retirement, savingsContributions entirely
+      };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(strippedPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/stripped-plan.ppb');
+
+      expect(Array.isArray(loaded?.benefits)).toBe(true);
+      expect(Array.isArray(loaded?.retirement)).toBe(true);
+      expect(Array.isArray(loaded?.savingsContributions)).toBe(true);
+    });
+  });
+
   it('throws after repeated bad key attempts for encrypted plan files', async () => {
     const plan = FileStorageService.createEmptyBudget(2026, 'USD');
     const encryptedEnvelope = JSON.stringify({
