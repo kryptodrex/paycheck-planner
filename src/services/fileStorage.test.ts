@@ -85,7 +85,7 @@ describe('FileStorageService', () => {
     });
     expect(settings.highContrastMode).toBe(false);
     expect(settings.colorVisionMode).toBe('normal');
-    expect(settings.stateCueMode).toBe('enhanced');
+    expect(settings.stateCueMode).toBe('minimal');
     expect(settings.fontScale).toBe(1.25);
   });
 
