@@ -228,14 +228,15 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
           </Button>
         </div>
 
-        <div className="plan-history-filters-row">
+        {/* Disabled until we get better styling for it. But not sure it's needed either, as audit history likely won't be too long. */}
+        {/* <div className="plan-history-filters-row">
           <FormGroup label="From">
             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           </FormGroup>
           <FormGroup label="To">
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           </FormGroup>
-        </div>
+        </div> */}
 
         {filteredEntries.length === 0 ? (
           <div className="plan-history-empty-state">No history entries match the selected filters.</div>
@@ -271,16 +272,16 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                           {new Date(first.entry.timestamp).toLocaleString()}
                         </span>
                         <span className="plan-history-entry-source">• {first.entry.sourceAction}</span>
+                        {!['create', 'restore'].includes(first.entry.changeType) && first.entry.timestamp.slice(0, 19) !== latestAuditTimestamp?.slice(0, 19) && (
+                          <Button
+                            variant="utility"
+                            className="plan-history-entry-restore"
+                            onClick={() => onRestoreEntries(batchViews.map((v) => v.entry.id))}
+                          >
+                            {first.entry.changeType === 'delete' ? 'Restore' : 'Rewind'}
+                          </Button>
+                        )}
                       </div>
-                      {!['create', 'restore'].includes(first.entry.changeType) && first.entry.timestamp.slice(0, 19) !== latestAuditTimestamp?.slice(0, 19) && (
-                        <Button
-                          variant="utility"
-                          className="plan-history-entry-restore"
-                          onClick={() => onRestoreEntries(batchViews.map((v) => v.entry.id))}
-                        >
-                          {first.entry.changeType === 'delete' ? 'Restore' : 'Rewind'}
-                        </Button>
-                      )}
                       <Button
                         variant="utility"
                         className="plan-history-entry-delete"
@@ -337,16 +338,16 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                           • Allocation: {view.allocationName || view.displayId}
                         </span>
                       )}
+                      {entry.changeType !== 'restore' && entry.timestamp.slice(0, 19) !== latestAuditTimestamp?.slice(0, 19) && (
+                        <Button
+                          variant="utility"
+                          className="plan-history-entry-restore"
+                          onClick={() => onRestoreEntries([entry.id])}
+                        >
+                          {entry.changeType === 'delete' ? 'Restore' : 'Rewind'}
+                        </Button>
+                      )}
                     </div>
-                    {entry.changeType !== 'restore' && entry.timestamp.slice(0, 19) !== latestAuditTimestamp?.slice(0, 19) && (
-                      <Button
-                        variant="utility"
-                        className="plan-history-entry-restore"
-                        onClick={() => onRestoreEntries([entry.id])}
-                      >
-                        {entry.changeType === 'delete' ? 'Restore' : 'Rewind'}
-                      </Button>
-                    )}
                     <Button
                       variant="utility"
                       className="plan-history-entry-delete"

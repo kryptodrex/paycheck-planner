@@ -217,7 +217,7 @@
 .waterfall-header-row {
   /* background: var(--header-gradient); */
   background: var(--header-gradient);
-  color: white;
+  color: var(--text-inverse);
   font-weight: 700;
   font-size: 1.1rem;
   padding: 1rem 0.75rem;
@@ -259,7 +259,7 @@
 .waterfall-footer-row {
   font-weight: 700;
   font-size: 1.1rem;
-  color: white;
+  color: var(--text-inverse);
   /* background: var(--bg-tertiary); */
   background: var(--header-gradient);
   padding: 1rem 0.75rem;

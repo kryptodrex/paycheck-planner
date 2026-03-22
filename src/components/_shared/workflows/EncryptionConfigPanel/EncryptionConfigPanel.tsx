@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { Alert, RadioGroup, Button, InfoBox } from '../../';
 import '../../sharedPathDisplay.css';
 import './EncryptionConfigPanel.css';
@@ -59,7 +60,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                             onKeyDown={(event) => handleCardKeyDown(event, true)}
                             aria-label="Enable encryption"
                         >
-                            <div className="encryption-option-icon">🔒</div>
+                            <div className="encryption-option-icon" aria-hidden="true"><ShieldCheck className="ui-icon" /></div>
                             <h3>Enable Encryption</h3>
                             <p>Encrypt your plan file automatically. Your key is stored securely in your computer's keychain.</p>
                         </div>
@@ -84,7 +85,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                             onKeyDown={(event) => handleCardKeyDown(event, true)}
                             aria-label="Change encryption key"
                         >
-                            <div className="encryption-option-icon">🔑</div>
+                            <div className="encryption-option-icon" aria-hidden="true"><KeyRound className="ui-icon" /></div>
                             <h3>Change Encryption Key</h3>
                             <p>Replace your current key with a new one. Your plan will be re-saved with the new key.</p>
                         </div>
@@ -96,7 +97,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                             onKeyDown={(event) => handleCardKeyDown(event, false)}
                             aria-label="Disable encryption"
                         >
-                            <div className="encryption-option-icon">📄</div>
+                            <div className="encryption-option-icon" aria-hidden="true"><ShieldOff className="ui-icon" /></div>
                             <h3>Disable Encryption</h3>
                             <p>Remove encryption from your plan. Your plan will be saved as plain text.</p>
                         </div>
@@ -117,7 +118,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                         onKeyDown={(event) => handleCardKeyDown(event, true)}
                         aria-label="Enable encryption"
                     >
-                        <div className="encryption-option-icon">🔒</div>
+                        <div className="encryption-option-icon" aria-hidden="true"><ShieldCheck className="ui-icon" /></div>
                         <h3>Enable Encryption</h3>
                         <p>Your plan file is encrypted automatically and your key is stored securely in your computer keychain.</p>
                     </div>
@@ -130,7 +131,7 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                         onKeyDown={(event) => handleCardKeyDown(event, false)}
                         aria-label="Disable encryption"
                     >
-                        <div className="encryption-option-icon">📄</div>
+                        <div className="encryption-option-icon" aria-hidden="true"><ShieldOff className="ui-icon" /></div>
                         <h3>No Encryption</h3>
                         <p>Your plan file is saved as plain text and can be read by anyone with file access.</p>
                     </div>
@@ -213,9 +214,10 @@ const EncryptionConfigPanel: React.FC<EncryptionConfigPanelProps> = ({
                                 variant="utility"
                                 size="small"
                                 onClick={() => navigator.clipboard.writeText(generatedKey)}
-                                successText="✓ Copied!"
+                                successText="Copied!"
                                 title="Copy to clipboard"
                             >
+                                <Check className="ui-icon ui-icon-sm" aria-hidden="true" />
                                 Copy to Clipboard
                             </Button>
                         </div>

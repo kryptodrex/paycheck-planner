@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ChartNoAxesCombined, PiggyBank, Plus } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import type { AuditHistoryTarget } from '../../../types/audit';
@@ -8,7 +9,6 @@ import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
-import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
 import { getAccountNameById } from '../../../utils/accountGrouping';
 import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
@@ -630,13 +630,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 {formatWithSymbol(toDisplayAmount(savingsTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <Button variant="primary" onClick={handleAddSavings}>+ Add Contribution</Button>
+            <Button variant="primary" onClick={handleAddSavings}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Contribution
+            </Button>
           </div>
         </div>
 
         {sortedSavings.length === 0 ? (
           <div className="empty-state empty-state--dashed empty-state--compact">
-            <div className="empty-icon">💰</div>
+            <div className="empty-icon" aria-hidden="true">
+              <PiggyBank className="ui-icon" />
+            </div>
             <h3>No Savings Contributions Yet</h3>
             <p>Add regular savings or investment transfers to get started</p>
           </div>
@@ -691,13 +696,18 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                 {formatWithSymbol(toDisplayAmount(retirementTotalPerPaycheck, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            <Button variant="primary" onClick={handleAddRetirement}>+ Add Retirement Plan</Button>
+            <Button variant="primary" onClick={handleAddRetirement}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add Retirement Plan
+            </Button>
           </div>
         </div>
 
         {sortedRetirement.length === 0 ? (
           <div className="empty-state empty-state--dashed empty-state--compact">
-            <div className="empty-icon">🏦</div>
+            <div className="empty-icon" aria-hidden="true">
+              <ChartNoAxesCombined className="ui-icon" />
+            </div>
             <h3>No Retirement Plans Yet</h3>
             <p>Add your retirement plans to get started</p>
           </div>
@@ -862,7 +872,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             >
               {budgetData.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                  {account.name}
                 </option>
               ))}
             </Dropdown>
@@ -953,7 +963,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
               <option value="paycheck">Paid from Paycheck</option>
               {budgetData.accounts.map((account) => (
                 <option key={account.id} value={account.id}>
-                  {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                  {account.name}
                 </option>
               ))}
             </Dropdown>

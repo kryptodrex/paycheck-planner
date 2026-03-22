@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { Info, Plus, Settings, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
@@ -7,7 +8,7 @@ import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear, getDisplayModeLabel } from '../../../utils/payPeriod';
 import { fromAllocationDisplayAmount, normalizeStoredAllocationAmount, toAllocationDisplayAmount } from '../../../utils/allocationEditor';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
-import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
+import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
 import type { Account } from '../../../types/accounts';
 import type { Bill, Loan, SavingsContribution } from '../../../types/obligations';
 import type { Benefit, RetirementElection } from '../../../types/payroll';
@@ -729,7 +730,8 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
-              ⚙️ Pay Settings
+              <Settings className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Pay Settings
             </Button>
           </>
         }
@@ -869,7 +871,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                 <React.Fragment key={fundingItem.account.id}>
                   <div className="waterfall-row waterfall-account-row">
                     <span className="waterfall-label">
-                      <span className="account-icon-small">{fundingItem.account.icon || getDefaultAccountIcon(fundingItem.account.type)}</span>
+                      <span className="account-icon-small">{
+                        (() => {
+                          const iconName = fundingItem.account.icon || getDefaultAccountIcon(fundingItem.account.type);
+                          const IconComponent = getIconComponent(iconName);
+                          return IconComponent ? <IconComponent className="ui-icon ui-icon-sm" /> : iconName;
+                        })()
+                      }</span>
                       Amount from {fundingItem.account.name}
                     </span>
                     <div className="waterfall-account-row-right">
@@ -892,7 +900,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                   {isEditing ? (
                     <div className="allocation-edit-section">
                       <div className="edit-mode-info">
-                        <span className="info-icon">ℹ️</span>
+                        <span className="info-icon" aria-hidden="true">
+                          <Info className="ui-icon ui-icon-sm" />
+                        </span>
                         <span>Editing amounts for {getDisplayModeLabel(displayMode)} view</span>
                       </div>
                       {displayAccount.allocationCategories.length === 0 && (
@@ -949,7 +959,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                                   });
                                 }}
                               />
-                              <Button className="category-remove-btn" variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">✕</Button>
+                              <Button className="category-remove-btn" variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">
+                                <X className="ui-icon ui-icon-sm" aria-hidden="true" />
+                              </Button>
                             </>
                           )}
                         </div>
@@ -957,7 +969,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       })}
 
                       <div className="waterfall-row waterfall-category-row category-actions-row">
-                        <Button style={{ flexGrow: 1 }} className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>+ Add Item</Button>
+                        <Button style={{ flexGrow: 1 }} className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>
+                          <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+                          Add Item
+                        </Button>
                         <div className="allocation-edit-actions bill-amount-display">
                           <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>
                           <Button variant="primary" size="small" onClick={() => saveAccountEdit(displayAccount.id)}>Save</Button>

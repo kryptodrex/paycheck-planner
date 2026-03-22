@@ -84,7 +84,7 @@
   gap: 1rem;
   padding: 1.25rem;
   background: var(--header-gradient);
-  color: white;
+  color: var(--text-inverse);
 }
 
 .account-info {

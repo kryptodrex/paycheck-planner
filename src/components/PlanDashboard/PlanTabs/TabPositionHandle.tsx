@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { TabPosition } from '../../../types/tabs';
+import { GripVertical, GripHorizontal } from 'lucide-react';
 import './TabPositionHandle.css';
 
 interface TabPositionHandleProps {
+  isSidebar?: boolean;
   currentPosition: TabPosition;
   onPositionChange: (position: TabPosition) => void;
 }
 
-const TabPositionHandle: React.FC<TabPositionHandleProps> = ({ currentPosition, onPositionChange }) => {
+const TabPositionHandle: React.FC<TabPositionHandleProps> = ({ isSidebar = true, currentPosition, onPositionChange }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [targetPosition, setTargetPosition] = useState<TabPosition | null>(null);
   const handleRef = useRef<HTMLDivElement>(null);
@@ -143,7 +145,9 @@ const TabPositionHandle: React.FC<TabPositionHandleProps> = ({ currentPosition, 
         onDragEnd={handleDragEnd}
         title="Drag to reposition tab bar"
       >
-        <span className="tab-position-grip">⋮⋮</span>
+        {
+          isSidebar ? <GripHorizontal className="tab-position-grip ui-icon" aria-hidden="true" /> : <GripVertical className="tab-position-grip ui-icon" aria-hidden="true" />
+        }
       </div>
       
       {isDragging && targetPosition && (

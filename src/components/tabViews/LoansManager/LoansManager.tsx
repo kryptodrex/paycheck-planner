@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Banknote, Building2, Plus, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
 import type { AuditHistoryTarget } from '../../../types/audit';
@@ -7,7 +8,7 @@ import type { LoanPaymentFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel } from '../../../utils/payPeriod';
-import { getDefaultAccountIcon } from '../../../utils/accountDefaults';
+import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
@@ -474,7 +475,8 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                 actions={
                     <>
                         <Button variant="primary" onClick={handleAddLoan}>
-                            + Add Loan
+                            <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+                            Add Loan
                         </Button>
                     </>
                 }
@@ -488,13 +490,17 @@ const LoansManager: React.FC<LoansManagerProps> = ({
             <div className="loans-content">
                 {budgetData.accounts.length === 0 ? (
                     <div className="empty-state empty-state--dashed empty-state--compact">
-                        <div className="empty-icon">🏦</div>
+                        <div className="empty-icon" aria-hidden="true">
+                            <Building2 className="ui-icon" />
+                        </div>
                         <h3>No Accounts Set Up</h3>
                         <p>Accounts are created during setup. Add an account before assigning loan payments.</p>
                     </div>
                 ) : loansList.length === 0 ? (
                     <div className="empty-state empty-state--dashed empty-state--compact">
-                        <div className="empty-icon">💸</div>
+                        <div className="empty-icon" aria-hidden="true">
+                            <Banknote className="ui-icon" />
+                        </div>
                         <h3>No Loan Payments Yet</h3>
                         <p>Add your first recurring loan payment to track it across the app.</p>
                         <Button variant="primary" className="btn-large" onClick={handleAddLoan} style={{ marginTop: '1rem' }}>
@@ -516,8 +522,12 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                             <section key={account.id} className="account-section" id={`account-${account.id}`}>
                                 <div className="account-header">
                                     <div className="account-info">
-                                        <span className="account-icon" style={{ color: account.color }}>
-                                            {account.icon || getDefaultAccountIcon(account.type)}
+                                        <span className="account-icon">
+                                            {(() => {
+                                                const iconName = account.icon || getDefaultAccountIcon(account.type);
+                                                const IconComponent = getIconComponent(iconName);
+                                                return IconComponent ? <IconComponent className="ui-icon" /> : iconName;
+                                            })()}
                                         </span>
                                         <h3>{account.name}</h3>
                                     </div>
@@ -651,7 +661,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                         >
                             {budgetData.accounts.map((account) => (
                                 <option key={account.id} value={account.id}>
-                                    {account.icon || getDefaultAccountIcon(account.type)} {account.name}
+                                    {account.name}
                                 </option>
                             ))}
                         </Dropdown>
@@ -711,7 +721,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                         onClick={() => handleRemovePaymentLine(line.id)}
                                         disabled={loanPaymentLines.length <= 1}
                                     >
-                                        ✕
+                                        <X className="ui-icon ui-icon-sm" aria-hidden="true" />
                                     </Button>
                                 </div>
                                 {line.error && <div className="loan-line-error">{line.error}</div>}
@@ -720,7 +730,8 @@ const LoansManager: React.FC<LoansManagerProps> = ({
 
                         <div className="loan-component-actions">
                             <Button variant="secondary" className="loan-add-component" type="button" onClick={handleAddPaymentLine}>
-                                + Add Component
+                                <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+                                Add Component
                             </Button>
                             <Button variant="tertiary" type="button" onClick={handleApplyTypeDefaults}>
                                 Add Defaults for {LOAN_TYPES.find((type) => type.value === loanType)?.label}

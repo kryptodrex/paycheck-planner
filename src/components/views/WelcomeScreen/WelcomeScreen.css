@@ -21,8 +21,12 @@
 }
 
 .error-icon {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  --icon-color: var(--alert-warning-text);
 }
 
 .error-message {
@@ -44,7 +48,6 @@
 .error-close {
   background: none;
   border: none;
-  font-size: 1.2rem;
   cursor: pointer;
   color: var(--alert-warning-text);
   padding: 0;
@@ -111,7 +114,10 @@
 }
 
 .icon {
-  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  font-size: clamp(1.15rem, 2.6vw, 1.35rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .recent-files {

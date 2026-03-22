@@ -157,7 +157,7 @@ describe('PayBreakdown custom allocation validation', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
-    await user.click(screen.getByRole('button', { name: '+ Add Item' }));
+    await user.click(screen.getByRole('button', { name: 'Add Item' }));
   }
 
   it('shows an error and blocks save when a custom allocation amount has no name', async () => {

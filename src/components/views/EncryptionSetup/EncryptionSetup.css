@@ -12,6 +12,17 @@
   font-size: clamp(1.4rem, 4vw, 1.75rem);
 }
 
+.encryption-title-with-icon {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.encryption-title-with-icon .ui-icon {
+  color: var(--icon-color-accent);
+}
+
 .subtitle {
   text-align: center;
   color: var(--text-secondary);

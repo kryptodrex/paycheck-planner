@@ -6,6 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
+import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
@@ -781,7 +782,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
       FileStorageService.removeRecentFile(oldPath);
       FileStorageService.addRecentFile(newPath);
-      setStatusToast({ message: '✏️ File renamed on disk. Plan name updated.', type: 'success' });
+      setStatusToast({ message: 'File renamed on disk. Plan name updated.', type: 'success' });
     });
 
     return unsubscribe;
@@ -983,7 +984,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     }
 
     if (movedDuringDragRef.current) {
-      setStatusToast({ message: '📋 Tab order updated', type: 'success' });
+      setStatusToast({ message: 'Tab order updated', type: 'success' });
     }
 
     flushSync(() => {
@@ -1539,11 +1540,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     });
 
     if (renameWarning) {
-      setStatusToast({ message: `⚠️ Plan updated, but file rename failed: ${renameWarning}`, type: 'warning' });
+      setStatusToast({ message: `Plan updated, but file rename failed: ${renameWarning}`, type: 'warning' });
     } else if (renamedFile) {
-      setStatusToast({ message: '✏️ Plan and file name updated', type: 'success' });
+      setStatusToast({ message: 'Plan and file name updated', type: 'success' });
     } else {
-      setStatusToast({ message: '✏️ Plan updated', type: 'success' });
+      setStatusToast({ message: 'Plan updated', type: 'success' });
     }
 
     setShowPlanEditModal(false);
@@ -1575,8 +1576,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
       setStatusToast({
         message: result.encryptionEnabled
-          ? '🔒 Encryption enabled for this plan'
-          : '📄 Encryption disabled for this plan',
+          ? 'Encryption enabled for this plan'
+          : 'Encryption disabled for this plan',
         type: 'success',
       });
       handleEncryptionModalClose();
@@ -1595,14 +1596,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     if (!budgetData?.settings?.filePath || !window.electronAPI?.revealInFolder) return;
     const result = await window.electronAPI.revealInFolder(budgetData.settings.filePath);
     if (!result.success) {
-      setStatusToast({ message: '⚠️ Unable to open file location', type: 'error' });
+      setStatusToast({ message: 'Unable to open file location', type: 'error' });
     }
   };
 
   const encryptionModalHeader = (() => {
-    if (encryptionEnabled === true) return '🔐 Encryption Key Setup';
-    if (encryptionEnabled === false) return '🔐 Disable Encryption';
-    return budgetData?.settings?.encryptionEnabled ? '🔐 Manage Encryption' : '🔐 Enable Encryption';
+    if (encryptionEnabled === true) return 'Encryption Key Setup';
+    if (encryptionEnabled === false) return 'Disable Encryption';
+    return budgetData?.settings?.encryptionEnabled ? 'Manage Encryption' : 'Enable Encryption';
   })();
 
   return (
@@ -1643,7 +1644,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
               onClick={() => setShowAccountsModal(true)}
               title="Manage your financial accounts"
             >
-              🏦 Accounts
+              <Sheet className="ui-icon" aria-hidden="true" />
+              Accounts
             </Button>
             <Button
               variant="secondary"
@@ -1652,7 +1654,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
               onClick={() => setShowCopyModal(true)}
               title="Copy this plan to another year"
             >
-              📋 Copy Plan
+              <Copy className="ui-icon" aria-hidden="true" />
+              Copy Plan
             </Button>
             <Button
               variant="secondary"
@@ -1661,7 +1664,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
               disabled={loading || !!missingActiveFile || activeRelinkLoading}
               className="header-btn-secondary"
             >
-              💾 Save
+              <Save className="ui-icon" aria-hidden="true" />
+              Save
             </Button>
           </div>
         </div>
@@ -1714,7 +1718,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           )}
 
           <div className="tab-content" ref={tabContentRef}>
-        {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
+        {viewMode && (
+          <div className="view-mode-header">
+            <Eye className="ui-icon view-mode-header-icon" aria-hidden="true" />
+            View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
+          </div>
+        )}
         <div
           className={`tab-panel ${activeTab === 'metrics' ? 'active' : ''}`}
           ref={(element) => {
@@ -1878,6 +1887,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             onClick={() => setShowFeedbackModal(true)}
             title="Share feedback"
           >
+            <MessageSquareText className="ui-icon" aria-hidden="true" />
             Share feedback
           </Button>
         </div>
@@ -1893,7 +1903,17 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
                 title="Click to open encryption configuration"
                 aria-label="Manage encryption settings"
               >
-                {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
+                {budgetData.settings.encryptionEnabled ? (
+                  <>
+                    <Lock className="ui-icon ui-icon-sm" aria-hidden="true" />
+                    Encrypted
+                  </>
+                ) : (
+                  <>
+                    <LockOpen className="ui-icon ui-icon-sm" aria-hidden="true" />
+                    Unencrypted
+                  </>
+                )}
               </Button>
               <Button
                 size="small"
@@ -1901,7 +1921,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
                 onClick={handleRevealSavedFile}
                 title="Show file in folder"
               >
-                Open in {fileManagerAppName}
+                <>
+                  <FolderOpen className="ui-icon ui-icon-sm" aria-hidden="true" />
+                  Open in {fileManagerAppName}
+                </>
               </Button>
             </>
           )}

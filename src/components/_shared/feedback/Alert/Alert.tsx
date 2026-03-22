@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle, Check, Info, X } from 'lucide-react';
 import './Alert.css';
 
 interface AlertProps {
@@ -10,11 +11,11 @@ interface AlertProps {
   className?: string;
 }
 
-const ALERT_META: Record<NonNullable<AlertProps['type']>, { icon: string; label: string }> = {
-  error: { icon: '!', label: 'Error' },
-  warning: { icon: '!', label: 'Warning' },
-  success: { icon: '✓', label: 'Success' },
-  info: { icon: 'i', label: 'Info' },
+const ALERT_META: Record<NonNullable<AlertProps['type']>, { icon: React.ReactNode; label: string }> = {
+  error:   { icon: <X className="ui-icon" />,             label: 'Error' },
+  warning: { icon: <AlertTriangle className="ui-icon" />, label: 'Warning' },
+  success: { icon: <Check className="ui-icon" />,         label: 'Success' },
+  info:    { icon: <Info className="ui-icon" />,          label: 'Info' },
 };
 
 const Alert: React.FC<AlertProps> = ({
