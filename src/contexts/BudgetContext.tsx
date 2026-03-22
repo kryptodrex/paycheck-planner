@@ -32,10 +32,12 @@ import type {
 import { FileStorageService } from '../services/fileStorage';
 import { calculatePaycheckBreakdown as calculateBudgetPaycheckBreakdown, getEmptyPaycheckBreakdown } from '../services/budgetCalculations';
 import { KeychainService } from '../services/keychainService';
-import { roundToCent, roundUpToCent } from '../utils/money';
+import { roundToCent } from '../utils/money';
 import { getPlanNameFromPath } from '../utils/filePath';
 import { getPaychecksPerYear } from '../utils/payPeriod';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
+import { HistoryEngine } from '../utils/historyEngine';
+import { buildAuditEntries } from '../utils/auditHistory';
 
 // Create the context - this is the "container" for our global state
 // Initially undefined, we'll provide the actual value in the Provider
@@ -72,6 +74,7 @@ interface BudgetProviderProps {
  * Think of this as the "manager" that holds and controls all budget data
  */
 export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
+  const HISTORY_MAX_DEPTH = 150;
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   // State for the current budget data (null means no budget loaded)
   // The type annotation ensures budgetData matches our BudgetData interface
@@ -85,6 +88,182 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   
   // Keep a reference to the last saved state
   const lastSavedDataRef = useRef<string | null>(null);
+
+  // History stacks for app-level undo/redo
+  const historyEngineRef = useRef(new HistoryEngine<BudgetData>(HISTORY_MAX_DEPTH));
+  const batchStateRef = useRef({
+    active: false,
+    pendingMutations: 0,
+    commitRequested: false,
+    commitDescription: undefined as string | undefined,
+  });
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const syncHistoryAvailability = useCallback(() => {
+    setCanUndo(historyEngineRef.current.canUndo());
+    setCanRedo(historyEngineRef.current.canRedo());
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    historyEngineRef.current.clear();
+    batchStateRef.current = {
+      active: false,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
+    syncHistoryAvailability();
+  }, [syncHistoryAvailability]);
+
+  const finalizeBatchCommitIfReady = useCallback(() => {
+    const batch = batchStateRef.current;
+    if (!batch.active || !batch.commitRequested || batch.pendingMutations > 0) {
+      return;
+    }
+
+    historyEngineRef.current.commitBatch(batch.commitDescription);
+    batchStateRef.current = {
+      active: false,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
+    syncHistoryAvailability();
+  }, [syncHistoryAvailability]);
+
+  const beginBatch = useCallback(() => {
+    if (batchStateRef.current.active) return;
+
+    batchStateRef.current = {
+      active: true,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
+    historyEngineRef.current.beginBatch();
+  }, []);
+
+  const commitBatch = useCallback((description?: string) => {
+    if (!batchStateRef.current.active) return;
+
+    batchStateRef.current = {
+      ...batchStateRef.current,
+      commitRequested: true,
+      commitDescription: description,
+    };
+
+    finalizeBatchCommitIfReady();
+  }, [finalizeBatchCommitIfReady]);
+
+  const discardBatch = useCallback(() => {
+    historyEngineRef.current.discardBatch();
+    batchStateRef.current = {
+      active: false,
+      pendingMutations: 0,
+      commitRequested: false,
+      commitDescription: undefined,
+    };
+  }, []);
+
+  const applyBudgetMutation = useCallback(
+    (
+      mutate: (current: BudgetData) => BudgetData,
+      options?: { trackHistory?: boolean; trackAudit?: boolean; description?: string; touchUpdatedAt?: boolean; note?: string }
+    ) => {
+      const trackHistory = options?.trackHistory ?? true;
+      const trackAudit = options?.trackAudit ?? trackHistory;
+      const touchUpdatedAt = options?.touchUpdatedAt ?? true;
+      const shouldTrackInBatch = trackHistory && batchStateRef.current.active;
+
+      if (shouldTrackInBatch) {
+        batchStateRef.current.pendingMutations += 1;
+      }
+
+      setBudgetData((prev) => {
+        if (!prev) {
+          if (shouldTrackInBatch) {
+            batchStateRef.current.pendingMutations = Math.max(0, batchStateRef.current.pendingMutations - 1);
+            finalizeBatchCommitIfReady();
+          }
+          return prev;
+        }
+
+        const nextBase = mutate(prev);
+        if (nextBase === prev) {
+          if (shouldTrackInBatch) {
+            batchStateRef.current.pendingMutations = Math.max(0, batchStateRef.current.pendingMutations - 1);
+            finalizeBatchCommitIfReady();
+          }
+          return prev;
+        }
+
+        const next = touchUpdatedAt
+          ? {
+              ...nextBase,
+              updatedAt: new Date().toISOString(),
+            }
+          : nextBase;
+
+        const auditEntries = trackAudit
+          ? buildAuditEntries({
+              prev,
+              next,
+              sourceAction: options?.description || 'Update plan data',
+              note: options?.note,
+            })
+          : [];
+
+        const nextWithAudit = auditEntries.length > 0
+          ? {
+              ...next,
+              metadata: {
+                auditHistory: [...(next.metadata?.auditHistory || []), ...auditEntries],
+              },
+            }
+          : next;
+
+        if (trackHistory) {
+          historyEngineRef.current.push(prev, options?.description);
+        }
+
+        if (shouldTrackInBatch) {
+          batchStateRef.current.pendingMutations = Math.max(0, batchStateRef.current.pendingMutations - 1);
+        }
+
+        syncHistoryAvailability();
+        if (shouldTrackInBatch) {
+          finalizeBatchCommitIfReady();
+        }
+        return nextWithAudit;
+      });
+    },
+    [finalizeBatchCommitIfReady, syncHistoryAvailability],
+  );
+
+  const undo = useCallback(() => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+
+      const restored = historyEngineRef.current.undo(prev);
+      if (!restored) return prev;
+
+      syncHistoryAvailability();
+      return restored;
+    });
+  }, [syncHistoryAvailability]);
+
+  const redo = useCallback(() => {
+    setBudgetData((prev) => {
+      if (!prev) return prev;
+
+      const restored = historyEngineRef.current.redo(prev);
+      if (!restored) return prev;
+
+      syncHistoryAvailability();
+      return restored;
+    });
+  }, [syncHistoryAvailability]);
 
   // Update unsaved changes tracking whenever budgetData changes
   useEffect(() => {
@@ -366,6 +545,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       }
       
       setBudgetData(data);
+      clearHistory();
       // Mark as saved (just loaded)
       lastSavedDataRef.current = JSON.stringify(data);
       setHasUnsavedChanges(false);
@@ -385,7 +565,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [openErrorDialog]); // No dependencies beyond dialog display
+  }, [clearHistory, openErrorDialog]); // No dependencies beyond dialog display
 
   /**
    * Create a new empty budget plan
@@ -394,12 +574,13 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const createNewBudget = useCallback((year: number) => {
     const newBudget = FileStorageService.createEmptyBudget(year);
     setBudgetData(newBudget);
+    clearHistory();
     
     // Notify main process that a budget is loaded (transitions welcome to plan window)
     if (window.electronAPI) {
       window.electronAPI.budgetLoaded();
     }
-  }, []);
+  }, [clearHistory]);
 
   /**
    * Create a demo budget with realistic randomly-generated data
@@ -409,12 +590,13 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     const year = new Date().getFullYear();
     const demoBudget = generateDemoBudgetData(year);
     setBudgetData(demoBudget);
+    clearHistory();
     
     // Notify main process that a budget is loaded (transitions welcome to plan window)
     if (window.electronAPI) {
       window.electronAPI.budgetLoaded();
     }
-  }, []);
+  }, [clearHistory]);
 
   /**
    * Close the current budget and return to welcome screen
@@ -423,7 +605,8 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     setBudgetData(null);
     setHasUnsavedChanges(false);
     lastSavedDataRef.current = '';
-  }, []);
+    clearHistory();
+  }, [clearHistory]);
 
   /**
    * Copy the current plan to a new year
@@ -462,424 +645,420 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     }
     
     setBudgetData(newBudget);
-  }, [budgetData]);
+    clearHistory();
+  }, [budgetData, clearHistory]);
 
   /**
    * Generic update function for bulk changes (e.g., reordering accounts)
    */
-  const updateBudgetData = useCallback((updates: Partial<BudgetData>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+  const updateBudgetData = useCallback(
+    (updates: Partial<BudgetData>, options?: { trackHistory?: boolean; trackAudit?: boolean; description?: string; note?: string }) => {
+      applyBudgetMutation(
+        (current) => ({
+          ...current,
+          ...updates,
+        }),
+        {
+          trackHistory: options?.trackHistory,
+          trackAudit: options?.trackAudit,
+          description: options?.description ?? 'Update plan data',
+          note: options?.note,
+        },
+      );
+    },
+    [applyBudgetMutation],
+  );
 
   /**
    * Update pay settings
    */
   const updatePaySettings = useCallback((settings: PaySettings) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
         paySettings: settings,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Update pay settings' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Add a new pre-tax deduction
    */
   const addDeduction = useCallback((deduction: Omit<Deduction, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
         preTaxDeductions: [
-          ...prev.preTaxDeductions,
+          ...current.preTaxDeductions,
           {
             ...deduction,
             id: crypto.randomUUID(),
           },
         ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Add pre-tax deduction' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update an existing deduction
    */
   const updateDeduction = useCallback((id: string, deduction: Partial<Deduction>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        preTaxDeductions: prev.preTaxDeductions.map((d) =>
-          d.id === id ? { ...d, ...deduction } : d
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        preTaxDeductions: current.preTaxDeductions.map((d) =>
+          d.id === id ? { ...d, ...deduction } : d,
         ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Update pre-tax deduction' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Delete a deduction
    */
   const deleteDeduction = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        preTaxDeductions: prev.preTaxDeductions.filter((d) => d.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        preTaxDeductions: current.preTaxDeductions.filter((d) => d.id !== id),
+      }),
+      { description: 'Delete pre-tax deduction' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update tax settings
    */
   const updateTaxSettings = useCallback((settings: TaxSettings) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
         taxSettings: settings,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Update tax settings' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update budget settings (currency, locale, etc.)
    */
   const updateBudgetSettings = useCallback((settings: BudgetSettings) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        settings: settings,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        settings,
+      }),
+      { description: 'Update budget settings' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Add a new account
    */
   const addAccount = useCallback((account: Omit<Account, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
         accounts: [
-          ...prev.accounts,
+          ...current.accounts,
           {
             ...account,
             id: crypto.randomUUID(),
           },
         ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Add account' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update an existing account
    */
   const updateAccount = useCallback((id: string, account: Partial<Account>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        accounts: prev.accounts.map((a) =>
-          a.id === id ? { ...a, ...account } : a
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        accounts: current.accounts.map((a) =>
+          a.id === id ? { ...a, ...account } : a,
         ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Update account' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Delete an account
    */
   const deleteAccount = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        accounts: prev.accounts.filter((a) => a.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        accounts: current.accounts.filter((a) => a.id !== id),
+      }),
+      { description: 'Delete account' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Add a new bill
    */
   const addBill = useCallback((bill: Omit<Bill, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
         bills: [
-          ...prev.bills,
+          ...current.bills,
           {
             ...bill,
             enabled: bill.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Add bill' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update an existing bill
    */
   const updateBill = useCallback((id: string, bill: Partial<Bill>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        bills: prev.bills.map((b) =>
-          b.id === id ? { ...b, ...bill } : b
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        bills: current.bills.map((b) =>
+          b.id === id ? { ...b, ...bill } : b,
         ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Update bill' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Delete a bill
    */
   const deleteBill = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        bills: prev.bills.filter((b) => b.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        bills: current.bills.filter((b) => b.id !== id),
+      }),
+      { description: 'Delete bill' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Add a new loan
    */
   const addLoan = useCallback((loan: Omit<Loan, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      const loans = prev.loans ?? [];
-      return {
-        ...prev,
-        loans: [
-          ...loans,
-          {
-            ...loan,
-            enabled: loan.enabled !== false,
-            id: crypto.randomUUID(),
-          },
-        ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => {
+        const loans = current.loans ?? [];
+        return {
+          ...current,
+          loans: [
+            ...loans,
+            {
+              ...loan,
+              enabled: loan.enabled !== false,
+              id: crypto.randomUUID(),
+            },
+          ],
+        };
+      },
+      { description: 'Add loan' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update an existing loan
    */
   const updateLoan = useCallback((id: string, loan: Partial<Loan>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      const loans = prev.loans ?? [];
-      return {
-        ...prev,
-        loans: loans.map((l) =>
-          l.id === id ? { ...l, ...loan } : l
-        ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => {
+        const loans = current.loans ?? [];
+        return {
+          ...current,
+          loans: loans.map((l) =>
+            l.id === id ? { ...l, ...loan } : l,
+          ),
+        };
+      },
+      { description: 'Update loan' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Delete a loan
    */
   const deleteLoan = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      const loans = prev.loans ?? [];
-      return {
-        ...prev,
-        loans: loans.filter((l) => l.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => {
+        const loans = current.loans ?? [];
+        return {
+          ...current,
+          loans: loans.filter((l) => l.id !== id),
+        };
+      },
+      { description: 'Delete loan' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Add a new benefit
    */
   const addBenefit = useCallback((benefit: Omit<Benefit, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
         benefits: [
-          ...prev.benefits,
+          ...current.benefits,
           {
             ...benefit,
             enabled: benefit.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Add benefit' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update an existing benefit
    */
   const updateBenefit = useCallback((id: string, benefit: Partial<Benefit>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        benefits: prev.benefits.map((b) =>
-          b.id === id ? { ...b, ...benefit } : b
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        benefits: current.benefits.map((b) =>
+          b.id === id ? { ...b, ...benefit } : b,
         ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Update benefit' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Delete a benefit
    */
   const deleteBenefit = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        benefits: prev.benefits.filter((b) => b.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        benefits: current.benefits.filter((b) => b.id !== id),
+      }),
+      { description: 'Delete benefit' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Add a new savings/investment contribution
    */
   const addSavingsContribution = useCallback((contribution: Omit<SavingsContribution, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      const existing = prev.savingsContributions ?? [];
-      return {
-        ...prev,
-        savingsContributions: [
-          ...existing,
-          {
-            ...contribution,
-            enabled: contribution.enabled !== false,
-            id: crypto.randomUUID(),
-          },
-        ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => {
+        const existing = current.savingsContributions ?? [];
+        return {
+          ...current,
+          savingsContributions: [
+            ...existing,
+            {
+              ...contribution,
+              enabled: contribution.enabled !== false,
+              id: crypto.randomUUID(),
+            },
+          ],
+        };
+      },
+      { description: 'Add savings contribution' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update an existing savings/investment contribution
    */
   const updateSavingsContribution = useCallback((id: string, contribution: Partial<SavingsContribution>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      const existing = prev.savingsContributions ?? [];
-      return {
-        ...prev,
-        savingsContributions: existing.map((item) =>
-          item.id === id ? { ...item, ...contribution } : item
-        ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => {
+        const existing = current.savingsContributions ?? [];
+        return {
+          ...current,
+          savingsContributions: existing.map((item) =>
+            item.id === id ? { ...item, ...contribution } : item,
+          ),
+        };
+      },
+      { description: 'Update savings contribution' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Delete a savings/investment contribution
    */
   const deleteSavingsContribution = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      const existing = prev.savingsContributions ?? [];
-      return {
-        ...prev,
-        savingsContributions: existing.filter((item) => item.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => {
+        const existing = current.savingsContributions ?? [];
+        return {
+          ...current,
+          savingsContributions: existing.filter((item) => item.id !== id),
+        };
+      },
+      { description: 'Delete savings contribution' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Add a new retirement election
    */
   const addRetirementElection = useCallback((election: Omit<RetirementElection, 'id'>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
         retirement: [
-          ...prev.retirement,
+          ...current.retirement,
           {
             ...election,
             enabled: election.enabled !== false,
             id: crypto.randomUUID(),
           },
         ],
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Add retirement election' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Update an existing retirement election
    */
   const updateRetirementElection = useCallback((id: string, election: Partial<RetirementElection>) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        retirement: prev.retirement.map((r) =>
-          r.id === id ? { ...r, ...election } : r
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        retirement: current.retirement.map((r) =>
+          r.id === id ? { ...r, ...election } : r,
         ),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+      }),
+      { description: 'Update retirement election' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Delete a retirement election
    */
   const deleteRetirementElection = useCallback((id: string) => {
-    setBudgetData((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        retirement: prev.retirement.filter((r) => r.id !== id),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-  }, []);
+    applyBudgetMutation(
+      (current) => ({
+        ...current,
+        retirement: current.retirement.filter((r) => r.id !== id),
+      }),
+      { description: 'Delete retirement election' },
+    );
+  }, [applyBudgetMutation]);
 
   /**
    * Calculate paycheck breakdown
@@ -907,9 +1086,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     let grossPay = 0;
     if (paySettings.payType === 'salary' && paySettings.annualSalary) {
       const paychecksPerYear = getPaychecksPerYear(paySettings.payFrequency);
-      grossPay = roundUpToCent(paySettings.annualSalary / paychecksPerYear);
+      grossPay = paySettings.annualSalary / paychecksPerYear;
     } else if (paySettings.payType === 'hourly' && paySettings.hourlyRate && paySettings.hoursPerPayPeriod) {
-      grossPay = roundUpToCent(paySettings.hourlyRate * paySettings.hoursPerPayPeriod);
+      grossPay = paySettings.hourlyRate * paySettings.hoursPerPayPeriod;
     }
 
     // If no pay settings configured yet, return zeros
@@ -976,6 +1155,13 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   const value: BudgetContextType = {
     budgetData,
     loading,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    beginBatch,
+    commitBatch,
+    discardBatch,
     saveBudget,
     saveWindowState,
     loadBudget,

@@ -1,4 +1,5 @@
 import React from 'react';
+import { LayoutList, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAppDialogs } from '../../../hooks';
 import { ConfirmDialog, ErrorDialog } from '../../_shared';
 import type { TabConfig, TabPosition, TabDisplayMode } from '../../../types/tabs';
@@ -103,6 +104,7 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
       {/* Tab Position Handle Display */}
       {onTabPositionChange && (
         <TabPositionHandle
+          isSidebar={isSidebar}
           currentPosition={tabPosition}
           onPositionChange={onTabPositionChange}
         />
@@ -126,7 +128,7 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
             onClick={() => onTabClick(tab.id as TabView, tab.id === 'bills' ? { resetBillsAnchor: true } : undefined)}
             title={showLabels ? undefined : tab.label}
           >
-            <span className="tab-icon">{tab.icon}</span>
+            <span className="tab-icon"><tab.icon className="ui-icon" /></span>
             {showLabels && <span className="tab-label">{tab.label}</span>}
           </button>
           <button
@@ -150,7 +152,7 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
           title="Manage tabs"
           aria-label="Manage tabs"
         >
-          <span className="tab-icon">✏️</span>
+          <span className="tab-icon"><LayoutList className="ui-icon" aria-hidden="true" /></span>
           {showManageLabel && <span className="tab-label">Manage Tabs</span>}
         </button>
       </div>
@@ -166,7 +168,7 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
           >
             <span className="toggle-icon">
               {/* TODO: Update the icon with a proper SVG or icon component later */}
-              {tabDisplayMode === 'icons-only' ? '>|' : '|<'}
+              {tabDisplayMode === 'icons-only' ? <PanelLeftOpen className="ui-icon" aria-hidden="true" /> : <PanelLeftClose className="ui-icon" aria-hidden="true" />}
             </span>
           </button>
         )}

@@ -2,7 +2,7 @@
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
@@ -214,6 +214,66 @@ const getOrCreateBudgetFileWatchState = (windowId: number): BudgetFileWatchState
 
 const sendMenuEvent = (window: BrowserWindow, event: MenuEventName, arg?: unknown) => {
   window.webContents.send(menuChannel(event), arg);
+};
+
+const MIN_ZOOM_FACTOR = 0.8;
+const MAX_ZOOM_FACTOR = 1.6;
+const ZOOM_STEP = 0.1;
+const DEFAULT_ZOOM_FACTOR = 1;
+
+type ZoomAction = 'in' | 'out' | 'reset';
+
+type ZoomStatusPayload = {
+  action: ZoomAction;
+  zoomFactor: number;
+  zoomPercent: number;
+  atLimit: boolean;
+  limit?: 'min' | 'max';
+};
+
+const clampZoomFactor = (factor: number): number => {
+  return Math.min(MAX_ZOOM_FACTOR, Math.max(MIN_ZOOM_FACTOR, factor));
+};
+
+const getTargetWindowForAppAction = (): BrowserWindow | null => {
+  return BrowserWindow.getFocusedWindow() ?? mainWindow ?? welcomeWindow ?? BrowserWindow.getAllWindows()[0] ?? null;
+};
+
+const applyZoomDelta = (window: BrowserWindow, delta: number): ZoomStatusPayload => {
+  const current = window.webContents.getZoomFactor();
+  const next = clampZoomFactor(Number((current + delta).toFixed(2)));
+  window.webContents.setZoomFactor(next);
+
+  const action: ZoomAction = delta > 0 ? 'in' : 'out';
+  const limit = action === 'in'
+    ? (next === MAX_ZOOM_FACTOR ? 'max' : undefined)
+    : (next === MIN_ZOOM_FACTOR ? 'min' : undefined);
+
+  return {
+    action,
+    zoomFactor: next,
+    zoomPercent: Math.round(next * 100),
+    atLimit: !!limit,
+    limit,
+  };
+};
+
+const resetZoom = (window: BrowserWindow): ZoomStatusPayload => {
+  window.webContents.setZoomFactor(DEFAULT_ZOOM_FACTOR);
+  return {
+    action: 'reset',
+    zoomFactor: DEFAULT_ZOOM_FACTOR,
+    zoomPercent: Math.round(DEFAULT_ZOOM_FACTOR * 100),
+    atLimit: false,
+  };
+};
+
+const executeZoomAction = (window: BrowserWindow, action: ZoomAction) => {
+  const zoomStatus = action === 'reset'
+    ? resetZoom(window)
+    : applyZoomDelta(window, action === 'in' ? ZOOM_STEP : -ZOOM_STEP);
+
+  sendMenuEvent(window, MENU_EVENTS.zoomStatus, zoomStatus);
 };
 
 const stopBudgetFileWatch = (windowId: number) => {
@@ -766,8 +826,6 @@ async function createWindow() {
   // Create application menu with File and Edit options
   createApplicationMenu();
   
-  // Register global keyboard shortcuts (fallback for menu accelerators)
-  registerGlobalShortcuts();
 }
 
 /**
@@ -903,8 +961,26 @@ function createApplicationMenu() {
   template.push({
     label: 'Edit',
     submenu: [
-      { role: 'undo' },
-      { role: 'redo' },
+      {
+        label: 'Undo',
+        accelerator: isMac ? 'Cmd+Z' : 'Ctrl+Z',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.undo);
+          }
+        },
+      },
+      {
+        label: 'Redo',
+        accelerator: isMac ? 'Cmd+Shift+Z' : 'Ctrl+Y',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.redo);
+          }
+        },
+      },
       { type: 'separator' },
       { role: 'cut' },
       { role: 'copy' },
@@ -931,6 +1007,17 @@ function createApplicationMenu() {
           }
         },
       },
+      { type: 'separator' },
+      {
+        label: 'Search Plan',
+        accelerator: isMac ? 'Cmd+F' : 'Ctrl+F',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.openSearch);
+          }
+        },
+      },
     ],
   });
 
@@ -939,7 +1026,7 @@ function createApplicationMenu() {
     label: 'View',
     submenu: [
       {
-        label: 'Tab Position',
+        label: 'Tab Bar Position',
         submenu: [
           {
             label: 'Top',
@@ -994,6 +1081,37 @@ function createApplicationMenu() {
         },
       },
       { type: 'separator' },
+      {
+        label: 'Zoom In',
+        accelerator: 'CmdOrCtrl+=',
+        click: () => {
+          const targetWindow = getTargetWindowForAppAction();
+          if (targetWindow) {
+            executeZoomAction(targetWindow, 'in');
+          }
+        },
+      },
+      {
+        label: 'Zoom Out',
+        accelerator: 'CmdOrCtrl+-',
+        click: () => {
+          const targetWindow = getTargetWindowForAppAction();
+          if (targetWindow) {
+            executeZoomAction(targetWindow, 'out');
+          }
+        },
+      },
+      {
+        label: 'Reset Zoom',
+        accelerator: 'CmdOrCtrl+0',
+        click: () => {
+          const targetWindow = getTargetWindowForAppAction();
+          if (targetWindow) {
+            executeZoomAction(targetWindow, 'reset');
+          }
+        },
+      },
+      { type: 'separator' },
       ...(DEBUG ? [{
         label: 'Toggle Developer Tools',
         accelerator: isMac ? 'Cmd+Option+I' : 'Ctrl+Shift+I',
@@ -1041,16 +1159,6 @@ function createApplicationMenu() {
           }
         },
       },
-      {
-        label: 'Home',
-        accelerator: isMac ? 'Cmd+Shift+H' : 'Ctrl+Shift+H',
-        click: () => {
-          const focusedWindow = BrowserWindow.getFocusedWindow();
-          if (focusedWindow) {
-            focusedWindow.webContents.send('menu:history-home');
-          }
-        },
-      },
       { type: 'separator' },
       {
         label: 'Minimize',
@@ -1091,55 +1199,6 @@ function createApplicationMenu() {
 
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
-}
-
-/**
- * Register global keyboard shortcuts that work even when web content has focus
- * These provide a fallback for menu accelerators which don't always work with focused form elements
- */
-function registerGlobalShortcuts() {
-  try {
-    // Register Cmd+, (Mac) and Ctrl+, (Windows/Linux) for Settings
-    const settingsShortcut = process.platform === 'darwin' ? 'Cmd+,' : 'Ctrl+,';
-    globalShortcut.register(settingsShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.openSettings);
-        debug(`Settings shortcut triggered via globalShortcut (${settingsShortcut})`);
-      }
-    });
-
-    const backShortcut = process.platform === 'darwin' ? 'Cmd+[' : 'Alt+Left';
-    globalShortcut.register(backShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.historyBack);
-        debug(`Back shortcut triggered via globalShortcut (${backShortcut})`);
-      }
-    });
-
-    const forwardShortcut = process.platform === 'darwin' ? 'Cmd+]' : 'Alt+Right';
-    globalShortcut.register(forwardShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.historyForward);
-        debug(`Forward shortcut triggered via globalShortcut (${forwardShortcut})`);
-      }
-    });
-
-    const homeShortcut = process.platform === 'darwin' ? 'Cmd+Shift+H' : 'Ctrl+Shift+H';
-    globalShortcut.register(homeShortcut, () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        sendMenuEvent(focusedWindow, MENU_EVENTS.historyHome);
-        debug(`Home shortcut triggered via globalShortcut (${homeShortcut})`);
-      }
-    });
-
-    debug('Global shortcuts registered successfully');
-  } catch (error) {
-    console.error('Failed to register global shortcuts:', error);
-  }
 }
 
 /**

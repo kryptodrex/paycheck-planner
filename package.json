@@ -1,7 +1,7 @@
 {
   "name": "paycheck-planner",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "Desktop paycheck planning and budget management application.",
   "author": {
     "name": "Paycheck Planner",
@@ -18,6 +18,7 @@
     "dev": "npm run sync-version && vite",
     "dev:inspector": "npm run sync-version && OPEN_DEVTOOLS=true vite",
     "build": "npx vite build && npm run sync-version",
+    "release-checks": "npm run lint && npx tsc -b && npm run test:run && npm run build",
     "build:dir": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --dir",
     "build:mac": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac",
     "build:win": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --win",
@@ -32,6 +33,7 @@
   "build": {
     "appId": "com.paycheckplanner.app",
     "productName": "Paycheck Planner",
+    "afterSign": "scripts/notarize.mjs",
     "icon": "build/icon.png",
     "fileAssociations": [
       {
@@ -63,12 +65,19 @@
       "category": "public.app-category.finance",
       "darkModeSupport": true,
       "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "gatekeeperAssess": true
     },
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -90,16 +99,22 @@
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "keytar": "^7.9.0",
+    "lucide-react": "^0.577.0",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.0.3",
     "@eslint/js": "^9.39.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/crypto-js": "^4.2.2",
     "@types/d3-sankey": "^0.12.5",
+    "@types/jest-axe": "^3.5.9",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -111,6 +126,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jest-axe": "^10.0.0",
+    "jsdom": "^29.0.0",
     "png2icons": "^2.0.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",

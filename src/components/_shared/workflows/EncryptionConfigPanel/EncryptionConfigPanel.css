@@ -25,9 +25,30 @@
   outline-offset: 2px;
 }
 
+.encryption-config-panel .encryption-option-card--danger:hover {
+  border-color: var(--alert-warning-border);
+  box-shadow: 0 0 0 3px var(--alert-warning-bg);
+}
+
+.encryption-config-panel .encryption-single-option {
+  grid-template-columns: 1fr;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.encryption-option-icon .ui-icon {
+  height: 2rem;
+  width: 2rem;
+}
+
 .encryption-config-panel .encryption-option-icon {
   font-size: clamp(2rem, 5vw, 2.6rem);
-  margin-bottom: 0.75rem;
+  align-items: center;
+  color: var(--icon-color-accent);
+  display: inline-flex;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
 }
 
 .encryption-config-panel .encryption-option-card h3 {

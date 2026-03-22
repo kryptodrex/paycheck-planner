@@ -23,9 +23,17 @@ interface SectionItemCardProps {
   onEdit: () => void;
   /** Delete callback */
   onDelete: () => void;
+  /** Optional history callback for object-level audit timeline */
+  onHistory?: () => void;
+  /** Optional label for history button */
+  historyLabel?: string;
   /** Extra content rendered in the card body (notes, breakdown rows, etc.) */
   children?: React.ReactNode;
+  /** Optional DOM id used by plan search for exact scroll/highlight targeting. */
+  elementId?: string;
   className?: string;
+  /** When true, suppresses the action bar (Edit, Delete, Pause, History buttons). Use for read-only snapshot rendering. */
+  hideActions?: boolean;
 }
 
 const SectionItemCard: React.FC<SectionItemCardProps> = ({
@@ -39,13 +47,19 @@ const SectionItemCard: React.FC<SectionItemCardProps> = ({
   pauseLabel,
   onEdit,
   onDelete,
+  onHistory,
+  historyLabel,
   children,
+  elementId,
   className,
+  hideActions = false,
 }) => {
   const pauseButtonLabel = pauseLabel ?? (isPaused ? 'Resume' : 'Pause');
+  const historyButtonLabel = historyLabel ?? 'View History';
 
   return (
     <div
+      id={elementId}
       className={['section-item-card', isPaused ? 'item-is-paused' : '', className || '']
         .filter(Boolean)
         .join(' ')}
@@ -73,23 +87,30 @@ const SectionItemCard: React.FC<SectionItemCardProps> = ({
 
       {children && <div className="item-card-body">{children}</div>}
 
-      <div className="item-card-actions">
-        {onPauseToggle && (
-          <Button
-            variant="utility"
-            className={isPaused ? 'item-card-btn-resume' : 'item-card-btn-pause'}
-            onClick={onPauseToggle}
-          >
-            {pauseButtonLabel}
+      {!hideActions && (
+        <div className="item-card-actions">
+          {onPauseToggle && (
+            <Button
+              variant="utility"
+              className={isPaused ? 'item-card-btn-resume' : 'item-card-btn-pause'}
+              onClick={onPauseToggle}
+            >
+              {pauseButtonLabel}
+            </Button>
+          )}
+          <Button className="item-card-btn-edit" variant="utility" onClick={onEdit}>
+            Edit
           </Button>
-        )}
-        <Button variant="utility" onClick={onEdit}>
-          Edit
-        </Button>
-        <Button variant="utility" className="item-card-btn-delete" onClick={onDelete}>
-          Delete
-        </Button>
-      </div>
+          {onHistory && (
+            <Button variant="utility" className="item-card-btn-history" onClick={onHistory}>
+              {historyButtonLabel}
+            </Button>
+          )}
+          <Button variant="utility" className="item-card-btn-delete" onClick={onDelete}>
+            Delete
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

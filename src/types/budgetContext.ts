@@ -7,6 +7,13 @@ import type { BudgetSettings } from './settings';
 export interface BudgetContextType {
   budgetData: BudgetData | null;
   loading: boolean;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  beginBatch: () => void;
+  commitBatch: (description?: string) => void;
+  discardBatch: () => void;
   saveBudget: (activeTab?: string, budgetOverride?: Partial<BudgetData>) => Promise<boolean>;
   saveWindowState: (width: number, height: number, x: number, y: number, activeTab?: string) => Promise<void>;
   loadBudget: (filePath?: string) => Promise<void>;
@@ -15,7 +22,10 @@ export interface BudgetContextType {
   closeBudget: () => void;
   selectSaveLocation: () => Promise<void>;
   copyPlanToNewYear: (newYear: number) => Promise<void>;
-  updateBudgetData: (data: Partial<BudgetData>) => void;
+  updateBudgetData: (
+    data: Partial<BudgetData>,
+    options?: { trackHistory?: boolean; trackAudit?: boolean; description?: string; note?: string }
+  ) => void;
   updatePaySettings: (settings: PaySettings) => void;
   addDeduction: (deduction: Omit<Deduction, 'id'>) => void;
   updateDeduction: (id: string, deduction: Partial<Deduction>) => void;

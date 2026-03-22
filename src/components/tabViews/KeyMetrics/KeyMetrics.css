@@ -20,12 +20,20 @@
   color: var(--text-secondary);
 }
 
-.metrics-grid {
+.key-metrics-body {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
+}
+
+.metrics-grid {
+  /* display: flex;
+  flex-direction: column; */
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  /* grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); */
   gap: 1rem;
   width: 100%;
-  max-width: 1680px;
+  /* max-width: 1680px; */
   margin: 0 auto 1.25rem;
 }
 
@@ -38,6 +46,26 @@
   box-shadow: var(--shadow-md);
   transition: transform 0.2s, box-shadow 0.2s;
   border: 1px solid var(--border-color);
+}
+
+.metric-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.metric-card-title {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.metric-card-title h3 {
+  font-size: 1.2rem;
+  color: var(--text-primary);
 }
 
 .metric-card-interactive {
@@ -57,15 +85,68 @@
 
 .metric-icon {
   font-size: 2.2rem;
-  margin-bottom: 0.35rem;
 }
 
 .metric-card h3 {
-  margin: 0 0 0.8rem 0;
+  margin: 0;
   font-size: 1rem;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.metric-context-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+[data-state-cues="minimal"] .metric-context-badge {
+  display: none;
+}
+
+.metric-context-badge-positive {
+  background: color-mix(in srgb, var(--success-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--success-color) 26%, var(--border-color));
+  color: var(--success-color);
+}
+
+.metric-context-badge-negative {
+  background: color-mix(in srgb, var(--error-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--error-color) 26%, var(--border-color));
+  color: var(--error-color);
+}
+
+.metric-context-badge-info {
+  background: color-mix(in srgb, var(--info-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--info-color) 26%, var(--border-color));
+  color: var(--info-color);
+}
+
+.metric-context-badge-warning {
+  background: color-mix(in srgb, var(--warning-color) 16%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--warning-color) 28%, var(--border-color));
+  color: var(--alert-warning-text);
+}
+
+.metric-context-badge-accent {
+  background: color-mix(in srgb, var(--violet-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--violet-color) 24%, var(--border-color));
+  color: var(--violet-color);
+}
+
+.metric-context-badge-cyan {
+  background: color-mix(in srgb, var(--cyan-color) 14%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--cyan-color) 24%, var(--border-color));
+  color: var(--cyan-color);
 }
 
 .metric-values {
@@ -123,7 +204,7 @@
   border-left: 4px solid var(--success-color);
 }
 
-.income-card .metric-primary .value {
+.income-card .metric-primary .value, .income-card .metric-icon {
   color: var(--success-color);
 }
 
@@ -131,7 +212,7 @@
   border-left: 4px solid var(--error-color);
 }
 
-.taxes-card .metric-primary .value {
+.taxes-card .metric-primary .value, .taxes-card .metric-icon {
   color: var(--error-color);
 }
 
@@ -139,7 +220,7 @@
   border-left: 4px solid var(--info-color);
 }
 
-.net-card .metric-primary .value {
+.net-card .metric-primary .value, .net-card .metric-icon {
   color: var(--info-color);
 }
 
@@ -147,7 +228,7 @@
   border-left: 4px solid var(--warning-color);
 }
 
-.bills-card .metric-primary .value {
+.bills-card .metric-primary .value, .bills-card .metric-icon {
   color: var(--warning-color);
 }
 
@@ -155,7 +236,7 @@
   border-left: 4px solid var(--violet-color);
 }
 
-.remaining-card .metric-primary .value {
+.remaining-card .metric-primary .value, .remaining-card .metric-icon {
   color: var(--violet-color);
 }
 
@@ -163,7 +244,7 @@
   border-left: 4px solid var(--cyan-color);
 }
 
-.savings-card .metric-primary .value {
+.savings-card .metric-primary .value, .savings-card .metric-icon {
   color: var(--cyan-color);
 }
 
@@ -277,11 +358,19 @@
 }
 
 .km-posttax-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, #f43f5e 85%, var(--bg-primary)), #f43f5e);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--metric-posttax-color) 85%, var(--bg-primary)),
+    var(--metric-posttax-color)
+  );
 }
 
 .km-bills-segment {
-  background: linear-gradient(135deg, color-mix(in srgb, #f97316 85%, var(--bg-primary)), #f97316);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--metric-bills-color) 85%, var(--bg-primary)),
+    var(--metric-bills-color)
+  );
 }
 
 .km-savings-segment {
@@ -293,7 +382,7 @@
 }
 
 .km-shortfall-segment {
-  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  background: linear-gradient(135deg, var(--metric-shortfall-color), var(--metric-shortfall-color-strong));
 }
 
 .km-bar-labels {
@@ -326,11 +415,11 @@
 }
 
 .km-posttax-dot {
-  background: #f43f5e;
+  background: var(--metric-posttax-color);
 }
 
 .km-bills-dot {
-  background: #f97316;
+  background: var(--metric-bills-color);
 }
 
 .km-savings-dot {
@@ -342,7 +431,7 @@
 }
 
 .km-shortfall-dot {
-  background: #991b1b;
+  background: var(--metric-shortfall-color);
 }
 
 .km-flow-summary-list {
@@ -370,7 +459,7 @@
 }
 
 .km-flow-summary-value {
-  font-family: var(--font-mono);
+  font-family: inherit;
   color: var(--text-primary);
   white-space: nowrap;
 }
@@ -393,7 +482,7 @@
 }
 
 .km-flow-fill-income {
-  background: linear-gradient(135deg, var(--success-color), #059669);
+  background: linear-gradient(135deg, var(--success-color), color-mix(in srgb, var(--success-color) 70%, var(--bg-primary)));
 }
 
 .km-flow-fill-taxes {
@@ -405,7 +494,7 @@
 }
 
 .km-flow-fill-posttax {
-  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  background: linear-gradient(135deg, var(--metric-posttax-color), var(--metric-posttax-color-strong));
 }
 
 .km-flow-fill-net {
@@ -413,7 +502,7 @@
 }
 
 .km-flow-fill-bills {
-  background: linear-gradient(135deg, #f97316, #ea580c);
+  background: linear-gradient(135deg, var(--metric-bills-color), var(--metric-bills-color-strong));
 }
 
 .km-flow-fill-savings {
@@ -425,7 +514,7 @@
 }
 
 .km-flow-fill-shortfall {
-  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  background: linear-gradient(135deg, var(--metric-shortfall-color), var(--metric-shortfall-color-strong));
 }
 
 .km-pie-view {
@@ -496,7 +585,7 @@
 .km-pie-center strong {
   color: var(--text-primary);
   font-size: 0.9rem;
-  font-family: var(--font-mono);
+  font-family: inherit;
 }
 
 .km-pie-legend {
@@ -531,14 +620,42 @@
 .km-pie-legend-value {
   color: var(--text-secondary);
   font-size: 0.85rem;
-  font-family: var(--font-mono);
+  font-family: inherit;
   text-align: right;
   white-space: nowrap;
+}
+
+/* Very wide screens only */
+@media (min-width: 2205px) {
+  .key-metrics-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .metrics-grid {
+    margin-bottom: 0;
+  }
+
+  .summary-bar {
+    height: max-content;
+  }
+}
+
+@media (max-width: 1120px) {
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 768px) {
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .metric-card-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .summary-bar {

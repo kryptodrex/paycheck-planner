@@ -41,6 +41,12 @@ export function convertBudgetAmounts(data: BudgetData, exchangeRate: number): Bu
     })),
     taxSettings: {
       ...data.taxSettings,
+      taxLines: (data.taxSettings.taxLines || []).map((line) => ({
+        ...line,
+        amount: line.calculationType === 'fixed'
+          ? convertCurrencyValue(line.amount, exchangeRate) || 0
+          : line.amount,
+      })),
       additionalWithholding: convertCurrencyValue(data.taxSettings.additionalWithholding, exchangeRate) || 0,
     },
     accounts: data.accounts.map((account) => ({

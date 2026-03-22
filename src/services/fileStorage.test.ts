@@ -1,45 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_STORAGE_KEYS, STORAGE_KEYS } from '../constants/storage';
 import { FileStorageService } from './fileStorage';
-
-class LocalStorageMock {
-  private store = new Map<string, string>();
-
-  get length(): number {
-    return this.store.size;
-  }
-
-  getItem(key: string): string | null {
-    return this.store.has(key) ? this.store.get(key)! : null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-
-  key(index: number): string | null {
-    return Array.from(this.store.keys())[index] ?? null;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-}
+import { toAllocationDisplayAmount } from '../utils/allocationEditor';
 
 describe('FileStorageService', () => {
-  const localStorageMock = new LocalStorageMock();
-
   beforeEach(() => {
-    localStorageMock.clear();
-    Object.defineProperty(globalThis, 'localStorage', {
-      value: localStorageMock,
-      configurable: true,
-    });
-
     Object.defineProperty(globalThis, 'crypto', {
       value: {
         randomUUID: vi.fn(() => 'uuid-mock'),
@@ -70,6 +35,7 @@ describe('FileStorageService', () => {
       encryptionEnabled: true,
       encryptionKey: 'super-secret',
       lastOpenedFile: '/tmp/file',
+      viewModeFavorites: ['weekly', 'monthly'],
     });
 
     const raw = localStorage.getItem(STORAGE_KEYS.settings);
@@ -79,6 +45,78 @@ describe('FileStorageService', () => {
     const settings = FileStorageService.getAppSettings();
     expect(settings.encryptionEnabled).toBe(true);
     expect(settings.encryptionKey).toBeUndefined();
+    expect(settings.viewModeFavorites).toEqual(['weekly', 'monthly']);
+  });
+
+  it('normalizes invalid view mode favorites from stored app settings', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({ viewModeFavorites: ['weekly', 'invalid-mode', 'weekly'] }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+
+    expect(settings.viewModeFavorites).toEqual(['weekly']);
+  });
+
+  it('normalizes appearance values from stored app settings', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        themeMode: 'invalid-theme',
+        appearanceMode: 'wildcard',
+        appearancePreset: 'neon-chaos',
+        customAppearance: { primaryAccent: 'bad', surfaceTint: '#fff' },
+        highContrastMode: 'yes',
+        colorVisionMode: 'tetrachromacy',
+        stateCueMode: 'verbose',
+        fontScale: 7,
+      }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+
+    expect(settings.themeMode).toBeUndefined();
+    expect(settings.appearanceMode).toBe('preset');
+    expect(settings.appearancePreset).toBe('default');
+    expect(settings.customAppearance).toEqual({
+      primaryAccent: '#667eea',
+      surfaceTint: '#eef2ff',
+    });
+    expect(settings.highContrastMode).toBe(false);
+    expect(settings.colorVisionMode).toBe('normal');
+    expect(settings.stateCueMode).toBe('enhanced');
+    expect(settings.fontScale).toBe(1.25);
+  });
+
+  it('normalizes appearance values before persisting app settings', () => {
+    FileStorageService.saveAppSettings({
+      themeMode: 'system',
+      appearanceMode: 'custom',
+      appearancePreset: 'forest',
+      customAppearance: {
+        primaryAccent: '#123456',
+        surfaceTint: '#abcdef',
+      },
+      highContrastMode: false,
+      colorVisionMode: 'deuteranopia',
+      stateCueMode: 'minimal',
+      fontScale: 0.1,
+      glossaryTermsEnabled: true,
+    });
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
+    expect(stored.themeMode).toBe('system');
+    expect(stored.appearanceMode).toBe('custom');
+    expect(stored.appearancePreset).toBe('forest');
+    expect(stored.customAppearance).toEqual({
+      primaryAccent: '#123456',
+      surfaceTint: '#abcdef',
+    });
+    expect(stored.highContrastMode).toBe(false);
+    expect(stored.colorVisionMode).toBe('deuteranopia');
+    expect(stored.stateCueMode).toBe('minimal');
+    expect(stored.fontScale).toBe(0.9);
   });
 
   it('adds and de-duplicates recent files', () => {
@@ -113,6 +151,68 @@ describe('FileStorageService', () => {
     };
     const [, serialized] = saveBudgetMock.mock.calls[0];
     expect(serialized).not.toContain('encryptionKey');
+  });
+
+  it('preserves allocation edit amounts across save and load round trips', async () => {
+    const budget = FileStorageService.createEmptyBudget(2026, 'USD');
+    budget.settings.encryptionEnabled = false;
+    budget.accounts = [
+      {
+        id: 'acct-1',
+        name: 'Checking',
+        type: 'checking',
+        color: '#3366ff',
+        allocationCategories: [
+          {
+            id: 'cat-1',
+            name: 'Flexible Spending',
+            amount: 92.312307692308,
+          },
+        ],
+      },
+    ];
+
+    await FileStorageService.saveBudget(budget, '/tmp/persisted-roundtrip.ppb');
+
+    const saveBudgetMock = window.electronAPI.saveBudget as unknown as {
+      mock: { calls: [string, string][] };
+    };
+    const [, serialized] = saveBudgetMock.mock.calls.at(-1)!;
+
+    Object.defineProperty(globalThis, 'window', {
+      value: {
+        electronAPI: {
+          saveFileDialog: vi.fn(async () => '/tmp/plan.ppb'),
+          saveBudget: vi.fn(async () => ({ success: true })),
+          openFileDialog: vi.fn(async () => '/tmp/persisted-roundtrip.ppb'),
+          loadBudget: vi.fn(async () => ({ success: true, data: serialized })),
+          selectDirectory: vi.fn(async () => '/tmp'),
+        },
+      },
+      configurable: true,
+    });
+
+    const loaded = await FileStorageService.loadBudget('/tmp/persisted-roundtrip.ppb');
+
+    expect(loaded?.accounts[0].allocationCategories?.[0].amount).toBe(92.312307692308);
+    expect(
+      toAllocationDisplayAmount(
+        loaded!.accounts[0].allocationCategories![0].amount,
+        26,
+        'monthly',
+      ),
+    ).toBe(200.01);
+  });
+
+  it('creates default tax lines with percentage mode metadata', () => {
+    const budget = FileStorageService.createEmptyBudget(2026, 'USD');
+
+    expect(budget.taxSettings.taxLines).toEqual([
+      { id: 'uuid-mock', label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'Social Security', rate: 6.2, amount: 0, calculationType: 'percentage' },
+      { id: 'uuid-mock', label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
+    ]);
   });
 
   it('returns known plan IDs from path mappings', () => {
@@ -181,7 +281,7 @@ describe('FileStorageService', () => {
       exportedAt: new Date().toISOString(),
       data: {
         [STORAGE_KEYS.theme]: 'dark',
-        [STORAGE_KEYS.settings]: '{"themeMode":"dark","encryptionEnabled":true,"encryptionKey":"secret"}',
+        [STORAGE_KEYS.settings]: '{"themeMode":"unknown","highContrastMode":"yes","fontScale":10,"encryptionEnabled":true,"encryptionKey":"secret"}',
         [STORAGE_KEYS.accounts]: '[{"id":"1"}]',
         'foreign-key': 'should-be-ignored',
       },
@@ -194,7 +294,9 @@ describe('FileStorageService', () => {
 
     // Settings blob restored, but plan-specific fields stripped
     const settings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!);
-    expect(settings.themeMode).toBe('dark');
+    expect(settings.themeMode).toBeUndefined();
+    expect(settings.highContrastMode).toBe(false);
+    expect(settings.fontScale).toBe(1.25);
     expect(settings.encryptionEnabled).toBeUndefined();
     expect(settings.encryptionKey).toBeUndefined();
 
@@ -321,6 +423,122 @@ describe('FileStorageService', () => {
     expect(recentFiles.some((file) => file.filePath === '/tmp/missing-plan.budget')).toBe(false);
     expect(recentFiles.some((file) => file.filePath === '/tmp/moved-plan.budget')).toBe(true);
     expect(FileStorageService.getKnownPlanIdForFile('/tmp/moved-plan.budget')).toBe('plan-1');
+  });
+
+  describe('migrateBudgetData — legacy plan file migration', () => {
+    // Minimal object that passes isBudgetData() but may be missing newer fields.
+    // Intentionally does NOT include metadata so we can test that migration adds it.
+    function makeLegacyPlanBase(): Record<string, unknown> {
+      return {
+        id: 'legacy-plan-1',
+        name: 'Legacy Plan',
+        year: 2024,
+        paySettings: { annualSalary: 0, hourlyRate: 0, payFrequency: 'biweekly' },
+        accounts: [],
+        bills: [],
+        preTaxDeductions: [],
+        taxSettings: {
+          taxLines: [
+            { id: 'tl-1', label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
+          ],
+          additionalWithholding: 0,
+        },
+        settings: { encryptionEnabled: false, currency: 'USD' },
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      };
+    }
+
+    it('initializes auditHistory to empty array for old plans without metadata', async () => {
+      const oldPlan = makeLegacyPlanBase();
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(oldPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/legacy.ppb');
+
+      expect(loaded?.metadata).toBeDefined();
+      expect(loaded?.metadata?.auditHistory).toEqual([]);
+    });
+
+    it('resets auditHistory to empty array when metadata exists but auditHistory is not an array', async () => {
+      const badPlan = { ...makeLegacyPlanBase(), metadata: { auditHistory: 'corrupted string' } };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(badPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/corrupt-metadata.ppb');
+
+      expect(loaded?.metadata?.auditHistory).toEqual([]);
+    });
+
+    it('preserves existing auditHistory when loading a plan that already has entries', async () => {
+      const existingEntry = {
+        id: 'entry-1',
+        timestamp: '2025-06-01T00:00:00.000Z',
+        entityType: 'bill',
+        entityId: 'bill-1',
+        changeType: 'create',
+        sourceAction: 'AddBillModal',
+        snapshot: { id: 'bill-1', name: 'Rent', amount: 1500 },
+      };
+      const planWithHistory = {
+        ...makeLegacyPlanBase(),
+        metadata: { auditHistory: [existingEntry] },
+      };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(planWithHistory) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/plan-with-history.ppb');
+
+      expect(loaded?.metadata?.auditHistory).toHaveLength(1);
+      expect(loaded?.metadata?.auditHistory?.[0].id).toBe('entry-1');
+    });
+
+    it('migrates old fixed-field taxSettings format (federalTaxRate) to taxLines', async () => {
+      const legacyTaxPlan = {
+        ...makeLegacyPlanBase(),
+        taxSettings: {
+          federalTaxRate: 12,
+          stateTaxRate: 5,
+          socialSecurityRate: 6.2,
+          medicareRate: 1.45,
+          additionalWithholding: 50,
+        },
+      };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(legacyTaxPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/legacy-tax.ppb');
+
+      expect(Array.isArray(loaded?.taxSettings.taxLines)).toBe(true);
+      expect(loaded?.taxSettings.taxLines).toHaveLength(4);
+      expect(loaded?.taxSettings.taxLines[0]).toMatchObject({
+        label: 'Federal Tax',
+        rate: 12,
+        calculationType: 'percentage',
+      });
+      expect(loaded?.taxSettings.taxLines[1]).toMatchObject({ label: 'State Tax', rate: 5 });
+      expect(loaded?.taxSettings.additionalWithholding).toBe(50);
+    });
+
+    it('initializes missing optional arrays (benefits, retirement, savingsContributions) in old plans', async () => {
+      const strippedPlan = {
+        ...makeLegacyPlanBase(),
+        // omit benefits, retirement, savingsContributions entirely
+      };
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(strippedPlan) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/stripped-plan.ppb');
+
+      expect(Array.isArray(loaded?.benefits)).toBe(true);
+      expect(Array.isArray(loaded?.retirement)).toBe(true);
+      expect(Array.isArray(loaded?.savingsContributions)).toBe(true);
+    });
   });
 
   it('throws after repeated bad key attempts for encrypted plan files', async () => {

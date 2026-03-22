@@ -1,7 +1,9 @@
+import type { LucideIcon } from 'lucide-react';
+
 export interface TabConfig {
   id: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   visible: boolean;
   order: number;
   pinned: boolean;

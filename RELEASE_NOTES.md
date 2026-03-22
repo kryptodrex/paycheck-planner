@@ -6,28 +6,23 @@
 
 ### Features
 
-- Added a dedicated modal to edit plan name and plan year, including preset year options and validated custom year entry.
-- Added pause/resume support for deduction items to match other financial item cards.
-- Redesigned Key Metrics tab with a unified breakdown card offering three switchable views: Bars (individual flow bars per category), Stacked (proportional bar across all segments), and Pie (SVG donut chart with hover interactions). Selected view is persisted per plan file.
-- Added a semantic color system to the Key Metrics breakdown: expense categories use distinct warm hues, savings/flexible spending use cooler hues, and gross pay remains green.
-- Added a new "All Accounts Total" banner to Bills, Savings, and Loan views so totals across accounts are visible at a glance.
+- New theme preset options available to choose from in App Settings
+- Added undo and redo support across planning workflows, plus an audit history overlay so you can review and restore prior changes.
+- Added plan-wide search actions that can jump directly to settings, sections, and modals, including common add/edit/delete/pause tasks.
+- Added automated reallocation support when remaining spending is below target, with safe-source rules and a clear summary of what changed.
+- Added app-wide Lucide icon support with account icon selection, replacing legacy emoji-based iconography.
+
 
 ### Improvements
 
-- Improved account editing usability by prioritizing existing accounts, keeping add controls at the bottom, and improving smaller-window behavior.
-- Refined allocation row readability with cleaner category logic, earlier count indicators, and one-line ellipsis handling for very long category names.
-- Standardized and polished several shared UI surfaces (cards, headers, and modal interactions) for more consistent behavior across views.
-- Updated Key Metrics chart categorization to combine deductions and bills into a clearer "Bills & Deductions" grouping.
-- Improved Key Metrics stacked chart rendering so the bar reliably fills the full container width.
-- Improved Key Metrics card layout responsiveness so cards flow more naturally by available screen space.
+- Improved gross-to-net clarity with explicit pre-tax and post-tax deduction visibility in key breakdown views.
+- Expanded tax modeling so tax lines can be configured using either percentage rates or fixed amounts.
+- Expanded view mode flexibility with more cadence options, paycheck-cadence defaults, and better selector guidance.
+- Overhauled Appearance and Accessibility settings with curated light/dark preset pairs, manual dark-mode overrides, and a dedicated high-contrast mode.
+- Added app-level display scaling controls (zoom/font size) in Settings and View, including keyboard shortcuts for zoom in, zoom out, and reset.
+
 
 ### Bug Fixes
 
-- Fixed remaining amount behavior so negative remaining values are shown correctly and highlighted with a clear danger state.
-- Fixed retirement contribution rounding consistency to nearest cent across affected flows.
-- Fixed Setup Wizard tax defaults to avoid USD-centric assumptions when using non-USD currencies.
-- Fixed glossary term rendering so intended capitalization is preserved.
-- Fixed header drag-region interaction regressions that could block certain modal close/button interactions.
-- Fixed Key Metrics totals mismatches by aligning Remaining-for-Spending calculations between cards and charts.
-- Fixed Key Metrics savings calculations to include Savings & Investment Contributions and properly classify retirement contributions in savings.
-- Fixed Key Metrics bills totals to ignore paused/disabled bills.
+- Fixed cross-mode rounding and persistence behavior so values remain stable after editing, saving, and reopening.
+- Fixed several search interaction issues, including navigation/scroll behavior and action responsiveness for pause/resume controls.

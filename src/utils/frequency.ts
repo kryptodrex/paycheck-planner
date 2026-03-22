@@ -29,6 +29,10 @@ const PAY_FREQUENCY_OCCURRENCES: Partial<Record<FrequencyToken, number>> = {
   'twice-monthly': 24,
   'twice-a-month': 24,
   monthly: 12,
+  quarterly: 4,
+  yearly: 1,
+  annual: 1,
+  annually: 1,
 };
 
 const BILL_FREQUENCY_OCCURRENCES: Partial<Record<FrequencyToken, number>> = {

@@ -1,4 +1,5 @@
 import React from 'react';
+import Dropdown from '../Dropdown';
 import './DateInput.css';
 
 interface DateInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -57,7 +58,8 @@ const DateInput: React.FC<DateInputProps> = ({
 
     return (
       <div className={`date-input day-month ${hasError ? 'field-error' : ''}`.trim()}>
-        <select
+        <Dropdown
+          containerClassName="date-input-select-container"
           className="date-input-select"
           value={selectedMonth}
           onChange={(e) => handleMonthChange(e.target.value)}
@@ -72,11 +74,12 @@ const DateInput: React.FC<DateInputProps> = ({
               </option>
             );
           })}
-        </select>
+        </Dropdown>
 
         <span className="date-input-divider" aria-hidden="true" />
 
-        <select
+        <Dropdown
+          containerClassName="date-input-select-container"
           className="date-input-select"
           value={Math.min(selectedDay, dayMax)}
           onChange={(e) => handleDayChange(e.target.value)}
@@ -87,7 +90,7 @@ const DateInput: React.FC<DateInputProps> = ({
               {dayValue}
             </option>
           ))}
-        </select>
+        </Dropdown>
       </div>
     );
   }

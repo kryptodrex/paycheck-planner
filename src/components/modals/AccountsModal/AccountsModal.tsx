@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import type { Account } from '../../../types/accounts';
-import { Modal, Button, FormGroup, AccountsEditor } from '../../_shared';
+import { Modal, Button, FormGroup, AccountsEditor, Dropdown } from '../../_shared';
 import './AccountsModal.css';
 import './AccountsDeleteModal.css';
 
@@ -135,7 +135,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
         isOpen={true}
         onClose={onClose}
         contentClassName="accounts-modal"
-        header="Manage Accounts"
+        header="Manage Your Accounts"
         footer={
           <Button variant="primary" onClick={onClose}>
             Done
@@ -149,7 +149,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
           onDelete={handleDeleteAccount}
           onMove={handleMoveAccount}
           showToggleButton={true}
-          infoMessage="These accounts are specific to this plan. Changes will only affect this plan file."
+          infoMessage="These accounts are specific to this plan, so any changes will only affect this plan file."
         />
       </Modal>
 
@@ -202,7 +202,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
                 </ul>
 
                 <FormGroup label="Move linked items to" required>
-                  <select
+                  <Dropdown
                     value={deleteTargetAccountId}
                     onChange={(e) => setDeleteTargetAccountId(e.target.value)}
                   >
@@ -213,7 +213,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
                           {account.name}
                         </option>
                       ))}
-                  </select>
+                  </Dropdown>
                 </FormGroup>
               </>
             ) : (

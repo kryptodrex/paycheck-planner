@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LayoutList } from 'lucide-react';
 import { Modal, Button } from '../../_shared';
 import type { TabConfig } from '../../../types/tabs';
 import './PlanTabs.css';
@@ -38,7 +39,12 @@ const TabManagementModal: React.FC<TabManagementModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      header="📋 Manage Tabs"
+      header={
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+            <LayoutList className="ui-icon" aria-hidden="true" />
+            Manage Tabs
+          </h2>
+        }
       footer={
         <Button
           variant="primary"
@@ -80,7 +86,7 @@ const TabManagementModal: React.FC<TabManagementModalProps> = ({
                     className={`tab-management-item ${animationClass}`}
                   >
                     <div className="tab-info">
-                      <span className="tab-icon">{tab.icon}</span>
+                      <span className="tab-icon"><tab.icon className="ui-icon" /></span>
                       <span className="tab-label">{tab.label}</span>
                     </div>
                     <div className="tab-actions">
@@ -130,7 +136,7 @@ const TabManagementModal: React.FC<TabManagementModalProps> = ({
                 {hiddenTabs.map((tab) => (
                   <div key={tab.id} className="tab-management-item">
                     <div className="tab-info">
-                      <span className="tab-icon">{tab.icon}</span>
+                      <span className="tab-icon"><tab.icon className="ui-icon" /></span>
                       <span className="tab-label">{tab.label}</span>
                     </div>
                     <div className="tab-actions">

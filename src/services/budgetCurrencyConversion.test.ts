@@ -45,7 +45,10 @@ const sampleBudget: BudgetData = {
     },
   ],
   taxSettings: {
-    taxLines: [{ id: 'tax-1', label: 'Federal', rate: 0.22 }],
+    taxLines: [
+      { id: 'tax-1', label: 'Federal', rate: 22, amount: 0, calculationType: 'percentage' },
+      { id: 'tax-2', label: 'Local', rate: 0, amount: 40, calculationType: 'fixed' },
+    ],
     additionalWithholding: 10.125,
   },
   accounts: [
@@ -118,6 +121,8 @@ describe('budgetCurrencyConversion', () => {
     expect(converted.retirement[1].employeeContribution).toBe(6);
     expect(converted.retirement[1].employerMatchCap).toBe(4);
 
+    expect(converted.taxSettings.taxLines[0].amount).toBe(0);
+    expect(converted.taxSettings.taxLines[1].amount).toBe(60);
     expect(converted.taxSettings.additionalWithholding).toBe(15.19);
     expect(converted.accounts[0].allocation).toBe(600);
     expect(converted.accounts[0].allocationCategories?.[0].amount).toBe(225);

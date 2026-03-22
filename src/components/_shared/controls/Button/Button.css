@@ -24,6 +24,17 @@
   cursor: not-allowed;
 }
 
+[data-state-cues="enhanced"] .btn-disabled-state:not(.btn-icon) {
+  border: 1px dashed color-mix(in srgb, var(--text-secondary) 40%, var(--border-color));
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--bg-primary) 88%, transparent) 0,
+    color-mix(in srgb, var(--bg-primary) 88%, transparent) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
 .btn:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
@@ -37,7 +48,7 @@
 /* Primary button */
 .btn-primary {
   background: var(--accent-primary);
-  color: white;
+  color: var(--button-primary-text, white);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -61,7 +72,7 @@
   background: var(--border-color);
   border-color: var(--border-color-hover, var(--accent-primary));
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-secondary:active:not(:disabled) {
@@ -185,7 +196,7 @@
 
 /* Remove button — icon variant with red hover */
 .btn.btn-icon.btn-remove:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--surface-danger-subtle);
   color: var(--error-color);
 }
 

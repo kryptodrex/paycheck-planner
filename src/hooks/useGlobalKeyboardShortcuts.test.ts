@@ -100,4 +100,32 @@ describe('useGlobalKeyboardShortcuts', () => {
 
     expect(callback).not.toHaveBeenCalled();
   });
+
+  it('does not fire callback when shouldHandle returns false', () => {
+    const callback = vi.fn();
+    const shouldHandle = vi.fn(() => false);
+    useGlobalKeyboardShortcuts([
+      { key: 'z', mac: true, shouldHandle, callback },
+    ]);
+
+    const handler = listeners.get('window:keydown');
+    expect(handler).toBeDefined();
+
+    const event = {
+      key: 'z',
+      metaKey: true,
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent;
+
+    handler?.(event);
+
+    expect(shouldHandle).toHaveBeenCalledTimes(1);
+    expect(callback).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(event.stopPropagation).not.toHaveBeenCalled();
+  });
 });

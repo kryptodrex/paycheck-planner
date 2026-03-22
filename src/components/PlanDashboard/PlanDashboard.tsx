@@ -6,7 +6,8 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
-import { MENU_EVENTS } from '../../constants/events';
+import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText } from 'lucide-react';
+import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
@@ -22,10 +23,19 @@ import AccountsModal from '../modals/AccountsModal';
 import ExportModal from '../modals/ExportModal';
 import FeedbackModal from '../modals/FeedbackModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel } from '../_shared';
+import PlanSearchOverlay from './PlanSearchOverlay';
+import PlanHistoryOverlay from './PlanHistoryOverlay';
+import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeSelector } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
+import { getPayFrequencyViewMode } from '../../utils/payPeriod';
+import { sanitizeFavoriteViewModes } from '../../utils/viewModePreferences';
+import { useGlobalKeyboardShortcuts } from '../../hooks';
+import type { SearchResult } from '../../utils/planSearch';
+import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
 import type { TabPosition, TabDisplayMode, TabConfig } from '../../types/tabs';
 import type { ViewMode } from '../../types/viewMode';
+import type { AuditEntry, AuditHistoryTarget } from '../../types/audit';
+import type { AccountAllocationCategory } from '../../types/accounts';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
@@ -41,12 +51,84 @@ interface PlanHistoryState {
 interface PlanDashboardProps {
   onResetSetup?: () => void;
   viewMode?: string | null; // If set, this is a view-only window
+  onUndoRedoSuccess?: (action: 'undo' | 'redo') => void;
 }
 
 const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
 
-const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode }) => {
-  const { budgetData, saveBudget, loading, createNewBudget, loadBudget, copyPlanToNewYear, closeBudget, updateBudgetSettings, updateBudgetData } = useBudget();
+/** Timing constants for the search-result scroll + highlight behaviour */
+const SEARCH_SCROLL_INITIAL_DELAY_MS = 80;
+const SEARCH_SCROLL_RETRY_DELAY_MS = 120;
+const SEARCH_SCROLL_MAX_RETRIES = 5;
+const SEARCH_SCROLL_SETTLE_DELAY_MS = 220;
+const SEARCH_HIGHLIGHT_DURATION_MS = 1800;
+
+const SCROLL_VISIBILITY_PADDING_PX = 12;
+
+const getNearestScrollableAncestor = (element: HTMLElement): HTMLElement | null => {
+  let current: HTMLElement | null = element.parentElement;
+
+  while (current) {
+    const style = window.getComputedStyle(current);
+    const overflowY = style.overflowY;
+    const isScrollable =
+      (overflowY === 'auto' || overflowY === 'scroll') &&
+      current.scrollHeight > current.clientHeight;
+
+    if (isScrollable) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+};
+
+const isElementVisibleInContainer = (element: HTMLElement, container: HTMLElement): boolean => {
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  return (
+    elementRect.top >= containerRect.top + SCROLL_VISIBILITY_PADDING_PX &&
+    elementRect.bottom <= containerRect.bottom - SCROLL_VISIBILITY_PADDING_PX
+  );
+};
+
+const getFirstVisibleFavoriteMode = (): ViewMode => {
+  const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+  return favorites[0];
+};
+
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return (
+    target.tagName === 'INPUT' ||
+    target.tagName === 'TEXTAREA' ||
+    target.tagName === 'SELECT' ||
+    target.isContentEditable
+  );
+};
+
+const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, onUndoRedoSuccess }) => {
+  const {
+    budgetData,
+    saveBudget,
+    loading,
+    createNewBudget,
+    loadBudget,
+    copyPlanToNewYear,
+    closeBudget,
+    updateBudgetSettings,
+    updateBudgetData,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useBudget();
   const getInitialTab = () => {
     const normalizedViewMode = normalizeLegacyTabId(viewMode);
     if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
@@ -65,11 +147,59 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [scrollToAccountId, setScrollToAccountId] = useState<string | undefined>(undefined);
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [pendingTabScroll, setPendingTabScroll] = useState<{ tab: TabId; position: TabScrollPosition } | null>(null);
-  const [displayMode, setDisplayMode] = useState<ViewMode>('paycheck');
+  const [displayMode, setDisplayMode] = useState<ViewMode>(() => {
+    if (budgetData?.settings?.displayMode) {
+      return sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites).includes(
+        budgetData.settings.displayMode as never,
+      )
+        ? budgetData.settings.displayMode
+        : getFirstVisibleFavoriteMode();
+    }
+
+    const cadenceMode = getPayFrequencyViewMode(budgetData?.paySettings?.payFrequency ?? 'bi-weekly');
+    return sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites).includes(cadenceMode as never)
+      ? cadenceMode
+      : getFirstVisibleFavoriteMode();
+  });
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined);
+  const [pendingPaySettingsFieldHighlight, setPendingPaySettingsFieldHighlight] = useState<string | undefined>(undefined);
+  const [paySettingsSearchRequestKey, setPaySettingsSearchRequestKey] = useState(0);
+  const [pendingBillsSearchAction, setPendingBillsSearchAction] = useState<
+    | 'add-bill'
+    | 'add-deduction'
+    | 'edit-bill'
+    | 'delete-bill'
+    | 'toggle-bill'
+    | 'edit-benefit'
+    | 'delete-benefit'
+    | 'toggle-benefit'
+    | undefined
+  >(undefined);
+  const [pendingBillsSearchTargetId, setPendingBillsSearchTargetId] = useState<string | undefined>(undefined);
+  const [billsSearchRequestKey, setBillsSearchRequestKey] = useState(0);
+  const [pendingLoansSearchAction, setPendingLoansSearchAction] = useState<'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan' | undefined>(undefined);
+  const [pendingLoansSearchTargetId, setPendingLoansSearchTargetId] = useState<string | undefined>(undefined);
+  const [loansSearchRequestKey, setLoansSearchRequestKey] = useState(0);
+  const [pendingSavingsSearchAction, setPendingSavingsSearchAction] = useState<
+    | 'add-contribution'
+    | 'add-retirement'
+    | 'edit-savings'
+    | 'delete-savings'
+    | 'toggle-savings'
+    | 'edit-retirement'
+    | 'delete-retirement'
+    | 'toggle-retirement'
+    | undefined
+  >(undefined);
+  const [pendingSavingsSearchTargetId, setPendingSavingsSearchTargetId] = useState<string | undefined>(undefined);
+  const [savingsSearchRequestKey, setSavingsSearchRequestKey] = useState(0);
+  const [taxSearchOpenSettingsRequestKey, setTaxSearchOpenSettingsRequestKey] = useState(0);
+  const [showSearch, setShowSearch] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<AuditHistoryTarget | null>(null);
   const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [showEncryptionSetup, setShowEncryptionSetup] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -88,6 +218,31 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const [showPlanLoadingScreen, setShowPlanLoadingScreen] = useState(false);
   const [tabPosition, setTabPosition] = useState<TabPosition>('left');
   const [tabDisplayMode, setTabDisplayMode] = useState<TabDisplayMode>('icons-with-labels');
+
+  const handleUndoAction = useCallback(() => {
+    if (isEditableTarget(document.activeElement)) {
+      document.execCommand('undo');
+      return;
+    }
+
+    if (canUndo) {
+      undo();
+      onUndoRedoSuccess?.('undo');
+    }
+  }, [canUndo, onUndoRedoSuccess, undo]);
+
+  const handleRedoAction = useCallback(() => {
+    if (isEditableTarget(document.activeElement)) {
+      document.execCommand('redo');
+      return;
+    }
+
+    if (canRedo) {
+      redo();
+      onUndoRedoSuccess?.('redo');
+    }
+  }, [canRedo, onUndoRedoSuccess, redo]);
+
   const {
     encryptionEnabled,
     setEncryptionEnabled,
@@ -119,7 +274,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
   const historyStateKeyRef = useRef<string | null>(null);
   const suppressHistoryPushRef = useRef(false);
   const lastMissingPathPromptRef = useRef<string | null>(null);
-  const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
+  const {
+    confirmDialog,
+    errorDialog,
+    openConfirmDialog,
+    confirmCurrentDialog,
+    closeConfirmDialog,
+    openErrorDialog,
+    closeErrorDialog,
+  } = useAppDialogs();
   const {
     missingFile: missingActiveFile,
     relinkMismatchMessage: activeRelinkMismatchMessage,
@@ -299,7 +462,38 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (budgetData?.settings?.tabDisplayMode) {
       setTabDisplayMode(budgetData.settings.tabDisplayMode);
     }
-  }, [budgetData?.settings?.tabDisplayMode, budgetData?.settings?.tabPosition]);
+    if (budgetData?.settings?.displayMode) {
+      const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+      setDisplayMode(
+        favorites.includes(budgetData.settings.displayMode as never)
+          ? budgetData.settings.displayMode
+          : favorites[0],
+      );
+    } else if (budgetData?.paySettings?.payFrequency) {
+      const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+      const cadenceMode = getPayFrequencyViewMode(budgetData.paySettings.payFrequency);
+      setDisplayMode(favorites.includes(cadenceMode as never) ? cadenceMode : favorites[0]);
+    }
+  }, [
+    budgetData?.settings?.tabDisplayMode,
+    budgetData?.settings?.tabPosition,
+    budgetData?.settings?.displayMode,
+    budgetData?.paySettings?.payFrequency,
+  ]);
+
+  useEffect(() => {
+    const handleViewModeFavoritesChanged = () => {
+      const favorites = sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites);
+      if (!favorites.includes(displayMode as never)) {
+        setDisplayMode(favorites[0]);
+      }
+    };
+
+    window.addEventListener(APP_CUSTOM_EVENTS.viewModeFavoritesChanged, handleViewModeFavoritesChanged);
+    return () => {
+      window.removeEventListener(APP_CUSTOM_EVENTS.viewModeFavoritesChanged, handleViewModeFavoritesChanged);
+    };
+  }, [displayMode]);
 
   // Handle tab position changes
   const handleTabPositionChange = useCallback((newPosition: TabPosition) => {
@@ -326,6 +520,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       tabDisplayMode: newMode,
     });
   }, [tabDisplayMode, budgetData, updateBudgetSettings]);
+
+  // Handle view display mode changes — persisted to settings so it survives frequency changes
+  const handleDisplayModeChange = useCallback((newMode: ViewMode) => {
+    if (newMode === displayMode || !budgetData) return;
+    setDisplayMode(newMode);
+    updateBudgetSettings({
+      ...budgetData.settings,
+      displayMode: newMode,
+    });
+  }, [displayMode, budgetData, updateBudgetSettings]);
 
   const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
     const currentPath = budgetData?.settings?.filePath;
@@ -367,12 +571,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         tabConfigs: latestTabConfigsRef.current,
         tabPosition,
         tabDisplayMode,
+        displayMode,
       },
     });
     if (success) {
       setStatusToast({ message: 'Saved successfully', type: 'success' });
     }
-  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, missingActiveFile, ensureValidSavePath]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, missingActiveFile, ensureValidSavePath]);
 
   const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
     const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
@@ -467,6 +672,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       setShowAccountsModal(true);
     });
 
+    const unsubscribeUndo = window.electronAPI.onMenuEvent(MENU_EVENTS.undo, () => {
+      handleUndoAction();
+    });
+
+    const unsubscribeRedo = window.electronAPI.onMenuEvent(MENU_EVENTS.redo, () => {
+      handleRedoAction();
+    });
+
     const unsubscribeHistoryBack = window.electronAPI.onMenuEvent(MENU_EVENTS.historyBack, () => {
       if (!viewMode) {
         window.history.back();
@@ -509,6 +722,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       handleTabDisplayModeChangeRef.current?.(newMode);
     });
 
+    const unsubscribeOpenSearch = window.electronAPI.onMenuEvent(MENU_EVENTS.openSearch, () => {
+      setShowSearch(true);
+    });
+
     return () => {
       unsubscribeNew();
       unsubscribeOpen();
@@ -517,13 +734,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       unsubscribeSettings();
       unsubscribePayOptions();
       unsubscribeAccounts();
+      unsubscribeUndo();
+      unsubscribeRedo();
       unsubscribeHistoryBack();
       unsubscribeHistoryForward();
       unsubscribeHistoryHome();
       unsubscribeSetTabPosition();
       unsubscribeToggleDisplayMode();
+      unsubscribeOpenSearch();
     };
-  }, [activeTab, createNewBudget, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
+  }, [activeTab, createNewBudget, handleRedoAction, handleUndoAction, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -555,11 +775,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           ...budgetData.settings,
           filePath: newPath,
         },
+      }, {
+        trackHistory: false,
+        description: 'Sync renamed plan path',
       });
 
       FileStorageService.removeRecentFile(oldPath);
       FileStorageService.addRecentFile(newPath);
-      setStatusToast({ message: '✏️ File renamed on disk. Plan name updated.', type: 'success' });
+      setStatusToast({ message: 'File renamed on disk. Plan name updated.', type: 'success' });
     });
 
     return unsubscribe;
@@ -761,7 +984,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     }
 
     if (movedDuringDragRef.current) {
-      setStatusToast({ message: '📋 Tab order updated', type: 'success' });
+      setStatusToast({ message: 'Tab order updated', type: 'success' });
     }
 
     flushSync(() => {
@@ -830,6 +1053,330 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [visibleTabs, handleTabClick]);
+
+  // Cmd/Ctrl+F — open plan-wide search (React capture-phase fallback)
+  useGlobalKeyboardShortcuts([
+    {
+      key: 'f',
+      mac: true,
+      windows: true,
+      callback: () => setShowSearch(true),
+    },
+    {
+      key: ',',
+      mac: true,
+      windows: true,
+      callback: () => {
+        setSettingsInitialSection(undefined);
+        setShowSettings(true);
+      },
+    },
+    {
+      key: 'z',
+      mac: true,
+      windows: true,
+      shouldHandle: (e) => !isEditableTarget(e.target),
+      callback: handleUndoAction,
+    },
+    {
+      key: 'z',
+      mac: true,
+      windows: true,
+      shift: true,
+      shouldHandle: (e) => !isEditableTarget(e.target),
+      callback: handleRedoAction,
+    },
+    {
+      key: 'y',
+      windows: true,
+      shouldHandle: (e) => !isEditableTarget(e.target),
+      callback: handleRedoAction,
+    },
+  ]);
+
+  // Handle navigation from search results
+  const handleSearchNavigate = useCallback(
+    (result: SearchResult) => {
+      const { action } = result;
+
+      // Try to find a registered handler for this action type
+      const registryHandler = getActionHandler(action.type);
+      if (registryHandler) {
+        // Build context for the handler with all state setters and navigation functions
+        // Cast state setters to SearchActionContext type since React's SetStateAction is compatible
+        const context: SearchActionContext = {
+          setPendingBillsSearchAction: setPendingBillsSearchAction as SearchActionContext['setPendingBillsSearchAction'],
+          setPendingBillsSearchTargetId: setPendingBillsSearchTargetId as SearchActionContext['setPendingBillsSearchTargetId'],
+          setBillsSearchRequestKey: setBillsSearchRequestKey as SearchActionContext['setBillsSearchRequestKey'],
+          setPendingLoansSearchAction: setPendingLoansSearchAction as SearchActionContext['setPendingLoansSearchAction'],
+          setPendingLoansSearchTargetId: setPendingLoansSearchTargetId as SearchActionContext['setPendingLoansSearchTargetId'],
+          setLoansSearchRequestKey: setLoansSearchRequestKey as SearchActionContext['setLoansSearchRequestKey'],
+          setPendingSavingsSearchAction: setPendingSavingsSearchAction as SearchActionContext['setPendingSavingsSearchAction'],
+          setPendingSavingsSearchTargetId: setPendingSavingsSearchTargetId as SearchActionContext['setPendingSavingsSearchTargetId'],
+          setSavingsSearchRequestKey: setSavingsSearchRequestKey as SearchActionContext['setSavingsSearchRequestKey'],
+          setTaxSearchOpenSettingsRequestKey: setTaxSearchOpenSettingsRequestKey as SearchActionContext['setTaxSearchOpenSettingsRequestKey'],
+          selectTab: selectTab as SearchActionContext['selectTab'],
+          setShowAccountsModal: setShowAccountsModal as SearchActionContext['setShowAccountsModal'],
+          setShowSettings: setShowSettings as SearchActionContext['setShowSettings'],
+          setSettingsInitialSection: setSettingsInitialSection as SearchActionContext['setSettingsInitialSection'],
+          setScrollToAccountId: setScrollToAccountId as SearchActionContext['setScrollToAccountId'],
+        };
+        registryHandler(action, context);
+        return;
+      }
+
+      // Fallback to built-in action handling for core actions (navigate-tab, open-settings, etc.)
+      if (action.type === 'navigate-tab') {
+        openTabFromLink(action.tabId);
+        // After tab switch, scroll to element and briefly highlight it
+        if (action.elementId) {
+          const elementId = action.elementId;
+          // Retry polling because the target tab may not be in the DOM yet immediately
+          const attemptScroll = (attemptsLeft: number) => {
+            const el = document.getElementById(elementId);
+            if (el) {
+              const scrollContainer = getNearestScrollableAncestor(el);
+              el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+              el.classList.add('plan-search-highlight');
+              window.setTimeout(
+                () => el.classList.remove('plan-search-highlight'),
+                SEARCH_HIGHLIGHT_DURATION_MS,
+              );
+
+              if (scrollContainer) {
+                window.setTimeout(() => {
+                  if (!isElementVisibleInContainer(el, scrollContainer) && attemptsLeft > 0) {
+                    attemptScroll(attemptsLeft - 1);
+                  }
+                }, SEARCH_SCROLL_SETTLE_DELAY_MS);
+              }
+            } else if (attemptsLeft > 0) {
+              window.setTimeout(() => attemptScroll(attemptsLeft - 1), SEARCH_SCROLL_RETRY_DELAY_MS);
+            }
+          };
+          window.setTimeout(() => attemptScroll(SEARCH_SCROLL_MAX_RETRIES), SEARCH_SCROLL_INITIAL_DELAY_MS);
+        }
+      } else if (action.type === 'open-pay-settings') {
+        setPendingPaySettingsFieldHighlight(action.fieldHighlight);
+        setPaySettingsSearchRequestKey((prev) => prev + 1);
+        selectTab('breakdown', { resetBillsAnchor: true, revealIfHidden: true });
+      } else if (action.type === 'open-accounts') {
+        setShowAccountsModal(true);
+      } else if (action.type === 'open-settings') {
+        setSettingsInitialSection(action.sectionId);
+        setShowSettings(true);
+      }
+    },
+    [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight, setPaySettingsSearchRequestKey],
+  );
+
+  const handleOpenViewModeSettings = useCallback(() => {
+    setSettingsInitialSection('app-data-reset');
+    setShowSettings(true);
+  }, []);
+
+  const handleOpenObjectHistory = useCallback((target: AuditHistoryTarget) => {
+    setHistoryTarget(target);
+  }, []);
+
+  const handleCloseObjectHistory = useCallback(() => {
+    setHistoryTarget(null);
+  }, []);
+
+  const handleDeleteHistoryEntry = useCallback(
+    (entryId: string) => {
+      if (!budgetData) return;
+
+      openConfirmDialog({
+        title: 'Delete History Entry',
+        message: 'Remove this history snapshot from the timeline?',
+        confirmLabel: 'Delete Entry',
+        confirmVariant: 'danger',
+        onConfirm: () => {
+          const nextAudit = (budgetData.metadata?.auditHistory || []).filter((entry) => entry.id !== entryId);
+          updateBudgetData(
+            {
+              metadata: {
+                auditHistory: nextAudit,
+              },
+            },
+            {
+              trackHistory: false,
+              trackAudit: false,
+              description: 'Delete history entry',
+            },
+          );
+        },
+      });
+    },
+    [budgetData, openConfirmDialog, updateBudgetData],
+  );
+
+  const handleRestoreHistoryEntries = useCallback(
+    (entryIds: string[]) => {
+      if (!budgetData || entryIds.length === 0) return;
+
+      const auditHistory = budgetData.metadata?.auditHistory || [];
+      const entriesToRestore = entryIds
+        .map((id) => auditHistory.find((entry) => entry.id === id))
+        .filter((entry): entry is AuditEntry => Boolean(entry));
+
+      if (entriesToRestore.length === 0) return;
+
+      const upsertById = <T extends { id: string }>(items: T[], item: T): T[] => {
+        const idx = items.findIndex((existing) => existing.id === item.id);
+        if (idx === -1) return [...items, item];
+        return items.map((existing, i) => (i === idx ? item : existing));
+      };
+
+      const applyEntryRestore = (current: typeof budgetData, entry: AuditEntry): typeof budgetData => {
+        if (!current || !entry.snapshot || typeof entry.snapshot !== 'object') return current;
+
+        const snapshot = entry.snapshot as Record<string, unknown>;
+
+        switch (entry.entityType) {
+          case 'bill':
+            return {
+              ...current,
+              bills: upsertById(current.bills, snapshot as unknown as typeof current.bills[number]),
+            };
+          case 'deduction':
+            return {
+              ...current,
+              preTaxDeductions: upsertById(
+                current.preTaxDeductions,
+                snapshot as unknown as typeof current.preTaxDeductions[number],
+              ),
+            };
+          case 'savings-contribution':
+            return {
+              ...current,
+              savingsContributions: upsertById(
+                current.savingsContributions || [],
+                snapshot as unknown as NonNullable<typeof current.savingsContributions>[number],
+              ),
+            };
+          case 'retirement-election':
+            return {
+              ...current,
+              retirement: upsertById(current.retirement, snapshot as unknown as typeof current.retirement[number]),
+            };
+          case 'loan':
+            return {
+              ...current,
+              loans: upsertById(current.loans, snapshot as unknown as typeof current.loans[number]),
+            };
+          case 'benefit':
+            return {
+              ...current,
+              benefits: upsertById(current.benefits, snapshot as unknown as typeof current.benefits[number]),
+            };
+          case 'account':
+            return {
+              ...current,
+              accounts: upsertById(current.accounts, snapshot as unknown as typeof current.accounts[number]),
+            };
+          case 'allocation-item': {
+            const accountId = typeof snapshot.accountId === 'string'
+              ? snapshot.accountId
+              : entry.entityId.split(':')[0];
+            const categoryId = entry.entityId.includes(':')
+              ? entry.entityId.split(':')[1]
+              : String(snapshot.id || '');
+
+            const restoredCategory: AccountAllocationCategory = {
+              ...(snapshot as unknown as AccountAllocationCategory),
+              id: categoryId,
+            };
+
+            return {
+              ...current,
+              accounts: current.accounts.map((account) => {
+                if (account.id !== accountId) return account;
+                const categories = account.allocationCategories || [];
+                return {
+                  ...account,
+                  allocationCategories: upsertById(categories, restoredCategory),
+                };
+              }),
+            };
+          }
+          case 'pay-settings':
+            return {
+              ...current,
+              paySettings: snapshot as unknown as typeof current.paySettings,
+            };
+          case 'tax-settings':
+            return {
+              ...current,
+              taxSettings: snapshot as unknown as typeof current.taxSettings,
+            };
+          case 'budget-settings':
+            return {
+              ...current,
+              settings: snapshot as unknown as typeof current.settings,
+            };
+          default:
+            return current;
+        }
+      };
+
+      const allDeletes = entriesToRestore.every((e) => e.changeType === 'delete');
+      const count = entriesToRestore.length;
+      const actionVerb = allDeletes ? 'Restore' : 'Rewind';
+
+      openConfirmDialog({
+        title: allDeletes ? 'Restore Deleted Entry' : 'Rewind to Previous State',
+        message: count > 1
+          ? allDeletes
+            ? `Restore ${count} deleted entries back to the plan?`
+            : `Rewind ${count} entries back to this previous state?`
+          : allDeletes
+            ? 'Restore this deleted entry back to the plan?'
+            : 'Rewind this entry back to this previous state?',
+        confirmLabel: count > 1 ? `${actionVerb} Entries` : actionVerb,
+        confirmVariant: 'primary',
+        onConfirm: () => {
+          const restored = entriesToRestore.reduce((acc, entry) => applyEntryRestore(acc, entry), budgetData);
+          if (!restored) return;
+
+          const now = new Date().toISOString();
+          const sourceAction = allDeletes ? 'Restore deleted entry' : 'Rewind to previous state';
+          const restoredAuditEntries: AuditEntry[] = entriesToRestore.map((entry) => ({
+            id: crypto.randomUUID(),
+            timestamp: now,
+            entityType: entry.entityType,
+            entityId: entry.entityId,
+            changeType: 'restore',
+            sourceAction,
+            snapshot: entry.snapshot,
+            note: `Restored from history entry ${entry.id}`,
+          }));
+
+          const nextAudit = [
+            ...(restored.metadata?.auditHistory || []),
+            ...restoredAuditEntries,
+          ];
+
+          updateBudgetData(
+            {
+              ...restored,
+              metadata: {
+                auditHistory: nextAudit,
+              },
+            },
+            {
+              trackAudit: false,
+              description: count > 1
+                ? allDeletes ? 'Restore deleted entries' : 'Rewind entries to previous state'
+                : allDeletes ? 'Restore deleted entry' : 'Rewind to previous state',
+            },
+          );
+        },
+      });
+    },
+    [budgetData, openConfirmDialog, updateBudgetData],
+  );
 
   if (showPlanLoadingScreen) {
     return (
@@ -993,11 +1540,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     });
 
     if (renameWarning) {
-      setStatusToast({ message: `⚠️ Plan updated, but file rename failed: ${renameWarning}`, type: 'warning' });
+      setStatusToast({ message: `Plan updated, but file rename failed: ${renameWarning}`, type: 'warning' });
     } else if (renamedFile) {
-      setStatusToast({ message: '✏️ Plan and file name updated', type: 'success' });
+      setStatusToast({ message: 'Plan and file name updated', type: 'success' });
     } else {
-      setStatusToast({ message: '✏️ Plan updated', type: 'success' });
+      setStatusToast({ message: 'Plan updated', type: 'success' });
     }
 
     setShowPlanEditModal(false);
@@ -1029,8 +1576,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
 
       setStatusToast({
         message: result.encryptionEnabled
-          ? '🔒 Encryption enabled for this plan'
-          : '📄 Encryption disabled for this plan',
+          ? 'Encryption enabled for this plan'
+          : 'Encryption disabled for this plan',
         type: 'success',
       });
       handleEncryptionModalClose();
@@ -1049,9 +1596,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
     if (!budgetData?.settings?.filePath || !window.electronAPI?.revealInFolder) return;
     const result = await window.electronAPI.revealInFolder(budgetData.settings.filePath);
     if (!result.success) {
-      setStatusToast({ message: '⚠️ Unable to open file location', type: 'error' });
+      setStatusToast({ message: 'Unable to open file location', type: 'error' });
     }
   };
+
+  const encryptionModalHeader = (() => {
+    if (encryptionEnabled === true) return 'Encryption Key Setup';
+    if (encryptionEnabled === false) return 'Disable Encryption';
+    return budgetData?.settings?.encryptionEnabled ? 'Manage Encryption' : 'Enable Encryption';
+  })();
 
   return (
     <div className={`plan-dashboard layout-with-tabs-${tabPosition}`}>
@@ -1075,34 +1628,46 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             )}
           </div>
         </div>
-        <div className="header-right">
-          <Button
-            variant="secondary"
-            size="small"
-            className="header-btn-secondary"
-            onClick={() => setShowAccountsModal(true)}
-            title="Manage your financial accounts"
-          >
-            🏦 Accounts
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            className="header-btn-secondary"
-            onClick={() => setShowCopyModal(true)}
-            title="Copy this plan to another year"
-          >
-            📋 Copy Plan
-          </Button>
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={handleSave}
-            disabled={loading || !!missingActiveFile || activeRelinkLoading}
-            className="header-btn-secondary"
-          >
-            💾 Save
-          </Button>
+        <div className="header-actions">
+          <ViewModeSelector
+            mode={displayMode}
+            onChange={handleDisplayModeChange}
+            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
+            onOpenViewModeSettings={handleOpenViewModeSettings}
+            disabled={activeTab === 'metrics'}
+          />
+          <div className="header-btn-group">
+            <Button
+              variant="secondary"
+              size="small"
+              className="header-btn-secondary"
+              onClick={() => setShowAccountsModal(true)}
+              title="Manage your financial accounts"
+            >
+              <Sheet className="ui-icon" aria-hidden="true" />
+              Accounts
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              className="header-btn-secondary"
+              onClick={() => setShowCopyModal(true)}
+              title="Copy this plan to another year"
+            >
+              <Copy className="ui-icon" aria-hidden="true" />
+              Copy Plan
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={handleSave}
+              disabled={loading || !!missingActiveFile || activeRelinkLoading}
+              className="header-btn-secondary"
+            >
+              <Save className="ui-icon" aria-hidden="true" />
+              Save
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -1153,7 +1718,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           )}
 
           <div className="tab-content" ref={tabContentRef}>
-        {viewMode && <div className="view-mode-header">📺 View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</div>}
+        {viewMode && (
+          <div className="view-mode-header">
+            <Eye className="ui-icon view-mode-header-icon" aria-hidden="true" />
+            View-Only: {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}
+          </div>
+        )}
         <div
           className={`tab-panel ${activeTab === 'metrics' ? 'active' : ''}`}
           ref={(element) => {
@@ -1186,7 +1756,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <PayBreakdown 
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            searchPaySettingsRequestKey={paySettingsSearchRequestKey}
+            searchPaySettingsFieldHighlight={pendingPaySettingsFieldHighlight}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
@@ -1199,6 +1770,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             onNavigateToLoans={(accountId) => {
               openTabFromLink('loans', { scrollToAccountId: accountId, scrollToRetirement: false });
             }} 
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1209,8 +1781,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <BillsManager 
             scrollToAccountId={scrollToAccountId}
+            searchActionRequestKey={billsSearchRequestKey}
+            searchActionType={pendingBillsSearchAction}
+            searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1221,8 +1796,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         >
           <LoansManager 
             scrollToAccountId={scrollToAccountId}
+            searchActionRequestKey={loansSearchRequestKey}
+            searchActionType={pendingLoansSearchAction}
+            searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1232,8 +1810,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           }}
         >
           <TaxBreakdown 
+            searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
@@ -1245,8 +1824,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           <SavingsManager 
             shouldScrollToRetirement={shouldScrollToRetirement}
             onScrollToRetirementComplete={handleScrollToRetirementComplete}
+            searchActionRequestKey={savingsSearchRequestKey}
+            searchActionType={pendingSavingsSearchAction}
+            searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={displayMode}
-            onDisplayModeChange={setDisplayMode}
+            onViewHistory={handleOpenObjectHistory}
           />
         </div>
       </div>
@@ -1305,6 +1887,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             onClick={() => setShowFeedbackModal(true)}
             title="Share feedback"
           >
+            <MessageSquareText className="ui-icon" aria-hidden="true" />
             Share feedback
           </Button>
         </div>
@@ -1320,7 +1903,17 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
                 title="Click to open encryption configuration"
                 aria-label="Manage encryption settings"
               >
-                {budgetData.settings.encryptionEnabled ? '🔒 Encrypted' : '📄 Unencrypted'}
+                {budgetData.settings.encryptionEnabled ? (
+                  <>
+                    <Lock className="ui-icon ui-icon-sm" aria-hidden="true" />
+                    Encrypted
+                  </>
+                ) : (
+                  <>
+                    <LockOpen className="ui-icon ui-icon-sm" aria-hidden="true" />
+                    Unencrypted
+                  </>
+                )}
               </Button>
               <Button
                 size="small"
@@ -1328,7 +1921,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
                 onClick={handleRevealSavedFile}
                 title="Show file in folder"
               >
-                Open in {fileManagerAppName}
+                <>
+                  <FolderOpen className="ui-icon ui-icon-sm" aria-hidden="true" />
+                  Open in {fileManagerAppName}
+                </>
               </Button>
             </>
           )}
@@ -1392,7 +1988,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
         </FormGroup>
 
         <FormGroup label="Plan Year" required>
-          <select
+          <Dropdown
             value={draftYearSelection}
             onChange={(event) => {
               const selectedValue = event.target.value;
@@ -1409,7 +2005,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
             <option value={String(budgetData.year)}>{budgetData.year}</option>
             <option value={String(budgetData.year + 1)}>{budgetData.year + 1}</option>
             <option value="custom">Custom</option>
-          </select>
+          </Dropdown>
         </FormGroup>
 
         {draftYearSelection === 'custom' && (
@@ -1493,14 +2089,18 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettings} 
-        onClose={() => setShowSettings(false)}
+        onClose={() => {
+          setShowSettings(false);
+          setSettingsInitialSection(undefined);
+        }}
+        initialSectionId={settingsInitialSection}
       />
 
       {/* Encryption Setup Modal */}
       <Modal
         isOpen={showEncryptionSetup && !!budgetData}
         onClose={handleEncryptionModalClose}
-        header={encryptionEnabled ? '🔐 Encryption Key Setup' : '🔐 Security Setup'}
+        header={encryptionModalHeader}
         footer={
           <>
             {encryptionEnabled === null ? (
@@ -1535,11 +2135,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           </>
         }
       >
-        {encryptionEnabled !== null && (
+        {encryptionEnabled === true && (
           <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>
-            {encryptionEnabled
-              ? 'This key will be used to encrypt and decrypt your budget files.'
-              : 'Your plan file will be saved without encryption.'}
+            This key will be used to encrypt and decrypt your budget files.
           </p>
         )}
         <EncryptionConfigPanel
@@ -1551,6 +2149,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
           setCustomKey={setCustomKey}
           generatedKey={generatedKey}
           onGenerateKey={handleGenerateEncryptionKey}
+          mode="manage"
+          currentlyEncrypted={budgetData?.settings?.encryptionEnabled === true}
         />
       </Modal>
 
@@ -1601,6 +2201,36 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode })
       <ExportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
+      />
+
+      {/* Plan-wide Search Overlay */}
+      <PlanSearchOverlay
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        budgetData={budgetData}
+        onNavigate={handleSearchNavigate}
+      />
+
+      <PlanHistoryOverlay
+        key={historyTarget ? `${historyTarget.entityType}:${historyTarget.entityId}` : 'no-history-target'}
+        isOpen={!!historyTarget}
+        target={historyTarget}
+        auditHistory={budgetData.metadata?.auditHistory || []}
+        entityNames={Object.fromEntries((budgetData.accounts || []).map((a) => [a.id, a.name]))}
+        onRestoreEntries={handleRestoreHistoryEntries}
+        onClose={handleCloseObjectHistory}
+        onDeleteEntry={handleDeleteHistoryEntry}
+      />
+
+      <ConfirmDialog
+        isOpen={!!confirmDialog}
+        onClose={closeConfirmDialog}
+        onConfirm={confirmCurrentDialog}
+        title={confirmDialog?.title || 'Confirm'}
+        message={confirmDialog?.message || ''}
+        confirmLabel={confirmDialog?.confirmLabel}
+        cancelLabel={confirmDialog?.cancelLabel}
+        confirmVariant={confirmDialog?.confirmVariant}
       />
     </div>
   );
