@@ -18,6 +18,7 @@
     "dev": "npm run sync-version && vite",
     "dev:inspector": "npm run sync-version && OPEN_DEVTOOLS=true vite",
     "build": "npx vite build && npm run sync-version",
+    "release-checks": "npm run lint && npx tsc -b && npm run test:run && npm run build",
     "build:dir": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --dir",
     "build:mac": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac",
     "build:win": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --win",
@@ -32,6 +33,7 @@
   "build": {
     "appId": "com.paycheckplanner.app",
     "productName": "Paycheck Planner",
+    "afterSign": "scripts/notarize.mjs",
     "icon": "build/icon.png",
     "fileAssociations": [
       {
@@ -63,6 +65,8 @@
       "category": "public.app-category.finance",
       "darkModeSupport": true,
       "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
       "gatekeeperAssess": true
     },
     "win": {
@@ -102,6 +106,7 @@
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "@electron/rebuild": "^4.0.3",
     "@eslint/js": "^9.39.1",
     "@testing-library/jest-dom": "^6.9.1",

@@ -416,6 +416,21 @@ If version validation workflow fails on PRs to `develop`:
 - Format: `MAJOR.MINOR.PATCH` (e.g., `0.1.0` → `0.1.1`)
 - Workflow gracefully skips if `version` file doesn't exist on either branch
 
+### macOS signing and notarization (release automation)
+
+Production-quality macOS builds require both code signing and notarization.
+
+Required CI secrets for signed mac builds:
+- `CSC_LINK`: Base64-encoded `.p12` certificate payload (Developer ID Application)
+- `CSC_KEY_PASSWORD`: Password for the `.p12` certificate
+- `APPLE_ID`: Apple ID email used for notarization
+- `APPLE_APP_SPECIFIC_PASSWORD`: App-specific password for the Apple ID
+- `APPLE_TEAM_ID`: Apple Developer Team ID
+
+Notes:
+- Build config uses hardened runtime + Electron entitlements and runs notarization in `scripts/notarize.mjs`.
+- If notarization env vars are missing, local mac builds still complete but notarization is skipped.
+
 ## Keeping This README Updated
 
 When any **major feature** or **architecture** changes, update this README in the same PR.
