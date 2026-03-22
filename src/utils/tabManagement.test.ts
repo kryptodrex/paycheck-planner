@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Banknote, ChartPie } from 'lucide-react';
 import {
   getDefaultTabConfigs,
   getHiddenTabs,
@@ -33,7 +34,7 @@ describe('tabManagement utilities', () => {
       {
         id: 'metrics',
         label: 'Key Metrics',
-        icon: '📊',
+        icon: ChartPie,
         visible: true,
         order: 10,
         pinned: false,
@@ -41,7 +42,7 @@ describe('tabManagement utilities', () => {
       {
         id: 'breakdown',
         label: 'Pay Breakdown',
-        icon: '💵',
+        icon: Banknote,
         visible: true,
         order: 1,
         pinned: false,

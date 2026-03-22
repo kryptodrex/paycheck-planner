@@ -5,6 +5,7 @@
  * Also provides action handlers for bill/benefit actions (toggle, edit, delete).
  */
 
+import { HeartPulse, ReceiptText } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult, OpenBillsAction } from '../planSearch';
 import type { SearchModule, SearchActionContext } from '../searchRegistry';
@@ -28,7 +29,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
       title: bill.name,
       subtitle: `${formatSearchCurrency(bill.amount, currency)} · ${freqLabel}${bill.category ? ` · ${bill.category}` : ''}`,
       category: 'Bills',
-      categoryIcon: '🧾',
+      categoryIcon: ReceiptText,
       badge: paused ? 'Paused' : bill.discretionary ? 'Discretionary' : undefined,
       inlineActions: [
         {
@@ -67,7 +68,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
         ? `${benefit.amount}% — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`
         : `${formatSearchCurrency(benefit.amount, currency)} — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`,
       category: 'Benefits',
-      categoryIcon: '🏥',
+      categoryIcon: HeartPulse,
       badge: paused ? 'Paused' : undefined,
       inlineActions: [
         {

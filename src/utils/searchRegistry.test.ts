@@ -1,4 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
+import { Package, Target } from 'lucide-react';
 import {
   registerSearchModule,
   unregisterSearchModule,
@@ -41,7 +42,7 @@ const mockModuleA: SearchModule = {
       id: 'result-a1',
       title: 'Result A1',
       category: 'Module A',
-      categoryIcon: '📦',
+      categoryIcon: Package,
       action: { type: 'navigate-tab', tabId: 'metrics' },
     },
   ],
@@ -59,14 +60,14 @@ const mockModuleB: SearchModule = {
       id: 'result-b1',
       title: 'Result B1',
       category: 'Module B',
-      categoryIcon: '🎯',
+      categoryIcon: Target,
       action: { type: 'navigate-tab', tabId: 'breakdown' },
     },
     {
       id: 'result-b2',
       title: 'Result B2',
       category: 'Module B',
-      categoryIcon: '🎯',
+      categoryIcon: Target,
       action: { type: 'navigate-tab', tabId: 'bills' },
     },
   ],

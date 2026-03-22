@@ -1,3 +1,4 @@
+import { Plus, Settings } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
@@ -11,7 +12,7 @@ function buildQuickActionsResults(_budgetData: BudgetData): SearchResult[] {
       title: 'Add Bill',
       subtitle: 'Open Bills & Expenses and start adding a bill',
       category: 'Quick Actions',
-      categoryIcon: '➕',
+      categoryIcon: Plus,
       action: { type: 'open-bills-action', mode: 'add-bill' },
     },
     {
@@ -19,7 +20,7 @@ function buildQuickActionsResults(_budgetData: BudgetData): SearchResult[] {
       title: 'Add Deduction',
       subtitle: 'Open Bills & Expenses and start adding a deduction',
       category: 'Quick Actions',
-      categoryIcon: '➕',
+      categoryIcon: Plus,
       action: { type: 'open-bills-action', mode: 'add-deduction' },
     },
     {
@@ -27,7 +28,7 @@ function buildQuickActionsResults(_budgetData: BudgetData): SearchResult[] {
       title: 'Add Loan Payment',
       subtitle: 'Open Loan Payments and start adding a payment',
       category: 'Quick Actions',
-      categoryIcon: '➕',
+      categoryIcon: Plus,
       action: { type: 'open-loans-action', mode: 'add-loan' },
     },
     {
@@ -35,7 +36,7 @@ function buildQuickActionsResults(_budgetData: BudgetData): SearchResult[] {
       title: 'Add Contribution',
       subtitle: 'Open Savings and start adding a savings/investment contribution',
       category: 'Quick Actions',
-      categoryIcon: '➕',
+      categoryIcon: Plus,
       action: { type: 'open-savings-action', mode: 'add-contribution' },
     },
     {
@@ -43,7 +44,7 @@ function buildQuickActionsResults(_budgetData: BudgetData): SearchResult[] {
       title: 'Add Retirement Plan',
       subtitle: 'Open Savings and start adding a retirement plan',
       category: 'Quick Actions',
-      categoryIcon: '➕',
+      categoryIcon: Plus,
       action: { type: 'open-savings-action', mode: 'add-retirement' },
     },
     {
@@ -51,7 +52,7 @@ function buildQuickActionsResults(_budgetData: BudgetData): SearchResult[] {
       title: 'Edit Tax Settings',
       subtitle: 'Open Tax Breakdown and launch the tax settings modal',
       category: 'Quick Actions',
-      categoryIcon: '⚙️',
+      categoryIcon: Settings,
       action: { type: 'open-taxes-action', mode: 'open-settings' },
     },
   ];

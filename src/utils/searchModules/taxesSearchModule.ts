@@ -1,3 +1,4 @@
+import { Scale } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import { calculatePaycheckBreakdown } from '../../services/budgetCalculations';
 import type { OpenTaxesAction, SearchResult } from '../planSearch';
@@ -18,7 +19,7 @@ function buildTaxesResults(budgetData: BudgetData): SearchResult[] {
           ? formatSearchCurrency(line.amount ?? 0, currency) + ' (fixed)'
           : `${line.rate}%`,
       category: 'Tax',
-      categoryIcon: '🏛️',
+      categoryIcon: Scale,
       action: { type: 'navigate-tab', tabId: 'taxes', elementId: `tax-line-${line.id}` },
     });
   }
@@ -29,7 +30,7 @@ function buildTaxesResults(budgetData: BudgetData): SearchResult[] {
       title: 'Additional Withholding',
       subtitle: formatSearchCurrency(budgetData.taxSettings?.additionalWithholding ?? 0, currency) + ' per paycheck',
       category: 'Tax',
-      categoryIcon: '🏛️',
+      categoryIcon: Scale,
       action: { type: 'navigate-tab', tabId: 'taxes', elementId: 'tax-additional-withholding-row' },
     });
   }
@@ -39,7 +40,7 @@ function buildTaxesResults(budgetData: BudgetData): SearchResult[] {
     title: 'Total Taxes',
     subtitle: formatSearchCurrency(paycheckBreakdown.totalTaxes, currency) + ' per paycheck',
     category: 'Tax',
-    categoryIcon: '🏛️',
+    categoryIcon: Scale,
     action: { type: 'navigate-tab', tabId: 'taxes', elementId: 'tax-total-taxes-row' },
   });
 

@@ -1,3 +1,4 @@
+import { Banknote, CalendarClock, Clock } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
@@ -29,7 +30,7 @@ function buildPaySettingsResults(budgetData: BudgetData): SearchResult[] {
     title: 'Annual Pay',
     subtitle: getAnnualPaySubtitle(annualAmount, pay.payType, currency),
     category: 'Pay Settings',
-    categoryIcon: '💰',
+    categoryIcon: Banknote,
     action: { type: 'open-pay-settings', fieldHighlight: pay.payType === 'salary' ? 'annualSalary' : 'hourlyRate' },
   });
 
@@ -40,7 +41,7 @@ function buildPaySettingsResults(budgetData: BudgetData): SearchResult[] {
       ? pay.payFrequency.charAt(0).toUpperCase() + pay.payFrequency.slice(1).replace(/-/g, ' ')
       : undefined,
     category: 'Pay Settings',
-    categoryIcon: '📅',
+    categoryIcon: CalendarClock,
     action: { type: 'open-pay-settings', fieldHighlight: 'payFrequency' },
   });
 
@@ -50,7 +51,7 @@ function buildPaySettingsResults(budgetData: BudgetData): SearchResult[] {
       title: 'Hourly Rate',
       subtitle: formatSearchCurrency(pay.hourlyRate, currency) + '/hr',
       category: 'Pay Settings',
-      categoryIcon: '⏱️',
+      categoryIcon: Clock,
       action: { type: 'open-pay-settings', fieldHighlight: 'hourlyRate' },
     });
   }

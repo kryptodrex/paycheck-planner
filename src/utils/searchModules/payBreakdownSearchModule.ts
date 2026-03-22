@@ -1,3 +1,4 @@
+import { Banknote, Calculator, HandCoins, Pin, ReceiptText, Scale, TrendingDown, Wallet } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import { calculateAnnualizedPaySummary, calculatePaycheckBreakdown } from '../../services/budgetCalculations';
 import { convertBillToYearly } from '../billFrequency';
@@ -32,7 +33,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       title: 'Gross Pay',
       subtitle: `${formatSearchCurrency(paycheckBreakdown.grossPay, currency)} per paycheck`,
       category: 'Pay Breakdown',
-      categoryIcon: '💸',
+      categoryIcon: Banknote,
       action: {
         type: 'navigate-tab',
         tabId: 'breakdown',
@@ -44,7 +45,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       title: 'Total Taxes',
       subtitle: `${formatSearchCurrency(paycheckBreakdown.totalTaxes, currency)} per paycheck`,
       category: 'Pay Breakdown',
-      categoryIcon: '🏛️',
+      categoryIcon: Scale,
       action: {
         type: 'navigate-tab',
         tabId: 'breakdown',
@@ -56,7 +57,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       title: 'Taxable Income',
       subtitle: `${formatSearchCurrency(paycheckBreakdown.taxableIncome, currency)} per paycheck`,
       category: 'Pay Breakdown',
-      categoryIcon: '🧮',
+      categoryIcon: Calculator,
       action: {
         type: 'navigate-tab',
         tabId: 'breakdown',
@@ -70,7 +71,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
             title: 'Pre-Tax Deductions',
             subtitle: `${formatSearchCurrency(paycheckBreakdown.preTaxDeductions, currency)} per paycheck`,
             category: 'Pay Breakdown',
-            categoryIcon: '📉',
+            categoryIcon: TrendingDown,
             action: {
               type: 'navigate-tab' as const,
               tabId: 'breakdown' as const,
@@ -86,7 +87,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
             title: 'Post-Tax Deductions',
             subtitle: `${formatSearchCurrency(postTaxDeductionsAmount, currency)} per paycheck`,
             category: 'Pay Breakdown',
-            categoryIcon: '📌',
+            categoryIcon: Pin,
             action: {
               type: 'navigate-tab' as const,
               tabId: 'breakdown' as const,
@@ -100,7 +101,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       title: 'Net Pay',
       subtitle: `${formatSearchCurrency(paycheckBreakdown.netPay, currency)} per paycheck`,
       category: 'Pay Breakdown',
-      categoryIcon: '✅',
+      categoryIcon: HandCoins,
       action: {
         type: 'navigate-tab',
         tabId: 'breakdown',
@@ -112,7 +113,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       title: 'All That Remains for Spending',
       subtitle: `${formatSearchCurrency(Math.max(annualRemainingForSpending / Math.max(paychecksPerYear, 1), 0), currency)} per paycheck`,
       category: 'Pay Breakdown',
-      categoryIcon: '💵',
+      categoryIcon: Wallet,
       action: {
         type: 'navigate-tab',
         tabId: 'breakdown',
@@ -126,7 +127,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
             title: 'After-Tax Allocations',
             subtitle: 'Account funding and category allocations',
             category: 'Pay Breakdown',
-            categoryIcon: '🧾',
+            categoryIcon: ReceiptText,
             action: {
               type: 'navigate-tab' as const,
               tabId: 'breakdown' as const,
