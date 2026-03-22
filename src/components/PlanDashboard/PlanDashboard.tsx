@@ -6,7 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
-import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText } from 'lucide-react';
+import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
@@ -1881,7 +1881,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
       <footer className="dashboard-footer">
         <div className="footer-left-actions">
-          <Button
+          {/* <Button
             size="small"
             variant="utility"
             onClick={() => setShowFeedbackModal(true)}
@@ -1889,7 +1889,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           >
             <MessageSquareText className="ui-icon" aria-hidden="true" />
             Share feedback
-          </Button>
+          </Button> */}
         </div>
         <div className="footer-info">
           <span>Last saved: {budgetData.settings.lastSavedAt ? new Date(budgetData.settings.lastSavedAt).toLocaleString() : 'Never'}</span>
