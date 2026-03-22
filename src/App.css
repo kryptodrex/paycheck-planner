@@ -27,7 +27,7 @@ html, body {
   align-items: center;
   min-height: 100vh;
   background: var(--header-gradient);
-  color: white;
+  color: var(--text-inverse);
   font-size: clamp(1.1rem, 3vw, 1.5rem);
   padding: 1rem;
 }
