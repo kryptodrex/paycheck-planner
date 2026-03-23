@@ -610,6 +610,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       <PageHeader
         title="Savings"
         subtitle="Manage savings/investment transfers and retirement contributions"
+        icon={<PiggyBank className="ui-icon" aria-hidden="true" />}
       />
 
       <Banner

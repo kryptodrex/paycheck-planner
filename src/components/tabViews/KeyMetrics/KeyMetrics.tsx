@@ -1,5 +1,5 @@
 import React from 'react';
-import { BanknoteArrowDown, ClipboardList, HandCoins, PiggyBank, Scale, Wallet } from 'lucide-react';
+import { BanknoteArrowDown, ClipboardList, HandCoins, PieChart, PiggyBank, Scale, Wallet } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { calculateAnnualizedPayBreakdown, calculateAnnualizedPaySummary } from '../../../services/budgetCalculations';
 import { formatWithSymbol } from '../../../utils/currency';
@@ -267,6 +267,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
       <PageHeader
         title="Key Metrics"
         subtitle="Your financial overview at a glance"
+        icon={<PieChart className="ui-icon" aria-hidden="true" />}
       />
       <div className="key-metrics-body">
         <div className="metrics-grid">

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Banknote, Building2, Plus, X } from 'lucide-react';
+import { Banknote, Building2, Landmark, Plus, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
 import type { AuditHistoryTarget } from '../../../types/audit';
@@ -472,6 +472,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
             <PageHeader
                 title="Loan Payments"
                 subtitle="Track recurring mortgage, auto, student, and other loan payments"
+                icon={<Landmark className="ui-icon" aria-hidden="true" />}
                 actions={
                     <>
                         <Button variant="primary" onClick={handleAddLoan}>

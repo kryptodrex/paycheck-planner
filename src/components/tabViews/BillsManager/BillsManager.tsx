@@ -469,6 +469,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
       <PageHeader
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
+        icon={<ClipboardList className="ui-icon" aria-hidden="true" />}
         actions={
           <div className="bills-header-buttons">
             <Button variant="secondary" onClick={handleAddBenefit}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Info, Plus, Settings, X } from 'lucide-react';
+import { Banknote, Info, Plus, Settings, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
@@ -727,6 +727,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
       <PageHeader
         title="Pay Breakdown"
         subtitle="See where your paycheck goes from gross to net"
+        icon={<Banknote className="ui-icon" aria-hidden="true" />}
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
