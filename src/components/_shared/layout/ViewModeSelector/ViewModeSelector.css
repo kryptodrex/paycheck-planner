@@ -12,6 +12,7 @@
   padding: 0.25rem;
   border-radius: 8px;
   overflow: visible;
+  border: 2px solid var(--border-header-soft);
 }
 
 .view-mode-selector button {

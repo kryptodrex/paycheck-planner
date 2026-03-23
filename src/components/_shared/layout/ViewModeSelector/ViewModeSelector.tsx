@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Settings } from 'lucide-react';
-import { APP_CUSTOM_EVENTS } from '../../../../constants/events';
-import { FileStorageService } from '../../../../services/fileStorage';
+import type { SelectableViewMode } from '../../../../types/viewMode';
 import type { ViewMode } from '../../../../types/viewMode';
 import { buildViewModeSelectorOptions, sanitizeFavoriteViewModes } from '../../../../utils/viewModePreferences';
 import { getDisplayModeLabel } from '../../../../utils/payPeriod';
@@ -16,6 +15,8 @@ interface ViewModeSelectorProps<T extends string = ViewMode> {
   mode: T;
   onChange: (mode: T) => void;
   options?: ViewModeOption<T>[];
+  /** Plan-specific favorites; when provided, skips internal app-settings reads. */
+  favorites?: SelectableViewMode[];
   payCadenceMode?: T;
   payCadenceLabel?: string;
   onOpenViewModeSettings?: () => void;
@@ -26,29 +27,13 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   mode,
   onChange,
   options,
+  favorites: favoritesProp,
   payCadenceMode,
   payCadenceLabel = 'Your Pay Frequency',
   onOpenViewModeSettings,
   disabled = false,
 }: ViewModeSelectorProps<T>) => {
-  const [favoriteModes, setFavoriteModes] = useState(() =>
-    sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites),
-  );
-
-  useEffect(() => {
-    if (options) return;
-
-    const handleFavoritesChanged = () => {
-      setFavoriteModes(
-        sanitizeFavoriteViewModes(FileStorageService.getAppSettings().viewModeFavorites),
-      );
-    };
-
-    window.addEventListener(APP_CUSTOM_EVENTS.viewModeFavoritesChanged, handleFavoritesChanged);
-    return () => {
-      window.removeEventListener(APP_CUSTOM_EVENTS.viewModeFavoritesChanged, handleFavoritesChanged);
-    };
-  }, [options]);
+  const favoriteModes = favoritesProp ?? sanitizeFavoriteViewModes(undefined);
 
   const resolvedOptions = useMemo(() => {
     if (options) {
@@ -59,7 +44,10 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   }, [options, favoriteModes, payCadenceMode]);
 
   const optionsWithCadence = useMemo(() => {
-    if (!payCadenceMode || options) {
+    // Only auto-add cadence tab when the user has not explicitly configured
+    // favorites (favouritesProp absent). When plan-specific favorites are
+    // provided, the user's checkbox selection is the authoritative list.
+    if (!payCadenceMode || options || favoritesProp !== undefined) {
       return resolvedOptions;
     }
 
@@ -74,7 +62,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
       } as ViewModeOption<T>,
       ...resolvedOptions,
     ];
-  }, [payCadenceMode, options, resolvedOptions]);
+  }, [payCadenceMode, options, favoritesProp, resolvedOptions]);
 
   return (
     <div className="view-mode-selector-wrap">

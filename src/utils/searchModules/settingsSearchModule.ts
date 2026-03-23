@@ -92,7 +92,7 @@ function buildSettingsResults(_budgetData: BudgetData): SearchResult[] {
       subtitle: 'Choose which cadence views appear in the selector: weekly, bi-weekly, monthly…',
       category: 'Settings',
       categoryIcon: ChartPie,
-      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+      action: { type: 'open-view-mode-settings' },
     },
     {
       id: 'settings-view-mode-weekly',
@@ -100,7 +100,7 @@ function buildSettingsResults(_budgetData: BudgetData): SearchResult[] {
       subtitle: 'Show amounts on a weekly cadence',
       category: 'Settings',
       categoryIcon: CalendarClock,
-      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+      action: { type: 'open-view-mode-settings' },
     },
     {
       id: 'settings-view-mode-biweekly',
@@ -108,7 +108,7 @@ function buildSettingsResults(_budgetData: BudgetData): SearchResult[] {
       subtitle: 'Show amounts on a bi-weekly cadence',
       category: 'Settings',
       categoryIcon: CalendarClock,
-      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+      action: { type: 'open-view-mode-settings' },
     },
     {
       id: 'settings-view-mode-monthly',
@@ -116,7 +116,7 @@ function buildSettingsResults(_budgetData: BudgetData): SearchResult[] {
       subtitle: 'Show amounts on a monthly cadence',
       category: 'Settings',
       categoryIcon: CalendarClock,
-      action: { type: 'open-settings', sectionId: 'app-data-reset' },
+      action: { type: 'open-view-mode-settings' },
     },
     {
       id: 'settings-backup',

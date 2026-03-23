@@ -25,7 +25,6 @@ import {
   normalizeThemeMode,
 } from '../utils/appearanceSettings';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountDefaults';
-import { sanitizeFavoriteViewModes } from '../utils/viewModePreferences';
 
 const BACKUP_EXCLUDED_KEYS = new Set<string>(BACKUP_EXCLUDED_STORAGE_KEYS);
 
@@ -107,7 +106,6 @@ function normalizeAppSettingsValue(
   normalized.colorVisionMode = normalizeColorVisionMode(normalized.colorVisionMode);
   normalized.stateCueMode = normalizeStateCueMode(normalized.stateCueMode);
   normalized.fontScale = normalizeFontScale(normalized.fontScale);
-  normalized.viewModeFavorites = sanitizeFavoriteViewModes(normalized.viewModeFavorites);
 
   return normalized;
 }

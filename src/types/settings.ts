@@ -24,6 +24,7 @@ export interface BudgetSettings {
   };
   activeTab?: string;
   keyMetricsBreakdownView?: KeyMetricsBreakdownView;
+  viewModeFavorites?: SelectableViewMode[];
 }
 
 export interface AppSettings {
@@ -39,5 +40,4 @@ export interface AppSettings {
   stateCueMode?: StateCueMode;
   fontScale?: number;
   glossaryTermsEnabled?: boolean;
-  viewModeFavorites?: SelectableViewMode[];
 }

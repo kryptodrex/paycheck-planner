@@ -47,6 +47,28 @@ export function sanitizeFavoriteViewModes(modes: unknown): SelectableViewMode[] 
   return unique.size > 0 ? Array.from(unique) : [...DEFAULT_FAVORITE_VIEW_MODES];
 }
 
+/**
+ * When the pay frequency changes, keep the favorites list in sync:
+ * - If the new cadence mode is already in favorites, returns null (no update needed).
+ * - Otherwise drops the first existing favorite to make room, inserts the new cadence
+ *   mode, and returns a canonical-sorted list capped at MAX_VISIBLE_FAVORITE_VIEW_MODES.
+ */
+export function syncFavoritesForCadence(
+  currentFavorites: SelectableViewMode[],
+  cadenceMode: SelectableViewMode,
+): SelectableViewMode[] | null {
+  if (currentFavorites.includes(cadenceMode)) {
+    return null;
+  }
+
+  const base =
+    currentFavorites.length >= MAX_VISIBLE_FAVORITE_VIEW_MODES
+      ? currentFavorites.slice(1)
+      : currentFavorites;
+
+  return sanitizeFavoriteViewModes([...base, cadenceMode]).slice(0, MAX_VISIBLE_FAVORITE_VIEW_MODES);
+}
+
 export function buildViewModeSelectorOptions(
   favorites: unknown,
   payCadenceMode?: SelectableViewMode,
