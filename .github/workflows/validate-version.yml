@@ -3,7 +3,6 @@ name: Validate Version File
 on:
   pull_request:
     branches:
-      - develop
       - main
     types: [opened, synchronize, reopened]
     paths-ignore:
@@ -11,6 +10,11 @@ on:
       - '**/*.md'
       - '*.md'
       - '.gitignore'
+      - 'release/**'
+      - 'dist/**'
+      - 'dist-electron/**'
+      - 'coverage/**'
+      - 'app_updates/**'
 
 jobs:
   check-version:
@@ -52,6 +56,19 @@ jobs:
           VERSION=$(cat version | tr -d ' \n')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $VERSION"
+
+      - name: Check if release tag already exists
+        if: steps.check_version.outputs.version_changed == 'true'
+        id: check_tag
+        run: |
+          TAG="v${{ steps.current_version.outputs.version }}"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "❌ Tag ${TAG} already exists on origin"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Tag ${TAG} does not exist on origin"
+          fi
 
       - name: Check if version file exists in base branch
         if: steps.check_version.outputs.version_changed == 'true'
@@ -143,12 +160,17 @@ jobs:
             const currentVersion = '${{ steps.current_version.outputs.version }}';
             const baseVersion = '${{ steps.base_version.outputs.version }}';
             const baseExists = '${{ steps.check_base_version.outputs.exists }}';
+            const tagExists = '${{ steps.check_tag.outputs.exists }}';
             
             let message = '';
             
             // Handle case where version file was not modified
             if (versionChanged === 'false') {
               message = `❌ **Version File Not Updated**\n\nThe version file was not modified in this PR. Please update the \`version\` file in the root directory with the new version number.`;
+            }
+            // Handle case where release tag already exists
+            else if (tagExists === 'true') {
+              message = `❌ **Release Tag Already Exists**\n\nThe version \`${currentVersion}\` maps to tag \`v${currentVersion}\`, which already exists on origin. Please bump the version before merge.`;
             }
             // Handle case where version file doesn't exist in base branch (new file)
             else if (baseExists === 'false') {
@@ -180,6 +202,12 @@ jobs:
         if: steps.compare.outputs.should_fail == 'true'
         run: |
           echo "::error::Version validation failed. See PR comment for details."
+          exit 1
+
+      - name: Fail if release tag already exists
+        if: steps.check_tag.outputs.exists == 'true'
+        run: |
+          echo "::error::Release tag v${{ steps.current_version.outputs.version }} already exists. Bump version before merge."
           exit 1
 
       - name: Fail if version not updated
