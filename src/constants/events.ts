@@ -29,6 +29,7 @@ export const APP_CUSTOM_EVENTS = {
   appearanceSettingsChanged: 'appearance-settings-changed',
   glossaryTermsChanged: 'glossary-terms-changed',
   viewModeFavoritesChanged: 'view-mode-favorites-changed',
+  viewModeAutoSwitched: 'view-mode-auto-switched',
   undoRedoStatus: 'app:undo-redo-status',
 } as const;
 

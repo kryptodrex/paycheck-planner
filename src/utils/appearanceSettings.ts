@@ -7,7 +7,7 @@ export const MAX_FONT_SCALE = 1.25;
 export const DEFAULT_FONT_SCALE = 1;
 export const DEFAULT_APPEARANCE_MODE: AppearanceMode = 'preset';
 export const DEFAULT_COLOR_VISION_MODE: ColorVisionMode = 'normal';
-export const DEFAULT_STATE_CUE_MODE: StateCueMode = 'enhanced';
+export const DEFAULT_STATE_CUE_MODE: StateCueMode = 'minimal';
 export const DEFAULT_CUSTOM_APPEARANCE: CustomAppearanceSettings = {
   primaryAccent: '#667eea',
   surfaceTint: '#eef2ff',

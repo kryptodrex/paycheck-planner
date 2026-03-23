@@ -11,6 +11,8 @@ on:
     paths-ignore:
       - '.github/workflows/**'
       - '**/*.md'
+      - '*.md'
+      - '.gitignore'
 
 jobs:
   test:

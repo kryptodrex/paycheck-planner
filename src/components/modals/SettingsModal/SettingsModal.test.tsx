@@ -40,7 +40,6 @@ describe('SettingsModal', () => {
         stateCueMode: 'enhanced',
         fontScale: 1,
         glossaryTermsEnabled: true,
-        viewModeFavorites: ['weekly', 'monthly'],
       }),
     );
 
@@ -97,7 +96,6 @@ describe('SettingsModal', () => {
         stateCueMode: 'enhanced',
         fontScale: 1,
         glossaryTermsEnabled: true,
-        viewModeFavorites: ['weekly', 'monthly'],
       }),
     );
 
@@ -146,19 +144,6 @@ describe('SettingsModal', () => {
     expect(screen.getByRole('radio', { name: /ocean/i })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /default/i })).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('Showing matching presets for "ocean".');
-  });
-
-  it('finds view mode favorites by cadence value and narrows visible options', async () => {
-    const user = userEvent.setup();
-    renderSettingsModal();
-
-    await user.type(screen.getByLabelText(/search settings/i), 'quarterly');
-
-    expect(screen.getByRole('heading', { name: 'App Data and Reset' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'View Mode Favorites' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Quarterly')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Weekly')).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Showing matching view modes for "quarterly".');
   });
 
   it('explains theme mode and preset distinctions in appearance settings', () => {

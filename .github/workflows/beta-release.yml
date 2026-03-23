@@ -9,6 +9,8 @@ on:
     paths-ignore:
       - '.github/workflows/**'
       - '**/*.md'
+      - '*.md'
+      - '.gitignore'
 
 permissions:
   contents: write
@@ -72,11 +74,11 @@ jobs:
         run: npm run build:${{ matrix.target }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          FEEDBACK_FORM_URL: ${{ secrets.FEEDBACK_FORM_URL }}
-          FEEDBACK_FORM_ENTRY_EMAIL: ${{ secrets.FEEDBACK_FORM_ENTRY_EMAIL }}
-          FEEDBACK_FORM_ENTRY_CATEGORY: ${{ secrets.FEEDBACK_FORM_ENTRY_CATEGORY }}
-          FEEDBACK_FORM_ENTRY_SUBJECT: ${{ secrets.FEEDBACK_FORM_ENTRY_SUBJECT }}
-          FEEDBACK_FORM_ENTRY_DETAILS: ${{ secrets.FEEDBACK_FORM_ENTRY_DETAILS }}
+          FEEDBACK_FORM_URL: ${{ vars.FEEDBACK_FORM_URL }}
+          FEEDBACK_FORM_ENTRY_EMAIL: ${{ vars.FEEDBACK_FORM_ENTRY_EMAIL }}
+          FEEDBACK_FORM_ENTRY_CATEGORY: ${{ vars.FEEDBACK_FORM_ENTRY_CATEGORY }}
+          FEEDBACK_FORM_ENTRY_SUBJECT: ${{ vars.FEEDBACK_FORM_ENTRY_SUBJECT }}
+          FEEDBACK_FORM_ENTRY_DETAILS: ${{ vars.FEEDBACK_FORM_ENTRY_DETAILS }}
 
       - name: Upload beta artifacts
         uses: actions/upload-artifact@v4

@@ -1,0 +1,10 @@
+.modal-content.view-mode-settings-modal-content {
+  max-width: min(480px, 96vw);
+}
+
+.view-mode-settings-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0;
+}

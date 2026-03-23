@@ -35,7 +35,6 @@ describe('FileStorageService', () => {
       encryptionEnabled: true,
       encryptionKey: 'super-secret',
       lastOpenedFile: '/tmp/file',
-      viewModeFavorites: ['weekly', 'monthly'],
     });
 
     const raw = localStorage.getItem(STORAGE_KEYS.settings);
@@ -45,18 +44,6 @@ describe('FileStorageService', () => {
     const settings = FileStorageService.getAppSettings();
     expect(settings.encryptionEnabled).toBe(true);
     expect(settings.encryptionKey).toBeUndefined();
-    expect(settings.viewModeFavorites).toEqual(['weekly', 'monthly']);
-  });
-
-  it('normalizes invalid view mode favorites from stored app settings', () => {
-    localStorage.setItem(
-      STORAGE_KEYS.settings,
-      JSON.stringify({ viewModeFavorites: ['weekly', 'invalid-mode', 'weekly'] }),
-    );
-
-    const settings = FileStorageService.getAppSettings();
-
-    expect(settings.viewModeFavorites).toEqual(['weekly']);
   });
 
   it('normalizes appearance values from stored app settings', () => {
@@ -85,7 +72,7 @@ describe('FileStorageService', () => {
     });
     expect(settings.highContrastMode).toBe(false);
     expect(settings.colorVisionMode).toBe('normal');
-    expect(settings.stateCueMode).toBe('enhanced');
+    expect(settings.stateCueMode).toBe('minimal');
     expect(settings.fontScale).toBe(1.25);
   });
 

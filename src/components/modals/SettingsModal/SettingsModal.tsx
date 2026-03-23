@@ -5,10 +5,8 @@ import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
 import { useTheme } from '../../../contexts/ThemeContext';
 import type { AppearancePreset, ColorVisionMode, StateCueMode, ThemeMode } from '../../../types/appearance';
-import type { SelectableViewMode } from '../../../types/viewMode';
-import { Button, CheckboxGroup, Dropdown, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
+import { Button, Dropdown, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
 import { FileStorageService } from '../../../services/fileStorage';
-import { MAX_VISIBLE_FAVORITE_VIEW_MODES, SELECTABLE_VIEW_MODES, sanitizeFavoriteViewModes } from '../../../utils/viewModePreferences';
 import {
   normalizeAppearancePreset,
   normalizeColorVisionMode,
@@ -34,7 +32,6 @@ interface SettingsState {
   stateCueMode: StateCueMode;
   fontScale: number;
   glossaryTermsEnabled: boolean;
-  viewModeFavorites: SelectableViewMode[];
 }
 
 const COLOR_VISION_OPTIONS: Array<{ value: ColorVisionMode; label: string; description: string }> = [
@@ -63,23 +60,6 @@ interface SettingsSection {
   searchTerms: string;
 }
 
-const formatViewModeLabel = (mode: SelectableViewMode): string => {
-  if (mode === 'bi-weekly') {
-    return 'Bi-weekly';
-  }
-
-  if (mode === 'semi-monthly') {
-    return 'Semi-monthly';
-  }
-
-  return mode.charAt(0).toUpperCase() + mode.slice(1);
-};
-
-const VIEW_MODE_OPTIONS = SELECTABLE_VIEW_MODES.map((mode) => ({
-  value: mode,
-  label: formatViewModeLabel(mode),
-}));
-
 const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: 'appearance',
@@ -102,10 +82,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: 'app-data-reset',
     title: 'App Data and Reset',
-    searchTerms: [
-      'view mode cadence favorites app data reset import backup',
-      VIEW_MODE_OPTIONS.map((option) => `${option.value} ${option.label}`).join(' '),
-    ].join(' '),
+    searchTerms: 'app data reset import backup',
   },
 ];
 
@@ -129,7 +106,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
     stateCueMode: normalizeStateCueMode(appSettings.stateCueMode),
     fontScale: normalizeFontScale(appSettings.fontScale),
     glossaryTermsEnabled: appSettings.glossaryTermsEnabled !== false,
-    viewModeFavorites: sanitizeFavoriteViewModes(appSettings.viewModeFavorites),
   });
 
   const [settings, setSettings] = useState<SettingsState>(() => {
@@ -149,7 +125,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
       stateCueMode: updated.stateCueMode,
       fontScale: updated.fontScale,
       glossaryTermsEnabled: updated.glossaryTermsEnabled,
-      viewModeFavorites: sanitizeFavoriteViewModes(updated.viewModeFavorites),
     });
   };
 
@@ -224,18 +199,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
     window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled } }));
   };
 
-  const handleViewModeFavoritesChange = (values: string[]) => {
-    const nextFavorites = sanitizeFavoriteViewModes(values).slice(0, MAX_VISIBLE_FAVORITE_VIEW_MODES) as SelectableViewMode[];
-
-    const updated = {
-      ...settings,
-      viewModeFavorites: nextFavorites,
-    };
-    setSettings(updated);
-    persistSettings(updated);
-    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.viewModeFavoritesChanged));
-  };
-
   const handleExportBackup = async () => {
     setBackingUp(true);
     try {
@@ -286,7 +249,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
       window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
       window.dispatchEvent(new CustomEvent(APP_CUSTOM_EVENTS.glossaryTermsChanged, { detail: { enabled: newGlossary } }));
-      window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.viewModeFavoritesChanged));
       const reopenResult = await window.electronAPI.reopenWelcomeWindow();
       if (!reopenResult.success) {
         throw new Error(reopenResult.error || 'Failed to reopen welcome window');
@@ -365,27 +327,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
     return APPEARANCE_PRESET_OPTIONS.filter((preset) => matchingAppearancePresetValues.has(preset.value));
   }, [matchingAppearancePresetValues]);
 
-  const matchingViewModeValues = useMemo(() => {
-    if (searchTokens.length === 0) {
-      return null;
-    }
-
-    const matches = VIEW_MODE_OPTIONS.filter((option) => {
-      const corpus = `${option.value} ${option.label}`.toLowerCase();
-      return searchTokens.every((token) => corpus.includes(token));
-    }).map((option) => option.value);
-
-    return new Set(matches);
-  }, [searchTokens]);
-
-  const visibleViewModeOptions = useMemo(() => {
-    if (!matchingViewModeValues || matchingViewModeValues.size === 0) {
-      return VIEW_MODE_OPTIONS;
-    }
-
-    return VIEW_MODE_OPTIONS.filter((option) => matchingViewModeValues.has(option.value));
-  }, [matchingViewModeValues]);
-
   const visibleSectionIds = useMemo(() => new Set(visibleSections.map((section) => section.id)), [visibleSections]);
 
   useEffect(() => {
@@ -440,7 +381,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
       isOpen={isOpen}
       onClose={onClose}
       contentClassName="settings-modal-content"
-      header="Settings"
+      header="App Settings"
       footer={
         <Button variant="primary" onClick={onClose}>
           Done
@@ -704,37 +645,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
               }}
             >
               <h3 id="app-data-reset">App Data and Reset</h3>
-
-              <div className="settings-subsection">
-                <h4 className="settings-subsection-title">View Mode Favorites</h4>
-
-                <div className="settings-group">
-                  <label>Always Show These View Modes</label>
-                  <CheckboxGroup
-                    selectedValues={settings.viewModeFavorites}
-                    onChange={handleViewModeFavoritesChange}
-                    className="settings-view-mode-grid"
-                    options={visibleViewModeOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                      disabled:
-                        (settings.viewModeFavorites.length === 1
-                        && settings.viewModeFavorites.includes(option.value))
-                        || (settings.viewModeFavorites.length >= MAX_VISIBLE_FAVORITE_VIEW_MODES
-                        && !settings.viewModeFavorites.includes(option.value)),
-                    }))}
-                  />
-                  {matchingViewModeValues && matchingViewModeValues.size > 0 && (
-                    <p className="settings-search-hint" role="status">
-                      Showing matching view modes for "{searchQuery.trim()}".
-                    </p>
-                  )}
-                </div>
-
-                <InfoBox>
-                  Favorites apply app-wide and carry across all plans on this device. You can pin up to {MAX_VISIBLE_FAVORITE_VIEW_MODES} favorites, and at least one mode must stay enabled.
-                </InfoBox>
-              </div>
 
               <div className="settings-danger-zone">
                 <h4 className="settings-subsection-title">Reset App Settings</h4>
