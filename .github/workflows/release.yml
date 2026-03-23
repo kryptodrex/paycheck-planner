@@ -1,15 +1,16 @@
 name: Release
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types:
-      - closed
     paths-ignore:
       - '.github/workflows/**'
+      - '/*.md'
       - '**/*.md'
       - '*.md'
+      - '/*.MD'
+      - '**/*.MD'
       - '.gitignore'
       - 'release/**'
       - 'dist/**'
@@ -22,7 +23,6 @@ permissions:
 
 jobs:
   build:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -93,7 +93,6 @@ jobs:
           retention-days: 90
 
   publish-release:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     needs: build
     runs-on: ubuntu-latest
 

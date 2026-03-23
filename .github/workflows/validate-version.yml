@@ -7,8 +7,11 @@ on:
     types: [opened, synchronize, reopened]
     paths-ignore:
       - '.github/workflows/**'
+      - '/*.md'
       - '**/*.md'
       - '*.md'
+      - '/*.MD'
+      - '**/*.MD'
       - '.gitignore'
       - 'release/**'
       - 'dist/**'
