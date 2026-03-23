@@ -53,7 +53,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         customAppearance: normalizeCustomAppearance(undefined),
         highContrastMode: false,
         colorVisionMode: 'normal' as const,
-        stateCueMode: 'enhanced' as const,
+        stateCueMode: 'minimal' as const,
         fontScale: 1,
       };
     }
@@ -88,7 +88,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         customAppearance: normalizeCustomAppearance(undefined),
         highContrastMode: false,
         colorVisionMode: 'normal' as const,
-        stateCueMode: 'enhanced' as const,
+        stateCueMode: 'minimal' as const,
         fontScale: 1,
       };
     }

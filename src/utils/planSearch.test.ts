@@ -342,7 +342,7 @@ describe('buildSearchIndex', () => {
 
     const viewModeEntry = index.find((r) => r.id === 'settings-view-mode');
     expect(viewModeEntry).toBeDefined();
-    expect(viewModeEntry?.action).toMatchObject({ type: 'open-settings', sectionId: 'app-data-reset' });
+    expect(viewModeEntry?.action).toMatchObject({ type: 'open-view-mode-settings' });
   });
 });
 

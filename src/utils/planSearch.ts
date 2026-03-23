@@ -83,6 +83,11 @@ export interface OpenTaxesAction {
   mode: 'open-settings';
 }
 
+/** Open the plan-specific View Mode Settings modal. */
+export interface OpenViewModeSettingsAction {
+  type: 'open-view-mode-settings';
+}
+
 export type SearchResultAction =
   | NavigateTabAction
   | OpenPaySettingsAction
@@ -91,7 +96,8 @@ export type SearchResultAction =
   | OpenBillsAction
   | OpenLoansAction
   | OpenSavingsAction
-  | OpenTaxesAction;
+  | OpenTaxesAction
+  | OpenViewModeSettingsAction;
 
 export interface SearchInlineAction {
   id: string;
