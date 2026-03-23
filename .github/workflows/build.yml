@@ -3,7 +3,7 @@ name: Build
 on:
   pull_request:
     branches:
-      - develop
+      - main
     types:
       - opened
       - synchronize
@@ -13,6 +13,11 @@ on:
       - '**/*.md'
       - '*.md'
       - '.gitignore'
+      - 'release/**'
+      - 'dist/**'
+      - 'dist-electron/**'
+      - 'coverage/**'
+      - 'app_updates/**'
 
 jobs:
   build:

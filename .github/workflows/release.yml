@@ -1,4 +1,4 @@
-name: Production Release
+name: Release
 
 on:
   pull_request:
@@ -11,20 +11,101 @@ on:
       - '**/*.md'
       - '*.md'
       - '.gitignore'
+      - 'release/**'
+      - 'dist/**'
+      - 'dist-electron/**'
+      - 'coverage/**'
+      - 'app_updates/**'
 
 permissions:
   contents: write
 
 jobs:
-  promote-release:
-    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'develop'
+  build:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+          - os: windows-latest
+            target: win
+          - os: ubuntu-latest
+            target: linux
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync version from file
+        run: npm run sync-version
+
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-1-dev libnss3-dev pkg-config fakeroot dpkg
+
+      - name: Build Electron app for macOS (signed + notarized)
+        if: matrix.os == 'macos-latest'
+        run: npm run build:${{ matrix.target }}
+        env:
+          CSC_FOR_PULL_REQUEST: true
+          CSC_IDENTITY_AUTO_DISCOVERY: true
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          FEEDBACK_FORM_URL: ${{ vars.FEEDBACK_FORM_URL }}
+          FEEDBACK_FORM_ENTRY_EMAIL: ${{ vars.FEEDBACK_FORM_ENTRY_EMAIL }}
+          FEEDBACK_FORM_ENTRY_CATEGORY: ${{ vars.FEEDBACK_FORM_ENTRY_CATEGORY }}
+          FEEDBACK_FORM_ENTRY_SUBJECT: ${{ vars.FEEDBACK_FORM_ENTRY_SUBJECT }}
+          FEEDBACK_FORM_ENTRY_DETAILS: ${{ vars.FEEDBACK_FORM_ENTRY_DETAILS }}
+
+      - name: Build Electron app for ${{ matrix.target }}
+        if: matrix.os != 'macos-latest'
+        run: npm run build:${{ matrix.target }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          FEEDBACK_FORM_URL: ${{ vars.FEEDBACK_FORM_URL }}
+          FEEDBACK_FORM_ENTRY_EMAIL: ${{ vars.FEEDBACK_FORM_ENTRY_EMAIL }}
+          FEEDBACK_FORM_ENTRY_CATEGORY: ${{ vars.FEEDBACK_FORM_ENTRY_CATEGORY }}
+          FEEDBACK_FORM_ENTRY_SUBJECT: ${{ vars.FEEDBACK_FORM_ENTRY_SUBJECT }}
+          FEEDBACK_FORM_ENTRY_DETAILS: ${{ vars.FEEDBACK_FORM_ENTRY_DETAILS }}
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paycheck-planner-${{ matrix.target }}
+          path: release/
+          retention-days: 90
+
+  publish-release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
 
       - name: Read version
         id: version
@@ -62,12 +143,17 @@ jobs:
             echo "__END_CHANGELOG__"
           } >> $GITHUB_OUTPUT
 
-      - name: Promote to Production Release
+      - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: v${{ steps.version.outputs.VERSION }}
           body: ${{ steps.changelog.outputs.CHANGELOG }}
+          files: |
+            all-artifacts/paycheck-planner-mac/**/*.dmg
+            all-artifacts/paycheck-planner-win/**/*.exe
+            all-artifacts/paycheck-planner-linux/**/*.AppImage
           draft: false
           prerelease: false
           make_latest: true
+          fail_on_unmatched_files: false
