@@ -570,7 +570,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   return (
     <div className="tab-view savings-manager">
       <PageHeader
-        title="Savings"
+        title="Savings & Retirement Plans"
         subtitle="Manage savings/investment transfers and retirement contributions"
         icon={<PiggyBank className="ui-icon" aria-hidden="true" />}
       />
