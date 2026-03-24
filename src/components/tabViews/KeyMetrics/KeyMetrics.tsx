@@ -475,7 +475,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
             contextLabel="Committed"
             contextTone="warning"
             ariaLabel="Open bills tab"
-            // onClick={onNavigateToBills}
+            onClick={onNavigateToBills}
           >
               <div className="metric-primary">
                 <span className="label">Yearly</span>
