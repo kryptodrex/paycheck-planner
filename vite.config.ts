@@ -31,4 +31,42 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+
+          if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/')) {
+            return 'react-vendor';
+          }
+
+          if (id.includes('/node_modules/lucide-react/')) {
+            return 'icons-vendor';
+          }
+
+          if (
+            id.includes('/node_modules/jspdf/') ||
+            id.includes('/node_modules/jspdf-autotable/')
+          ) {
+            return 'jspdf-vendor';
+          }
+
+          if (id.includes('/node_modules/pdf-lib/') || id.includes('/node_modules/@pdf-lib/')) {
+            return 'pdf-lib-vendor';
+          }
+
+          if (
+            id.includes('/node_modules/html2canvas/') ||
+            id.includes('/node_modules/dompurify/') ||
+            id.includes('/node_modules/canvg/')
+          ) {
+            return 'canvas-vendor';
+          }
+
+          return undefined;
+        },
+      },
+    },
+  },
 })

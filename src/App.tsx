@@ -1,5 +1,5 @@
 // Main App component - decides whether to show setup, welcome screen, or dashboard
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from './constants/events'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
@@ -8,10 +8,11 @@ import EncryptionSetup from './components/views/EncryptionSetup'
 import WelcomeScreen from './components/views/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
 import SettingsModal from './components/modals/SettingsModal'
-import AboutModal from './components/modals/AboutModal'
-import GlossaryModal from './components/modals/GlossaryModal'
-import KeyboardShortcutsModal from './components/modals/KeyboardShortcutsModal'
 import './App.css'
+
+const AboutModal = lazy(() => import('./components/modals/AboutModal'))
+const GlossaryModal = lazy(() => import('./components/modals/GlossaryModal'))
+const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'))
 
 function App() {
   if (import.meta.env.DEV) console.debug('[APP] App component rendering...');
@@ -283,19 +284,25 @@ function App() {
           <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </>
       )}
-      <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
-      <GlossaryModal
-        isOpen={showGlossary}
-        initialTermId={initialGlossaryTermId}
-        onClose={() => {
-          setShowGlossary(false)
-          setInitialGlossaryTermId(null)
-        }}
-      />
-      <KeyboardShortcutsModal
-        isOpen={showKeyboardShortcuts}
-        onClose={() => setShowKeyboardShortcuts(false)}
-      />
+      <Suspense fallback={null}>
+        <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <GlossaryModal
+          isOpen={showGlossary}
+          initialTermId={initialGlossaryTermId}
+          onClose={() => {
+            setShowGlossary(false)
+            setInitialGlossaryTermId(null)
+          }}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <KeyboardShortcutsModal
+          isOpen={showKeyboardShortcuts}
+          onClose={() => setShowKeyboardShortcuts(false)}
+        />
+      </Suspense>
       {zoomIndicatorMessage && (
         <div
           className={`zoom-indicator ${zoomIndicatorAtLimit ? 'limit' : ''}`}
