@@ -296,12 +296,8 @@
 
 .header-btn-group {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-}
-
-.view-mode-selector-wrap {
-  padding-bottom: 0;
-  max-width: 100%;
 }
 
 /* Header button styles - these are on the gradient background */
@@ -310,6 +306,7 @@
   color: var(--text-inverse);
   border: 2px solid var(--border-header-soft);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-inverse) 8%, transparent);
+  height: fit-content;
 }
 
 .header-btn-secondary:hover:not(:disabled) {
@@ -421,11 +418,6 @@
     order: 1;
     width: 100%;
     justify-content: stretch;
-  }
-
-  .view-mode-selector-wrap {
-    order: 2;
-    width: 100%;
   }
 
   .header-btn-group > button {

@@ -1690,7 +1690,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <ViewModeSelector
             mode={displayMode}
             onChange={handleDisplayModeChange}
-            favorites={sanitizeFavoriteViewModes(budgetData.settings.viewModeFavorites)}
+            favorites={budgetData.settings.viewModeFavorites != null ? sanitizeFavoriteViewModes(budgetData.settings.viewModeFavorites) : undefined}
             payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
             onOpenViewModeSettings={handleOpenViewModeSettings}
             disabled={activeTab === 'metrics'}
