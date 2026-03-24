@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Wallet, Info, Plus, Settings, X } from 'lucide-react';
+import React, { useMemo, useState, useRef } from 'react';
+import { Wallet, Info, Plus, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
@@ -18,7 +18,6 @@ import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
 import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
 import { Alert, Button, ConfirmDialog, InputWithPrefix, PageHeader, AmountBreakdown, Toast } from '../../_shared';
-import PaySettingsModal from '../../modals/PaySettingsModal';
 import ReallocationReviewModal from '../../modals/ReallocationReviewModal/ReallocationReviewModal';
 import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../modals/ReallocationSummaryModal/ReallocationSummaryModal';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
@@ -85,8 +84,6 @@ const getCategoryItemCount = (category: AllocationCategory): number | null => {
 
 interface PayBreakdownProps {
   displayMode: ViewMode;
-  searchPaySettingsRequestKey?: number;
-  searchPaySettingsFieldHighlight?: string;
   onNavigateToBills?: (accountId: string) => void;
   onNavigateToSavings?: (accountId: string) => void;
   onNavigateToRetirement?: (accountId: string) => void;
@@ -96,8 +93,6 @@ interface PayBreakdownProps {
 
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
   displayMode,
-  searchPaySettingsRequestKey,
-  searchPaySettingsFieldHighlight,
   onNavigateToBills,
   onNavigateToSavings,
   onNavigateToRetirement,
@@ -109,8 +104,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const [editingAccountIds, setEditingAccountIds] = useState<Set<string>>(new Set());
   const [draftAccounts, setDraftAccounts] = useState<Map<string, AllocationAccount>>(new Map());
   const [validationMessages, setValidationMessages] = useState<Map<string, ValidationMessage>>(new Map());
-  const [showPaySettingsModal, setShowPaySettingsModal] = useState(false);
-  const [paySettingsFieldHighlight, setPaySettingsFieldHighlight] = useState<string | undefined>(undefined);
   const [inputValues, setInputValues] = useState<Map<string, number>>(new Map()); // Local input values to prevent conversion flicker
   const [showReallocationModal, setShowReallocationModal] = useState(false);
   const [selectedReallocationIds, setSelectedReallocationIds] = useState<string[]>([]);
@@ -128,15 +121,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const previousLeftoverRef = useRef<number | null>(null);
   const negativeBalancePromptedRef = useRef(false);
   const suppressNextNegativeBalancePromptRef = useRef(false);
-
-  useEffect(() => {
-    if (!searchPaySettingsRequestKey) {
-      return;
-    }
-
-    setPaySettingsFieldHighlight(searchPaySettingsFieldHighlight);
-    setShowPaySettingsModal(true);
-  }, [searchPaySettingsFieldHighlight, searchPaySettingsRequestKey]);
 
   if (!budgetData) return null;
 
@@ -728,24 +712,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         title="Pay Breakdown"
         subtitle="See where your paycheck goes from gross to net"
         icon={<Wallet className="ui-icon" aria-hidden="true" />}
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
-              <Settings className="ui-icon ui-icon-sm" aria-hidden="true" />
-              Pay Settings
-            </Button>
-          </>
-        }
-      />
-
-      <PaySettingsModal
-        isOpen={showPaySettingsModal}
-        onClose={() => {
-          setShowPaySettingsModal(false);
-          setPaySettingsFieldHighlight(undefined);
-        }}
-        searchFieldHighlight={paySettingsFieldHighlight}
-        onViewHistory={onViewHistory}
       />
 
       {/* Gross to Net Table */}

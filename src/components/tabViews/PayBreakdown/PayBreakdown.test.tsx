@@ -9,7 +9,6 @@ const {
   openConfirmDialogMock,
   closeConfirmDialogMock,
   confirmCurrentDialogMock,
-  paySettingsModalMock,
   mockBudgetData,
 } = vi.hoisted(() => ({
   updateBudgetDataMock: vi.fn(),
@@ -20,7 +19,6 @@ const {
   openConfirmDialogMock: vi.fn(),
   closeConfirmDialogMock: vi.fn(),
   confirmCurrentDialogMock: vi.fn(),
-  paySettingsModalMock: vi.fn(),
   mockBudgetData: {
     settings: { currency: 'USD' },
     paySettings: {
@@ -96,17 +94,6 @@ vi.mock('../../../services/reallocationPlanner', () => ({
   applyReallocationPlan: vi.fn(),
 }));
 
-vi.mock('../../modals/PaySettingsModal', () => ({
-  default: ({ isOpen, searchFieldHighlight }: { isOpen: boolean; searchFieldHighlight?: string }) => {
-    paySettingsModalMock({ isOpen, searchFieldHighlight });
-    if (!isOpen) {
-      return null;
-    }
-
-    return <div data-testid="pay-settings-modal">{searchFieldHighlight ?? 'none'}</div>;
-  },
-}));
-
 vi.mock('../../modals/ReallocationReviewModal/ReallocationReviewModal', () => ({
   default: () => null,
 }));
@@ -126,7 +113,6 @@ describe('PayBreakdown custom allocation validation', () => {
     openConfirmDialogMock.mockClear();
     closeConfirmDialogMock.mockClear();
     confirmCurrentDialogMock.mockClear();
-    paySettingsModalMock.mockClear();
 
     localStorage.clear();
 
@@ -231,18 +217,4 @@ describe('PayBreakdown custom allocation validation', () => {
     expect(screen.getByText(/allocations exceed net pay/i)).toBeInTheDocument();
   });
 
-  it('opens pay settings modal and passes search field highlight when requested by dashboard search', async () => {
-    render(
-      <PayBreakdown
-        displayMode="monthly"
-        searchPaySettingsRequestKey={1}
-        searchPaySettingsFieldHighlight="payFrequency"
-      />,
-    );
-
-    expect(await screen.findByTestId('pay-settings-modal')).toHaveTextContent('payFrequency');
-    expect(paySettingsModalMock).toHaveBeenCalledWith(
-      expect.objectContaining({ isOpen: true, searchFieldHighlight: 'payFrequency' }),
-    );
-  });
 });
