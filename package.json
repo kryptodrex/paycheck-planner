@@ -1,7 +1,7 @@
 {
   "name": "paycheck-planner",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Desktop paycheck planning and budget management application.",
   "author": {
     "name": "Paycheck Planner",
