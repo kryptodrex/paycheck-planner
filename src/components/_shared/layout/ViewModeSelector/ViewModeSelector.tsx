@@ -29,7 +29,7 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   options,
   favorites: favoritesProp,
   payCadenceMode,
-  payCadenceLabel = 'Your Pay Frequency',
+  payCadenceLabel = 'Pay Frequency',
   onOpenViewModeSettings,
   disabled = false,
 }: ViewModeSelectorProps<T>) => {

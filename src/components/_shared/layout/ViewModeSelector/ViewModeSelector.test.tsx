@@ -28,7 +28,7 @@ describe('ViewModeSelector', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'WeeklyYour Pay Frequency' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Weekly\s*Pay Frequency/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Monthly' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Yearly' })).toBeInTheDocument();
   });
