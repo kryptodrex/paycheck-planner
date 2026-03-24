@@ -931,6 +931,16 @@ function createApplicationMenu() {
           }
         },
       },
+      {
+        label: 'Copy Plan',
+        accelerator: isMac ? 'Cmd+Shift+C' : 'Ctrl+Shift+C',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.copyPlan);
+          }
+        },
+      },
       { type: 'separator' },
       {
         label: 'Close Window',
@@ -998,7 +1008,7 @@ function createApplicationMenu() {
         },
       },
       {
-        label: 'Pay Options',
+        label: 'Pay Details',
         accelerator: isMac ? 'Cmd+Shift+P' : 'Ctrl+Shift+P',
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();

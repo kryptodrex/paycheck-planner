@@ -4,6 +4,7 @@ export const MENU_EVENTS = {
   openBudgetFile: 'open-budget-file',
   changeEncryption: 'change-encryption',
   savePlan: 'save-plan',
+  copyPlan: 'copy-plan',
   openSettings: 'open-settings',
   openAbout: 'open-about',
   openGlossary: 'open-glossary',
