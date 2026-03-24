@@ -6,23 +6,26 @@
 
 ### Features
 
-- New theme preset options available to choose from in App Settings
-- Added undo and redo support across planning workflows, plus an audit history overlay so you can review and restore prior changes.
-- Added plan-wide search actions that can jump directly to settings, sections, and modals, including common add/edit/delete/pause tasks.
-- Added automated reallocation support when remaining spending is below target, with safe-source rules and a clear summary of what changed.
-- Added app-wide Lucide icon support with account icon selection, replacing legacy emoji-based iconography.
+- No major features for this release
 
 
 ### Improvements
 
-- Improved gross-to-net clarity with explicit pre-tax and post-tax deduction visibility in key breakdown views.
-- Expanded tax modeling so tax lines can be configured using either percentage rates or fixed amounts.
-- Expanded view mode flexibility with more cadence options, paycheck-cadence defaults, and better selector guidance.
-- Overhauled Appearance and Accessibility settings with curated light/dark preset pairs, manual dark-mode overrides, and a dedicated high-contrast mode.
-- Added app-level display scaling controls (zoom/font size) in Settings and View, including keyboard shortcuts for zoom in, zoom out, and reset.
+- Added the tab icon next to each view title so the active workspace has clearer visual context.
+- Simplified retirement setup by removing employer match handling from retirement elections to reduce complexity, as it's not an amount taken out of your paycheck generally
+- Improved Key Metrics view accuracy
+	- Remaining-for-spending totals now match between Key Metrics and Pay Breakdown in yearly mode.
+	- The Bills metric was reworked as Recurring Expenses and now reflects the total of custom allocations, bills, deductions, and loan payments.
+- Improved account deletion behavior so linked items are handled more intelligently across all supported item types.
+- Reduced icon width to look cleaner, and replaced a few icons to make more sense in context
+- Reduced built application size by around 100MB
 
 
 ### Bug Fixes
 
-- Fixed cross-mode rounding and persistence behavior so values remain stable after editing, saving, and reopening.
-- Fixed several search interaction issues, including navigation/scroll behavior and action responsiveness for pause/resume controls.
+- Fixed deduction amount rounding/display inconsistencies (for example 9.30 no longer drifting to 9.31).
+- Fixed edit-form amount formatting so trailing zeros are preserved more consistently when editing existing bill and deduction values.
+- Added tighter decimal precision handling in amount entry fields to match what the UI can reliably display.
+- Fixed history overlay behavior for legacy entries so edits no longer appear as misleading empty-to-value changes.
+- Fixed a history overlay deletion bug where deleting an Initial tracked state row could delete the wrong item in stacked history.
+- Fixed tax settings history to actually break out the line item changes done
