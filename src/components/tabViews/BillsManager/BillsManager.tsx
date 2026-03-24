@@ -529,7 +529,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
       />
 
       {budgetData.accounts.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state empty-state--dashed">
           <div className="empty-icon" aria-hidden="true">
             <Building2 className="ui-icon" />
           </div>
@@ -537,15 +537,21 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           <p>Accounts are created during the initial setup wizard. Run the setup wizard to create your first account.</p>
         </div>
       ) : !hasAnyItems ? (
-        <div className="empty-state">
+        <div className="empty-state empty-state--dashed">
           <div className="empty-icon" aria-hidden="true">
             <ClipboardList className="ui-icon" />
           </div>
-          <h3>No Bills or Deductions Yet</h3>
+          <h3>No Bills or Deductions Added Yet</h3>
           <p>Add recurring bills or paycheck/account deductions to get started</p>
           <div className="empty-state-actions">
-            <Button variant="secondary" onClick={handleAddBenefit}>Add Deduction</Button>
-            <Button variant="primary" onClick={handleAddBill}>Add First Bill</Button>
+            <Button variant="secondary" onClick={handleAddBenefit}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add First Deduction
+            </Button>
+            <Button variant="primary" onClick={handleAddBill}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add First Bill
+            </Button>
           </div>
         </div>
       ) : (

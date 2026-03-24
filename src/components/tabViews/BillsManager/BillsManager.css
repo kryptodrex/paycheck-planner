@@ -46,11 +46,6 @@
   flex-wrap: wrap;
 }
 
-.bills-manager .bills-header-actions .view-mode-selector-wrap {
-  flex: 1 1 34rem;
-  min-width: min(100%, 28rem);
-}
-
 .bills-manager .bills-manager-header {
   display: flex;
   align-items: center;
@@ -76,11 +71,6 @@
   .bills-manager .bills-header-actions {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .bills-manager .bills-header-actions .view-mode-selector-wrap {
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   .bills-manager .bills-header-buttons {
