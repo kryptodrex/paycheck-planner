@@ -18,20 +18,6 @@ export type ViewModeOption = {
   label: string;
 };
 
-function getSupplementalFavoriteModeForCadence(
-  payCadenceMode?: SelectableViewMode,
-): SelectableViewMode | null {
-  if (payCadenceMode === 'monthly') {
-    return 'quarterly';
-  }
-
-  if (payCadenceMode === 'yearly') {
-    return 'quarterly';
-  }
-
-  return null;
-}
-
 export function sanitizeFavoriteViewModes(modes: unknown): SelectableViewMode[] {
   if (!Array.isArray(modes)) {
     return [...DEFAULT_FAVORITE_VIEW_MODES];
@@ -49,24 +35,39 @@ export function sanitizeFavoriteViewModes(modes: unknown): SelectableViewMode[] 
 
 /**
  * When the pay frequency changes, keep the favorites list in sync:
- * - If the new cadence mode is already in favorites, returns null (no update needed).
- * - Otherwise drops the first existing favorite to make room, inserts the new cadence
- *   mode, and returns a canonical-sorted list capped at MAX_VISIBLE_FAVORITE_VIEW_MODES.
+ * - Removes the previousCadenceMode from favorites when it is not a permanent
+ *   default (monthly/yearly) and differs from the new cadence — prevents stale
+ *   cadence tabs from lingering after a frequency change.
+ * - If the new cadence mode is already in the updated list, returns null (no update needed).
+ * - Otherwise inserts the new cadence at its canonical position and returns the
+ *   updated list capped at MAX_VISIBLE_FAVORITE_VIEW_MODES.
  */
 export function syncFavoritesForCadence(
   currentFavorites: SelectableViewMode[],
   cadenceMode: SelectableViewMode,
+  previousCadenceMode?: SelectableViewMode,
 ): SelectableViewMode[] | null {
-  if (currentFavorites.includes(cadenceMode)) {
-    return null;
+  // Remove the old cadence if it differs from the new one and is not a
+  // permanent default (monthly/yearly are always useful regardless of cadence).
+  let base = currentFavorites;
+  if (
+    previousCadenceMode &&
+    previousCadenceMode !== cadenceMode &&
+    !DEFAULT_FAVORITE_VIEW_MODES.includes(previousCadenceMode)
+  ) {
+    base = currentFavorites.filter((f) => f !== previousCadenceMode);
   }
 
-  const base =
-    currentFavorites.length >= MAX_VISIBLE_FAVORITE_VIEW_MODES
-      ? currentFavorites.slice(1)
-      : currentFavorites;
+  if (base.includes(cadenceMode)) {
+    // If we removed the old cadence the list changed — return the cleaned-up list.
+    return base.length !== currentFavorites.length
+      ? sanitizeFavoriteViewModes(base).slice(0, MAX_VISIBLE_FAVORITE_VIEW_MODES)
+      : null;
+  }
 
-  return sanitizeFavoriteViewModes([...base, cadenceMode]).slice(0, MAX_VISIBLE_FAVORITE_VIEW_MODES);
+  const finalBase =
+    base.length >= MAX_VISIBLE_FAVORITE_VIEW_MODES ? base.slice(1) : base;
+  return sanitizeFavoriteViewModes([...finalBase, cadenceMode]).slice(0, MAX_VISIBLE_FAVORITE_VIEW_MODES);
 }
 
 export function buildViewModeSelectorOptions(
@@ -76,14 +77,6 @@ export function buildViewModeSelectorOptions(
 ): ViewModeOption[] {
   const sanitizedFavorites = sanitizeFavoriteViewModes(favorites);
   const cappedFavorites = sanitizedFavorites.slice(0, Math.max(maxFavorites, 1));
-
-  if ((payCadenceMode === 'monthly' || payCadenceMode === 'yearly') && cappedFavorites.length < maxFavorites) {
-    const supplementalMode = getSupplementalFavoriteModeForCadence(payCadenceMode);
-    if (supplementalMode && !cappedFavorites.includes(supplementalMode)) {
-      cappedFavorites.push(supplementalMode);
-    }
-  }
-
   return SELECTABLE_VIEW_MODES
     .filter((mode) => cappedFavorites.includes(mode))
     .map((mode) => ({

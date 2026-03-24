@@ -23,7 +23,7 @@ describe('viewModePreferences utilities', () => {
   it('caps visible favorites and can add a supplemental default for monthly cadence', () => {
     const options = buildViewModeSelectorOptions(['monthly', 'yearly'], 'monthly');
 
-    expect(options.map((option) => option.value)).toEqual(['monthly', 'quarterly', 'yearly']);
+    expect(options.map((option) => option.value)).toEqual(['monthly', 'yearly']);
   });
 });
 
@@ -32,14 +32,18 @@ describe('syncFavoritesForCadence', () => {
     expect(syncFavoritesForCadence(['bi-weekly', 'monthly', 'quarterly'], 'bi-weekly')).toBeNull();
   });
 
+  it('returns null when the cadence is already in favorites and no old cadence to remove', () => {
+    expect(syncFavoritesForCadence(['monthly', 'yearly'], 'monthly')).toBeNull();
+  });
+
   it('adds cadence at its canonical position when there is room', () => {
     // monthly(3) + yearly(5) → room for bi-weekly(1) → [bi-weekly, monthly, yearly]
     expect(syncFavoritesForCadence(['monthly', 'yearly'], 'bi-weekly')).toEqual(['bi-weekly', 'monthly', 'yearly']);
   });
 
-  it('drops the first existing favorite to make room when at capacity', () => {
-    // [monthly, quarterly, yearly] at cap → drop monthly, add bi-weekly → [bi-weekly, quarterly, yearly]
-    expect(syncFavoritesForCadence(['monthly', 'quarterly', 'yearly'], 'bi-weekly')).toEqual(['bi-weekly', 'quarterly', 'yearly']);
+  it('adds cadence without dropping when still under capacity', () => {
+    // 3 favorites, max=6 → room available, add bi-weekly → [bi-weekly, monthly, quarterly, yearly]
+    expect(syncFavoritesForCadence(['monthly', 'quarterly', 'yearly'], 'bi-weekly')).toEqual(['bi-weekly', 'monthly', 'quarterly', 'yearly']);
   });
 
   it('inserts cadence in canonical order when dropped item is not at position 0', () => {
@@ -47,8 +51,24 @@ describe('syncFavoritesForCadence', () => {
     expect(syncFavoritesForCadence(['monthly', 'yearly'], 'quarterly')).toEqual(['monthly', 'quarterly', 'yearly']);
   });
 
-  it('drops first favorite and respects canonical ordering of the new list', () => {
-    // [bi-weekly, monthly, yearly] at cap → drop bi-weekly, add semi-monthly → [semi-monthly, monthly, yearly]
-    expect(syncFavoritesForCadence(['bi-weekly', 'monthly', 'yearly'], 'semi-monthly')).toEqual(['semi-monthly', 'monthly', 'yearly']);
+  it('inserts cadence in canonical order when there is room', () => {
+    // [bi-weekly, monthly, yearly] → room available, add semi-monthly → [bi-weekly, semi-monthly, monthly, yearly]
+    expect(syncFavoritesForCadence(['bi-weekly', 'monthly', 'yearly'], 'semi-monthly')).toEqual(['bi-weekly', 'semi-monthly', 'monthly', 'yearly']);
+
+  });
+
+  it('removes old cadence and adds new one when frequency changes (non-default cadence)', () => {
+    // bi-weekly → monthly: remove bi-weekly (not a default), monthly already present → ['monthly','yearly']
+    expect(syncFavoritesForCadence(['bi-weekly', 'monthly', 'yearly'], 'monthly', 'bi-weekly')).toEqual(['monthly', 'yearly']);
+  });
+
+  it('removes old cadence and adds new one when switching between two non-default cadences', () => {
+    // bi-weekly → semi-monthly: remove bi-weekly, add semi-monthly
+    expect(syncFavoritesForCadence(['bi-weekly', 'monthly', 'yearly'], 'semi-monthly', 'bi-weekly')).toEqual(['semi-monthly', 'monthly', 'yearly']);
+  });
+
+  it('does not remove old cadence when it is a permanent default', () => {
+    // monthly → bi-weekly: monthly is a DEFAULT so it stays; bi-weekly added
+    expect(syncFavoritesForCadence(['monthly', 'yearly'], 'bi-weekly', 'monthly')).toEqual(['bi-weekly', 'monthly', 'yearly']);
   });
 });
