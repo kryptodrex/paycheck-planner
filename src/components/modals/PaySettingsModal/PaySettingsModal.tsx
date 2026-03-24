@@ -254,9 +254,10 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
     // Sync view mode selector favorites when pay frequency changes so the new
     // cadence tab appears at its canonical position in this plan's selector.
     if (editPayFrequency !== budgetData.paySettings.payFrequency) {
+      const oldCadenceMode = getPayFrequencyViewMode(budgetData.paySettings.payFrequency) as SelectableViewMode;
       const cadenceMode = getPayFrequencyViewMode(editPayFrequency) as SelectableViewMode;
       const existingFavorites = sanitizeFavoriteViewModes(updatedBudget.settings.viewModeFavorites);
-      const newFavorites = syncFavoritesForCadence(existingFavorites, cadenceMode);
+      const newFavorites = syncFavoritesForCadence(existingFavorites, cadenceMode, oldCadenceMode);
       updatedBudget = {
         ...updatedBudget,
         settings: {
@@ -286,13 +287,13 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       isOpen={isOpen}
       onClose={onClose}
       contentClassName="pay-settings-modal-content"
-      header="Edit Pay Breakdown Settings"
+      header="Your Pay Details"
       footer={
         <>
           {onViewHistory && (
             <Button 
-              variant="utility" 
-              onClick={() => onViewHistory({ entityType: 'pay-settings', entityId: 'pay-settings', title: 'Pay Settings' })}
+              variant="secondary" 
+              onClick={() => onViewHistory({ entityType: 'pay-settings', entityId: 'pay-settings', title: 'Pay Details' })}
             >
               View History
             </Button>
