@@ -477,7 +477,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                     <>
                         <Button variant="primary" onClick={handleAddLoan}>
                             <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
-                            Add Loan
+                            Add Loan Payment
                         </Button>
                     </>
                 }
@@ -490,7 +490,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
 
             <div className="loans-content">
                 {budgetData.accounts.length === 0 ? (
-                    <div className="empty-state empty-state--dashed empty-state--compact">
+                    <div className="empty-state empty-state--dashed">
                         <div className="empty-icon" aria-hidden="true">
                             <Building2 className="ui-icon" />
                         </div>
@@ -498,13 +498,14 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                         <p>Accounts are created during setup. Add an account before assigning loan payments.</p>
                     </div>
                 ) : loansList.length === 0 ? (
-                    <div className="empty-state empty-state--dashed empty-state--compact">
+                    <div className="empty-state empty-state--dashed">
                         <div className="empty-icon" aria-hidden="true">
-                            <Banknote className="ui-icon" />
+                            <Landmark className="ui-icon" />
                         </div>
-                        <h3>No Loan Payments Yet</h3>
+                        <h3>No Loan Payments Added Yet</h3>
                         <p>Add your first recurring loan payment to track it across the app.</p>
-                        <Button variant="primary" className="btn-large" onClick={handleAddLoan} style={{ marginTop: '1rem' }}>
+                        <Button variant="primary" onClick={handleAddLoan}>
+                            <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
                             Add First Loan Payment
                         </Button>
                     </div>
