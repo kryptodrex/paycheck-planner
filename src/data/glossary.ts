@@ -3,7 +3,6 @@ export type GlossaryCategory =
   | 'taxes'
   | 'deductions'
   | 'allocations'
-  | 'benefits'
   | 'retirement'
   | 'accounts'
   | 'loans';
@@ -26,7 +25,7 @@ export const glossaryTerms: GlossaryTerm[] = [
     category: 'pay',
     shortDefinition: 'Total earnings before taxes and deductions.',
     fullDefinition:
-      'Gross Pay is your total pay before any taxes, benefits, retirement contributions, or other deductions are subtracted.',
+      'Gross Pay is your total pay before any taxes, deductions, retirement contributions, or other withholdings are subtracted.',
     aliases: ['gross income'],
     tags: ['salary', 'hourly', 'paycheck'],
     relatedTermIds: ['net-pay', 'deduction', 'withholding'],
@@ -58,7 +57,7 @@ export const glossaryTerms: GlossaryTerm[] = [
     category: 'deductions',
     shortDefinition: 'Subtracted before taxes are calculated.',
     fullDefinition:
-      'Pre-tax deductions reduce taxable income before tax calculations. Common examples include certain benefits and retirement contributions.',
+      'Pre-tax deductions reduce taxable income before tax calculations. Common examples include insurance deductions and retirement contributions.',
     tags: ['taxable income'],
     relatedTermIds: ['deduction', 'taxable-income', 'retirement-contribution'],
   },
@@ -173,12 +172,12 @@ export const glossaryTerms: GlossaryTerm[] = [
   },
   {
     id: 'benefit',
-    term: 'Benefit',
-    category: 'benefits',
-    shortDefinition: 'Amount deducted from pay or an account for benefits, such as insurance.',
+    term: 'Insurance Deduction',
+    category: 'deductions',
+    shortDefinition: 'Amount deducted from pay or an account for insurance and similar programs.',
     fullDefinition:
-      'Benefits can include insurance plans and other programs. They might be employer-sponsored and can be deducted pre-tax or post-tax depending on the specific benefit and plan, or paid out of pocket and tracked as an allocation.',
-    tags: ['insurance', 'employer', 'benefit'],
+      'Recurring deductions can include insurance plans and other employer programs. They can be deducted pre-tax or post-tax depending on the deduction type, or paid out of pocket and tracked as an allocation.',
+    tags: ['insurance', 'employer', 'deduction'],
     relatedTermIds: ['pre-tax-deduction', 'post-tax-deduction', 'allocation'],
   },
   {
@@ -189,16 +188,7 @@ export const glossaryTerms: GlossaryTerm[] = [
     fullDefinition:
       'A retirement contribution is money you set aside toward retirement accounts such as a 401(k), 403(b), IRA, or pension plans. It is generally deducted from your paycheck before taxes, but may vary depending on the plan.',
     tags: ['US-only'],
-    relatedTermIds: ['employer-match', 'pre-tax-deduction', 'annual-contribution-limit'],
-  },
-  {
-    id: 'employer-match',
-    term: 'Employer Match',
-    category: 'retirement',
-    shortDefinition: 'Employer contribution based on your own contribution.',
-    fullDefinition:
-      'Employer match is additional money your employer contributes to your retirement plan when you contribute, often up to a defined limit.',
-    relatedTermIds: ['retirement-contribution', 'annual-contribution-limit'],
+    relatedTermIds: ['pre-tax-deduction', 'annual-contribution-limit'],
   },
   {
     id: 'annual-contribution-limit',
@@ -207,7 +197,7 @@ export const glossaryTerms: GlossaryTerm[] = [
     shortDefinition: 'Maximum allowed yearly retirement contribution.',
     fullDefinition:
       'The annual contribution limit is the maximum amount you can contribute to specific retirement plans in a calendar year, based on applicable rules.',
-    relatedTermIds: ['retirement-contribution', 'employer-match'],
+    relatedTermIds: ['retirement-contribution'],
   },
   {
     id: 'account',
@@ -292,7 +282,6 @@ export const glossaryCategoryLabels: Record<GlossaryCategory, string> = {
   taxes: 'Taxes',
   deductions: 'Deductions',
   allocations: 'Allocations',
-  benefits: 'Benefits',
   retirement: 'Retirement',
   accounts: 'Accounts',
   loans: 'Loans',

@@ -1072,8 +1072,8 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, [budgetData]);
 
   /**
-   * Calculate retirement contribution amounts for display
-   * Returns estimated employee and employer contributions per paycheck
+   * Calculate retirement contribution amounts for display.
+   * Employer match is intentionally excluded from in-app retirement math.
    */
   const calculateRetirementContributions = useCallback((election: RetirementElection) => {
     if (!budgetData || election.enabled === false) {
@@ -1104,25 +1104,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       employeeAmount = roundToCent(election.employeeContribution);
     }
 
-    // Calculate employer match (if enabled)
-    let employerAmount = 0;
-    if (election.hasEmployerMatch) {
-      // Convert employee contribution to percentage of gross for comparison
-      const employeePercentage = election.employeeContributionIsPercentage
-        ? election.employeeContribution
-        : (employeeAmount / grossPay) * 100;
-
-      if (election.employerMatchCapIsPercentage) {
-        // Cap is a percentage - employer matches up to that percentage
-        const matchPercentage = Math.min(employeePercentage, election.employerMatchCap);
-        employerAmount = roundToCent((grossPay * matchPercentage) / 100);
-      } else {
-        // Cap is a dollar amount - employer matches up to that amount
-        employerAmount = Math.min(employeeAmount, roundToCent(election.employerMatchCap));
-      }
-    }
-
-    return { employeeAmount, employerAmount };
+    return { employeeAmount, employerAmount: 0 };
   }, [budgetData]);
 
   /**

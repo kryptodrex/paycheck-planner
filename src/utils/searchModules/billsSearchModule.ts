@@ -1,7 +1,7 @@
 /**
  * Bills Search Module
  *
- * Contributes search results for Bills and Benefits to the search registry.
+ * Contributes search results for Bills and Deductions to the search registry.
  * Also provides action handlers for bill/benefit actions (toggle, edit, delete).
  */
 
@@ -12,7 +12,7 @@ import type { SearchModule, SearchActionContext } from '../searchRegistry';
 import { createTypedActionHandler, formatSearchCurrency, incrementRequestKey } from './moduleUtils';
 
 /**
- * Builds search results for Bills and Benefits.
+ * Builds search results for Bills and Deductions.
  */
 function buildBillsResults(budgetData: BudgetData): SearchResult[] {
   const results: SearchResult[] = [];
@@ -58,7 +58,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
     });
   }
 
-  // ── Benefits ──────────────────────────────────────────────────────────────
+  // ── Deductions ────────────────────────────────────────────────────────────
   for (const benefit of budgetData.benefits ?? []) {
     const paused = benefit.enabled === false;
     results.push({
@@ -67,7 +67,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
       subtitle: benefit.isPercentage
         ? `${benefit.amount}% — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`
         : `${formatSearchCurrency(benefit.amount, currency)} — ${benefit.isTaxable ? 'taxable' : 'non-taxable'}`,
-      category: 'Benefits',
+      category: 'Deductions',
       categoryIcon: HeartPulse,
       badge: paused ? 'Paused' : undefined,
       inlineActions: [
@@ -120,7 +120,7 @@ const handleBillsAction = createTypedActionHandler('open-bills-action', (billsAc
 
 /**
  * The Bills search module.
- * Exports bills and benefits as searchable results and provides action handling.
+ * Exports bills and deductions as searchable results and provides action handling.
  */
 export const billsSearchModule: SearchModule = {
   id: 'bills',

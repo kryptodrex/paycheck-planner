@@ -141,7 +141,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
                 checked={includeBenefits}
                 onChange={(e) => setIncludeBenefits(e.target.checked)}
               />
-              <span>Benefits</span>
+              <span>Deductions</span>
             </label>
             <label className="export-checkbox">
               <input
