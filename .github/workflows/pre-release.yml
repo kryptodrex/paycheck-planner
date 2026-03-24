@@ -1,0 +1,149 @@
+name: Prerelease
+
+on:
+  push:
+    branches:
+      - develop
+    paths-ignore:
+      - '.github/workflows/**'
+      - '/*.md'
+      - '**/*.md'
+      - '*.md'
+      - '/*.MD'
+      - '**/*.MD'
+      - '.gitignore'
+      - 'release/**'
+      - 'dist/**'
+      - 'dist-electron/**'
+      - 'coverage/**'
+      - 'app_updates/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+          - os: windows-latest
+            target: win
+          - os: ubuntu-latest
+            target: linux
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync version from file
+        run: npm run sync-version
+
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-1-dev libnss3-dev pkg-config fakeroot dpkg
+
+      - name: Build Electron app for macOS (signed + notarized)
+        if: matrix.os == 'macos-latest'
+        run: npm run build:${{ matrix.target }} -- --publish never
+        env:
+          CSC_FOR_PULL_REQUEST: true
+          CSC_IDENTITY_AUTO_DISCOVERY: true
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          FEEDBACK_FORM_URL: ${{ vars.FEEDBACK_FORM_URL }}
+          FEEDBACK_FORM_ENTRY_EMAIL: ${{ vars.FEEDBACK_FORM_ENTRY_EMAIL }}
+          FEEDBACK_FORM_ENTRY_CATEGORY: ${{ vars.FEEDBACK_FORM_ENTRY_CATEGORY }}
+          FEEDBACK_FORM_ENTRY_SUBJECT: ${{ vars.FEEDBACK_FORM_ENTRY_SUBJECT }}
+          FEEDBACK_FORM_ENTRY_DETAILS: ${{ vars.FEEDBACK_FORM_ENTRY_DETAILS }}
+
+      - name: Build Electron app for ${{ matrix.target }}
+        if: matrix.os != 'macos-latest'
+        run: npm run build:${{ matrix.target }} -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          FEEDBACK_FORM_URL: ${{ vars.FEEDBACK_FORM_URL }}
+          FEEDBACK_FORM_ENTRY_EMAIL: ${{ vars.FEEDBACK_FORM_ENTRY_EMAIL }}
+          FEEDBACK_FORM_ENTRY_CATEGORY: ${{ vars.FEEDBACK_FORM_ENTRY_CATEGORY }}
+          FEEDBACK_FORM_ENTRY_SUBJECT: ${{ vars.FEEDBACK_FORM_ENTRY_SUBJECT }}
+          FEEDBACK_FORM_ENTRY_DETAILS: ${{ vars.FEEDBACK_FORM_ENTRY_DETAILS }}
+
+      - name: Upload beta artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paycheck-planner-${{ matrix.target }}
+          path: release/
+          retention-days: 90
+
+  beta-release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Read version
+        id: version
+        run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
+        
+      - name: Create prerelease metadata
+        id: beta_meta
+        run: |
+          TAG="v${{ steps.version.outputs.VERSION }}"
+          NAME="v${{ steps.version.outputs.VERSION }} (Beta)"
+
+          {
+            echo "TAG=$TAG"
+            echo "NAME=$NAME"
+            echo "BODY<<__END_BODY__"
+            echo "## 🚧 Prerelease"
+            echo ""
+            echo "This is a prerelease pending final testing."
+            echo ""
+            echo "### 📦 Platform Builds"
+            echo "- **macOS**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.dmg"
+            echo "- **Windows**: Paycheck Planner Setup ${{ steps.version.outputs.VERSION }}.exe"
+            echo "- **Linux**: Paycheck Planner-${{ steps.version.outputs.VERSION }}-arm64.AppImage"
+            echo ""
+            echo "---"
+            echo "⚠️ This release will be promoted to a full release when merged to main."
+            echo "__END_BODY__"
+          } >> $GITHUB_OUTPUT
+
+      - name: Publish GitHub prerelease
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.beta_meta.outputs.TAG }}
+          name: ${{ steps.beta_meta.outputs.NAME }}
+          body: ${{ steps.beta_meta.outputs.BODY }}
+          files: |
+            all-artifacts/paycheck-planner-mac/**/*.dmg
+            all-artifacts/paycheck-planner-win/**/Paycheck Planner Setup *.exe
+            all-artifacts/paycheck-planner-linux/**/*.AppImage
+          draft: false
+          prerelease: true
+          fail_on_unmatched_files: false
