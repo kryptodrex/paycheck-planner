@@ -10,7 +10,7 @@ export const SELECTABLE_VIEW_MODES: SelectableViewMode[] = [
   'yearly',
 ];
 
-export const MAX_VISIBLE_FAVORITE_VIEW_MODES = 3;
+export const MAX_VISIBLE_FAVORITE_VIEW_MODES = 6;
 export const DEFAULT_FAVORITE_VIEW_MODES: SelectableViewMode[] = ['monthly', 'yearly'];
 
 export type ViewModeOption = {

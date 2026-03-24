@@ -65,32 +65,30 @@ const ViewModeSelector = <T extends string = ViewMode,>({
   }, [payCadenceMode, options, favoritesProp, resolvedOptions]);
 
   return (
-    <div className="view-mode-selector-wrap">
-      <div className="view-mode-selector">
-        {optionsWithCadence.map((option) => (
-          <button
-            key={option.value}
-            className={mode === option.value ? 'active' : ''}
-            onClick={() => onChange(option.value)}
-            disabled={disabled}
-          >
-            <span>{option.label}</span>
-            {payCadenceMode === option.value && (
-              <span className="view-mode-selector-cadence">{payCadenceLabel}</span>
-            )}
-          </button>
-        ))}
-        {!options && onOpenViewModeSettings && (
+    <div className="view-mode-selector">
+      {optionsWithCadence.map((option) => (
         <button
-          className="view-mode-settings-button"
-          onClick={onOpenViewModeSettings}
-          aria-label="Open view mode settings"
-          title="Open view mode settings"
+          key={option.value}
+          className={`${mode === option.value ? 'active' : ''}`}
+          onClick={() => onChange(option.value)}
+          disabled={disabled}
         >
-          <Settings className="ui-icon ui-icon-sm" aria-hidden="true" />
+          <span>{option.label}</span>
+          {payCadenceMode === option.value && (
+            <span className="view-mode-selector-cadence">{payCadenceLabel}</span>
+          )}
         </button>
-      )}
-      </div>
+      ))}
+      {!options && onOpenViewModeSettings && (
+      <button
+        className="view-mode-settings-button"
+        onClick={onOpenViewModeSettings}
+        aria-label="Open view mode settings"
+        title="Open view mode settings"
+      >
+        <Settings className="ui-icon ui-icon-sm" aria-hidden="true" />
+      </button>
+    )}
     </div>
   );
 };

@@ -38,7 +38,7 @@ const ViewModeSettingsModal: React.FC<ViewModeSettingsModalProps> = ({
     >
       <div className="view-mode-settings-modal-body">
         <div className="settings-group">
-          <label>Always Show These View Modes</label>
+          <label>Always show these view modes:</label>
           <CheckboxGroup
             selectedValues={favorites}
             onChange={handleChange}
@@ -47,14 +47,14 @@ const ViewModeSettingsModal: React.FC<ViewModeSettingsModalProps> = ({
               value: option.value,
               label: option.label,
               disabled:
-                (favorites.length === 1 && favorites.includes(option.value)) ||
-                (favorites.length >= MAX_VISIBLE_FAVORITE_VIEW_MODES && !favorites.includes(option.value)),
+                (favorites.length === 1 && favorites.includes(option.value)) 
+                || (favorites.length >= MAX_VISIBLE_FAVORITE_VIEW_MODES && !favorites.includes(option.value)),
             }))}
           />
         </div>
 
         <InfoBox>
-          Applies to this plan only. Pin up to {MAX_VISIBLE_FAVORITE_VIEW_MODES} view modes; at least one must stay enabled.
+          Selected favorites apply to this plan only. You can pin up to {MAX_VISIBLE_FAVORITE_VIEW_MODES} view modes, and a minimum of 1 must stay enabled.
         </InfoBox>
       </div>
     </Modal>
