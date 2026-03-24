@@ -1,5 +1,5 @@
 import React from 'react';
-import { BanknoteArrowDown, ClipboardList, HandCoins, PieChart, PiggyBank, Scale, Wallet } from 'lucide-react';
+import { BanknoteArrowDown, ClipboardList, HandCoins, LayoutGrid, PiggyBank, Scale, Wallet } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { calculateAnnualizedPayBreakdown, calculateAnnualizedPaySummary } from '../../../services/budgetCalculations';
 import { formatWithSymbol } from '../../../utils/currency';
@@ -221,9 +221,23 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
     return sum + (loan.monthlyPayment * 12);
   }, 0));
 
-  const annualRecurringExpenses = roundUpToCent(annualBills + annualRecurringDeductions + annualLoanPayments);
+  const customAllocationItems = (budgetData.accounts || []).flatMap((account) =>
+    (account.allocationCategories || []).filter((category) => !isAutoAllocationCategoryId(category.id)),
+  );
+
+  const annualCustomAllocationItems = roundUpToCent(customAllocationItems.reduce((sum, category) => {
+    return sum + (Math.max(0, category.amount || 0) * paychecksPerYear);
+  }, 0));
+
+  const annualRecurringExpenses = roundUpToCent(
+    annualBills + annualRecurringDeductions + annualLoanPayments + annualCustomAllocationItems,
+  );
   const monthlyRecurringExpenses = roundUpToCent(annualRecurringExpenses / 12);
-  const recurringExpenseCount = budgetData.bills.length + budgetData.benefits.length + (budgetData.loans || []).length;
+  const recurringExpenseCount =
+    budgetData.bills.length +
+    budgetData.benefits.length +
+    (budgetData.loans || []).length +
+    customAllocationItems.length;
 
   // Keep historical yearly segment math for the summary chart.
   const annualRemainingBeforeSavings = roundUpToCent(annualNet - annualBills);
@@ -374,7 +388,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
       <PageHeader
         title="Key Metrics"
         subtitle="Your financial overview for the year at a glance"
-        icon={<PieChart className="ui-icon" aria-hidden="true" />}
+        icon={<LayoutGrid className="ui-icon" aria-hidden="true" />}
       />
       <div className="key-metrics-body">
         <div className="metrics-grid">
@@ -461,7 +475,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
             contextLabel="Committed"
             contextTone="warning"
             ariaLabel="Open bills tab"
-            onClick={onNavigateToBills}
+            // onClick={onNavigateToBills}
           >
               <div className="metric-primary">
                 <span className="label">Yearly</span>

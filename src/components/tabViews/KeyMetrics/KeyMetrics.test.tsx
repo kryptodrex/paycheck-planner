@@ -198,6 +198,20 @@ describe('KeyMetrics semantic badges', () => {
     expect(screen.getByText('3 items')).toBeTruthy();
   });
 
+  it('includes custom allocation line items in recurring expenses totals', () => {
+    mockBudgetData.accounts[0].allocationCategories = [
+      { id: 'custom-1', name: 'Subscriptions', amount: 150 },
+      { id: '__bills_auto-1', name: 'Auto Bills', amount: 400 },
+    ];
+
+    render(<KeyMetrics />);
+
+    // 12k bills + (150*12) custom allocations = 13.8k yearly.
+    // Auto allocation categories should not be double counted here.
+    expect(screen.getByText('$13,800')).toBeTruthy();
+    expect(screen.getByText('2 items')).toBeTruthy();
+  });
+
   it('switches the remaining card badge to shortfall when bills exceed net pay', () => {
     mockBudgetData.accounts[0].allocationCategories = [
       { id: 'cat-1', name: 'Allocated', amount: 3600 },
