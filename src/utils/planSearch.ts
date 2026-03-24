@@ -21,7 +21,7 @@ export interface NavigateTabAction {
   elementId?: string;
 }
 
-/** Open the Pay Settings modal and optionally highlight a field. */
+/** Open the Pay Details modal and optionally highlight a field. */
 export interface OpenPaySettingsAction {
   type: 'open-pay-settings';
   fieldHighlight?: string;
