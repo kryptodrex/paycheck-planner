@@ -4,7 +4,7 @@ interface StatusToastState {
   message: string;
   type: StatusToastType;
 }
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
@@ -20,12 +20,8 @@ import SavingsManager from '../tabViews/SavingsManager';
 import TaxBreakdown from '../tabViews/TaxBreakdown';
 import SettingsModal from '../modals/SettingsModal';
 import AccountsModal from '../modals/AccountsModal';
-import ExportModal from '../modals/ExportModal';
-import FeedbackModal from '../modals/FeedbackModal';
 import ViewModeSettingsModal from '../modals/ViewModeSettingsModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import PlanSearchOverlay from './PlanSearchOverlay';
-import PlanHistoryOverlay from './PlanHistoryOverlay';
 import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeSelector } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
@@ -43,6 +39,11 @@ import './PlanDashboard.css';
 import type { TabId } from '../../utils/tabManagement';
 
 type TabScrollPosition = 'top' | 'bottom';
+
+const ExportModal = lazy(() => import('../modals/ExportModal'));
+const FeedbackModal = lazy(() => import('../modals/FeedbackModal'));
+const PlanSearchOverlay = lazy(() => import('./PlanSearchOverlay'));
+const PlanHistoryOverlay = lazy(() => import('./PlanHistoryOverlay'));
 
 interface PlanHistoryState {
   kind: 'plan-tab';
@@ -111,6 +112,19 @@ const isEditableTarget = (target: EventTarget | null): boolean => {
     target.tagName === 'TEXTAREA' ||
     target.tagName === 'SELECT' ||
     target.isContentEditable
+  );
+};
+
+const areAuditEntriesEquivalent = (a: AuditEntry, b: AuditEntry): boolean => {
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.timestamp === b.timestamp &&
+    a.entityType === b.entityType &&
+    a.entityId === b.entityId &&
+    a.changeType === b.changeType &&
+    a.sourceAction === b.sourceAction &&
+    JSON.stringify(a.snapshot) === JSON.stringify(b.snapshot)
   );
 };
 
@@ -1204,7 +1218,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   }, []);
 
   const handleDeleteHistoryEntry = useCallback(
-    (entryId: string) => {
+    (entryToDelete: AuditEntry, originalIndex: number) => {
       if (!budgetData) return;
 
       openConfirmDialog({
@@ -1213,7 +1227,31 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         confirmLabel: 'Delete Entry',
         confirmVariant: 'danger',
         onConfirm: () => {
-          const nextAudit = (budgetData.metadata?.auditHistory || []).filter((entry) => entry.id !== entryId);
+          const currentAudit = budgetData.metadata?.auditHistory || [];
+
+          let deleteIndex = -1;
+
+          if (
+            originalIndex >= 0 &&
+            originalIndex < currentAudit.length &&
+            areAuditEntriesEquivalent(currentAudit[originalIndex], entryToDelete)
+          ) {
+            deleteIndex = originalIndex;
+          }
+
+          if (deleteIndex === -1) {
+            deleteIndex = currentAudit.findIndex((entry) => areAuditEntriesEquivalent(entry, entryToDelete));
+          }
+
+          if (deleteIndex === -1 && typeof entryToDelete.id === 'string') {
+            deleteIndex = currentAudit.findIndex((entry) => entry.id === entryToDelete.id);
+          }
+
+          if (deleteIndex === -1) {
+            return;
+          }
+
+          const nextAudit = currentAudit.filter((_, idx) => idx !== deleteIndex);
           updateBudgetData(
             {
               metadata: {
@@ -1952,23 +1990,25 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         </div>
       </footer>
 
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
-        context={{
-          appVersion: '1.0.0',
-          activeTab,
-          planYear: budgetData.year,
-          planName: budgetData.name,
-          currentFilePath: budgetData.settings.filePath,
-        }}
-        onSubmitted={({ success, message }: { success: boolean; message: string }) => {
-          setStatusToast({
-            type: success ? 'success' : 'error',
-            message,
-          });
-        }}
-      />
+      <Suspense fallback={null}>
+        <FeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          context={{
+            appVersion: '1.0.0',
+            activeTab,
+            planYear: budgetData.year,
+            planName: budgetData.name,
+            currentFilePath: budgetData.settings.filePath,
+          }}
+          onSubmitted={({ success, message }: { success: boolean; message: string }) => {
+            setStatusToast({
+              type: success ? 'success' : 'error',
+              message,
+            });
+          }}
+        />
+      </Suspense>
 
       <ViewModeSettingsModal
         isOpen={showViewModeSettings}
@@ -2226,29 +2266,35 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       />
 
       {/* Export Modal */}
-      <ExportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-      />
+      <Suspense fallback={null}>
+        <ExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+        />
+      </Suspense>
 
       {/* Plan-wide Search Overlay */}
-      <PlanSearchOverlay
-        isOpen={showSearch}
-        onClose={() => setShowSearch(false)}
-        budgetData={budgetData}
-        onNavigate={handleSearchNavigate}
-      />
+      <Suspense fallback={null}>
+        <PlanSearchOverlay
+          isOpen={showSearch}
+          onClose={() => setShowSearch(false)}
+          budgetData={budgetData}
+          onNavigate={handleSearchNavigate}
+        />
+      </Suspense>
 
-      <PlanHistoryOverlay
-        key={historyTarget ? `${historyTarget.entityType}:${historyTarget.entityId}` : 'no-history-target'}
-        isOpen={!!historyTarget}
-        target={historyTarget}
-        auditHistory={budgetData.metadata?.auditHistory || []}
-        entityNames={Object.fromEntries((budgetData.accounts || []).map((a) => [a.id, a.name]))}
-        onRestoreEntries={handleRestoreHistoryEntries}
-        onClose={handleCloseObjectHistory}
-        onDeleteEntry={handleDeleteHistoryEntry}
-      />
+      <Suspense fallback={null}>
+        <PlanHistoryOverlay
+          key={historyTarget ? `${historyTarget.entityType}:${historyTarget.entityId}` : 'no-history-target'}
+          isOpen={!!historyTarget}
+          target={historyTarget}
+          auditHistory={budgetData.metadata?.auditHistory || []}
+          entityNames={Object.fromEntries((budgetData.accounts || []).map((a) => [a.id, a.name]))}
+          onRestoreEntries={handleRestoreHistoryEntries}
+          onClose={handleCloseObjectHistory}
+          onDeleteEntry={handleDeleteHistoryEntry}
+        />
+      </Suspense>
 
       <ConfirmDialog
         isOpen={!!confirmDialog}

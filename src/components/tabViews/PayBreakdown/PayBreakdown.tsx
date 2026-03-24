@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Info, Plus, Settings, X } from 'lucide-react';
+import { Wallet, Info, Plus, Settings, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
@@ -727,6 +727,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
       <PageHeader
         title="Pay Breakdown"
         subtitle="See where your paycheck goes from gross to net"
+        icon={<Wallet className="ui-icon" aria-hidden="true" />}
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowPaySettingsModal(true)}>
@@ -971,7 +972,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       <div className="waterfall-row waterfall-category-row category-actions-row">
                         <Button style={{ flexGrow: 1 }} className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => addCategory(displayAccount.id)}>
                           <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
-                          Add Item
+                          Add Custom Item
                         </Button>
                         <div className="allocation-edit-actions bill-amount-display">
                           <Button className="allocation-secondary-btn" variant="secondary" size="small" onClick={() => cancelAccountEdit(displayAccount.id)}>Cancel</Button>

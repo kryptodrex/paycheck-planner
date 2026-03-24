@@ -102,6 +102,19 @@ describe('historyDiff utilities', () => {
     it('should fallback to generic formatting for unknown keys', () => {
       expect(formatDiffValueForField('amount', 1000)).toBe('1,000');
     });
+
+    it('should format tax line arrays with line-level detail', () => {
+      const lines = [
+        { id: 'federal', label: 'Federal Tax', rate: 22, calculationType: 'percentage' },
+        { id: 'local', label: 'Local Tax', amount: 45, calculationType: 'fixed' },
+      ];
+
+      expect(formatDiffValueForField('taxLines', lines)).toBe('Federal Tax: 22% | Local Tax: 45 fixed');
+    });
+
+    it('should format empty tax lines arrays as (empty)', () => {
+      expect(formatDiffValueForField('taxLines', [])).toBe('(empty)');
+    });
   });
 
   describe('summarizePaymentBreakdownDiff', () => {
@@ -157,6 +170,10 @@ describe('historyDiff utilities', () => {
 
     it('should handle already formatted fields', () => {
       expect(formatFieldName('Name')).toBe('Name');
+    });
+
+    it('should use display override for tax lines', () => {
+      expect(formatFieldName('taxLines')).toBe('Tax Lines');
     });
   });
 

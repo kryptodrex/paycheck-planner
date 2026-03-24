@@ -59,7 +59,7 @@ function buildSavingsResults(budgetData: BudgetData): SearchResult[] {
     results.push({
       id: `retirement-${election.id}`,
       title: label,
-      subtitle: `Employee contribution: ${contribLabel}${election.hasEmployerMatch ? ' · Employer match' : ''}`,
+      subtitle: `Your contribution: ${contribLabel}`,
       category: 'Retirement',
       categoryIcon: Umbrella,
       badge: paused ? 'Paused' : undefined,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import type { Account } from '../../../types/accounts';
+import type { BudgetData } from '../../../types/budget';
 import { Modal, Button, FormGroup, AccountsEditor, Dropdown } from '../../_shared';
 import './AccountsModal.css';
 import './AccountsDeleteModal.css';
@@ -9,14 +10,116 @@ interface AccountsModalProps {
   onClose: () => void;
 }
 
+type LinkedDataKey = 'bills' | 'benefits' | 'retirement' | 'savingsContributions' | 'loans';
+
+type LinkedSummary = {
+  key: LinkedDataKey;
+  label: string;
+  count: number;
+};
+
+type LinkedCollectionConfig = {
+  key: LinkedDataKey;
+  label: string;
+  getItems: (data: BudgetData) => Array<unknown>;
+  isLinkedToAccount: (item: unknown, accountId: string) => boolean;
+  reassignAccount: (item: unknown, targetAccountId: string) => unknown;
+};
+
+const LINKED_ACCOUNT_COLLECTIONS: LinkedCollectionConfig[] = [
+  {
+    key: 'bills',
+    label: 'bill(s)',
+    getItems: (data) => data.bills,
+    isLinkedToAccount: (item, accountId) => (item as BudgetData['bills'][number]).accountId === accountId,
+    reassignAccount: (item, targetAccountId) => ({
+      ...(item as BudgetData['bills'][number]),
+      accountId: targetAccountId,
+    }),
+  },
+  {
+    key: 'benefits',
+    label: 'deduction(s)',
+    getItems: (data) => data.benefits,
+    isLinkedToAccount: (item, accountId) => (item as BudgetData['benefits'][number]).sourceAccountId === accountId,
+    reassignAccount: (item, targetAccountId) => ({
+      ...(item as BudgetData['benefits'][number]),
+      deductionSource: 'account' as const,
+      sourceAccountId: targetAccountId,
+    }),
+  },
+  {
+    key: 'retirement',
+    label: 'retirement election(s)',
+    getItems: (data) => data.retirement,
+    isLinkedToAccount: (item, accountId) => (item as BudgetData['retirement'][number]).sourceAccountId === accountId,
+    reassignAccount: (item, targetAccountId) => ({
+      ...(item as BudgetData['retirement'][number]),
+      deductionSource: 'account' as const,
+      sourceAccountId: targetAccountId,
+    }),
+  },
+  {
+    key: 'savingsContributions',
+    label: 'savings contribution(s)',
+    getItems: (data) => data.savingsContributions ?? [],
+    isLinkedToAccount: (item, accountId) => (item as NonNullable<BudgetData['savingsContributions']>[number]).accountId === accountId,
+    reassignAccount: (item, targetAccountId) => ({
+      ...(item as NonNullable<BudgetData['savingsContributions']>[number]),
+      accountId: targetAccountId,
+    }),
+  },
+  {
+    key: 'loans',
+    label: 'loan(s)',
+    getItems: (data) => data.loans,
+    isLinkedToAccount: (item, accountId) => (item as BudgetData['loans'][number]).accountId === accountId,
+    reassignAccount: (item, targetAccountId) => ({
+      ...(item as BudgetData['loans'][number]),
+      accountId: targetAccountId,
+    }),
+  },
+];
+
+const getLinkedSummaries = (data: BudgetData, accountId: string): LinkedSummary[] => {
+  return LINKED_ACCOUNT_COLLECTIONS.map((config) => {
+    const count = config.getItems(data).filter((item) => config.isLinkedToAccount(item, accountId)).length;
+    return {
+      key: config.key,
+      label: config.label,
+      count,
+    };
+  });
+};
+
+const buildLinkedCollectionUpdates = (
+  data: BudgetData,
+  accountId: string,
+  mode: 'reallocate' | 'delete-all' | 'delete-account',
+  targetAccountId?: string,
+): Partial<Pick<BudgetData, LinkedDataKey>> => {
+  return LINKED_ACCOUNT_COLLECTIONS.reduce((updates, config) => {
+    const nextCollection = config.getItems(data).map((item) => {
+      if (!config.isLinkedToAccount(item, accountId)) {
+        return item;
+      }
+      if (mode !== 'reallocate' || !targetAccountId) {
+        return null;
+      }
+      return config.reassignAccount(item, targetAccountId);
+    }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+    (updates as Record<LinkedDataKey, Array<unknown>>)[config.key] = nextCollection;
+    return updates;
+  }, {} as Partial<Pick<BudgetData, LinkedDataKey>>);
+};
+
 const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
   const { budgetData, addAccount, updateAccount, updateBudgetData } = useBudget();
   const [deleteTargetAccountId, setDeleteTargetAccountId] = useState<string>('');
   const [deleteDialogState, setDeleteDialogState] = useState<{
     account: Account;
-    linkedBills: number;
-    linkedBenefits: number;
-    linkedRetirement: number;
+    linkedSummaries: LinkedSummary[];
   } | null>(null);
 
   const accounts = budgetData?.accounts ?? [];
@@ -48,20 +151,12 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
     const accountToDelete = budgetData.accounts.find((account) => account.id === id);
     if (!accountToDelete) return;
 
-    const linkedBills = budgetData.bills.filter((bill) => bill.accountId === id).length;
-    const linkedBenefits = budgetData.benefits.filter(
-      (benefit) => benefit.sourceAccountId === id
-    ).length;
-    const linkedRetirement = budgetData.retirement.filter(
-      (election) => election.sourceAccountId === id
-    ).length;
+    const linkedSummaries = getLinkedSummaries(budgetData, id);
     const fallbackAccount = accounts.find((account) => account.id !== id);
     setDeleteTargetAccountId(fallbackAccount?.id || '');
     setDeleteDialogState({
       account: accountToDelete,
-      linkedBills,
-      linkedBenefits,
-      linkedRetirement,
+      linkedSummaries,
     });
   };
 
@@ -80,44 +175,30 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
       if (!deleteTargetAccountId || deleteTargetAccountId === accountId) {
         return;
       }
-
-      const updatedBills = budgetData.bills.map((bill) =>
-        bill.accountId === accountId ? { ...bill, accountId: deleteTargetAccountId } : bill
-      );
-      const updatedBenefits = budgetData.benefits.map((benefit) =>
-        benefit.sourceAccountId === accountId
-          ? { ...benefit, deductionSource: 'account' as const, sourceAccountId: deleteTargetAccountId }
-          : benefit
-      );
-      const updatedRetirement = budgetData.retirement.map((election) =>
-        election.sourceAccountId === accountId
-          ? { ...election, deductionSource: 'account' as const, sourceAccountId: deleteTargetAccountId }
-          : election
+      const linkedCollectionUpdates = buildLinkedCollectionUpdates(
+        budgetData,
+        accountId,
+        mode,
+        deleteTargetAccountId,
       );
 
       updateBudgetData({
         accounts: updatedAccounts,
-        bills: updatedBills,
-        benefits: updatedBenefits,
-        retirement: updatedRetirement,
+        ...linkedCollectionUpdates,
       });
       handleCloseDeleteDialog();
       return;
     }
 
-    const updatedBills = budgetData.bills.filter((bill) => bill.accountId !== accountId);
-    const updatedBenefits = budgetData.benefits.filter(
-      (benefit) => benefit.sourceAccountId !== accountId
-    );
-    const updatedRetirement = budgetData.retirement.filter(
-      (election) => election.sourceAccountId !== accountId
+    const linkedCollectionUpdates = buildLinkedCollectionUpdates(
+      budgetData,
+      accountId,
+      mode,
     );
 
     updateBudgetData({
       accounts: updatedAccounts,
-      bills: updatedBills,
-      benefits: updatedBenefits,
-      retirement: updatedRetirement,
+      ...linkedCollectionUpdates,
     });
     handleCloseDeleteDialog();
   };
@@ -125,7 +206,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
   if (!budgetData) return null;
 
   const totalLinkedItems = deleteDialogState
-    ? deleteDialogState.linkedBills + deleteDialogState.linkedBenefits + deleteDialogState.linkedRetirement
+    ? deleteDialogState.linkedSummaries.reduce((sum, summary) => sum + summary.count, 0)
     : 0;
   const hasLinkedItems = totalLinkedItems > 0;
 
@@ -196,9 +277,9 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
                   This account is linked to existing data. Choose whether to move linked items to another account or delete them.
                 </p>
                 <ul className="account-delete-summary">
-                  <li>{deleteDialogState.linkedBills} bill(s)</li>
-                  <li>{deleteDialogState.linkedBenefits} benefit(s)</li>
-                  <li>{deleteDialogState.linkedRetirement} retirement election(s)</li>
+                  {deleteDialogState.linkedSummaries.map((summary) => (
+                    <li key={summary.key}>{summary.count} {summary.label}</li>
+                  ))}
                 </ul>
 
                 <FormGroup label="Move linked items to" required>
@@ -218,7 +299,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
               </>
             ) : (
               <p>
-                This account has no linked bills, benefits, or retirement elections. Deleting it will only remove the account.
+                This account has no linked items. Deleting it will only remove the account.
               </p>
             )}
           </div>

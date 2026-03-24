@@ -46,7 +46,6 @@ type SavingsFieldErrors = {
 type RetirementFieldErrors = {
   employeeAmount?: string;
   sourceAccountId?: string;
-  employerMatchCap?: string;
   yearlyLimit?: string;
   customLabel?: string;
 };
@@ -91,9 +90,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   const [retirementSource, setRetirementSource] = useState<'paycheck' | 'account'>('paycheck');
   const [retirementSourceAccountId, setRetirementSourceAccountId] = useState('');
   const [retirementIsPreTax, setRetirementIsPreTax] = useState(true);
-  const [employerMatchOption, setEmployerMatchOption] = useState<'no-match' | 'has-match'>('no-match');
-  const [employerMatchCap, setEmployerMatchCap] = useState('');
-  const [employerMatchCapIsPercentage, setEmployerMatchCapIsPercentage] = useState(true);
   const [yearlyLimit, setYearlyLimit] = useState('');
   const [retirementFieldErrors, setRetirementFieldErrors] = useState<RetirementFieldErrors>({});
   const [retirementFormMessage, setRetirementFormMessage] = useState<{ type: 'warning' | 'error'; message: string } | null>(null);
@@ -199,9 +195,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           setRetirementSource(election.deductionSource || 'paycheck');
           setRetirementSourceAccountId(election.sourceAccountId || '');
           setRetirementIsPreTax(election.isPreTax !== false);
-          setEmployerMatchOption(election.hasEmployerMatch ? 'has-match' : 'no-match');
-          setEmployerMatchCap((election.employerMatchCap || 0).toString());
-          setEmployerMatchCapIsPercentage(election.employerMatchCapIsPercentage);
           setYearlyLimit((election.yearlyLimit || '').toString());
           setRetirementFieldErrors({});
           setRetirementFormMessage(null);
@@ -219,9 +212,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         setRetirementSource('paycheck');
         setRetirementSourceAccountId('');
         setRetirementIsPreTax(true);
-        setEmployerMatchOption('no-match');
-        setEmployerMatchCap('');
-        setEmployerMatchCapIsPercentage(true);
         setYearlyLimit('');
         setRetirementFieldErrors({});
         setRetirementFormMessage(null);
@@ -280,23 +270,9 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       ? (grossPayPerPaycheck * election.employeeContribution) / 100
       : election.employeeContribution;
 
-    let employerAmountPerPaycheck = 0;
-    if (election.hasEmployerMatch) {
-      const employeePercentage = election.employeeContributionIsPercentage
-        ? election.employeeContribution
-        : (employeeAmountPerPaycheck / grossPayPerPaycheck) * 100;
-
-      if (election.employerMatchCapIsPercentage) {
-        const matchPercentage = Math.min(employeePercentage, election.employerMatchCap);
-        employerAmountPerPaycheck = (grossPayPerPaycheck * matchPercentage) / 100;
-      } else {
-        employerAmountPerPaycheck = Math.min(employeeAmountPerPaycheck, election.employerMatchCap);
-      }
-    }
-
     return {
       employeeAmount: roundToCent(employeeAmountPerPaycheck),
-      employerAmount: roundToCent(employerAmountPerPaycheck),
+      employerAmount: 0,
     };
   };
 
@@ -319,16 +295,14 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     const bEnabled = b.enabled !== false;
     if (aEnabled !== bEnabled) return aEnabled ? -1 : 1;
 
-    const aTotal = calculateRetirementContributions(a).employeeAmount + calculateRetirementContributions(a).employerAmount;
-    const bTotal = calculateRetirementContributions(b).employeeAmount + calculateRetirementContributions(b).employerAmount;
-    return bTotal - aTotal;
+    return calculateRetirementContributions(b).employeeAmount - calculateRetirementContributions(a).employeeAmount;
   });
 
   const retirementTotalPerPaycheck = sortedRetirement.reduce((sum, election) => {
     if (election.enabled === false) return sum;
 
-    const { employeeAmount: employeePerPaycheck, employerAmount } = calculateRetirementContributions(election);
-    return sum + employeePerPaycheck + employerAmount;
+    const { employeeAmount: employeePerPaycheck } = calculateRetirementContributions(election);
+    return sum + employeePerPaycheck;
   }, 0);
 
   const totalSavingsAndRetirementPerPaycheck = roundToCent(
@@ -475,9 +449,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     setRetirementSource('paycheck');
     setRetirementSourceAccountId('');
     setRetirementIsPreTax(true);
-    setEmployerMatchOption('no-match');
-    setEmployerMatchCap('');
-    setEmployerMatchCapIsPercentage(true);
     setYearlyLimit('');
     setRetirementFieldErrors({});
     setRetirementFormMessage(null);
@@ -493,9 +464,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     setRetirementSource(election.deductionSource || 'paycheck');
     setRetirementSourceAccountId(election.sourceAccountId || '');
     setRetirementIsPreTax(election.isPreTax !== false);
-    setEmployerMatchOption(election.hasEmployerMatch ? 'has-match' : 'no-match');
-    setEmployerMatchCap((election.employerMatchCap || 0).toString());
-    setEmployerMatchCapIsPercentage(election.employerMatchCapIsPercentage);
     setYearlyLimit((election.yearlyLimit || '').toString());
     setRetirementFieldErrors({});
     setRetirementFormMessage(null);
@@ -503,9 +471,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   };
 
   const handleSaveRetirement = () => {
-    const hasEmployerMatch = employerMatchOption === 'has-match';
     const parsedEmployeeContribution = parseFloat(employeeAmount);
-    const parsedMatchCap = parseFloat(employerMatchCap);
     const parsedYearlyLimit = yearlyLimit ? parseFloat(yearlyLimit) : undefined;
     const isAccountSource = retirementSource === 'account';
     const errors: RetirementFieldErrors = {};
@@ -520,10 +486,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
 
     if (isAccountSource && !retirementSourceAccountId) {
       errors.sourceAccountId = 'Please select an account for this retirement deduction source.';
-    }
-
-    if (hasEmployerMatch && (!Number.isFinite(parsedMatchCap) || parsedMatchCap < 0)) {
-      errors.employerMatchCap = 'Please enter a valid employer match cap.';
     }
 
     if (yearlyLimit && (!Number.isFinite(parsedYearlyLimit) || (parsedYearlyLimit ?? 0) <= 0)) {
@@ -561,9 +523,9 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       isPreTax: isAccountSource ? false : retirementIsPreTax,
       deductionSource: retirementSource,
       sourceAccountId: isAccountSource ? retirementSourceAccountId : undefined,
-      hasEmployerMatch,
-      employerMatchCap: hasEmployerMatch ? (Number.isNaN(parsedMatchCap) ? 0 : parsedMatchCap) : 0,
-      employerMatchCapIsPercentage: hasEmployerMatch ? employerMatchCapIsPercentage : false,
+      hasEmployerMatch: false,
+      employerMatchCap: 0,
+      employerMatchCapIsPercentage: false,
       yearlyLimit: parsedYearlyLimit,
     };
 
@@ -610,6 +572,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       <PageHeader
         title="Savings"
         subtitle="Manage savings/investment transfers and retirement contributions"
+        icon={<PiggyBank className="ui-icon" aria-hidden="true" />}
       />
 
       <Banner
@@ -714,8 +677,8 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         ) : (
           <div className="retirement-list">
             {sortedRetirement.map((retirement) => {
-              const { employeeAmount: employeePerPaycheck, employerAmount } = getRetirementContributionPreview(retirement);
-              const totalPerPaycheck = employeePerPaycheck + employerAmount;
+              const { employeeAmount: employeePerPaycheck } = getRetirementContributionPreview(retirement);
+              const totalPerPaycheck = employeePerPaycheck;
               const totalInDisplayMode = toDisplayAmount(totalPerPaycheck, paychecksPerYear, displayMode);
               const isEnabled = retirement.enabled !== false;
               const isPreTaxRetirement = retirement.isPreTax !== false;
@@ -754,15 +717,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                         {retirement.employeeContributionIsPercentage && ` (${retirement.employeeContribution}%)`}
                       </span>
                     </div>
-                    {retirement.hasEmployerMatch && (
-                      <div className="detail">
-                        <span className="label"><GlossaryTerm termId="employer-match">Employer Match</GlossaryTerm>:</span>
-                        <span className="value">
-                          {formatWithSymbol(employerAmount || 0, currency, { minimumFractionDigits: 2 })} per paycheck
-                          {' '}(up to {retirement.employerMatchCapIsPercentage ? `${retirement.employerMatchCap || 0}%` : formatWithSymbol(retirement.employerMatchCap || 0, currency, { minimumFractionDigits: 2 })})
-                        </span>
-                      </div>
-                    )}
                     {displayMode !== 'paycheck' && (
                       <div className="detail total-detail">
                         <span className="label">Total {getDisplayModeLabel(displayMode)}:</span>
@@ -1039,51 +993,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           </div>
         </div>
 
-        <div className="retirement-form-section">
-          <h4><GlossaryTerm termId="employer-match">Employer Match</GlossaryTerm> (Optional)</h4>
-          <FormGroup label={<><GlossaryTerm termId="employer-match">Employer Match Availability</GlossaryTerm></>}>
-            <RadioGroup
-              name="employerMatch"
-              value={employerMatchOption}
-              onChange={(value) => setEmployerMatchOption(value as 'no-match' | 'has-match')}
-              layout="column"
-              options={[
-                { value: 'no-match', label: 'Employer does not offer match' },
-                { value: 'has-match', label: 'Employer offers match' },
-              ]}
-            />
-          </FormGroup>
-
-          {employerMatchOption === 'has-match' && (
-            <div className="form-row">
-              <FormGroup label={<><GlossaryTerm termId="employer-match">Match Cap</GlossaryTerm></>} required error={retirementFieldErrors.employerMatchCap}>
-                <InputWithPrefix
-                  prefix={!employerMatchCapIsPercentage ? getCurrencySymbol(currency) : ''}
-                  suffix={employerMatchCapIsPercentage ? '%' : ''}
-                  type="number"
-                  value={employerMatchCap}
-                  className={retirementFieldErrors.employerMatchCap ? 'field-error' : ''}
-                  onChange={(e) => {
-                    setEmployerMatchCap(e.target.value);
-                    if (retirementFieldErrors.employerMatchCap) {
-                      setRetirementFieldErrors((prev) => ({ ...prev, employerMatchCap: undefined }));
-                    }
-                  }}
-                  placeholder={employerMatchCapIsPercentage ? '6' : '0.00'}
-                  step={employerMatchCapIsPercentage ? '0.1' : '0.01'}
-                  min="0"
-                  required
-                />
-              </FormGroup>
-              <FormGroup label={<><GlossaryTerm termId="employer-match">Cap Type</GlossaryTerm></>}>
-                <Dropdown value={employerMatchCapIsPercentage ? 'percentage' : 'amount'} onChange={(e) => setEmployerMatchCapIsPercentage(e.target.value === 'percentage')}>
-                  <option value="percentage">% of Gross Pay</option>
-                  <option value="amount">Fixed Amount</option>
-                </Dropdown>
-              </FormGroup>
-            </div>
-          )}
-        </div>
       </Modal>
 
       <ConfirmDialog

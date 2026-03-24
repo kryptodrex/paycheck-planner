@@ -21,12 +21,13 @@ interface PlanHistoryOverlayProps {
   entityNames?: Record<string, string>;
   onRestoreEntries: (entryIds: string[]) => void;
   onClose: () => void;
-  onDeleteEntry: (entryId: string) => void;
+  onDeleteEntry: (entry: AuditEntry, originalIndex: number) => void;
 }
 
 interface TimelineEntryView {
   entry: AuditEntry;
   isCardType: boolean;
+  isLegacyBaselineMissing: boolean;
   diffs: ReturnType<typeof extractFieldDiffs>;
   cardDiffs: ReturnType<typeof extractFieldDiffs>;
   summary: string[];
@@ -53,6 +54,17 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
   };
   const [dateFrom] = useState('');
   const [dateTo] = useState('');
+
+  const getEntryRenderKey = (entry: AuditEntry, idx: number): string => {
+    const idPart = typeof entry.id === 'string' && entry.id.length > 0 ? entry.id : 'missing-id';
+    return `${idPart}-${entry.timestamp}-${entry.entityType}-${entry.entityId}-${idx}`;
+  };
+
+  const handleDeleteEntry = (entry: AuditEntry): void => {
+    // Use the exact source index from the full audit array as a stable fallback
+    // for legacy history rows that may not have unique IDs.
+    onDeleteEntry(entry, auditHistory.indexOf(entry));
+  };
 
   // The most recent audit timestamp for this target entity (across all history, pre-filter).
   // Used to hide the action button on the entry that represents the current state.
@@ -131,12 +143,13 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
 
   const buildEntryView = (entry: AuditEntry, idx: number): TimelineEntryView | null => {
     const isCardType = CARD_ENTITY_TYPES.has(entry.entityType);
+    const isUpdateLike = entry.changeType === 'update' || entry.changeType === 'restore';
     const sameEntityInFiltered = filteredEntries
       .slice(idx + 1)
       .find((candidate) => candidate.entityId === entry.entityId) ?? null;
 
     const fallbackPrevEntry =
-      !sameEntityInFiltered && (entry.changeType === 'update' || entry.changeType === 'restore')
+      !sameEntityInFiltered && isUpdateLike
         ? auditHistory
             .filter((candidate) => {
               if (candidate.entityType !== entry.entityType) return false;
@@ -147,8 +160,9 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
         : null;
 
     const baselineEntry = sameEntityInFiltered ?? fallbackPrevEntry;
+    const isLegacyBaselineMissing = isUpdateLike && !baselineEntry;
     const allDiffs =
-      (entry.changeType === 'update' || entry.changeType === 'restore')
+      isUpdateLike && baselineEntry
         ? extractFieldDiffs(baselineEntry?.snapshot ?? {}, entry.snapshot)
         : [];
     const diffs =
@@ -157,7 +171,7 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
         : allDiffs;
 
     // Do not render no-op update rows.
-    if ((entry.changeType === 'update' || entry.changeType === 'restore') && diffs.length === 0) {
+    if (isUpdateLike && !isLegacyBaselineMissing && diffs.length === 0) {
       return null;
     }
 
@@ -199,6 +213,7 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
     return {
       entry,
       isCardType,
+      isLegacyBaselineMissing,
       diffs,
       cardDiffs,
       summary,
@@ -238,7 +253,7 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
         </div> */}
 
         {filteredEntries.length === 0 ? (
-          <div className="plan-history-empty-state">No history entries match the selected filters.</div>
+          <div className="plan-history-empty-state">There are no historic entries yet for this item.</div>
         ) : (
           <div className="plan-history-timeline-list">
             {filteredEntries.map((entry, idx) => {
@@ -263,7 +278,7 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                 const first = batchViews[0];
 
                 return (
-                  <div key={`${entry.id}-allocation-batch`} className="plan-history-timeline-item">
+                  <div key={`${getEntryRenderKey(entry, idx)}-allocation-batch`} className="plan-history-timeline-item">
                     <div className="plan-history-entry-meta">
                       <div className="plan-history-entry-meta-left">
                         <PillBadge variant={first.changeBadgeVariant}>{first.changeLabel}</PillBadge>
@@ -284,7 +299,7 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                       <Button
                         variant="utility"
                         className="plan-history-entry-delete"
-                        onClick={() => onDeleteEntry(first.entry.id)}
+                        onClick={() => handleDeleteEntry(first.entry)}
                       >
                         Delete
                       </Button>
@@ -301,16 +316,22 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                           </div>
 
                           {(allocationView.entry.changeType === 'update' || allocationView.entry.changeType === 'restore') ? (
-                            <div className="plan-history-changed-fields">
-                              {allocationView.diffs.map((diff) => (
-                                <span key={diff.key} className="plan-history-changed-field">
-                                  <span className="plan-history-changed-field-name">{formatFieldName(diff.key)}:</span>
-                                  <span className="plan-history-changed-old">{resolveValue(diff.key, diff.oldValue)}</span>
-                                  <span className="plan-history-changed-arrow">→</span>
-                                  <span className="plan-history-changed-new">{resolveValue(diff.key, diff.newValue)}</span>
-                                </span>
-                              ))}
-                            </div>
+                            allocationView.isLegacyBaselineMissing ? (
+                              <div className="plan-history-allocation-batch-summary">
+                                Initial tracked state for a legacy allocation item.
+                              </div>
+                            ) : (
+                              <div className="plan-history-changed-fields">
+                                {allocationView.diffs.map((diff) => (
+                                  <span key={diff.key} className="plan-history-changed-field">
+                                    <span className="plan-history-changed-field-name">{formatFieldName(diff.key)}:</span>
+                                    <span className="plan-history-changed-old">{resolveValue(diff.key, diff.oldValue)}</span>
+                                    <span className="plan-history-changed-arrow">→</span>
+                                    <span className="plan-history-changed-new">{resolveValue(diff.key, diff.newValue)}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )
                           ) : (
                             <div className="plan-history-allocation-batch-summary">
                               {toAllocationSummaryText(allocationView.entry.snapshot)}
@@ -324,7 +345,7 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
               }
 
               return (
-                <div key={entry.id} className="plan-history-timeline-item">
+                <div key={getEntryRenderKey(entry, idx)} className="plan-history-timeline-item">
                   <div className="plan-history-entry-meta">
                     <div className="plan-history-entry-meta-left">
                       <PillBadge variant={view.changeBadgeVariant}>{view.changeLabel}</PillBadge>
@@ -350,7 +371,7 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                     <Button
                       variant="utility"
                       className="plan-history-entry-delete"
-                      onClick={() => onDeleteEntry(entry.id)}
+                      onClick={() => handleDeleteEntry(entry)}
                     >
                       Delete
                     </Button>
@@ -374,6 +395,16 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                               <span className="plan-history-changed-new">{resolveValue(d.key, d.newValue)}</span>
                             </span>
                           ))}
+                        </div>
+                      )}
+                      {view.isLegacyBaselineMissing && (
+                        <div className="plan-history-entry-summary">
+                          <span className="plan-history-summary-label">Initial tracked state</span>
+                          <div className="plan-history-summary-fields">
+                            <div className="plan-history-summary-field">
+                              As this is the first tracked edit of this item, no earlier comparison exists yet to show.
+                            </div>
+                          </div>
                         </div>
                       )}
                     </>
@@ -412,12 +443,28 @@ const PlanHistoryOverlay: React.FC<PlanHistoryOverlayProps> = ({
                           {view.summary.length > 0 && (
                             <div className="plan-history-summary-fields">
                               {view.summary.map((line, i) => (
-                                <div key={`${entry.id}-summary-${i}`} className="plan-history-summary-field">
+                                <div key={`${getEntryRenderKey(entry, idx)}-summary-${i}`} className="plan-history-summary-field">
                                   {line}
                                 </div>
                               ))}
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {view.isLegacyBaselineMissing && (
+                        <div className="plan-history-entry-summary">
+                          <span className="plan-history-summary-label">Initial tracked state</span>
+                          <div className="plan-history-summary-fields">
+                            <div className="plan-history-summary-field">
+                              As this is the first tracked edit of this item, no earlier comparison exists yet to show.
+                            </div>
+                            {view.summary.map((line, i) => (
+                              <div key={`${getEntryRenderKey(entry, idx)}-legacy-summary-${i}`} className="plan-history-summary-field">
+                                {line}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </>

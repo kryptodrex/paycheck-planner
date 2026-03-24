@@ -8,7 +8,7 @@ import type { Benefit } from '../../../types/payroll';
 import type { BillFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { roundUpToCent } from '../../../utils/money';
+import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
@@ -46,6 +46,43 @@ type BenefitFieldErrors = {
   name?: string;
   amount?: string;
   sourceAccountId?: string;
+};
+
+const MAX_AMOUNT_DECIMALS = 3;
+
+const roundToScale = (value: number, decimals: number): number => {
+  const factor = 10 ** decimals;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+};
+
+const sanitizeDecimalInput = (rawValue: string, maxDecimals: number): string | null => {
+  const value = rawValue.replace(/,/g, '');
+
+  if (value === '') return '';
+  if (!/^\d*\.?\d*$/.test(value)) return null;
+
+  const [wholePart, decimalPart] = value.split('.');
+  if (decimalPart == null) return wholePart;
+
+  return `${wholePart}.${decimalPart.slice(0, maxDecimals)}`;
+};
+
+const formatAmountForInput = (amount: number, minDecimals: number, maxDecimals: number): string => {
+  if (!Number.isFinite(amount)) return '';
+
+  const rounded = roundToScale(amount, maxDecimals);
+  let formatted = rounded.toFixed(maxDecimals).replace(/0+$/, '').replace(/\.$/, '');
+
+  if (!formatted.includes('.') && minDecimals > 0) {
+    formatted = `${formatted}.${'0'.repeat(minDecimals)}`;
+  } else if (formatted.includes('.')) {
+    const fractionLength = formatted.split('.')[1].length;
+    if (fractionLength < minDecimals) {
+      formatted = `${formatted}${'0'.repeat(minDecimals - fractionLength)}`;
+    }
+  }
+
+  return formatted;
 };
 
 const BillsManager: React.FC<BillsManagerProps> = ({
@@ -126,7 +163,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
         const bill = budgetData.bills.find((item) => item.id === searchActionTargetId);
         if (bill) {
           setBillName(bill.name);
-          setBillAmount(bill.amount.toString());
+          setBillAmount(formatAmountForInput(bill.amount, 2, MAX_AMOUNT_DECIMALS));
           setBillFrequency(bill.frequency);
           setBillAccountId(bill.accountId);
           setBillNotes(bill.notes || '');
@@ -163,7 +200,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
         const benefit = budgetData.benefits.find((item) => item.id === searchActionTargetId);
         if (benefit) {
           setBenefitName(benefit.name);
-          setBenefitAmount(benefit.amount.toString());
+          setBenefitAmount(formatAmountForInput(benefit.amount, benefit.isPercentage ? 0 : 2, MAX_AMOUNT_DECIMALS));
           setBenefitIsPercentage(benefit.isPercentage || false);
           setBenefitSource(benefit.deductionSource || 'paycheck');
           setBenefitSourceAccountId(benefit.sourceAccountId || '');
@@ -243,7 +280,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
     if (benefit.isPercentage) {
       return roundUpToCent((grossPayPerPaycheck * benefit.amount) / 100);
     }
-    return roundUpToCent(benefit.amount);
+    return roundToCent(benefit.amount);
   };
 
   const getBenefitMonthly = (benefit: Benefit): number => {
@@ -313,7 +350,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
 
   const handleEditBill = (bill: Bill) => {
     setBillName(bill.name);
-    setBillAmount(bill.amount.toString());
+    setBillAmount(formatAmountForInput(bill.amount, 2, MAX_AMOUNT_DECIMALS));
     setBillFrequency(bill.frequency);
     setBillAccountId(bill.accountId);
     setBillNotes(bill.notes || '');
@@ -325,12 +362,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   const handleSaveBill = () => {
     const trimmedBillName = billName.trim();
     const parsedBillAmount = parseFloat(billAmount);
+    const normalizedBillAmount = roundToScale(parsedBillAmount, MAX_AMOUNT_DECIMALS);
     const errors: BillFieldErrors = {};
 
     if (!trimmedBillName) {
       errors.name = 'Bill name is required.';
     }
-    if (!Number.isFinite(parsedBillAmount) || parsedBillAmount <= 0) {
+    if (!Number.isFinite(parsedBillAmount) || normalizedBillAmount <= 0) {
       errors.amount = 'Please enter a valid amount greater than zero.';
     }
     if (!billAccountId) {
@@ -344,7 +382,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
 
     const billData = {
       name: trimmedBillName,
-      amount: parsedBillAmount,
+      amount: normalizedBillAmount,
       frequency: billFrequency,
       accountId: billAccountId,
       enabled: editingBill ? editingBill.enabled !== false : true,
@@ -389,7 +427,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
 
   const handleEditBenefit = (benefit: Benefit) => {
     setBenefitName(benefit.name);
-    setBenefitAmount(benefit.amount.toString());
+    setBenefitAmount(formatAmountForInput(benefit.amount, benefit.isPercentage ? 0 : 2, MAX_AMOUNT_DECIMALS));
     setBenefitIsPercentage(benefit.isPercentage || false);
     setBenefitSource(benefit.deductionSource || 'paycheck');
     setBenefitSourceAccountId(benefit.sourceAccountId || '');
@@ -402,13 +440,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   const handleSaveBenefit = () => {
     const name = benefitName.trim();
     const parsedAmount = parseFloat(benefitAmount);
+    const normalizedAmount = roundToScale(parsedAmount, MAX_AMOUNT_DECIMALS);
     const isAccountSource = benefitSource === 'account';
     const errors: BenefitFieldErrors = {};
 
     if (!name) {
       errors.name = 'Deduction name is required.';
     }
-    if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
+    if (!Number.isFinite(parsedAmount) || normalizedAmount < 0) {
       errors.amount = 'Please enter a valid deduction amount.';
     }
     if (isAccountSource && !benefitSourceAccountId) {
@@ -422,7 +461,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
 
     const payload = {
       name,
-      amount: parsedAmount,
+      amount: normalizedAmount,
       enabled: editingBenefit ? editingBenefit.enabled !== false : true,
       discretionary: benefitIsDiscretionary,
       isTaxable: isAccountSource ? true : benefitIsTaxable,
@@ -469,6 +508,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
       <PageHeader
         title="Bills & Expenses"
         subtitle="Manage recurring bills, expenses, and paycheck deductions"
+        icon={<ClipboardList className="ui-icon" aria-hidden="true" />}
         actions={
           <div className="bills-header-buttons">
             <Button variant="secondary" onClick={handleAddBenefit}>
@@ -687,15 +727,17 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           <FormGroup label="Amount" required error={billFieldErrors.amount}>
             <InputWithPrefix
               prefix={getCurrencySymbol(currency)}
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={billAmount}
               onChange={(e) => {
-                setBillAmount(e.target.value);
+                const nextValue = sanitizeDecimalInput(e.target.value, MAX_AMOUNT_DECIMALS);
+                if (nextValue === null) return;
+                setBillAmount(nextValue);
                 billErrors.clearFieldError('amount');
               }}
               placeholder="0.00"
-              step="0.01"
-              min="0"
+              pattern="^\\d*\\.?\\d{0,3}$"
               className={billFieldErrors.amount ? 'field-error' : ''}
               required
             />
@@ -809,16 +851,18 @@ const BillsManager: React.FC<BillsManagerProps> = ({
             <InputWithPrefix
               prefix={!benefitIsPercentage ? getCurrencySymbol(currency) : ''}
               suffix={benefitIsPercentage ? '%' : ''}
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={benefitAmount}
               className={benefitFieldErrors.amount ? 'field-error' : ''}
               onChange={(e) => {
-                setBenefitAmount(e.target.value);
+                const nextValue = sanitizeDecimalInput(e.target.value, MAX_AMOUNT_DECIMALS);
+                if (nextValue === null) return;
+                setBenefitAmount(nextValue);
                 benefitErrors.clearFieldError('amount');
               }}
               placeholder={benefitIsPercentage ? '0' : '0.00'}
-              step={benefitIsPercentage ? '0.1' : '0.01'}
-              min="0"
+              pattern="^\\d*\\.?\\d{0,3}$"
               required
             />
           </FormGroup>

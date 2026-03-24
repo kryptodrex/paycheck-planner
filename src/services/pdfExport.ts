@@ -197,15 +197,15 @@ export async function exportToPDF(
     yPosition = getNextYPosition(doc, yPosition + 15);
   }
 
-  // Benefits Section
+  // Deductions Section
   if (includeBenefits && budgetData.benefits.length > 0) {
     checkPageBreak(60);
     doc.setFontSize(16);
     doc.setTextColor(40, 40, 40);
-    doc.text('Benefits', 20, yPosition);
+    doc.text('Deductions', 20, yPosition);
     yPosition += 10;
 
-    const benefitsData = budgetData.benefits.map(benefit => {
+    const deductionsData = budgetData.benefits.map(benefit => {
       const amount = benefit.isPercentage
         ? `${benefit.amount}% (${formatWithSymbol((paycheckAmount * benefit.amount) / 100, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
         : formatWithSymbol(benefit.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -216,8 +216,8 @@ export async function exportToPDF(
 
     autoTable(doc, {
       startY: yPosition,
-      head: [['Benefit', 'Amount', 'Tax Type', 'Source']],
-      body: benefitsData,
+      head: [['Deduction', 'Amount', 'Tax Type', 'Source']],
+      body: deductionsData,
       theme: 'striped',
       headStyles: { fillColor: [70, 130, 180] },
       margin: { left: 20, right: 20 },

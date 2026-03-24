@@ -18,6 +18,7 @@ import {
 } from '../../../utils/taxLines';
 import '../tabViews.shared.css';
 import './TaxBreakdown.css';
+import { Scale } from 'lucide-react';
 
 interface TaxBreakdownProps {
     searchOpenSettingsRequestKey?: number;
@@ -190,6 +191,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
             <PageHeader
                 title="Tax Breakdown"
                 subtitle="View and manage your tax withholding information"
+                icon={<Scale className="ui-icon" aria-hidden="true" />}
                 actions={
                     <>
                         {onViewHistory && (

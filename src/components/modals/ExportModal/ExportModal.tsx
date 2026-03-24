@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useBudget } from '../../../contexts/BudgetContext';
-import { exportToPDF, type PDFExportOptions } from '../../../services/pdfExport';
+import type { PDFExportOptions } from '../../../services/pdfExport';
 import { Modal, Button, FormGroup } from '../../_shared';
 import './ExportModal.css';
 
@@ -54,6 +54,8 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
         includeRetirement,
         includeTaxes,
       };
+
+      const { exportToPDF } = await import('../../../services/pdfExport');
 
       // Generate PDF
       const pdfData = await exportToPDF(budgetData, options);
@@ -141,7 +143,7 @@ const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
                 checked={includeBenefits}
                 onChange={(e) => setIncludeBenefits(e.target.checked)}
               />
-              <span>Benefits</span>
+              <span>Deductions</span>
             </label>
             <label className="export-checkbox">
               <input
