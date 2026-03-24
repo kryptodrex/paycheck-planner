@@ -1,5 +1,5 @@
 // Utility functions for managing dashboard tabs
-import { Banknote, ChartPie, ClipboardList, Landmark, PiggyBank, Scale } from 'lucide-react';
+import { Wallet, LayoutGrid, ClipboardList, Landmark, PiggyBank, Scale } from 'lucide-react';
 import type { TabConfig } from '../types/tabs';
 
 export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
@@ -22,7 +22,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'metrics',
       label: 'Key Metrics',
-      icon: ChartPie,
+      icon: LayoutGrid,
       visible: true,
       order: 0,
       pinned: false,
@@ -30,7 +30,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
     {
       id: 'breakdown',
       label: 'Pay Breakdown',
-      icon: Banknote,
+      icon: Wallet,
       visible: true,
       order: 1,
       pinned: false,
