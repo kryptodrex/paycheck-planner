@@ -110,6 +110,34 @@ const formatPaymentBreakdown = (value: unknown): string => {
   return lines.join(' | ');
 };
 
+const formatTaxLines = (value: unknown): string => {
+  if (!Array.isArray(value)) return formatDiffValue(value);
+  if (value.length === 0) return '(empty)';
+
+  const lines = value
+    .filter((line) => line && typeof line === 'object')
+    .map((line) => {
+      const item = line as Record<string, unknown>;
+      const label = typeof item.label === 'string' && item.label.length > 0 ? item.label : 'Tax line';
+      const calculationType = item.calculationType === 'fixed' ? 'fixed' : 'percentage';
+
+      if (calculationType === 'fixed') {
+        const amount = typeof item.amount === 'number'
+          ? item.amount.toLocaleString('en-US', { maximumFractionDigits: 2 })
+          : formatDiffValue(item.amount);
+        return `${label}: ${amount} fixed`;
+      }
+
+      const rate = typeof item.rate === 'number'
+        ? item.rate.toLocaleString('en-US', { maximumFractionDigits: 2 })
+        : formatDiffValue(item.rate);
+      return `${label}: ${rate}%`;
+    });
+
+  if (lines.length === 0) return '[Array]';
+  return lines.join(' | ');
+};
+
 const toPaymentLineKey = (line: Record<string, unknown>): string => {
   if (typeof line.id === 'string' && line.id.length > 0) return line.id;
   const label = typeof line.label === 'string' ? line.label : 'line';
@@ -197,6 +225,9 @@ export const formatDiffValueForField = (key: string, value: unknown): string => 
   if (key === 'paymentBreakdown') {
     return formatPaymentBreakdown(value);
   }
+  if (key === 'taxLines') {
+    return formatTaxLines(value);
+  }
   return formatDiffValue(value);
 };
 
@@ -216,6 +247,7 @@ const FIELD_DISPLAY_NAMES: Record<string, string> = {
   interestRate: 'Interest Rate',
   paymentFrequency: 'Payment Frequency',
   deductionSource: 'Deduction Source',
+  taxLines: 'Tax Lines',
 };
 
 /**
