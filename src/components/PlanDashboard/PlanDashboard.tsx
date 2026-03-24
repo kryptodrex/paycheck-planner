@@ -114,6 +114,19 @@ const isEditableTarget = (target: EventTarget | null): boolean => {
   );
 };
 
+const areAuditEntriesEquivalent = (a: AuditEntry, b: AuditEntry): boolean => {
+  if (a === b) return true;
+  return (
+    a.id === b.id &&
+    a.timestamp === b.timestamp &&
+    a.entityType === b.entityType &&
+    a.entityId === b.entityId &&
+    a.changeType === b.changeType &&
+    a.sourceAction === b.sourceAction &&
+    JSON.stringify(a.snapshot) === JSON.stringify(b.snapshot)
+  );
+};
+
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, onUndoRedoSuccess }) => {
   const {
     budgetData,
@@ -1204,7 +1217,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   }, []);
 
   const handleDeleteHistoryEntry = useCallback(
-    (entryId: string) => {
+    (entryToDelete: AuditEntry, originalIndex: number) => {
       if (!budgetData) return;
 
       openConfirmDialog({
@@ -1213,7 +1226,31 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         confirmLabel: 'Delete Entry',
         confirmVariant: 'danger',
         onConfirm: () => {
-          const nextAudit = (budgetData.metadata?.auditHistory || []).filter((entry) => entry.id !== entryId);
+          const currentAudit = budgetData.metadata?.auditHistory || [];
+
+          let deleteIndex = -1;
+
+          if (
+            originalIndex >= 0 &&
+            originalIndex < currentAudit.length &&
+            areAuditEntriesEquivalent(currentAudit[originalIndex], entryToDelete)
+          ) {
+            deleteIndex = originalIndex;
+          }
+
+          if (deleteIndex === -1) {
+            deleteIndex = currentAudit.findIndex((entry) => areAuditEntriesEquivalent(entry, entryToDelete));
+          }
+
+          if (deleteIndex === -1 && typeof entryToDelete.id === 'string') {
+            deleteIndex = currentAudit.findIndex((entry) => entry.id === entryToDelete.id);
+          }
+
+          if (deleteIndex === -1) {
+            return;
+          }
+
+          const nextAudit = currentAudit.filter((_, idx) => idx !== deleteIndex);
           updateBudgetData(
             {
               metadata: {
