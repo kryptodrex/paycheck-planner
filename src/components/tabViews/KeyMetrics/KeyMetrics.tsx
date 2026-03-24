@@ -3,10 +3,10 @@ import { BanknoteArrowDown, ClipboardList, HandCoins, PieChart, PiggyBank, Scale
 import { useBudget } from '../../../contexts/BudgetContext';
 import { calculateAnnualizedPayBreakdown, calculateAnnualizedPaySummary } from '../../../services/budgetCalculations';
 import { formatWithSymbol } from '../../../utils/currency';
-import { roundUpToCent } from '../../../utils/money';
+import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { getPaychecksPerYear } from '../../../utils/payPeriod';
 import { convertBillToYearly } from '../../../utils/billFrequency';
-import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
+import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { buildKeyMetricsSegments } from '../../../utils/keyMetricsSegments';
 import type { KeyMetricsBreakdownView } from '../../../types/settings';
 import { PageHeader, ViewModeSelector } from '../../_shared';
@@ -35,6 +35,88 @@ interface MetricCardProps {
 }
 
 type BreakdownView = 'bars' | 'stacked' | 'pie';
+
+const AUTO_ALLOCATION_PREFIXES = ['__bills_', '__benefits_', '__retirement_', '__loans_', '__savings_'];
+
+const isAutoAllocationCategoryId = (categoryId: string): boolean => {
+  return AUTO_ALLOCATION_PREFIXES.some((prefix) => categoryId.startsWith(prefix));
+};
+
+const calculateBillPerPaycheck = (amount: number, frequency: string, paychecksPerYear: number): number => {
+  const billsPerYear = getBillFrequencyOccurrencesPerYear(frequency);
+  return roundUpToCent((amount * billsPerYear) / paychecksPerYear);
+};
+
+const calculateRemainingForSpendingPerPaycheck = (
+  budgetData: NonNullable<ReturnType<typeof useBudget>['budgetData']>,
+  grossPayPerPaycheck: number,
+  netPayPerPaycheck: number,
+  paychecksPerYear: number,
+): number => {
+  const totalAllocated = budgetData.accounts.reduce((accountSum, account) => {
+    const userCategories = (account.allocationCategories || []).filter(
+      (category) => !isAutoAllocationCategoryId(category.id),
+    );
+    const userTotal = userCategories.reduce((sum, category) => sum + Math.max(0, category.amount || 0), 0);
+
+    const accountBills = budgetData.bills.filter(
+      (bill) => bill.enabled !== false && bill.accountId === account.id,
+    );
+    const accountBenefits = budgetData.benefits.filter(
+      (benefit) => benefit.enabled !== false && benefit.deductionSource === 'account' && benefit.sourceAccountId === account.id,
+    );
+    const accountRetirement = budgetData.retirement.filter(
+      (election) => election.enabled !== false && election.deductionSource === 'account' && election.sourceAccountId === account.id,
+    );
+    const accountLoans = (budgetData.loans || []).filter(
+      (loan) => loan.enabled !== false && loan.accountId === account.id,
+    );
+    const accountSavings = (budgetData.savingsContributions || []).filter(
+      (item) => item.enabled !== false && item.accountId === account.id,
+    );
+
+    const billsPerPaycheck = accountBills.reduce((sum, bill) => {
+      return sum + calculateBillPerPaycheck(bill.amount, bill.frequency, paychecksPerYear);
+    }, 0);
+
+    const accountDeductionsPerPaycheck = accountBenefits.reduce((sum, benefit) => {
+      const amountPerPaycheck = benefit.isPercentage
+        ? roundUpToCent((grossPayPerPaycheck * benefit.amount) / 100)
+        : roundUpToCent(benefit.amount);
+      return sum + amountPerPaycheck;
+    }, 0);
+
+    const accountRetirementPerPaycheck = accountRetirement.reduce((sum, election) => {
+      const employeePerPaycheck = election.employeeContributionIsPercentage
+        ? Math.round((((grossPayPerPaycheck * election.employeeContribution) / 100) + Number.EPSILON) * 100) / 100
+        : Math.round((election.employeeContribution + Number.EPSILON) * 100) / 100;
+      return sum + employeePerPaycheck;
+    }, 0);
+
+    const accountLoansPerPaycheck = accountLoans.reduce((sum, loan) => {
+      return sum + (loan.monthlyPayment * 12) / paychecksPerYear;
+    }, 0);
+
+    const accountSavingsPerPaycheck = accountSavings.reduce((sum, item) => {
+      const occurrencesPerYear = getSavingsFrequencyOccurrencesPerYear(item.frequency);
+      const perPaycheck = occurrencesPerYear === paychecksPerYear
+        ? roundUpToCent(item.amount)
+        : roundUpToCent((item.amount * occurrencesPerYear) / paychecksPerYear);
+      return sum + perPaycheck;
+    }, 0);
+
+    const autoBillsAndDeductions = accountBills.length > 0 || accountBenefits.length > 0
+      ? roundUpToCent(billsPerPaycheck + accountDeductionsPerPaycheck)
+      : 0;
+    const autoRetirement = accountRetirement.length > 0 ? roundUpToCent(accountRetirementPerPaycheck) : 0;
+    const autoLoans = accountLoans.length > 0 ? roundUpToCent(accountLoansPerPaycheck) : 0;
+    const autoSavings = accountSavings.length > 0 ? roundUpToCent(accountSavingsPerPaycheck) : 0;
+
+    return accountSum + userTotal + autoBillsAndDeductions + autoRetirement + autoLoans + autoSavings;
+  }, 0);
+
+  return netPayPerPaycheck - totalAllocated;
+};
 
 const MetricCard: React.FC<MetricCardProps> = ({
   id,
@@ -124,11 +206,36 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
       return sum + convertBillToYearly(bill.amount, bill.frequency);
     }, 0));
 
-  // Calculate monthly averages
-  const monthlyBills = roundUpToCent(annualBills / 12);
+  const annualRecurringDeductions = roundUpToCent((budgetData.benefits || []).reduce((sum, benefit) => {
+    if (benefit.enabled === false) return sum;
 
-  // Calculate remaining/free money (before savings; used for bar sub-component math)
-  const annualRemaining = roundUpToCent(annualNet - annualBills);
+    const perPaycheck = benefit.isPercentage
+      ? roundToCent((breakdown.grossPay * benefit.amount) / 100)
+      : roundToCent(benefit.amount);
+
+    return sum + (perPaycheck * paychecksPerYear);
+  }, 0));
+
+  const annualLoanPayments = roundUpToCent((budgetData.loans || []).reduce((sum, loan) => {
+    if (loan.enabled === false) return sum;
+    return sum + (loan.monthlyPayment * 12);
+  }, 0));
+
+  const annualRecurringExpenses = roundUpToCent(annualBills + annualRecurringDeductions + annualLoanPayments);
+  const monthlyRecurringExpenses = roundUpToCent(annualRecurringExpenses / 12);
+  const recurringExpenseCount = budgetData.bills.length + budgetData.benefits.length + (budgetData.loans || []).length;
+
+  // Keep historical yearly segment math for the summary chart.
+  const annualRemainingBeforeSavings = roundUpToCent(annualNet - annualBills);
+
+  // Align this metric with Pay Breakdown's "All that remains for spending" logic.
+  const remainingPerPaycheck = calculateRemainingForSpendingPerPaycheck(
+    budgetData,
+    breakdown.grossPay,
+    breakdown.netPay,
+    paychecksPerYear,
+  );
+  const annualRemainingForSpending = roundUpToCent(remainingPerPaycheck * paychecksPerYear);
 
   // Calculate savings rate from savings accounts, savings contributions, and retirement elections.
   const savingsAccounts = budgetData.accounts.filter(a => a.type === 'savings');
@@ -183,12 +290,12 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
 
   // Break net into its real sub-components so every dollar of gross is accounted for in the bar.
   const annualBillsCoveredByNet = roundUpToCent(Math.min(Math.max(annualBills, 0), Math.max(annualNet, 0)));
-  const annualRemainingPositive = roundUpToCent(Math.max(annualRemaining, 0));
-  const annualShortfall = roundUpToCent(Math.max(-annualRemaining, 0));
+  const annualRemainingPositive = roundUpToCent(Math.max(annualRemainingBeforeSavings, 0));
+  const annualShortfall = roundUpToCent(Math.max(-annualRemainingBeforeSavings, 0));
   const annualSavingsInBar = roundUpToCent(Math.min(annualSavings, annualRemainingPositive));
   const annualFlexibleRemaining = roundUpToCent(Math.max(annualRemainingPositive - annualSavingsInBar, 0));
-  const remainingContextLabel = annualShortfall > 0 ? 'Shortfall' : 'Flexible';
-  const remainingContextTone = annualShortfall > 0 ? 'negative' : 'accent';
+  const remainingContextLabel = annualRemainingForSpending < 0 ? 'Shortfall' : 'Flexible';
+  const remainingContextTone = annualRemainingForSpending < 0 ? 'negative' : 'accent';
 
   // Ensure tiny non-zero amounts are still visibly represented in UI bars.
   const MIN_VISIBLE_STACKED_BAR_PX = 4;
@@ -266,7 +373,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
     <div className="tab-view key-metrics">
       <PageHeader
         title="Key Metrics"
-        subtitle="Your financial overview at a glance"
+        subtitle="Your financial overview for the year at a glance"
         icon={<PieChart className="ui-icon" aria-hidden="true" />}
       />
       <div className="key-metrics-body">
@@ -345,12 +452,12 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
                 <span className="value">{formatWithSymbol(breakdown.netPay, currency, { maximumFractionDigits: 2 })}</span>
               </div>
           </MetricCard>
-          {/* Bills Card */}
+          {/* Recurring Expenses Card */}
           <MetricCard
             id="key-metrics-bills-card"
             className="bills-card"
             icon={<ClipboardList className="ui-icon ui-icon-lg" />}
-            title="Total Bills"
+            title="Recurring Expenses"
             contextLabel="Committed"
             contextTone="warning"
             ariaLabel="Open bills tab"
@@ -358,15 +465,15 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           >
               <div className="metric-primary">
                 <span className="label">Yearly</span>
-                <span className="value">{formatWithSymbol(annualBills, currency, { maximumFractionDigits: 0 })}</span>
+                <span className="value">{formatWithSymbol(annualRecurringExpenses, currency, { maximumFractionDigits: 0 })}</span>
               </div>
               <div className="metric-secondary">
                 <span className="label">Monthly</span>
-                <span className="value">{formatWithSymbol(monthlyBills, currency, { maximumFractionDigits: 0 })}</span>
+                <span className="value">{formatWithSymbol(monthlyRecurringExpenses, currency, { maximumFractionDigits: 0 })}</span>
               </div>
               <div className="metric-secondary">
                 <span className="label">Count</span>
-                <span className="value">{budgetData.bills.length} bills</span>
+                <span className="value">{recurringExpenseCount} items</span>
               </div>
           </MetricCard>
 
@@ -408,15 +515,15 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
           >
               <div className="metric-primary">
                 <span className="label">Yearly</span>
-                <span className="value">{formatWithSymbol(annualFlexibleRemaining, currency, { maximumFractionDigits: 0 })}</span>
+                <span className="value">{formatWithSymbol(annualRemainingForSpending, currency, { maximumFractionDigits: 0 })}</span>
               </div>
               <div className="metric-secondary">
                 <span className="label">Monthly</span>
-                <span className="value">{formatWithSymbol(annualFlexibleRemaining / 12, currency, { maximumFractionDigits: 0 })}</span>
+                <span className="value">{formatWithSymbol(annualRemainingForSpending / 12, currency, { maximumFractionDigits: 0 })}</span>
               </div>
               <div className="metric-secondary">
                 <span className="label">% of Net</span>
-                <span className="value">{(annualNet > 0 ? (annualFlexibleRemaining / annualNet) * 100 : 0).toFixed(1)}%</span>
+                <span className="value">{(annualNet > 0 ? (annualRemainingForSpending / annualNet) * 100 : 0).toFixed(1)}%</span>
               </div>
           </MetricCard>
         </div>

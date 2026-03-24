@@ -22,7 +22,16 @@ const {
       annualSalary: 60000,
       minLeftover: 0,
     },
-    accounts: [],
+    accounts: [
+      {
+        id: 'acc-1',
+        name: 'Checking',
+        type: 'checking',
+        color: '#4f46e5',
+        icon: 'wallet',
+        allocationCategories: [] as Array<{ id: string; name: string; amount: number }>,
+      },
+    ],
     bills: [
       {
         id: 'bill-1',
@@ -32,9 +41,28 @@ const {
         enabled: true,
       },
     ],
-    benefits: [],
+    benefits: [] as Array<{
+      id: string;
+      name: string;
+      amount: number;
+      isTaxable: boolean;
+      isPercentage?: boolean;
+      enabled?: boolean;
+      deductionSource?: 'paycheck' | 'account';
+    }>,
     retirement: [],
-    loans: [],
+    loans: [] as Array<{
+      id: string;
+      name: string;
+      type: 'mortgage' | 'auto' | 'student' | 'personal' | 'credit-card' | 'other';
+      principal: number;
+      currentBalance: number;
+      interestRate: number;
+      monthlyPayment: number;
+      accountId: string;
+      startDate: string;
+      enabled?: boolean;
+    }>,
     savingsContributions: [],
     preTaxDeductions: [],
     taxSettings: {
@@ -119,6 +147,9 @@ describe('KeyMetrics semantic badges', () => {
     calculatePaycheckBreakdownMock.mockClear();
     calculateRetirementContributionsMock.mockClear();
     updateBudgetSettingsMock.mockClear();
+    mockBudgetData.accounts[0].allocationCategories = [];
+    mockBudgetData.benefits = [];
+    mockBudgetData.loans = [];
   });
 
   it('renders visible semantic badges for the metric cards', () => {
@@ -132,13 +163,61 @@ describe('KeyMetrics semantic badges', () => {
     expect(screen.getByText('Flexible')).toBeTruthy();
   });
 
+  it('shows recurring expenses card totals including bills, deductions, and loans', () => {
+    mockBudgetData.benefits = [
+      {
+        id: 'benefit-1',
+        name: 'Health Deduction',
+        amount: 200,
+        isTaxable: true,
+        isPercentage: false,
+        enabled: true,
+        deductionSource: 'paycheck',
+      },
+    ];
+    mockBudgetData.loans = [
+      {
+        id: 'loan-1',
+        name: 'Auto Loan',
+        type: 'auto',
+        principal: 20000,
+        currentBalance: 15000,
+        interestRate: 4,
+        monthlyPayment: 300,
+        accountId: 'acc-1',
+        startDate: '2026-01-01',
+        enabled: true,
+      },
+    ];
+
+    render(<KeyMetrics />);
+
+    expect(screen.getByText('Recurring Expenses')).toBeTruthy();
+    // 12k bills + (200*12) deductions + (300*12) loans = 18k yearly.
+    expect(screen.getByText('$18,000')).toBeTruthy();
+    expect(screen.getByText('3 items')).toBeTruthy();
+  });
+
   it('switches the remaining card badge to shortfall when bills exceed net pay', () => {
-    annualizedSummary.annualNet = 6000;
-    annualizedSummary.monthlyNet = 500;
+    mockBudgetData.accounts[0].allocationCategories = [
+      { id: 'cat-1', name: 'Allocated', amount: 3600 },
+    ];
 
     render(<KeyMetrics />);
 
     expect(screen.getByText('Shortfall')).toBeTruthy();
     expect(screen.queryByText('Flexible')).toBeNull();
+  });
+
+  it('uses allocation leftover math for remaining yearly amount', () => {
+    // Net is 3,500 per paycheck, with 1,000 allocated => 2,500 remaining per paycheck.
+    // Monthly pay frequency means yearly remaining should be 30,000.
+    mockBudgetData.accounts[0].allocationCategories = [
+      { id: 'cat-2', name: 'Planned spending', amount: 1000 },
+    ];
+
+    render(<KeyMetrics />);
+
+    expect(screen.getByText('$30,000')).toBeTruthy();
   });
 });
