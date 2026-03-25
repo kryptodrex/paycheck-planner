@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Banknote, Building2, Landmark, Plus, X } from 'lucide-react';
+import { Building2, Landmark, Plus, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
 import type { AuditHistoryTarget } from '../../../types/audit';
