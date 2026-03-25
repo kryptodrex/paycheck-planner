@@ -83,6 +83,7 @@
   border-radius: 0.5rem;
   overflow: visible;
   transition: border-color 0.15s;
+  padding: 0.25rem;
 }
 
 .cvms--open .cvms__chip {
