@@ -1,11 +1,9 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import type { SelectableViewMode, ViewMode } from '../../../../types/viewMode';
 import { SELECTABLE_VIEW_MODES } from '../../../../utils/viewModePreferences';
 import { getDisplayModeLabel } from '../../../../utils/payPeriod';
 import './CompactViewModeSelector.css';
-
-export type CompactViewModeVariant = 'spinner' | 'floating-row' | 'grid-popover' | 'fan';
 
 export interface CompactSelectorOption<T extends string = string> {
     value: T;
@@ -17,25 +15,20 @@ export interface CompactViewModeSelectorProps<T extends string = SelectableViewM
     mode: T | ViewMode;
     onChange: (mode: T) => void;
     options?: CompactSelectorOption<T>[];
-    /** Optional highlighted option shown with a small badge in the selector/panel. */
+    /** Optional highlighted option shown with a subtle indicator in the selector/panel. */
     highlightedValue?: T;
     highlightedLabel?: string;
     disabled?: boolean;
     hidden?: boolean;
-    /**
-     * Controls the visual/interaction style:
-     * - `spinner`       — Active label with ← → arrows, no expand.
-     * - `floating-row`  — Compact chip; hovers to reveal a floating row of all 6 options.
-     * - `grid-popover`  — Compact chip; hovers to reveal a floating 2×3 grid card.
-     * - `fan`           — Minimal single label; hovers to reveal a floating strip with a staggered entrance.
-     */
-    variant?: CompactViewModeVariant;
 }
 
 const defaultOptions: CompactSelectorOption<SelectableViewMode>[] = SELECTABLE_VIEW_MODES.map((mode) => ({
     value: mode,
     label: getDisplayModeLabel(mode),
 }));
+
+type CompactPanelLayout = 'row' | 'column';
+type CompactPanelAlignment = 'center' | 'left' | 'right';
 
 const CompactViewModeSelector = <T extends string = SelectableViewMode,>({
     mode,
@@ -45,10 +38,12 @@ const CompactViewModeSelector = <T extends string = SelectableViewMode,>({
     highlightedLabel = 'Highlighted',
     disabled = false,
     hidden = false,
-    variant = 'floating-row',
 }: CompactViewModeSelectorProps<T>) => {
     const [expanded, setExpanded] = useState(false);
+    const [panelLayout, setPanelLayout] = useState<CompactPanelLayout>('row');
+    const [panelAlignment, setPanelAlignment] = useState<CompactPanelAlignment>('center');
     const containerRef = useRef<HTMLDivElement>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
     const closeTimeoutRef = useRef<number | null>(null);
 
     const clearCloseTimeout = useCallback(() => {
@@ -59,10 +54,16 @@ const CompactViewModeSelector = <T extends string = SelectableViewMode,>({
     }, []);
 
     const openPanel = useCallback(() => {
-        if (disabled || hidden || variant === 'spinner') return;
+        if (disabled || hidden) return;
         clearCloseTimeout();
-        setExpanded(true);
-    }, [clearCloseTimeout, disabled, hidden, variant]);
+        if (!expanded) {
+            // Measure placement from a consistent baseline only when transitioning
+            // from closed -> open, so hover/focus within the open panel does not snap.
+            setPanelLayout('row');
+            setPanelAlignment('center');
+            setExpanded(true);
+        }
+    }, [clearCloseTimeout, disabled, hidden, expanded]);
 
     const scheduleClosePanel = useCallback((delay = 140) => {
         clearCloseTimeout();
@@ -82,6 +83,10 @@ const CompactViewModeSelector = <T extends string = SelectableViewMode,>({
     const currentOption = resolvedOptions[currentIndex] ?? resolvedOptions[0];
     const currentLabel = currentOption?.label ?? '';
     const isHighlighted = activeMode === highlightedValue;
+
+    const triggerAriaLabel = isHighlighted && highlightedLabel
+        ? `View mode: ${currentLabel}, ${highlightedLabel}`
+        : `View mode: ${currentLabel}`;
 
     const cycleMode = useCallback(
         (direction: 1 | -1) => {
@@ -123,6 +128,68 @@ const CompactViewModeSelector = <T extends string = SelectableViewMode,>({
         };
     }, [clearCloseTimeout]);
 
+    useLayoutEffect(() => {
+        if (!expanded) {
+            return;
+        }
+
+        const updatePanelPlacement = () => {
+            const container = containerRef.current;
+            const panel = panelRef.current;
+            if (!container || !panel) {
+                return;
+            }
+
+            const viewportPadding = 8;
+            const viewportWidth = window.innerWidth;
+            const containerRect = container.getBoundingClientRect();
+            const rowWidth = Math.max(panel.scrollWidth, panel.getBoundingClientRect().width);
+
+            const centeredLeft = containerRect.left + (containerRect.width / 2) - (rowWidth / 2);
+            const centeredRight = centeredLeft + rowWidth;
+            if (centeredLeft >= viewportPadding && centeredRight <= viewportWidth - viewportPadding) {
+                setPanelLayout('row');
+                setPanelAlignment('center');
+                return;
+            }
+
+            const rightAnchoredLeft = containerRect.right - rowWidth;
+            if (rightAnchoredLeft >= viewportPadding) {
+                setPanelLayout('row');
+                setPanelAlignment('right');
+                return;
+            }
+
+            const leftAnchoredRight = containerRect.left + rowWidth;
+            if (leftAnchoredRight <= viewportWidth - viewportPadding) {
+                setPanelLayout('row');
+                setPanelAlignment('left');
+                return;
+            }
+
+            const columnWidth = Math.min(208, viewportWidth - (viewportPadding * 2));
+            const canAlignRightColumn = containerRect.right - columnWidth >= viewportPadding;
+            const canAlignLeftColumn = containerRect.left + columnWidth <= viewportWidth - viewportPadding;
+
+            let nextAlignment: CompactPanelAlignment = 'center';
+            if (canAlignRightColumn && (!canAlignLeftColumn || containerRect.right > viewportWidth / 2)) {
+                nextAlignment = 'right';
+            } else if (canAlignLeftColumn) {
+                nextAlignment = 'left';
+            }
+
+            setPanelLayout('column');
+            setPanelAlignment(nextAlignment);
+        };
+
+        updatePanelPlacement();
+        window.addEventListener('resize', updatePanelPlacement);
+
+        return () => {
+            window.removeEventListener('resize', updatePanelPlacement);
+        };
+    }, [expanded, resolvedOptions]);
+
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (disabled) return;
@@ -139,148 +206,115 @@ const CompactViewModeSelector = <T extends string = SelectableViewMode,>({
         [disabled, cycleMode],
     );
 
-    // ── Variant A: Spinner ────────────────────────────────────────────────────
-    if (variant === 'spinner') {
-        const prevIndex = (currentIndex - 1 + resolvedOptions.length) % resolvedOptions.length;
-        const nextIndex = (currentIndex + 1) % resolvedOptions.length;
-        return (
-            <div
-                ref={containerRef}
-                className="cvms cvms--spinner"
-                onKeyDown={handleKeyDown}
-                aria-label={`View mode: ${currentLabel}`}
-                style={{ display: hidden ? 'none' : undefined }}
-            >
-                <button
-                    className="cvms__arrow"
-                    onClick={() => cycleMode(-1)}
-                    disabled={disabled}
-                    aria-label={`Previous: ${resolvedOptions[prevIndex]?.label ?? ''}`}
-                    title={`Previous: ${resolvedOptions[prevIndex]?.label ?? ''}`}
-                >
-                    <ChevronLeft className="ui-icon ui-icon-sm" aria-hidden="true" />
-                </button>
-                <span className="cvms__spinner-label" role="status" aria-live="polite">
-                    {currentLabel}
-                    {isHighlighted && highlightedLabel && (
-                        <span className="cvms__badge">{highlightedLabel}</span>
-                    )}
-                </span>
-                <button
-                    className="cvms__arrow"
-                    onClick={() => cycleMode(1)}
-                    disabled={disabled}
-                    aria-label={`Next: ${resolvedOptions[nextIndex]?.label ?? ''}`}
-                    title={`Next: ${resolvedOptions[nextIndex]?.label ?? ''}`}
-                >
-                    <ChevronRight className="ui-icon ui-icon-sm" aria-hidden="true" />
-                </button>
-            </div>
-        );
-    }
-
-    // ── Variants B, C, D: Chip + Floating Panel ───────────────────────────────
-    const isFan = variant === 'fan';
-    const showArrows = variant === 'floating-row' || variant === 'grid-popover';
-    const panelLayout = variant === 'grid-popover' ? 'grid' : 'row';
-
     return (
         <div
             style={{ display: hidden ? 'none' : undefined }}
             ref={containerRef}
-            className={`cvms cvms--${variant}${expanded ? ' cvms--open' : ''}`}
+            className={`cvms${expanded ? ' cvms--open' : ''}`}
             onMouseEnter={openPanel}
             onMouseLeave={() => scheduleClosePanel()}
             onFocus={openPanel}
             onBlur={(e) => {
                 if (!containerRef.current?.contains(e.relatedTarget as Node)) {
-                    scheduleClosePanel(0);
+                    scheduleClosePanel(90);
                 }
             }}
             onKeyDown={handleKeyDown}
         >
             {/* ── Chip / trigger ── */}
             <div className="cvms__chip">
-                {showArrows && (
-                    <button
-                        className="cvms__arrow"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            cycleMode(-1);
-                        }}
-                        disabled={disabled}
-                        aria-label="Previous view mode"
-                        tabIndex={-1}
-                    >
-                        <ChevronLeft className="ui-icon ui-icon-sm" aria-hidden="true" />
-                    </button>
-                )}
+                <button
+                    className="cvms__arrow"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        cycleMode(-1);
+                    }}
+                    disabled={disabled}
+                    aria-label="Previous view mode"
+                    tabIndex={-1}
+                >
+                    <ChevronLeft className="ui-icon ui-icon-sm" aria-hidden="true" />
+                </button>
 
                 <button
                     className="cvms__trigger"
                     onClick={() => {
                         if (disabled) return;
                         clearCloseTimeout();
-                        setExpanded((v) => !v);
+                        setExpanded((v) => {
+                            const next = !v;
+                            if (next) {
+                                setPanelLayout('row');
+                                setPanelAlignment('center');
+                            }
+                            return next;
+                        });
                     }}
                     disabled={disabled}
                     aria-haspopup="listbox"
                     aria-expanded={expanded}
-                    aria-label={`View mode: ${currentLabel}`}
+                    aria-label={triggerAriaLabel}
                 >
-                    <span className="cvms__trigger-label">{currentLabel}</span>
-                    {isHighlighted && highlightedLabel && (
-                        <span className="cvms__badge cvms__badge--trigger">{highlightedLabel}</span>
-                    )}
-                    {!isFan && (
-                        <ChevronDown
-                            className={`ui-icon ui-icon-sm cvms__chevron${expanded ? ' cvms__chevron--open' : ''}`}
-                            aria-hidden="true"
-                        />
-                    )}
+                    <span className="cvms__trigger-content">
+                        <span className="cvms__trigger-label">{currentLabel}</span>
+                        {isHighlighted && highlightedLabel && (
+                            <span className="cvms__indicator-dot" title={highlightedLabel} />
+                        )}
+                    </span>
+                    <ChevronDown
+                        className={`ui-icon ui-icon-sm cvms__chevron${expanded ? ' cvms__chevron--open' : ''}`}
+                        aria-hidden="true"
+                    />
                 </button>
 
-                {showArrows && (
-                    <button
-                        className="cvms__arrow"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            cycleMode(1);
-                        }}
-                        disabled={disabled}
-                        aria-label="Next view mode"
-                        tabIndex={-1}
-                    >
-                        <ChevronRight className="ui-icon ui-icon-sm" aria-hidden="true" />
-                    </button>
-                )}
+                <button
+                    className="cvms__arrow"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        cycleMode(1);
+                    }}
+                    disabled={disabled}
+                    aria-label="Next view mode"
+                    tabIndex={-1}
+                >
+                    <ChevronRight className="ui-icon ui-icon-sm" aria-hidden="true" />
+                </button>
             </div>
 
             {/* ── Floating panel ── */}
             <div
-                className={`cvms__panel cvms__panel--${panelLayout}`}
+                ref={panelRef}
+                className={`cvms__panel cvms__panel--${panelLayout} cvms__panel--align-${panelAlignment}`}
                 role="listbox"
                 aria-label="Select view mode"
-                aria-hidden={!expanded}
                 onMouseEnter={clearCloseTimeout}
                 onMouseLeave={() => scheduleClosePanel()}
             >
-                {resolvedOptions.map((option) => (
-                    <button
-                        key={option.value}
-                        className={`cvms__option${option.value === activeMode ? ' cvms__option--active' : ''}`}
-                        onClick={() => handleSelect(option.value)}
-                        disabled={disabled}
-                        role="option"
-                        aria-selected={option.value === activeMode}
-                        tabIndex={expanded ? 0 : -1}
-                    >
-                        <span>{option.label}</span>
-                        {highlightedValue === option.value && highlightedLabel && (
-                            <span className="cvms__badge">{highlightedLabel}</span>
-                        )}
-                    </button>
-                ))}
+                {resolvedOptions.map((option) => {
+                    const optionHighlighted = highlightedValue === option.value && highlightedLabel;
+
+                    return (
+                        <button
+                            key={option.value}
+                            className={`cvms__option${option.value === activeMode ? ' cvms__option--active' : ''}${optionHighlighted ? ' cvms__option--highlighted' : ''}`}
+                            onClick={() => handleSelect(option.value)}
+                            disabled={disabled}
+                            role="option"
+                            aria-selected={option.value === activeMode}
+                            aria-label={optionHighlighted ? `${option.label}, ${highlightedLabel}` : option.label}
+                            tabIndex={expanded ? 0 : -1}
+                        >
+                            <span className="cvms__option-content">
+                                <span className="cvms__option-label">{option.label}</span>
+                                {optionHighlighted && (
+                                    <span className="cvms__indicator" aria-hidden="true">
+                                        <span className="cvms__indicator-dot" title={highlightedLabel} />
+                                    </span>
+                                )}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );
