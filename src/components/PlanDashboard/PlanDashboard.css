@@ -288,8 +288,9 @@
 
 .header-actions {
   display: flex;
-  gap: 2rem;
+  gap: 0.9rem;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   flex: 0 1 auto;
 }
@@ -412,10 +413,11 @@
   .header-actions {
     width: 100%;
     justify-content: stretch;
+    gap: 0.65rem;
   }
 
   .header-btn-group {
-    order: 1;
+    order: 2;
     width: 100%;
     justify-content: stretch;
   }

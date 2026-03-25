@@ -6,7 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
-import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText, Banknote, Settings, Edit } from 'lucide-react';
+import { Sheet, Copy, Eye, Lock, LockOpen, FolderOpen, MessageSquareText, Banknote, Settings, Edit } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { APP_VERSION } from '../../constants/appMeta';
 import { useBudget } from '../../contexts/BudgetContext';
@@ -553,19 +553,18 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     setShowSettings(true);
   }, [loading]);
 
-  // Handle save with success toast
-  const handleSave = useCallback(async () => {
-    if (!budgetData) return;
+  const performSave = useCallback(async (): Promise<boolean> => {
+    if (!budgetData) return false;
 
     if (missingActiveFile) {
       setStatusToast({ message: 'Locate moved file before saving this plan.', type: 'warning' });
-      return;
+      return false;
     }
 
     const canSaveToCurrentPath = await ensureValidSavePath();
     if (!canSaveToCurrentPath) {
       setStatusToast({ message: 'Plan file moved. Locate it or cancel relink before saving.', type: 'warning' });
-      return;
+      return false;
     }
 
     const success = await saveBudget(activeTab, {
@@ -577,10 +576,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         displayMode,
       },
     });
+
     if (success) {
       setStatusToast({ message: 'Saved successfully', type: 'success' });
+      return true;
     }
+
+    return false;
   }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, missingActiveFile, ensureValidSavePath]);
+
+  // Handle explicit save requests (toolbar/menu/keyboard)
+  const handleSave = useCallback(async () => {
+    await performSave();
+  }, [performSave]);
 
   const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
     const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
@@ -1692,28 +1700,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             <Button
               variant="secondary"
               size="small"
-              className="header-btn-secondary"
-              onClick={() => setShowCopyModal(true)}
-              title="Copy this plan to another year"
-            >
-              <Copy className="ui-icon" aria-hidden="true" />
-              Copy
-            </Button>
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={handleSave}
-              disabled={loading || !!missingActiveFile || activeRelinkLoading}
-              className="header-btn-secondary"
-            >
-              <Save className="ui-icon" aria-hidden="true" />
-              Save
-            </Button>
-            <Button
-              variant="secondary"
-              size="small"
               onClick={handleOpenSettings}
-              disabled={loading || !!missingActiveFile || activeRelinkLoading}
+              disabled={!!missingActiveFile || activeRelinkLoading}
               className="header-btn-secondary"
             >
               <Settings className="ui-icon" aria-hidden="true" />
