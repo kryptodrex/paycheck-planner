@@ -845,7 +845,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                           return IconComponent ? <IconComponent className="ui-icon ui-icon-sm" /> : iconName;
                         })()
                       }</span>
-                      Amount from {fundingItem.account.name}
+                      Amount to {fundingItem.account.name}
                     </span>
                     <div className="waterfall-account-row-right">
                       {!isEditing ? (
