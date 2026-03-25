@@ -255,7 +255,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
           </div>
         </FormGroup>
 
-        <div className="feedback-row">
+        {/* <div className="feedback-row">
           <label className="feedback-checkbox">
             <input
               type="checkbox"
@@ -264,7 +264,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
             />
             Include environment diagnostics (tab, plan metadata, browser info)
           </label>
-        </div>
+        </div> */}
 
         <FormGroup label="Screenshot (optional)">
           <input type="file" accept="image/*" onChange={handleScreenshotChange} />
