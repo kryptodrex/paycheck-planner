@@ -266,11 +266,11 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
           </label>
         </div> */}
 
-        <FormGroup label="Screenshot (optional)">
+        {/* <FormGroup label="Screenshot (optional)">
           <input type="file" accept="image/*" onChange={handleScreenshotChange} />
           {screenshot && <small className="helper-text">Attached: {screenshot.fileName}</small>}
           {screenshotError && <small className="error">{screenshotError}</small>}
-        </FormGroup>
+        </FormGroup> */}
 
         {fieldError && <p className="feedback-error">{fieldError}</p>}
       </div>
