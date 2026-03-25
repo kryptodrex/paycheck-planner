@@ -11,7 +11,8 @@
 
 ### Improvements
 
-- Moved Pay Settings button into plan header for easier access, renamed to Pay Details
+- Reworked the view mode selector to take up less space, and no longer have an unnecessary favorites modal associated with it
+- Moved Pay Settings into the plan header for easier access from any view
 - Tweaked view mode selector in header to look a bit better
 - Increase icon line width for visibility
 
