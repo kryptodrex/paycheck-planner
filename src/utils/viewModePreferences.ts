@@ -72,7 +72,7 @@ export function syncFavoritesForCadence(
 
 export function buildViewModeSelectorOptions(
   favorites: unknown,
-  payCadenceMode?: SelectableViewMode,
+  _payCadenceMode?: SelectableViewMode,
   maxFavorites = MAX_VISIBLE_FAVORITE_VIEW_MODES,
 ): ViewModeOption[] {
   const sanitizedFavorites = sanitizeFavoriteViewModes(favorites);
