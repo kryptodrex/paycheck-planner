@@ -1,6 +1,7 @@
 import React from 'react';
 import { BadgeQuestionMark, Building2, CalendarClock, ChartPie, Globe, PiggyBank, ShieldCheck } from 'lucide-react';
 import { Button, Modal } from '../../_shared';
+import { APP_VERSION, APP_NAME } from '../../../constants/appMeta';
 import './AboutModal.css';
 
 interface AboutModalProps {
@@ -13,7 +14,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      header="About Paycheck Planner"
+      header={`About ${APP_NAME}`}
       headerIcon={<BadgeQuestionMark className="ui-icon" aria-hidden="true" />}
       contentClassName="about-modal"
       footer={
@@ -24,7 +25,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     >
       <div className="about-intro">
         <h3>Plan where every paycheck goes</h3>
-        <p>Paycheck Planner helps you manage your finances with year-based planning, tracking exactly where your money goes from gross pay to net.</p>
+        <p>{APP_NAME} helps you manage your finances with year-based planning, tracking exactly where your money goes from gross pay to net.</p>
       </div>
 
       <div className="about-features">
@@ -78,7 +79,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
       </div>
 
       <div className="about-version">
-        <p><strong>Version:</strong> 1.0.0</p>
+        <p><strong>Version:</strong> {APP_VERSION}</p>
       </div>
     </Modal>
   );
