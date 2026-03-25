@@ -11,7 +11,7 @@ import { getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } fro
 import { normalizeStoredAllocationAmount } from '../../../utils/allocationEditor';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
-import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../../_shared';
+import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup, InfoBox } from '../../_shared';
 import '../../_shared/payEditorShared.css';
 import './PaySettingsModal.css';
 import { Banknote } from 'lucide-react';
@@ -432,6 +432,9 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
               ]}
             />
           </FormGroup>
+          <InfoBox>
+            Your chosen pay frequency will be indicated by a dot next to the corresponding pay frequency label in the view mode selector for your plan.
+          </InfoBox>
         </div>
 
         {/* Paycheck scheduling inputs intentionally disabled for now.
