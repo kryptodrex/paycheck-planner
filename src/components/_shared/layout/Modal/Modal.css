@@ -26,6 +26,20 @@
   -webkit-app-region: no-drag;
 }
 
+.modal-content .modal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-content .modal-header-icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
 .modal-content h3 {
   margin: 0 0 0.5rem 0;
   color: var(--text-primary);
