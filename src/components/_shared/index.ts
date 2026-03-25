@@ -1,6 +1,7 @@
 export { default as Alert } from './feedback/Alert';
 export { default as AmountBreakdown, type AmountBreakdownItem, type AmountBreakdownProps } from './layout/AmountBreakdown';
 export { default as Toast } from './feedback/Toast';
+export { default as TransientStatusIndicator } from './feedback/TransientStatusIndicator';
 export { default as Modal } from './layout/Modal';
 export { default as Button } from './controls/Button';
 export { default as FormGroup } from './controls/FormGroup';
