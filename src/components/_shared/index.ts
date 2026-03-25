@@ -21,6 +21,8 @@ export { default as AccountsEditor } from './workflows/AccountsEditor';
 export { default as TaxLinesEditor } from './workflows/TaxLinesEditor';
 export { default as EncryptionConfigPanel } from './workflows/EncryptionConfigPanel';
 export { default as ViewModeSelector } from './layout/ViewModeSelector';
+export { default as CompactViewModeSelector } from './layout/CompactViewModeSelector';
+export type { CompactViewModeVariant } from './layout/CompactViewModeSelector';
 export { default as PageHeader } from './layout/PageHeader';
 export { default as Banner } from './layout/Banner';
 export { default as ProgressBar } from './feedback/ProgressBar';
