@@ -1665,14 +1665,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             )}
           </div>
         </div>
-        <div className="header-actions">
-          <CompactViewModeSelector
+        <CompactViewModeSelector
             mode={displayMode}
             onChange={(m) => handleDisplayModeChange(m)}
             highlightedValue={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
             highlightedLabel="Your pay frequency"
             hidden={activeTab === 'metrics'}
           />
+        <div className="header-actions">
           <div className="header-btn-group">
             <Button
               variant="secondary"
