@@ -11,6 +11,7 @@
 
 ### Improvements
 
+- Plans now save automatically when closed (unless it's a new plan or demo plan that hasn't been saved yet)
 - Reworked the view mode selector to take up less space, and no longer have an unnecessary favorites modal associated with it
 - Moved Pay Settings into the plan header for easier access from any view
 - Tweaked view mode selector in header to look a bit better
