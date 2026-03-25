@@ -356,7 +356,6 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
                     setFieldErrors((prev) => ({ ...prev, annualSalary: undefined }));
                   }
                 }}
-                placeholder="65000"
               />
             </FormGroup>
           </div>
