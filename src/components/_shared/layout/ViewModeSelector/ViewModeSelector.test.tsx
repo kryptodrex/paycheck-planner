@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ViewModeSelector from './ViewModeSelector';
@@ -10,26 +10,13 @@ const DEFAULT_OPTIONS = [
 ];
 
 describe('ViewModeSelector', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
   it('renders default options when none provided', () => {
     render(<ViewModeSelector mode="weekly" onChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Weekly' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bi-weekly' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Semi-monthly' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Monthly' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Yearly' })).toBeInTheDocument();
-  });
-
-  it('injects pay cadence mode even when not favorited', () => {
-    render(
-      <ViewModeSelector
-        mode="weekly"
-        onChange={vi.fn()}
-        payCadenceMode="weekly"
-      />,
-    );
-
-    expect(screen.getByRole('button', { name: /Weekly\s*Pay Frequency/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Monthly' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quarterly' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Yearly' })).toBeInTheDocument();
   });
 
@@ -54,20 +41,5 @@ describe('ViewModeSelector', () => {
     render(<ViewModeSelector mode="a" onChange={vi.fn()} options={opts} />);
     expect(screen.getByRole('button', { name: 'Option A' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Option B' })).toBeInTheDocument();
-  });
-
-  it('shows settings shortcut and triggers callback when provided', async () => {
-    const onOpenViewModeSettings = vi.fn();
-
-    render(
-      <ViewModeSelector
-        mode="monthly"
-        onChange={vi.fn()}
-        onOpenViewModeSettings={onOpenViewModeSettings}
-      />,
-    );
-
-    await userEvent.click(screen.getByRole('button', { name: 'Open view mode settings' }));
-    expect(onOpenViewModeSettings).toHaveBeenCalledTimes(1);
   });
 });
