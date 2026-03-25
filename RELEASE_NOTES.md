@@ -15,6 +15,7 @@
 - Moved Pay Settings into the plan header for easier access from any view
 - Tweaked view mode selector in header to look a bit better
 - Increase icon line width for visibility
+- Redesigned the header to make it less cluttered
 
 
 ### Bug Fixes
