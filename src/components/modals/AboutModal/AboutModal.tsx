@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, CalendarClock, ChartPie, Globe, PiggyBank, ShieldCheck } from 'lucide-react';
+import { BadgeQuestionMark, Building2, CalendarClock, ChartPie, Globe, PiggyBank, ShieldCheck } from 'lucide-react';
 import { Button, Modal } from '../../_shared';
 import './AboutModal.css';
 
@@ -14,6 +14,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
       isOpen={isOpen}
       onClose={onClose}
       header="About Paycheck Planner"
+      headerIcon={<BadgeQuestionMark className="ui-icon" aria-hidden="true" />}
       contentClassName="about-modal"
       footer={
         <Button variant="primary" onClick={onClose}>
@@ -47,7 +48,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           <span className="about-feature-icon" aria-hidden="true"><ShieldCheck className="ui-icon" /></span>
           <div className="about-feature-content">
             <h4>Secure & Local</h4>
-            <p>Your data stays on your computer with optional encryption. No cloud sync, no data sharing—complete privacy and control.</p>
+            <p>Your data stays on your computer with optional encryption. No cloud sync, no data sharing, complete privacy and control.</p>
           </div>
         </div>
 
@@ -63,7 +64,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           <span className="about-feature-icon" aria-hidden="true"><Building2 className="ui-icon" /></span>
           <div className="about-feature-content">
             <h4>Account Management</h4>
-            <p>Create and manage multiple accounts (checking, savings, investment) and associate them with your bills and allocations.</p>
+            <p>Create and manage multiple accounts (checking, savings, investment) and associate them with your bills and other allocations.</p>
           </div>
         </div>
 

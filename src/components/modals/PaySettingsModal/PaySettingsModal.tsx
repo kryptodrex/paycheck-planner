@@ -14,6 +14,7 @@ import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../
 import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../../_shared';
 import '../../_shared/payEditorShared.css';
 import './PaySettingsModal.css';
+import { Banknote } from 'lucide-react';
 
 interface PaySettingsModalProps {
   isOpen: boolean;
@@ -280,6 +281,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       onClose={onClose}
       contentClassName="pay-settings-modal-content"
       header="Your Pay Details"
+      headerIcon={ <Banknote className="ui-icon" aria-hidden="true" /> }
       footer={
         <>
           {onViewHistory && (

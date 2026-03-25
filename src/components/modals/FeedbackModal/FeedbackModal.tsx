@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Button, Dropdown, FormGroup, Modal } from '../../_shared';
 import './FeedbackModal.css';
+import { MessageSquareText } from 'lucide-react';
 
 type FeedbackCategory = 'bug' | 'feature' | 'ui' | 'performance' | 'other';
 
@@ -187,6 +188,7 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
       isOpen={isOpen}
       onClose={handleClose}
       header="Share Feedback"
+      headerIcon={<MessageSquareText className="ui-icon" aria-hidden="true" />}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>

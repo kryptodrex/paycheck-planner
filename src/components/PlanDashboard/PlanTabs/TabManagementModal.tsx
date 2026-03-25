@@ -39,12 +39,8 @@ const TabManagementModal: React.FC<TabManagementModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      header={
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <LayoutList className="ui-icon" aria-hidden="true" />
-            Manage Tabs
-          </h2>
-        }
+      header="Manage Tabs"
+      headerIcon={<LayoutList className="ui-icon" aria-hidden="true" />}
       footer={
         <Button
           variant="primary"
