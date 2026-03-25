@@ -6,7 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
-import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText, Settings, Banknote } from 'lucide-react';
+import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText, Banknote, Settings } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
@@ -523,6 +523,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       }
     }
   }, [
+    budgetData?.settings,
     budgetData?.settings?.tabDisplayMode,
     budgetData?.settings?.tabPosition,
     budgetData?.settings?.displayMode,
@@ -597,6 +598,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     promptActiveFileRelink(currentPath);
     return false;
   }, [budgetData?.settings?.filePath, promptActiveFileRelink]);
+
+  // Open settings modal
+  const handleOpenSettings = useCallback(() => {
+    if (loading) return;
+    setSettingsInitialSection(undefined);
+    setShowSettings(true);
+  }, [loading]);
 
   // Handle save with success toast
   const handleSave = useCallback(async () => {
@@ -1767,6 +1775,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             >
               <Save className="ui-icon" aria-hidden="true" />
               Save
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={handleOpenSettings}
+              disabled={loading || !!missingActiveFile || activeRelinkLoading}
+              className="header-btn-secondary"
+            >
+              <Settings className="ui-icon" aria-hidden="true" />
+              Settings
             </Button>
           </div>
         </div>
