@@ -5,6 +5,7 @@ import type { BudgetData } from '../../../types/budget';
 import { Modal, Button, FormGroup, AccountsEditor, Dropdown } from '../../_shared';
 import './AccountsModal.css';
 import './AccountsDeleteModal.css';
+import { Sheet } from 'lucide-react';
 
 interface AccountsModalProps {
   onClose: () => void;
@@ -217,6 +218,7 @@ const AccountsModal: React.FC<AccountsModalProps> = ({ onClose }) => {
         onClose={onClose}
         contentClassName="accounts-modal"
         header="Manage Your Accounts"
+        headerIcon={<Sheet className="ui-icon" aria-hidden="true" />}
         footer={
           <Button variant="primary" onClick={onClose}>
             Done

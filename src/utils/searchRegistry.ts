@@ -88,7 +88,11 @@ const registry = new Map<string, SearchModule>();
  */
 export function registerSearchModule(module: SearchModule): void {
   if (registry.has(module.id)) {
-    console.warn(`Search module '${module.id}' is already registered. Replacing it.`);
+    // React Strict Mode and HMR can re-run app initialization in development.
+    // Replacing the existing module is expected in that case, so keep this quiet.
+    if (!import.meta.env.DEV) {
+      console.warn(`Search module '${module.id}' is already registered. Replacing it.`);
+    }
   }
   registry.set(module.id, module);
 }

@@ -931,6 +931,16 @@ function createApplicationMenu() {
           }
         },
       },
+      {
+        label: 'Copy Plan',
+        accelerator: isMac ? 'Cmd+Shift+C' : 'Ctrl+Shift+C',
+        click: () => {
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            sendMenuEvent(focusedWindow, MENU_EVENTS.copyPlan);
+          }
+        },
+      },
       { type: 'separator' },
       {
         label: 'Close Window',
@@ -998,7 +1008,7 @@ function createApplicationMenu() {
         },
       },
       {
-        label: 'Pay Options',
+        label: 'Pay Details',
         accelerator: isMac ? 'Cmd+Shift+P' : 'Ctrl+Shift+P',
         click: () => {
           const focusedWindow = BrowserWindow.getFocusedWindow();
@@ -1202,7 +1212,7 @@ function createApplicationMenu() {
 }
 
 /**
- * Handle closing a window with unsaved changes check
+ * Handle closing a window by attempting save-first behavior when unsaved changes exist.
  */
 async function handleCloseWindow(window: BrowserWindow) {
   try {
@@ -1211,23 +1221,21 @@ async function handleCloseWindow(window: BrowserWindow) {
     );
 
     if (hasUnsaved) {
-      const result = await dialog.showMessageBox(window, {
-        type: 'warning',
+      // Show "Do you want to save?" dialog for unsaved plans
+      const response = dialog.showMessageBoxSync(window, {
+        type: 'question',
         buttons: ['Save', "Don't Save", 'Cancel'],
         defaultId: 0,
         cancelId: 2,
-        title: 'Unsaved Changes',
-        message: 'You have unsaved changes',
-        detail: 'Do you want to save your plan before closing this window?',
+        title: 'Save Plan?',
+        message: 'This plan has unsaved changes. Do you want to save before closing?',
       });
 
-      if (result.response === 2) {
-        // Cancel
+      if (response === 2) {
+        // User clicked Cancel, don't close
         return;
-      }
-
-      if (result.response === 0) {
-        // Save
+      } else if (response === 0) {
+        // User clicked Save, attempt to save
         const saveSuccess = await window.webContents.executeJavaScript(
           `(async () => {
             if (typeof window.__requestSaveBeforeClose === 'function') {
@@ -1242,10 +1250,14 @@ async function handleCloseWindow(window: BrowserWindow) {
         );
 
         if (!saveSuccess) {
-          // Save failed or user canceled save dialog
+          dialog.showErrorBox(
+            'Save Failed',
+            'Could not save this plan. Please use File > Save (or Cmd/Ctrl+S) and try again.'
+          );
           return;
         }
       }
+      // If response === 1, user clicked "Don't Save" - proceed to close without saving
     }
 
     // Always save window state (size and active tab) even if content wasn't saved
@@ -1273,6 +1285,7 @@ async function handleCloseWindow(window: BrowserWindow) {
     console.error('Error checking unsaved changes:', error);
     dialog.showErrorBox('Close Error', 'Unable to verify save state. The window was not closed to prevent data loss.');
   }
+
 }
 
 // Save all window states before quitting

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BanknoteArrowDown, ClipboardList, HandCoins, LayoutGrid, PiggyBank, Scale, Wallet } from 'lucide-react';
+import { Banknote, BanknoteArrowDown, ClipboardList, HandCoins, LayoutGrid, PiggyBank, Scale, Wallet } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { calculateAnnualizedPayBreakdown, calculateAnnualizedPaySummary } from '../../../services/budgetCalculations';
 import { formatWithSymbol } from '../../../utils/currency';
@@ -9,12 +9,13 @@ import { convertBillToYearly } from '../../../utils/billFrequency';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { buildKeyMetricsSegments } from '../../../utils/keyMetricsSegments';
 import type { KeyMetricsBreakdownView } from '../../../types/settings';
-import { PageHeader, ViewModeSelector } from '../../_shared';
+import { Button, PageHeader, ViewModeSelector } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './KeyMetrics.css';
 
 interface KeyMetricsProps {
+  onOpenPayDetails?: () => void;
   onNavigateToTaxes?: () => void;
   onNavigateToNetPay?: () => void;
   onNavigateToSavings?: () => void;
@@ -174,6 +175,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 };
 
 const KeyMetrics: React.FC<KeyMetricsProps> = ({
+  onOpenPayDetails,
   onNavigateToTaxes,
   onNavigateToNetPay,
   onNavigateToSavings,
@@ -386,9 +388,17 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
   return (
     <div className="tab-view key-metrics">
       <PageHeader
-        title="Key Metrics"
+        title="Yearly Metrics"
         subtitle="Your financial overview for the year at a glance"
         icon={<LayoutGrid className="ui-icon" aria-hidden="true" />}
+        actions={
+          onOpenPayDetails ? (
+            <Button variant="secondary" onClick={onOpenPayDetails}>
+              <Banknote className="ui-icon" aria-hidden="true" />
+              Pay Details
+            </Button>
+          ) : undefined
+        }
       />
       <div className="key-metrics-body">
         <div className="metrics-grid">

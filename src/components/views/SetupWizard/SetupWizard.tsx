@@ -398,7 +398,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 >
                   {CURRENCIES.map(curr => (
                     <option key={curr.code} value={curr.code}>
-                      {`${curr.symbol} - ${curr.name} (${curr.code})`}
+                      {`${curr.name} (${curr.symbol})`}
                     </option>
                   ))}
                 </Dropdown>

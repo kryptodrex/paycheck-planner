@@ -83,8 +83,11 @@
 }
 
 .display-mode-toggle .toggle-icon {
-  font-size: 1rem;
+  font-size: 1.2rem;
   line-height: 1;
+}
+.display-mode-toggle .toggle-icon .ui-icon {
+  stroke-width: 2;
 }
 
 /* Tab button group with open-in-window button */

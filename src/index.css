@@ -4,7 +4,7 @@
   --icon-color-default: currentColor;
   --icon-color-muted: var(--text-secondary);
   --icon-color-accent: var(--accent-primary);
-  --icon-stroke-width: 1.3;
+  --icon-stroke-width: 1.5;
   line-height: 1.5;
   font-weight: 400;
 

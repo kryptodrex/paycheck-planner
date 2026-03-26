@@ -21,7 +21,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
   return [
     {
       id: 'metrics',
-      label: 'Key Metrics',
+      label: 'Yearly Metrics',
       icon: LayoutGrid,
       visible: true,
       order: 0,

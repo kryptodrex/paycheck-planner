@@ -16,11 +16,13 @@ interface ModalProps {
   footer?: React.ReactNode;
   /** Optional header title or custom header content */
   header?: React.ReactNode;
+  /** Optional header icon */
+  headerIcon?: React.ReactNode;
   /** Show close button in header (default: true) */
   showCloseButton?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, contentClassName, children, footer, header, showCloseButton = true }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, contentClassName, children, footer, header, headerIcon, showCloseButton = true }) => {
   // Handle Escape key to close modal - use capture phase for reliability
   useEffect(() => {
     if (!isOpen) return;
@@ -48,7 +50,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, contentClassName, childr
       >
         {header && (
           <div className="modal-header">
-            {typeof header === 'string' ? <h2>{header}</h2> : header}
+            <div className="modal-header-title">
+              {headerIcon && <span className="modal-header-icon">{headerIcon}</span>}
+              {typeof header === 'string' ? <h2>{header}</h2> : header}
+            </div>
             {showCloseButton && (
               <Button 
                 variant="icon" 

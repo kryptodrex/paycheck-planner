@@ -29,7 +29,7 @@ function buildPaySettingsResults(budgetData: BudgetData): SearchResult[] {
     id: 'pay-settings-annual-pay',
     title: 'Annual Pay',
     subtitle: getAnnualPaySubtitle(annualAmount, pay.payType, currency),
-    category: 'Pay Settings',
+    category: 'Pay Details',
     categoryIcon: Banknote,
     action: { type: 'open-pay-settings', fieldHighlight: pay.payType === 'salary' ? 'annualSalary' : 'hourlyRate' },
   });
@@ -40,7 +40,7 @@ function buildPaySettingsResults(budgetData: BudgetData): SearchResult[] {
     subtitle: pay.payFrequency
       ? pay.payFrequency.charAt(0).toUpperCase() + pay.payFrequency.slice(1).replace(/-/g, ' ')
       : undefined,
-    category: 'Pay Settings',
+    category: 'Pay Details',
     categoryIcon: CalendarClock,
     action: { type: 'open-pay-settings', fieldHighlight: 'payFrequency' },
   });
@@ -50,7 +50,7 @@ function buildPaySettingsResults(budgetData: BudgetData): SearchResult[] {
       id: 'pay-settings-hourly-rate',
       title: 'Hourly Rate',
       subtitle: formatSearchCurrency(pay.hourlyRate, currency) + '/hr',
-      category: 'Pay Settings',
+      category: 'Pay Details',
       categoryIcon: Clock,
       action: { type: 'open-pay-settings', fieldHighlight: 'hourlyRate' },
     });

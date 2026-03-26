@@ -3,7 +3,7 @@ name: Validate Version File
 on:
   pull_request:
     branches:
-      - main
+      - develop
     types: [opened, synchronize, reopened]
     paths-ignore:
       - '.github/workflows/**'

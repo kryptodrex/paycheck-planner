@@ -14,7 +14,7 @@ import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountD
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard } from '../../_shared';
+import { ActionMenuButton, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './BillsManager.css';
@@ -33,6 +33,7 @@ interface BillsManagerProps {
     | 'toggle-benefit';
   searchActionTargetId?: string;
   displayMode: ViewMode;
+  viewModeControl?: React.ReactNode;
   onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
@@ -91,6 +92,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode,
+  viewModeControl,
   onViewHistory,
 }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
@@ -115,6 +117,25 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   const [benefitIsDiscretionary, setBenefitIsDiscretionary] = useState(false);
   const benefitErrors = useFieldErrors<BenefitFieldErrors>();
   const lastHandledSearchActionKeyRef = useRef(0);
+  const [useCompactHeaderActions, setUseCompactHeaderActions] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 980px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(max-width: 980px)');
+    const handleChange = (event: MediaQueryListEvent) => {
+      setUseCompactHeaderActions(event.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (scrollToAccountId) {
@@ -511,14 +532,43 @@ const BillsManager: React.FC<BillsManagerProps> = ({
         icon={<ClipboardList className="ui-icon" aria-hidden="true" />}
         actions={
           <div className="bills-header-buttons">
-            <Button variant="secondary" onClick={handleAddBenefit}>
-              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
-              Add Deduction
-            </Button>
-            <Button variant="primary" onClick={handleAddBill}>
-              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
-              Add Bill
-            </Button>
+            {viewModeControl}
+            {useCompactHeaderActions ? (
+              <ActionMenuButton
+                className="bills-add-expense"
+                triggerClassName="bills-add-expense-trigger"
+                menuClassName="bills-add-expense-menu"
+                optionClassName="bills-add-expense-option"
+                variant="primary"
+                leadingIcon={<Plus className="ui-icon ui-icon-sm" aria-hidden="true" />}
+                label="Add Expense"
+                items={[
+                  {
+                    id: 'add-bill',
+                    label: 'Add Bill',
+                    icon: <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />,
+                    onSelect: handleAddBill,
+                  },
+                  {
+                    id: 'add-deduction',
+                    label: 'Add Deduction',
+                    icon: <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />,
+                    onSelect: handleAddBenefit,
+                  },
+                ]}
+              />
+            ) : (
+              <>
+                <Button variant="secondary" onClick={handleAddBenefit}>
+                  <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+                  Add Deduction
+                </Button>
+                <Button variant="primary" onClick={handleAddBill}>
+                  <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+                  Add Bill
+                </Button>
+              </>
+            )}
           </div>
         }
       />
@@ -529,7 +579,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
       />
 
       {budgetData.accounts.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state empty-state--dashed">
           <div className="empty-icon" aria-hidden="true">
             <Building2 className="ui-icon" />
           </div>
@@ -537,15 +587,21 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           <p>Accounts are created during the initial setup wizard. Run the setup wizard to create your first account.</p>
         </div>
       ) : !hasAnyItems ? (
-        <div className="empty-state">
+        <div className="empty-state empty-state--dashed">
           <div className="empty-icon" aria-hidden="true">
             <ClipboardList className="ui-icon" />
           </div>
-          <h3>No Bills or Deductions Yet</h3>
+          <h3>No Bills or Deductions Added Yet</h3>
           <p>Add recurring bills or paycheck/account deductions to get started</p>
           <div className="empty-state-actions">
-            <Button variant="secondary" onClick={handleAddBenefit}>Add Deduction</Button>
-            <Button variant="primary" onClick={handleAddBill}>Add First Bill</Button>
+            <Button variant="secondary" onClick={handleAddBenefit}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add First Deduction
+            </Button>
+            <Button variant="primary" onClick={handleAddBill}>
+              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+              Add First Bill
+            </Button>
           </div>
         </div>
       ) : (
@@ -773,12 +829,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           </Dropdown>
         </FormGroup>
 
-        <FormGroup label={<><GlossaryTerm termId="discretionary">Reallocation Eligibility</GlossaryTerm></>}>
+        <FormGroup label={<>Is this a <GlossaryTerm termId="discretionary">discretionary expense</GlossaryTerm>?</>}>
           <PillToggle
             value={billIsDiscretionary}
             onChange={setBillIsDiscretionary}
-            leftLabel="Exclude"
-            rightLabel="Include"
+            leftLabel="No"
+            rightLabel="Yes"
           />
         </FormGroup>
 
@@ -894,12 +950,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           </p>
         )}
 
-        <FormGroup label={<><GlossaryTerm termId="discretionary">Reallocation Eligibility</GlossaryTerm></>}>
+        <FormGroup label={<>Is this a <GlossaryTerm termId="discretionary">discretionary expense</GlossaryTerm>?</>}>
           <PillToggle
             value={benefitIsDiscretionary}
             onChange={setBenefitIsDiscretionary}
-            leftLabel="Exclude"
-            rightLabel="Include"
+            leftLabel="No"
+            rightLabel="Yes"
           />
         </FormGroup>
       </Modal>
