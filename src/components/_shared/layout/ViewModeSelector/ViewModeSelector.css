@@ -75,7 +75,7 @@
 }
 
 .view-mode-settings-button {
-  padding: 0.30rem 0.5rem;
+  padding: 0.30rem 0.75rem !important;
   margin: 0;
   align-self: center;
   display: inline-flex;

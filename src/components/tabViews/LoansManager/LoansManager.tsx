@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Banknote, Building2, Landmark, Plus, X } from 'lucide-react';
+import { Building2, Landmark, Plus, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
 import type { AuditHistoryTarget } from '../../../types/audit';
@@ -22,6 +22,7 @@ interface LoansManagerProps {
     searchActionType?: 'add-loan' | 'edit-loan' | 'delete-loan' | 'toggle-loan';
     searchActionTargetId?: string;
     displayMode: ViewMode;
+    viewModeControl?: React.ReactNode;
     onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
@@ -113,6 +114,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
     searchActionType,
     searchActionTargetId,
     displayMode,
+    viewModeControl,
     onViewHistory,
 }) => {
     const { budgetData, addLoan, updateLoan, deleteLoan } = useBudget();
@@ -475,6 +477,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                 icon={<Landmark className="ui-icon" aria-hidden="true" />}
                 actions={
                     <>
+                        {viewModeControl}
                         <Button variant="primary" onClick={handleAddLoan}>
                             <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
                             Add Loan Payment

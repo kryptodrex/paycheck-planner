@@ -8,6 +8,7 @@ import EncryptionSetup from './components/views/EncryptionSetup'
 import WelcomeScreen from './components/views/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
 import SettingsModal from './components/modals/SettingsModal'
+import { TransientStatusIndicator } from './components/_shared'
 import './App.css'
 
 const AboutModal = lazy(() => import('./components/modals/AboutModal'))
@@ -303,34 +304,15 @@ function App() {
           onClose={() => setShowKeyboardShortcuts(false)}
         />
       </Suspense>
-      {zoomIndicatorMessage && (
-        <div
-          className={`zoom-indicator ${zoomIndicatorAtLimit ? 'limit' : ''}`}
-          role="status"
-          aria-live="polite"
-          style={{
-            top: `${2.35 / currentZoomFactor}rem`,
-            right: `${1 / currentZoomFactor}rem`,
-            transform: `scale(${1 / currentZoomFactor})`,
-          }}
-        >
-          {zoomIndicatorMessage}
-        </div>
-      )}
-      {undoRedoMessage && (
-        <div
-          className="zoom-indicator"
-          role="status"
-          aria-live="polite"
-          style={{
-            top: `${2.35 / currentZoomFactor}rem`,
-            right: `${1 / currentZoomFactor}rem`,
-            transform: `scale(${1 / currentZoomFactor})`,
-          }}
-        >
-          {undoRedoMessage}
-        </div>
-      )}
+      <TransientStatusIndicator
+        message={zoomIndicatorMessage}
+        variant={zoomIndicatorAtLimit ? 'warning' : 'default'}
+        zoomFactor={currentZoomFactor}
+      />
+      <TransientStatusIndicator
+        message={undoRedoMessage}
+        zoomFactor={currentZoomFactor}
+      />
     </>
   )
 }

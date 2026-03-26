@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Monitor, Moon, Sun } from 'lucide-react';
+import { Check, Monitor, Moon, Settings, Sun } from 'lucide-react';
 import { APPEARANCE_PRESET_MAP, APPEARANCE_PRESET_OPTIONS } from '../../../constants/appearancePresets';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
@@ -382,6 +382,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
       onClose={onClose}
       contentClassName="settings-modal-content"
       header="App Settings"
+      headerIcon={<Settings className="ui-icon" aria-hidden="true" />}
       footer={
         <Button variant="primary" onClick={onClose}>
           Done

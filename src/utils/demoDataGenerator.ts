@@ -52,7 +52,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
   const accounts: Account[] = [
     {
       id: checkingId,
-      name: 'Checking',
+      name: 'Example Bank',
       type: 'checking',
       icon: getDefaultAccountIcon('checking'),
       color: getDefaultAccountColor('checking'),

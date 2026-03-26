@@ -1,0 +1,263 @@
+/* =============================================================================
+   CompactViewModeSelector  (.cvms)
+  Compact chip with left/right controls and a floating option panel.
+   ============================================================================= */
+
+/* ── Base wrapper ─────────────────────────────────────────────────────────── */
+.cvms {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 2.3rem;
+  user-select: none;
+  z-index: 2;
+}
+
+.cvms--open {
+  z-index: 5000;
+}
+
+/* ── Arrow buttons ─────────────────────────────────────────────────────────── */
+.cvms__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.4rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: 0.25rem;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.cvms__arrow:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+}
+
+.cvms__arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Highlight indicator ─────────────────────────────────────────────────── */
+.cvms__indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+  color: var(--text-secondary);
+}
+
+.cvms__indicator-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-primary) 78%, var(--bg-primary) 22%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-primary) 22%, var(--border-color) 78%);
+  flex-shrink: 0;
+}
+
+.cvms__indicator-text {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  transition: max-width 0.16s ease, opacity 0.12s ease;
+}
+
+/* ── Chip shell ───────────────────────────────────────────────────────────── */
+.cvms__chip {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-header-soft);
+  border-radius: 0.5rem;
+  overflow: visible;
+  transition: border-color 0.15s;
+  padding: 0.25rem;
+}
+
+.cvms--open .cvms__chip {
+  border-color: var(--border-accent-soft);
+}
+
+.cvms__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-accent);
+  white-space: nowrap;
+  transition: background 0.15s;
+  position: relative;
+  overflow: visible;
+}
+
+.cvms__trigger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+}
+
+.cvms__trigger-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 6rem;
+}
+
+.cvms__trigger-label {
+  text-align: center;
+}
+
+.cvms__chevron {
+  transition: transform 0.2s ease;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.cvms__chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ── Floating panel ───────────────────────────────────────────────────────── */
+.cvms__panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  z-index: 5010;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.6rem;
+  box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  max-width: calc(100vw - 1rem);
+  overflow: visible;
+  isolation: isolate;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cvms__panel--align-center {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%) translateY(-6px);
+}
+
+.cvms__panel--align-left {
+  left: 0;
+  right: auto;
+  transform: translateY(-6px);
+}
+
+.cvms__panel--align-right {
+  left: auto;
+  right: 0;
+  transform: translateY(-6px);
+}
+
+.cvms__panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cvms--open .cvms__panel {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.cvms--open .cvms__panel--align-center {
+  transform: translateX(-50%) translateY(0);
+}
+
+.cvms--open .cvms__panel--align-left,
+.cvms--open .cvms__panel--align-right {
+  transform: translateY(0);
+}
+
+.cvms__panel--row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.15rem;
+  padding: 0.3rem;
+  white-space: nowrap;
+}
+
+.cvms__panel--column {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0.3rem;
+  white-space: normal;
+  width: min(13rem, calc(100vw - 1rem));
+}
+
+/* ── Option buttons inside the panel ──────────────────────────────────────── */
+.cvms__option {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+  position: relative;
+  overflow: visible;
+}
+
+.cvms__option:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  color: var(--text-primary);
+}
+
+.cvms__option--active {
+  background: var(--bg-tertiary);
+  color: var(--text-accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.cvms__panel--column .cvms__option {
+  width: 100%;
+}
+
+.cvms__option-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.cvms__option-label {
+  min-width: 0;
+}
+
+.cvms__trigger:hover .cvms__indicator-text,
+.cvms__trigger:focus-visible .cvms__indicator-text,
+.cvms--open .cvms__trigger .cvms__indicator-text,
+.cvms__option:hover .cvms__indicator-text,
+.cvms__option:focus-visible .cvms__indicator-text,
+.cvms__option--active .cvms__indicator-text {
+  max-width: 7rem;
+  opacity: 1;
+}

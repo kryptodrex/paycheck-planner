@@ -6,8 +6,9 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
-import { Sheet, Copy, Eye, Lock, LockOpen, Save, FolderOpen, MessageSquareText, Settings, Banknote } from 'lucide-react';
+import { Sheet, Copy, Eye, Lock, LockOpen, FolderOpen, MessageSquareText, Settings, Edit } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
+import { APP_VERSION } from '../../constants/appMeta';
 import { useBudget } from '../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow, useFileRelinkFlow } from '../../hooks';
 import { FileStorageService } from '../../services/fileStorage';
@@ -21,13 +22,10 @@ import TaxBreakdown from '../tabViews/TaxBreakdown';
 import SettingsModal from '../modals/SettingsModal';
 import AccountsModal from '../modals/AccountsModal';
 import PaySettingsModal from '../modals/PaySettingsModal';
-import ViewModeSettingsModal from '../modals/ViewModeSettingsModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeSelector } from '../_shared';
+import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
-import { DEFAULT_FAVORITE_VIEW_MODES, sanitizeFavoriteViewModes, syncFavoritesForCadence } from '../../utils/viewModePreferences';
-import type { SelectableViewMode } from '../../types/viewMode';
 import { useGlobalKeyboardShortcuts } from '../../hooks';
 import type { SearchResult } from '../../utils/planSearch';
 import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
@@ -99,10 +97,6 @@ const isElementVisibleInContainer = (element: HTMLElement, container: HTMLElemen
   );
 };
 
-const getFirstVisibleFavoriteMode = (favorites: SelectableViewMode[]): ViewMode => {
-  return favorites[0] as ViewMode;
-};
-
 const isEditableTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -164,30 +158,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   const [shouldScrollToRetirement, setShouldScrollToRetirement] = useState(false);
   const [pendingTabScroll, setPendingTabScroll] = useState<{ tab: TabId; position: TabScrollPosition } | null>(null);
   const [displayMode, setDisplayMode] = useState<ViewMode>(() => {
-    const favorites = sanitizeFavoriteViewModes(budgetData?.settings?.viewModeFavorites);
     if (budgetData?.settings?.displayMode) {
-      return favorites.includes(budgetData.settings.displayMode as never)
-        ? budgetData.settings.displayMode
-        : getFirstVisibleFavoriteMode(favorites);
+      return budgetData.settings.displayMode;
     }
 
-    const cadenceMode = getPayFrequencyViewMode(budgetData?.paySettings?.payFrequency ?? 'bi-weekly');
-    // New plan (no stored favorites): always select the pay cadence so it matches
-    // the frequency the user just chose in setup.
-    if (budgetData?.settings?.viewModeFavorites == null) {
-      return cadenceMode;
-    }
-    return favorites.includes(cadenceMode as never)
-      ? cadenceMode
-      : getFirstVisibleFavoriteMode(favorites);
+    return getPayFrequencyViewMode(budgetData?.paySettings?.payFrequency ?? 'bi-weekly');
   });
+  const [previewDisplayMode, setPreviewDisplayMode] = useState<ViewMode | null>(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined);
   const [showPaySettingsModal, setShowPaySettingsModal] = useState(false);
-  const [showViewModeSettings, setShowViewModeSettings] = useState(false);
   const [pendingPaySettingsFieldHighlight, setPendingPaySettingsFieldHighlight] = useState<string | undefined>(undefined);
   const [pendingBillsSearchAction, setPendingBillsSearchAction] = useState<
     | 'add-bill'
@@ -363,6 +346,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
     const normalizedViewMode = normalizeLegacyTabId(viewMode);
     if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Restoring active tab from persisted context before paint.
       setActiveTab(normalizedViewMode);
       initializedTabContextRef.current = tabRestoreContext;
       return;
@@ -491,57 +475,25 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   // Initialize tab position and display mode from budget settings
   useEffect(() => {
     if (budgetData?.settings?.tabPosition) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Mirrors persisted tab position into local UI state.
       setTabPosition(budgetData.settings.tabPosition);
     }
     if (budgetData?.settings?.tabDisplayMode) {
       setTabDisplayMode(budgetData.settings.tabDisplayMode);
     }
     if (budgetData?.settings?.displayMode) {
-      const favorites = sanitizeFavoriteViewModes(budgetData.settings.viewModeFavorites);
-      setDisplayMode(
-        favorites.includes(budgetData.settings.displayMode as never)
-          ? budgetData.settings.displayMode
-          : favorites[0],
-      );
+      setDisplayMode(budgetData.settings.displayMode);
     } else if (budgetData?.paySettings?.payFrequency) {
-      const cadenceMode = getPayFrequencyViewMode(budgetData.paySettings.payFrequency);
-      if (budgetData.settings?.viewModeFavorites == null) {
-        setDisplayMode(cadenceMode);
-        // Persist initial favorites with the cadence included so the View Mode
-        // Favorites modal reflects it and re-selecting the cadence tab works.
-        const selectableCadenceMode = cadenceMode as SelectableViewMode;
-        const initialFavorites =
-          syncFavoritesForCadence(DEFAULT_FAVORITE_VIEW_MODES, selectableCadenceMode) ??
-          DEFAULT_FAVORITE_VIEW_MODES;
-        updateBudgetSettings({
-          ...budgetData.settings,
-          viewModeFavorites: initialFavorites,
-        });
-      } else {
-        const favorites = sanitizeFavoriteViewModes(budgetData.settings.viewModeFavorites);
-        setDisplayMode(favorites.includes(cadenceMode as never) ? cadenceMode : favorites[0]);
-      }
+      setDisplayMode(getPayFrequencyViewMode(budgetData.paySettings.payFrequency));
     }
+    setPreviewDisplayMode(null);
   }, [
+    budgetData?.settings,
     budgetData?.settings?.tabDisplayMode,
     budgetData?.settings?.tabPosition,
     budgetData?.settings?.displayMode,
-    budgetData?.settings?.viewModeFavorites,
     budgetData?.paySettings?.payFrequency,
-    updateBudgetSettings,
   ]);
-
-  // When plan-specific favorites change, ensure displayMode is still in the list.
-  // No-op when favorites haven't been stored yet — the cadence-based initializer
-  // already picked the right mode and there's nothing user-configured to enforce.
-  useEffect(() => {
-    if (budgetData?.settings?.viewModeFavorites == null) return;
-    const favorites = sanitizeFavoriteViewModes(budgetData.settings.viewModeFavorites);
-    if (!favorites.includes(displayMode as never)) {
-      setDisplayMode(favorites[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [budgetData?.settings?.viewModeFavorites]);
 
   // Handle tab position changes
   const handleTabPositionChange = useCallback((newPosition: TabPosition) => {
@@ -572,12 +524,42 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   // Handle view display mode changes — persisted to settings so it survives frequency changes
   const handleDisplayModeChange = useCallback((newMode: ViewMode) => {
     if (newMode === displayMode || !budgetData) return;
+    setPreviewDisplayMode(null);
     setDisplayMode(newMode);
     updateBudgetSettings({
       ...budgetData.settings,
       displayMode: newMode,
     });
   }, [displayMode, budgetData, updateBudgetSettings]);
+
+  const handleDisplayModePreview = useCallback((newMode: ViewMode | null) => {
+    if (!newMode || newMode === displayMode) {
+      setPreviewDisplayMode(null);
+      return;
+    }
+
+    setPreviewDisplayMode(newMode);
+  }, [displayMode]);
+
+  const effectiveDisplayMode = previewDisplayMode ?? displayMode;
+
+  const openPayDetailsModal = useCallback(() => {
+    setPendingPaySettingsFieldHighlight(undefined);
+    setShowPaySettingsModal(true);
+  }, []);
+
+  const renderViewModeHeaderControl = () => (
+      <ViewModeButton
+        label="View Mode"
+        mode={effectiveDisplayMode}
+        selectedMode={displayMode}
+        onChange={handleDisplayModeChange}
+        onPreviewChange={handleDisplayModePreview}
+        highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
+        highlightedLabel="Your pay frequency"
+        preferredPlacement="up"
+      />
+  );
 
   const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
     const currentPath = budgetData?.settings?.filePath;
@@ -598,19 +580,25 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     return false;
   }, [budgetData?.settings?.filePath, promptActiveFileRelink]);
 
-  // Handle save with success toast
-  const handleSave = useCallback(async () => {
-    if (!budgetData) return;
+  // Open settings modal
+  const handleOpenSettings = useCallback(() => {
+    if (loading) return;
+    setSettingsInitialSection(undefined);
+    setShowSettings(true);
+  }, [loading]);
+
+  const performSave = useCallback(async (): Promise<boolean> => {
+    if (!budgetData) return false;
 
     if (missingActiveFile) {
       setStatusToast({ message: 'Locate moved file before saving this plan.', type: 'warning' });
-      return;
+      return false;
     }
 
     const canSaveToCurrentPath = await ensureValidSavePath();
     if (!canSaveToCurrentPath) {
       setStatusToast({ message: 'Plan file moved. Locate it or cancel relink before saving.', type: 'warning' });
-      return;
+      return false;
     }
 
     const success = await saveBudget(activeTab, {
@@ -622,10 +610,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         displayMode,
       },
     });
+
     if (success) {
       setStatusToast({ message: 'Saved successfully', type: 'success' });
+      return true;
     }
+
+    return false;
   }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, missingActiveFile, ensureValidSavePath]);
+
+  // Handle explicit save requests (toolbar/menu/keyboard)
+  const handleSave = useCallback(async () => {
+    await performSave();
+  }, [performSave]);
 
   const scrollTabToPosition = useCallback((tab: TabId, position: TabScrollPosition = 'top') => {
     const getScrollTop = (element: { scrollHeight: number }, nextPosition: TabScrollPosition) => {
@@ -717,8 +714,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     });
 
     const unsubscribePayOptions = window.electronAPI.onMenuEvent(MENU_EVENTS.openPayOptions, () => {
-      setPendingPaySettingsFieldHighlight(undefined);
-      setShowPaySettingsModal(true);
+      openPayDetailsModal();
     });
 
     const unsubscribeAccounts = window.electronAPI.onMenuEvent(MENU_EVENTS.openAccounts, () => {
@@ -797,7 +793,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       unsubscribeToggleDisplayMode();
       unsubscribeOpenSearch();
     };
-  }, [activeTab, createNewBudget, handleRedoAction, handleUndoAction, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
+  }, [activeTab, createNewBudget, handleRedoAction, handleUndoAction, loadBudget, onResetSetup, openPayDetailsModal, scrollTabToTop, selectTab, viewMode, visibleTabs]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -924,6 +920,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         planLoadingStartRef.current = Date.now();
       }
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Loading screen must toggle immediately while plan data is unavailable.
       setShowPlanLoadingScreen(true);
       return;
     }
@@ -1218,25 +1215,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         setSettingsInitialSection(action.sectionId);
         setShowSettings(true);
       } else if (action.type === 'open-view-mode-settings') {
-        setShowViewModeSettings(true);
+        setSettingsInitialSection(undefined);
+        setShowSettings(true);
       }
     },
     [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight],
   );
-
-  const handleOpenViewModeSettings = useCallback(() => {
-    setShowViewModeSettings(true);
-  }, []);
-
-  const handleViewModeFavoritesChange = useCallback((newFavorites: SelectableViewMode[]) => {
-    if (!budgetData) return;
-    updateBudgetData({
-      settings: {
-        ...budgetData.settings,
-        viewModeFavorites: newFavorites,
-      },
-    });
-  }, [budgetData, updateBudgetData]);
 
   const handleOpenObjectHistory = useCallback((target: AuditHistoryTarget) => {
     setHistoryTarget(target);
@@ -1716,14 +1700,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           </div>
         </div>
         <div className="header-actions">
-          <ViewModeSelector
-            mode={displayMode}
-            onChange={handleDisplayModeChange}
-            favorites={budgetData.settings.viewModeFavorites != null ? sanitizeFavoriteViewModes(budgetData.settings.viewModeFavorites) : undefined}
-            payCadenceMode={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-            onOpenViewModeSettings={handleOpenViewModeSettings}
-            disabled={activeTab === 'metrics'}
-          />
           <div className="header-btn-group">
             <Button
               variant="secondary"
@@ -1739,34 +1715,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
               variant="secondary"
               size="small"
               className="header-btn-secondary"
-              onClick={() => {
-                setPendingPaySettingsFieldHighlight(undefined);
-                setShowPaySettingsModal(true);
-              }}
-              title="View and edit pay details"
+              onClick={handleOpenSettings}
+              disabled={!!missingActiveFile || activeRelinkLoading}
             >
-              <Banknote className="ui-icon" aria-hidden="true" />
-              Pay Details
-            </Button>
-            <Button
-              variant="secondary"
-              size="small"
-              className="header-btn-secondary"
-              onClick={() => setShowCopyModal(true)}
-              title="Copy this plan to another year"
-            >
-              <Copy className="ui-icon" aria-hidden="true" />
-              Copy
-            </Button>
-            <Button
-              variant="secondary"
-              size="small"
-              onClick={handleSave}
-              disabled={loading || !!missingActiveFile || activeRelinkLoading}
-              className="header-btn-secondary"
-            >
-              <Save className="ui-icon" aria-hidden="true" />
-              Save
+              <Settings className="ui-icon" aria-hidden="true" />
+              Settings
             </Button>
           </div>
         </div>
@@ -1832,6 +1785,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           }}
         >
           <KeyMetrics
+            onOpenPayDetails={openPayDetailsModal}
             onNavigateToTaxes={() => {
               openTabFromLink('taxes');
             }}
@@ -1856,7 +1810,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           }}
         >
           <PayBreakdown 
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'breakdown' ? renderViewModeHeaderControl() : undefined}
+            onOpenPayDetails={openPayDetailsModal}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
@@ -1883,7 +1839,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionRequestKey={billsSearchRequestKey}
             searchActionType={pendingBillsSearchAction}
             searchActionTargetId={pendingBillsSearchTargetId}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'bills' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1898,7 +1855,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionRequestKey={loansSearchRequestKey}
             searchActionType={pendingLoansSearchAction}
             searchActionTargetId={pendingLoansSearchTargetId}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'loans' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1910,7 +1868,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         >
           <TaxBreakdown 
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'taxes' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1926,7 +1885,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionRequestKey={savingsSearchRequestKey}
             searchActionType={pendingSavingsSearchAction}
             searchActionTargetId={pendingSavingsSearchTargetId}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'savings' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -2035,7 +1995,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           isOpen={showFeedbackModal}
           onClose={() => setShowFeedbackModal(false)}
           context={{
-            appVersion: '1.0.0',
+            appVersion: APP_VERSION,
             activeTab,
             planYear: budgetData.year,
             planName: budgetData.name,
@@ -2049,19 +2009,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           }}
         />
       </Suspense>
-
-      <ViewModeSettingsModal
-        isOpen={showViewModeSettings}
-        onClose={() => setShowViewModeSettings(false)}
-        favorites={sanitizeFavoriteViewModes(budgetData.settings.viewModeFavorites)}
-        onChange={handleViewModeFavoritesChange}
-      />
-
       {/* Edit Plan Metadata Modal */}
       <Modal
         isOpen={showPlanEditModal}
         onClose={handleCancelPlanEdit}
         header="Edit Plan Name and Year"
+        headerIcon={<Edit className="ui-icon" aria-hidden="true" />}
         footer={
           <>
             <Button type="button" variant="secondary" onClick={handleCancelPlanEdit}>
@@ -2155,6 +2108,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           setNewYear('');
         }}
         header="Copy Plan to New Year"
+        headerIcon={<Copy className="ui-icon" aria-hidden="true" />}
         footer={
           <>
             <Button

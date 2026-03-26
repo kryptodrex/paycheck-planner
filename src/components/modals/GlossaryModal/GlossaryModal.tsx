@@ -6,6 +6,7 @@ import {
   type GlossaryCategory,
 } from '../../../data/glossary';
 import './GlossaryModal.css';
+import { BookOpen } from 'lucide-react';
 
 interface GlossaryModalProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, initialT
       isOpen={isOpen}
       onClose={onClose}
       header="Glossary of Terms"
+      headerIcon={<BookOpen className="ui-icon" aria-hidden="true" />}
       contentClassName="glossary-modal"
       footer={
         <div className="glossary-footer-actions">
