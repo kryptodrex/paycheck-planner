@@ -33,7 +33,7 @@ describe('tabManagement utilities', () => {
     const existing = [
       {
         id: 'metrics',
-        label: 'Key Metrics',
+        label: 'Yearly Metrics',
         icon: ChartPie,
         visible: true,
         order: 10,
