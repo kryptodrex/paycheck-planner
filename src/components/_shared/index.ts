@@ -4,6 +4,8 @@ export { default as Toast } from './feedback/Toast';
 export { default as TransientStatusIndicator } from './feedback/TransientStatusIndicator';
 export { default as Modal } from './layout/Modal';
 export { default as Button } from './controls/Button';
+export { default as ActionMenuButton } from './controls/ActionMenuButton';
+export type { ActionMenuItem } from './controls/ActionMenuButton';
 export { default as FormGroup } from './controls/FormGroup';
 export { default as InputWithPrefix } from './controls/InputWithPrefix';
 export { default as DateInput } from './controls/DateInput';
