@@ -84,6 +84,7 @@ const getCategoryItemCount = (category: AllocationCategory): number | null => {
 
 interface PayBreakdownProps {
   displayMode: ViewMode;
+  viewModeControl?: React.ReactNode;
   onNavigateToBills?: (accountId: string) => void;
   onNavigateToSavings?: (accountId: string) => void;
   onNavigateToRetirement?: (accountId: string) => void;
@@ -93,6 +94,7 @@ interface PayBreakdownProps {
 
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
   displayMode,
+  viewModeControl,
   onNavigateToBills,
   onNavigateToSavings,
   onNavigateToRetirement,
@@ -712,6 +714,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         title="Pay Breakdown"
         subtitle="See where your paycheck goes from gross to net"
         icon={<Wallet className="ui-icon" aria-hidden="true" />}
+        actions={viewModeControl}
       />
 
       {/* Gross to Net Table */}
@@ -818,7 +821,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
       {budgetData.accounts.length > 0 && (
         <div id="pay-breakdown-after-tax-allocations" className="waterfall-breakdown">
           <div className="waterfall-header">
-            <h3>After-Tax <GlossaryTerm termId="allocation">Allocations</GlossaryTerm></h3>
+            <h3>Take Home Pay <GlossaryTerm termId="allocation">Allocations</GlossaryTerm></h3>
           </div>
           
           <div className="waterfall-table">

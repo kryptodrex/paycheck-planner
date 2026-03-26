@@ -23,10 +23,11 @@ import { Scale } from 'lucide-react';
 interface TaxBreakdownProps {
     searchOpenSettingsRequestKey?: number;
     displayMode: ViewMode;
+    viewModeControl?: React.ReactNode;
     onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
-const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode, onViewHistory }) => {
+const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKey, displayMode, viewModeControl, onViewHistory }) => {
     const { budgetData, calculatePaycheckBreakdown, updateBudgetData } = useBudget();
     const [showEditModal, setShowEditModal] = useState(false);
     const [editLines, setEditLines] = useState<EditableTaxLineValues[]>([]);
@@ -194,6 +195,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
                 icon={<Scale className="ui-icon" aria-hidden="true" />}
                 actions={
                     <>
+                        {viewModeControl}
                         {onViewHistory && (
                             <Button variant="secondary" onClick={() => onViewHistory({ entityType: 'tax-settings', entityId: 'tax-settings', title: 'Tax Settings' })}>
                                 View History

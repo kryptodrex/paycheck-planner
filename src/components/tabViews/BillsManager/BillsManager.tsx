@@ -33,6 +33,7 @@ interface BillsManagerProps {
     | 'toggle-benefit';
   searchActionTargetId?: string;
   displayMode: ViewMode;
+  viewModeControl?: React.ReactNode;
   onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
@@ -91,6 +92,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode,
+  viewModeControl,
   onViewHistory,
 }) => {
   const { budgetData, addBill, updateBill, deleteBill, addBenefit, updateBenefit, deleteBenefit } = useBudget();
@@ -511,6 +513,7 @@ const BillsManager: React.FC<BillsManagerProps> = ({
         icon={<ClipboardList className="ui-icon" aria-hidden="true" />}
         actions={
           <div className="bills-header-buttons">
+            {viewModeControl}
             <Button variant="secondary" onClick={handleAddBenefit}>
               <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
               Add Deduction

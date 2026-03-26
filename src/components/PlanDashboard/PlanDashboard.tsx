@@ -23,7 +23,7 @@ import SettingsModal from '../modals/SettingsModal';
 import AccountsModal from '../modals/AccountsModal';
 import PaySettingsModal from '../modals/PaySettingsModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, CompactViewModeSelector } from '../_shared';
+import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
 import { useGlobalKeyboardShortcuts } from '../../hooks';
@@ -164,6 +164,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
     return getPayFrequencyViewMode(budgetData?.paySettings?.payFrequency ?? 'bi-weekly');
   });
+  const [previewDisplayMode, setPreviewDisplayMode] = useState<ViewMode | null>(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
@@ -483,6 +484,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     } else if (budgetData?.paySettings?.payFrequency) {
       setDisplayMode(getPayFrequencyViewMode(budgetData.paySettings.payFrequency));
     }
+    setPreviewDisplayMode(null);
   }, [
     budgetData?.settings,
     budgetData?.settings?.tabDisplayMode,
@@ -520,12 +522,37 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   // Handle view display mode changes — persisted to settings so it survives frequency changes
   const handleDisplayModeChange = useCallback((newMode: ViewMode) => {
     if (newMode === displayMode || !budgetData) return;
+    setPreviewDisplayMode(null);
     setDisplayMode(newMode);
     updateBudgetSettings({
       ...budgetData.settings,
       displayMode: newMode,
     });
   }, [displayMode, budgetData, updateBudgetSettings]);
+
+  const handleDisplayModePreview = useCallback((newMode: ViewMode | null) => {
+    if (!newMode || newMode === displayMode) {
+      setPreviewDisplayMode(null);
+      return;
+    }
+
+    setPreviewDisplayMode(newMode);
+  }, [displayMode]);
+
+  const effectiveDisplayMode = previewDisplayMode ?? displayMode;
+
+  const renderViewModeHeaderControl = () => (
+      <ViewModeButton
+        label="View Mode"
+        mode={effectiveDisplayMode}
+        selectedMode={displayMode}
+        onChange={handleDisplayModeChange}
+        onPreviewChange={handleDisplayModePreview}
+        highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
+        highlightedLabel="Your pay frequency"
+        preferredPlacement="up"
+      />
+  );
 
   const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
     const currentPath = budgetData?.settings?.filePath;
@@ -1665,13 +1692,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             )}
           </div>
         </div>
-        <CompactViewModeSelector
-            mode={displayMode}
-            onChange={(m) => handleDisplayModeChange(m)}
-            highlightedValue={getPayFrequencyViewMode(budgetData.paySettings.payFrequency)}
-            highlightedLabel="Your pay frequency"
-            hidden={activeTab === 'metrics'}
-          />
         <div className="header-actions">
           <div className="header-btn-group">
             <Button
@@ -1795,7 +1815,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           }}
         >
           <PayBreakdown 
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'breakdown' ? renderViewModeHeaderControl() : undefined}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
@@ -1822,7 +1843,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionRequestKey={billsSearchRequestKey}
             searchActionType={pendingBillsSearchAction}
             searchActionTargetId={pendingBillsSearchTargetId}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'bills' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1837,7 +1859,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionRequestKey={loansSearchRequestKey}
             searchActionType={pendingLoansSearchAction}
             searchActionTargetId={pendingLoansSearchTargetId}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'loans' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1849,7 +1872,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         >
           <TaxBreakdown 
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'taxes' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1865,7 +1889,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionRequestKey={savingsSearchRequestKey}
             searchActionType={pendingSavingsSearchAction}
             searchActionTargetId={pendingSavingsSearchTargetId}
-            displayMode={displayMode}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'savings' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
