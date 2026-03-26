@@ -14,7 +14,7 @@ import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountD
 import { buildAccountRows, groupByAccountId } from '../../../utils/accountGrouping';
 import { convertBillToMonthly, formatBillFrequency } from '../../../utils/billFrequency';
 import { monthlyToDisplayAmount } from '../../../utils/displayAmounts';
-import { Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard } from '../../_shared';
+import { ActionMenuButton, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './BillsManager.css';
@@ -117,6 +117,26 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   const [benefitIsDiscretionary, setBenefitIsDiscretionary] = useState(false);
   const benefitErrors = useFieldErrors<BenefitFieldErrors>();
   const lastHandledSearchActionKeyRef = useRef(0);
+  const [useCompactHeaderActions, setUseCompactHeaderActions] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 980px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(max-width: 980px)');
+    const handleChange = (event: MediaQueryListEvent) => {
+      setUseCompactHeaderActions(event.matches);
+    };
+
+    setUseCompactHeaderActions(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (scrollToAccountId) {
@@ -514,14 +534,42 @@ const BillsManager: React.FC<BillsManagerProps> = ({
         actions={
           <div className="bills-header-buttons">
             {viewModeControl}
-            <Button variant="secondary" onClick={handleAddBenefit}>
-              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
-              Add Deduction
-            </Button>
-            <Button variant="primary" onClick={handleAddBill}>
-              <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
-              Add Bill
-            </Button>
+            {useCompactHeaderActions ? (
+              <ActionMenuButton
+                className="bills-add-expense"
+                triggerClassName="bills-add-expense-trigger"
+                menuClassName="bills-add-expense-menu"
+                optionClassName="bills-add-expense-option"
+                variant="primary"
+                leadingIcon={<Plus className="ui-icon ui-icon-sm" aria-hidden="true" />}
+                label="Add Expense"
+                items={[
+                  {
+                    id: 'add-bill',
+                    label: 'Add Bill',
+                    icon: <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />,
+                    onSelect: handleAddBill,
+                  },
+                  {
+                    id: 'add-deduction',
+                    label: 'Add Deduction',
+                    icon: <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />,
+                    onSelect: handleAddBenefit,
+                  },
+                ]}
+              />
+            ) : (
+              <>
+                <Button variant="secondary" onClick={handleAddBenefit}>
+                  <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+                  Add Deduction
+                </Button>
+                <Button variant="primary" onClick={handleAddBill}>
+                  <Plus className="ui-icon ui-icon-sm" aria-hidden="true" />
+                  Add Bill
+                </Button>
+              </>
+            )}
           </div>
         }
       />
@@ -782,12 +830,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           </Dropdown>
         </FormGroup>
 
-        <FormGroup label={<><GlossaryTerm termId="discretionary">Reallocation Eligibility</GlossaryTerm></>}>
+        <FormGroup label={<>Is this a <GlossaryTerm termId="discretionary">discretionary expense</GlossaryTerm>?</>}>
           <PillToggle
             value={billIsDiscretionary}
             onChange={setBillIsDiscretionary}
-            leftLabel="Exclude"
-            rightLabel="Include"
+            leftLabel="No"
+            rightLabel="Yes"
           />
         </FormGroup>
 
@@ -903,12 +951,12 @@ const BillsManager: React.FC<BillsManagerProps> = ({
           </p>
         )}
 
-        <FormGroup label={<><GlossaryTerm termId="discretionary">Reallocation Eligibility</GlossaryTerm></>}>
+        <FormGroup label={<>Is this a <GlossaryTerm termId="discretionary">discretionary expense</GlossaryTerm>?</>}>
           <PillToggle
             value={benefitIsDiscretionary}
             onChange={setBenefitIsDiscretionary}
-            leftLabel="Exclude"
-            rightLabel="Include"
+            leftLabel="No"
+            rightLabel="Yes"
           />
         </FormGroup>
       </Modal>

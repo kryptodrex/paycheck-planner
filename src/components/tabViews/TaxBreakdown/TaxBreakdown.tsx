@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { History, Pencil, Scale } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../../utils/payPeriod';
-import { Button, InputWithPrefix, Modal, FormGroup, PageHeader, TaxLinesEditor, InfoBox } from '../../_shared';
+import { ActionMenuButton, Button, InputWithPrefix, Modal, FormGroup, PageHeader, TaxLinesEditor, InfoBox } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import type { TaxLine } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
@@ -18,7 +19,6 @@ import {
 } from '../../../utils/taxLines';
 import '../tabViews.shared.css';
 import './TaxBreakdown.css';
-import { Scale } from 'lucide-react';
 
 interface TaxBreakdownProps {
     searchOpenSettingsRequestKey?: number;
@@ -33,6 +33,10 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
     const [editLines, setEditLines] = useState<EditableTaxLineValues[]>([]);
     const [additionalWithholding, setAdditionalWithholding] = useState('0');
     const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
+    const [useCompactHeaderActions, setUseCompactHeaderActions] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia('(max-width: 980px)').matches;
+    });
     const lastHandledSearchOpenSettingsRef = useRef(0);
 
     const currency = budgetData?.settings?.currency || 'USD';
@@ -74,6 +78,24 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
 
         return () => window.clearTimeout(timeoutId);
     }, [budgetData, searchOpenSettingsRequestKey, taxSettings.additionalWithholding, taxSettings.taxLines, taxableIncomeForEditor]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const mediaQuery = window.matchMedia('(max-width: 980px)');
+        const handleChange = (event: MediaQueryListEvent) => {
+            setUseCompactHeaderActions(event.matches);
+        };
+
+        setUseCompactHeaderActions(mediaQuery.matches);
+        mediaQuery.addEventListener('change', handleChange);
+
+        return () => {
+            mediaQuery.removeEventListener('change', handleChange);
+        };
+    }, []);
 
     if (!budgetData) return null;
 
@@ -196,14 +218,43 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
                 actions={
                     <>
                         {viewModeControl}
-                        {onViewHistory && (
-                            <Button variant="secondary" onClick={() => onViewHistory({ entityType: 'tax-settings', entityId: 'tax-settings', title: 'Tax Settings' })}>
-                                View History
-                            </Button>
+                        {useCompactHeaderActions ? (
+                            <ActionMenuButton
+                                className="tax-breakdown-actions-menu"
+                                triggerClassName="tax-breakdown-actions-menu-trigger"
+                                menuClassName="tax-breakdown-actions-menu-popover"
+                                optionClassName="tax-breakdown-actions-menu-option"
+                                variant="secondary"
+                                label="Actions"
+                                items={[
+                                    ...(onViewHistory
+                                        ? [{
+                                            id: 'view-history',
+                                            label: 'View History',
+                                            icon: <History className="ui-icon ui-icon-sm" aria-hidden="true" />,
+                                            onSelect: () => onViewHistory({ entityType: 'tax-settings', entityId: 'tax-settings', title: 'Tax Settings' }),
+                                        }]
+                                        : []),
+                                    {
+                                        id: 'edit-tax-settings',
+                                        label: 'Edit Tax Settings',
+                                        icon: <Pencil className="ui-icon ui-icon-sm" aria-hidden="true" />,
+                                        onSelect: handleEditStart,
+                                    },
+                                ]}
+                            />
+                        ) : (
+                            <>
+                                {onViewHistory && (
+                                    <Button variant="secondary" onClick={() => onViewHistory({ entityType: 'tax-settings', entityId: 'tax-settings', title: 'Tax Settings' })}>
+                                        View History
+                                    </Button>
+                                )}
+                                <Button variant="primary" onClick={handleEditStart}>
+                                    Edit Tax Settings
+                                </Button>
+                            </>
                         )}
-                        <Button variant="primary" onClick={handleEditStart}>
-                            Edit Tax Settings
-                        </Button>
                     </>
                 }
             />

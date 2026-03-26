@@ -144,6 +144,28 @@
 .tax-settings-modal {
     max-width: 700px;
 }
+.tax-breakdown .tax-breakdown-actions-menu-trigger {
+    min-width: 9rem;
+}
+
+.tax-breakdown .tax-breakdown-actions-menu-popover {
+    min-width: 12rem;
+}
+
+.tax-breakdown .tax-breakdown-actions-menu-option {
+    width: 100%;
+}
+
+@media (max-width: 980px) {
+    .tax-breakdown .tax-breakdown-actions-menu {
+        width: 100%;
+    }
+
+    .tax-breakdown .tax-breakdown-actions-menu-trigger {
+        width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .breakdown-header {
         flex-direction: column;
