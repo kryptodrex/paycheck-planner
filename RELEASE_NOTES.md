@@ -11,16 +11,17 @@
 
 ### Improvements
 
-- Plans now save automatically when closed (unless it's a new plan or demo plan that hasn't been saved yet)
+- Plans now save automatically when closed, but can still be saved via shortcut or menubar task
+    - Note: If it's a new plan or demo plan that hasn't been saved yet it will still prompt to save
 - Reworked the view mode selector to take up less space, and no longer have an unnecessary favorites modal associated with it
-- Moved Pay Settings into the plan header for easier access from any view
+- Added a Pay Details button to Key Metrics screen as well
 - Tweaked view mode selector in header to look a bit better
 - Increase icon line width for visibility
-- Redesigned the header to make it less cluttered
+- Reorganized the plan header to make it less cluttered
 
 
 ### Bug Fixes
 
 - Fixed demo generation immediately causing pay breakdown to go into the negative if random Gross Income is on the lower end
 - Fixed off-center "Add Loan Payment" button when no loan items were added yet
-- Fixed new plan creation starting with only two view modes visible after existing Setup Wizard
+- Fixed new plan creation starting with only two view modes visible after exiting Setup Wizard
