@@ -47,6 +47,7 @@
   display: inline-flex;
   align-items: baseline;
   gap: 0.45rem;
+  justify-content: space-between;
   min-width: 0;
   flex: 1;
   overflow: hidden;
