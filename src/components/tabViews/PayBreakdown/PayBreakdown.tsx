@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { Wallet, Info, Plus, X } from 'lucide-react';
+import { Wallet, Info, Plus, X, Banknote } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
@@ -85,6 +85,7 @@ const getCategoryItemCount = (category: AllocationCategory): number | null => {
 interface PayBreakdownProps {
   displayMode: ViewMode;
   viewModeControl?: React.ReactNode;
+  onOpenPayDetails?: () => void;
   onNavigateToBills?: (accountId: string) => void;
   onNavigateToSavings?: (accountId: string) => void;
   onNavigateToRetirement?: (accountId: string) => void;
@@ -95,6 +96,7 @@ interface PayBreakdownProps {
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
   displayMode,
   viewModeControl,
+  onOpenPayDetails,
   onNavigateToBills,
   onNavigateToSavings,
   onNavigateToRetirement,
@@ -714,7 +716,17 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         title="Pay Breakdown"
         subtitle="See where your paycheck goes from gross to net"
         icon={<Wallet className="ui-icon" aria-hidden="true" />}
-        actions={viewModeControl}
+        actions={
+          <>
+            {viewModeControl}
+            {onOpenPayDetails && (
+              <Button variant="secondary" onClick={onOpenPayDetails}>
+                <Banknote className="ui-icon" aria-hidden="true" />
+                Pay Details
+              </Button>
+            )}
+          </>
+        }
       />
 
       {/* Gross to Net Table */}
