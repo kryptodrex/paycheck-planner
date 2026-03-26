@@ -6,7 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
-import { Sheet, Copy, Eye, Lock, LockOpen, FolderOpen, MessageSquareText, Banknote, Settings, Edit } from 'lucide-react';
+import { Sheet, Copy, Eye, Lock, LockOpen, FolderOpen, MessageSquareText, Settings, Edit } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { APP_VERSION } from '../../constants/appMeta';
 import { useBudget } from '../../contexts/BudgetContext';
@@ -541,6 +541,11 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
   const effectiveDisplayMode = previewDisplayMode ?? displayMode;
 
+  const openPayDetailsModal = useCallback(() => {
+    setPendingPaySettingsFieldHighlight(undefined);
+    setShowPaySettingsModal(true);
+  }, []);
+
   const renderViewModeHeaderControl = () => (
       <ViewModeButton
         label="View Mode"
@@ -707,8 +712,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     });
 
     const unsubscribePayOptions = window.electronAPI.onMenuEvent(MENU_EVENTS.openPayOptions, () => {
-      setPendingPaySettingsFieldHighlight(undefined);
-      setShowPaySettingsModal(true);
+      openPayDetailsModal();
     });
 
     const unsubscribeAccounts = window.electronAPI.onMenuEvent(MENU_EVENTS.openAccounts, () => {
@@ -787,7 +791,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       unsubscribeToggleDisplayMode();
       unsubscribeOpenSearch();
     };
-  }, [activeTab, createNewBudget, handleRedoAction, handleUndoAction, loadBudget, onResetSetup, scrollTabToTop, selectTab, viewMode, visibleTabs]);
+  }, [activeTab, createNewBudget, handleRedoAction, handleUndoAction, loadBudget, onResetSetup, openPayDetailsModal, scrollTabToTop, selectTab, viewMode, visibleTabs]);
 
   // Save session state when active tab or budget data changes
   useEffect(() => {
@@ -1708,21 +1712,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
               variant="secondary"
               size="small"
               className="header-btn-secondary"
-              onClick={() => {
-                setPendingPaySettingsFieldHighlight(undefined);
-                setShowPaySettingsModal(true);
-              }}
-              title="View and edit pay details"
-            >
-              <Banknote className="ui-icon" aria-hidden="true" />
-              Pay Details
-            </Button>
-            <Button
-              variant="secondary"
-              size="small"
               onClick={handleOpenSettings}
               disabled={!!missingActiveFile || activeRelinkLoading}
-              className="header-btn-secondary"
             >
               <Settings className="ui-icon" aria-hidden="true" />
               Settings
@@ -1791,6 +1782,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           }}
         >
           <KeyMetrics
+            onOpenPayDetails={openPayDetailsModal}
             onNavigateToTaxes={() => {
               openTabFromLink('taxes');
             }}
@@ -1817,6 +1809,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <PayBreakdown 
             displayMode={effectiveDisplayMode}
             viewModeControl={activeTab === 'breakdown' ? renderViewModeHeaderControl() : undefined}
+            onOpenPayDetails={openPayDetailsModal}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
