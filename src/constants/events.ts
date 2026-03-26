@@ -4,6 +4,7 @@ export const MENU_EVENTS = {
   openBudgetFile: 'open-budget-file',
   changeEncryption: 'change-encryption',
   savePlan: 'save-plan',
+  copyPlan: 'copy-plan',
   openSettings: 'open-settings',
   openAbout: 'open-about',
   openGlossary: 'open-glossary',
@@ -28,7 +29,6 @@ export const APP_CUSTOM_EVENTS = {
   themeModeChanged: 'theme-mode-changed',
   appearanceSettingsChanged: 'appearance-settings-changed',
   glossaryTermsChanged: 'glossary-terms-changed',
-  viewModeFavoritesChanged: 'view-mode-favorites-changed',
   viewModeAutoSwitched: 'view-mode-auto-switched',
   undoRedoStatus: 'app:undo-redo-status',
 } as const;

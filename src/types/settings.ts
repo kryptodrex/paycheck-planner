@@ -1,6 +1,5 @@
 import type { TabConfig, TabDisplayMode, TabPosition } from './tabs';
 import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from './appearance';
-import type { SelectableViewMode } from './viewMode';
 import type { ViewMode } from './viewMode';
 
 export type KeyMetricsBreakdownView = 'flow' | 'stacked' | 'pie';
@@ -24,7 +23,6 @@ export interface BudgetSettings {
   };
   activeTab?: string;
   keyMetricsBreakdownView?: KeyMetricsBreakdownView;
-  viewModeFavorites?: SelectableViewMode[];
 }
 
 export interface AppSettings {

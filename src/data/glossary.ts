@@ -162,11 +162,11 @@ export const glossaryTerms: GlossaryTerm[] = [
   },
   {
     id: 'discretionary',
-    term: 'Reallocation Eligibility',
+    term: 'Discretionary Expense',
     category: 'allocations',
-    shortDefinition: 'Items marked to include in automated reallocation when remaining is below target.',
+    shortDefinition: 'Expenses that are optional or flexible.',
     fullDefinition:
-      'Bills and deductions can be marked as eligible for reallocation. When remaining is below target, Paycheck Planner can suggest pausing or reducing eligible items before recommending changes to retirement or other locked obligations.',
+      'Bills and deductions can be marked as discretionary. When your remaining for spending amount is below your target, Paycheck Planner can suggest pausing or reducing discretionary items before recommending changes to savings, retirement, or other obligations.',
     aliases: ['optional spending', 'flexible expense', 'discretionary'],
     relatedTermIds: ['allocation', 'residual-amount', 'deduction'],
   },

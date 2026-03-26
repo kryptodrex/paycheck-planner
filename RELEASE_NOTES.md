@@ -11,21 +11,18 @@
 
 ### Improvements
 
-- Added the tab icon next to each view title so the active workspace has clearer visual context.
-- Simplified retirement setup by removing employer match handling from retirement elections to reduce complexity, as it's not an amount taken out of your paycheck generally
-- Improved Key Metrics view accuracy
-	- Remaining-for-spending totals now match between Key Metrics and Pay Breakdown in yearly mode.
-	- The Bills metric was reworked as Recurring Expenses and now reflects the total of custom allocations, bills, deductions, and loan payments.
-- Improved account deletion behavior so linked items are handled more intelligently across all supported item types.
-- Reduced icon width to look cleaner, and replaced a few icons to make more sense in context
-- Reduced built application size by around 100MB
+- Plans now save automatically when closed, but can still be saved via shortcut or menubar task
+    - Note: If it's a new plan or demo plan that hasn't been saved yet it will still prompt to save
+- Reworked the view mode selector to take up less space, and no longer have an unnecessary favorites modal associated with it
+- Added a Pay Details button to Key Metrics screen as well
+- Increase icon line width for visibility
+- Reorganized the plan header to make it less cluttered
+- Header actions now switch between full buttons on wider windows and compact dropdowns on smaller screens
 
 
 ### Bug Fixes
 
-- Fixed deduction amount rounding/display inconsistencies (for example 9.30 no longer drifting to 9.31).
-- Fixed edit-form amount formatting so trailing zeros are preserved more consistently when editing existing bill and deduction values.
-- Added tighter decimal precision handling in amount entry fields to match what the UI can reliably display.
-- Fixed history overlay behavior for legacy entries so edits no longer appear as misleading empty-to-value changes.
-- Fixed a history overlay deletion bug where deleting an Initial tracked state row could delete the wrong item in stacked history.
-- Fixed tax settings history to actually break out the line item changes done
+- Fixed demo generation immediately causing pay breakdown to go into the negative if random Gross Income is on the lower end
+- Fixed off-center "Add Loan Payment" button when no loan items were added yet
+- Fixed new plan creation starting with only two view modes visible after exiting Setup Wizard
+- Fixed focused header action borders clipping near the sticky tab header edge

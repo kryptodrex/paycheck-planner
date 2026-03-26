@@ -3,19 +3,18 @@ import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import type { BudgetData } from '../../../types/budget';
 import type { PayFrequency } from '../../../types/frequencies';
-import type { SelectableViewMode } from '../../../types/viewMode';
 import type { PaySettings } from '../../../types/payroll';
 import type { AuditHistoryTarget } from '../../../types/audit';
 import { convertBudgetAmounts } from '../../../services/budgetCurrencyConversion';
 import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
 import { getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { normalizeStoredAllocationAmount } from '../../../utils/allocationEditor';
-import { sanitizeFavoriteViewModes, syncFavoritesForCadence } from '../../../utils/viewModePreferences';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
-import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup } from '../../_shared';
+import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup, InfoBox } from '../../_shared';
 import '../../_shared/payEditorShared.css';
 import './PaySettingsModal.css';
+import { Banknote } from 'lucide-react';
 
 interface PaySettingsModalProps {
   isOpen: boolean;
@@ -251,18 +250,13 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       };
     }
 
-    // Sync view mode selector favorites when pay frequency changes so the new
-    // cadence tab appears at its canonical position in this plan's selector.
     if (editPayFrequency !== budgetData.paySettings.payFrequency) {
-      const cadenceMode = getPayFrequencyViewMode(editPayFrequency) as SelectableViewMode;
-      const existingFavorites = sanitizeFavoriteViewModes(updatedBudget.settings.viewModeFavorites);
-      const newFavorites = syncFavoritesForCadence(existingFavorites, cadenceMode);
+      const cadenceMode = getPayFrequencyViewMode(editPayFrequency);
       updatedBudget = {
         ...updatedBudget,
         settings: {
           ...updatedBudget.settings,
           displayMode: cadenceMode,
-          viewModeFavorites: newFavorites ?? existingFavorites,
         },
       };
 
@@ -286,13 +280,14 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       isOpen={isOpen}
       onClose={onClose}
       contentClassName="pay-settings-modal-content"
-      header="Edit Pay Breakdown Settings"
+      header="Your Pay Details"
+      headerIcon={ <Banknote className="ui-icon" aria-hidden="true" /> }
       footer={
         <>
           {onViewHistory && (
             <Button 
-              variant="utility" 
-              onClick={() => onViewHistory({ entityType: 'pay-settings', entityId: 'pay-settings', title: 'Pay Settings' })}
+              variant="secondary" 
+              onClick={() => onViewHistory({ entityType: 'pay-settings', entityId: 'pay-settings', title: 'Pay Details' })}
             >
               View History
             </Button>
@@ -325,7 +320,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
           <Dropdown value={editCurrency} onChange={(e) => setEditCurrency(e.target.value)}>
             {CURRENCIES.map((currency) => (
               <option key={currency.code} value={currency.code}>
-                {currency.symbol} - {currency.name} ({currency.code})
+                {currency.name} ({currency.symbol})
               </option>
             ))}
           </Dropdown>
@@ -361,7 +356,6 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
                     setFieldErrors((prev) => ({ ...prev, annualSalary: undefined }));
                   }
                 }}
-                placeholder="65000"
               />
             </FormGroup>
           </div>
@@ -437,6 +431,9 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
               ]}
             />
           </FormGroup>
+          <InfoBox>
+            Your chosen pay frequency will be indicated by a dot next to the corresponding pay frequency label in the view mode selector for your plan.
+          </InfoBox>
         </div>
 
         {/* Paycheck scheduling inputs intentionally disabled for now.

@@ -168,7 +168,10 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
           >
             <span className="toggle-icon">
               {/* TODO: Update the icon with a proper SVG or icon component later */}
-              {tabDisplayMode === 'icons-only' ? <PanelLeftOpen className="ui-icon" aria-hidden="true" /> : <PanelLeftClose className="ui-icon" aria-hidden="true" />}
+              {tabDisplayMode === 'icons-only' ? 
+                <PanelLeftOpen className="ui-icon" aria-hidden="true" /> : 
+                <PanelLeftClose className="ui-icon" aria-hidden="true" />
+              }
             </span>
           </button>
         )}

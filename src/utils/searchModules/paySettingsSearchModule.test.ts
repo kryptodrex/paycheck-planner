@@ -4,7 +4,7 @@ import { paySettingsSearchModule } from './paySettingsSearchModule';
 
 const salaryBudget: BudgetData = {
   id: 'pay-settings-salary',
-  name: 'Pay Settings Salary',
+  name: 'Pay Details Salary',
   year: 2026,
   paySettings: {
     payType: 'salary',

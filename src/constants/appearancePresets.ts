@@ -18,7 +18,7 @@ export const APPEARANCE_PRESET_OPTIONS: AppearancePresetMeta[] = [
   {
     value: 'default',
     label: 'Paycheck Planner Purple',
-    description: 'Indigo and violet with the existing Paycheck Planner look.',
+    description: 'Indigo and violet with the original Paycheck Planner look.',
     preview: {
       accent: '#667eea',
       accentAlt: '#764ba2',

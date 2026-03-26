@@ -34,6 +34,7 @@ interface SavingsManagerProps {
     | 'toggle-retirement';
   searchActionTargetId?: string;
   displayMode?: ViewMode;
+  viewModeControl?: React.ReactNode;
   onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
@@ -57,6 +58,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   searchActionType,
   searchActionTargetId,
   displayMode = 'paycheck',
+  viewModeControl,
   onViewHistory,
 }) => {
   const { confirmDialog, openConfirmDialog, closeConfirmDialog, confirmCurrentDialog } = useAppDialogs();
@@ -570,9 +572,10 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   return (
     <div className="tab-view savings-manager">
       <PageHeader
-        title="Savings"
+        title="Savings & Retirement Plans"
         subtitle="Manage savings/investment transfers and retirement contributions"
         icon={<PiggyBank className="ui-icon" aria-hidden="true" />}
+        actions={viewModeControl}
       />
 
       <Banner

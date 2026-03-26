@@ -1,21 +1,16 @@
-.view-mode-selector-wrap {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding-bottom: 1.65rem;
-}
-
 .view-mode-selector {
   display: flex;
+  height: 2.3rem;
   gap: 0.5rem;
   background: var(--bg-tertiary);
   padding: 0.25rem;
-  border-radius: 8px;
+  border-radius: 0.5rem;
   overflow: visible;
   border: 2px solid var(--border-header-soft);
 }
 
 .view-mode-selector button {
+  font-size: 0.85rem;
   margin: 0;
   display: inline-flex;
   align-items: center;
@@ -25,7 +20,7 @@
   padding: 0.5rem 1rem;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 0.3rem;
   cursor: pointer;
   font-weight: 600;
   white-space: nowrap;
@@ -80,6 +75,7 @@
 }
 
 .view-mode-settings-button {
+  padding: 0.30rem 0.75rem !important;
   margin: 0;
   align-self: center;
   display: inline-flex;
@@ -93,6 +89,10 @@
   font-size: 1rem;
   line-height: 1;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.view-mode-settings-button .ui-icon {
+  font-size: 1rem;
+  stroke-width: 2px;
 }
 
 .view-mode-settings-button:hover {
@@ -120,11 +120,6 @@
 @media (max-width: 768px) {
   .view-mode-selector {
     width: 100%;
-  }
-
-  .view-mode-selector-wrap {
-    width: 100%;
-    padding-bottom: 1.8rem;
   }
 
   .view-mode-selector button {

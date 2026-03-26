@@ -34,14 +34,17 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
 
     annualGrossPay = hourlyRate * weeklyHours * 52;
   } else {
-    const salaryOptions = [32000, 38000, 45000, 52000, 60000, 70000, 82000, 92000, 98000];
+    const salaryOptions = [32000, 38000, 45000, 52000, 60000, 70000, 82000, 92000, 98000, 110000, 130000, 210000];
+    const variance = randomBetween(0.88, 1.12);
     annualSalary = salaryOptions[Math.floor(Math.random() * salaryOptions.length)];
-    annualGrossPay = annualSalary;
+    annualGrossPay = annualSalary * variance;
   }
 
   let federalTaxRate = 10;
   if (annualGrossPay > 50000) federalTaxRate = 12;
   if (annualGrossPay > 80000) federalTaxRate = 18;
+  if (annualGrossPay > 120000) federalTaxRate = 22;
+  if (annualGrossPay > 200000) federalTaxRate = 28;
   federalTaxRate += Math.random() * 2;
   const stateTaxRate = Math.random() < 0.25 ? 0 : 3 + Math.random() * 4;
 
@@ -49,7 +52,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
   const accounts: Account[] = [
     {
       id: checkingId,
-      name: 'My Checking',
+      name: 'Example Bank',
       type: 'checking',
       icon: getDefaultAccountIcon('checking'),
       color: getDefaultAccountColor('checking'),
@@ -130,20 +133,23 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
 
   const monthlyGross = annualGrossPay / 12;
 
-  const housingPercent = randomBetween(0.30, 0.40);
-  const utilitiesPercent = randomBetween(0.05, 0.08);
+  const housingPercent = randomBetween(0.30, 0.45);
+  const utilitiesPercent = randomBetween(0.03, 0.06);
 
   const targetMonthlyBills = [
-    { name: 'Rent', category: 'Housing', basePercent: housingPercent },
-    { name: 'Utilities', category: 'Utilities', basePercent: utilitiesPercent },
-    { name: 'Internet', category: 'Utilities', basePercent: 0.02 },
-    { name: 'Insurance', category: 'Insurance', basePercent: 0.05 },
-    { name: 'Streaming Service', category: 'Entertainment', basePercent: 0.01 },
+    { name: 'Rent', category: 'Housing', basePercent: housingPercent, baseAmount: 0 },
+    { name: 'Utilities', category: 'Utilities', basePercent: utilitiesPercent, baseAmount: 0 },
+    { name: 'Internet', category: 'Utilities', basePercent: 0.02, baseAmount: 0 },
+    { name: 'Insurance', category: 'Insurance', basePercent: 0.05, baseAmount: 0 },
+    { name: 'Streaming Service', category: 'Entertainment', basePercent: 0, baseAmount: 10 },
+    { name: 'Gym', category: 'Health', baseAmount: randomBetween(15, 60), basePercent: 0 },
   ];
 
   const bills: Bill[] = targetMonthlyBills.map((billTemplate) => {
     const variance = randomBetween(0.88, 1.12);
-    const monthlyAmount = roundToCents(monthlyGross * billTemplate.basePercent * variance);
+    const monthlyAmount = billTemplate.basePercent == 0
+      ? roundToCents(billTemplate.baseAmount * variance)
+      : roundToCents(monthlyGross * billTemplate.basePercent * variance);
     return {
       id: crypto.randomUUID(),
       name: billTemplate.name,
@@ -319,6 +325,24 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
       termMonths,
       enabled: true,
     });
+  }
+
+  // Safety cap: total bills + loan payments must not exceed 92% of estimated annual net.
+  // Bills are already capped vs net, but loans are derived from gross percentages and can
+  // stack up dramatically when multiple loan types are generated simultaneously.
+  if (loans.length > 0) {
+    const annualBillTotal = bills.reduce((sum, bill) => sum + bill.amount * 12, 0);
+    const annualLoanTotal = loans.reduce((sum, loan) => sum + (loan.monthlyPayment ?? 0) * 12, 0);
+    const maxAnnualTotal = estimatedAnnualNet * 0.92;
+    if (annualBillTotal + annualLoanTotal > maxAnnualTotal) {
+      const maxLoanAnnual = Math.max(0, maxAnnualTotal - annualBillTotal);
+      const loanScale = annualLoanTotal > 0 ? maxLoanAnnual / annualLoanTotal : 1;
+      if (loanScale < 1) {
+        loans.forEach((loan) => {
+          loan.monthlyPayment = roundToCents(Math.max(10, (loan.monthlyPayment ?? 0) * loanScale));
+        });
+      }
+    }
   }
 
   return {

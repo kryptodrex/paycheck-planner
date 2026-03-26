@@ -1,6 +1,7 @@
 import React from 'react';
-import { Building2, CalendarClock, ChartPie, Globe, PiggyBank, ShieldCheck } from 'lucide-react';
+import { BadgeQuestionMark, Building2, CalendarClock, ChartPie, Globe, PiggyBank, ShieldCheck } from 'lucide-react';
 import { Button, Modal } from '../../_shared';
+import { APP_VERSION, APP_NAME } from '../../../constants/appMeta';
 import './AboutModal.css';
 
 interface AboutModalProps {
@@ -13,7 +14,8 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      header="About Paycheck Planner"
+      header={`About ${APP_NAME}`}
+      headerIcon={<BadgeQuestionMark className="ui-icon" aria-hidden="true" />}
       contentClassName="about-modal"
       footer={
         <Button variant="primary" onClick={onClose}>
@@ -23,7 +25,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
     >
       <div className="about-intro">
         <h3>Plan where every paycheck goes</h3>
-        <p>Paycheck Planner helps you manage your finances with year-based planning, tracking exactly where your money goes from gross pay to net.</p>
+        <p>{APP_NAME} helps you manage your finances with year-based planning, tracking exactly where your money goes from gross pay to net.</p>
       </div>
 
       <div className="about-features">
@@ -47,7 +49,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           <span className="about-feature-icon" aria-hidden="true"><ShieldCheck className="ui-icon" /></span>
           <div className="about-feature-content">
             <h4>Secure & Local</h4>
-            <p>Your data stays on your computer with optional encryption. No cloud sync, no data sharing—complete privacy and control.</p>
+            <p>Your data stays on your computer with optional encryption. No cloud sync, no data sharing, complete privacy and control.</p>
           </div>
         </div>
 
@@ -63,7 +65,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           <span className="about-feature-icon" aria-hidden="true"><Building2 className="ui-icon" /></span>
           <div className="about-feature-content">
             <h4>Account Management</h4>
-            <p>Create and manage multiple accounts (checking, savings, investment) and associate them with your bills and allocations.</p>
+            <p>Create and manage multiple accounts (checking, savings, investment) and associate them with your bills and other allocations.</p>
           </div>
         </div>
 
@@ -77,7 +79,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
       </div>
 
       <div className="about-version">
-        <p><strong>Version:</strong> 1.0.0</p>
+        <p><strong>Version:</strong> {APP_VERSION}</p>
       </div>
     </Modal>
   );
