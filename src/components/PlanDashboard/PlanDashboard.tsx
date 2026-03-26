@@ -346,6 +346,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
     const normalizedViewMode = normalizeLegacyTabId(viewMode);
     if (normalizedViewMode && VALID_TABS.includes(normalizedViewMode)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Restoring active tab from persisted context before paint.
       setActiveTab(normalizedViewMode);
       initializedTabContextRef.current = tabRestoreContext;
       return;
@@ -474,6 +475,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   // Initialize tab position and display mode from budget settings
   useEffect(() => {
     if (budgetData?.settings?.tabPosition) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Mirrors persisted tab position into local UI state.
       setTabPosition(budgetData.settings.tabPosition);
     }
     if (budgetData?.settings?.tabDisplayMode) {
@@ -918,6 +920,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         planLoadingStartRef.current = Date.now();
       }
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Loading screen must toggle immediately while plan data is unavailable.
       setShowPlanLoadingScreen(true);
       return;
     }

@@ -130,7 +130,6 @@ const BillsManager: React.FC<BillsManagerProps> = ({
       setUseCompactHeaderActions(event.matches);
     };
 
-    setUseCompactHeaderActions(mediaQuery.matches);
     mediaQuery.addEventListener('change', handleChange);
 
     return () => {

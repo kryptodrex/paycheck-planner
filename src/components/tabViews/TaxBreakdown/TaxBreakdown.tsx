@@ -89,7 +89,6 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
             setUseCompactHeaderActions(event.matches);
         };
 
-        setUseCompactHeaderActions(mediaQuery.matches);
         mediaQuery.addEventListener('change', handleChange);
 
         return () => {

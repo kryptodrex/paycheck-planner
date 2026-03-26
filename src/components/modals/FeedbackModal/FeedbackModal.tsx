@@ -35,8 +35,6 @@ interface FeedbackModalProps {
   onSubmitted: (result: { success: boolean; message: string }) => void;
 }
 
-const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
-
 const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context, onSubmitted }) => {
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState<FeedbackCategory>('feature');
@@ -44,8 +42,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
   const [messageHtml, setMessageHtml] = useState('');
   const [messageText, setMessageText] = useState('');
   const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
-  const [screenshot, setScreenshot] = useState<FeedbackPayload['screenshot']>();
-  const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -81,8 +77,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
       editorRef.current.innerHTML = '';
     }
     setIncludeDiagnostics(true);
-    setScreenshot(undefined);
-    setScreenshotError(null);
     setFieldError(null);
     setIsSubmitting(false);
   };
@@ -90,40 +84,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
   const handleClose = () => {
     resetForm();
     onClose();
-  };
-
-  const handleScreenshotChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      setScreenshot(undefined);
-      setScreenshotError(null);
-      return;
-    }
-
-    if (file.size > MAX_SCREENSHOT_BYTES) {
-      setScreenshot(undefined);
-      setScreenshotError('Screenshot is too large. Maximum size is 5MB.');
-      return;
-    }
-
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(new Error('Could not read screenshot file.'));
-        reader.readAsDataURL(file);
-      });
-
-      setScreenshot({
-        fileName: file.name,
-        mimeType: file.type || 'image/png',
-        dataUrl,
-      });
-      setScreenshotError(null);
-    } catch {
-      setScreenshot(undefined);
-      setScreenshotError('Could not read screenshot file. Please try a different image.');
-    }
   };
 
   const buildDiagnostics = (): Record<string, unknown> => ({
@@ -161,7 +121,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, context,
       messageText: trimmedMessageText,
       includeDiagnostics,
       diagnostics: includeDiagnostics ? buildDiagnostics() : undefined,
-      screenshot,
     };
 
     setFieldError(null);
