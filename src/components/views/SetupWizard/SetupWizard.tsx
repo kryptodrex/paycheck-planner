@@ -12,8 +12,9 @@ import {
   toStoredTaxLine,
   validateEditableTaxLineValues,
 } from '../../../utils/taxLines';
+import { estimateTaxSettings } from '../../../services/taxEstimationService';
 import type { Account } from '../../../types/accounts';
-import type { PaySettings, TaxSettings } from '../../../types/payroll';
+import type { PaySettings, TaxSettings, TaxFilingStatus } from '../../../types/payroll';
 import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor, Dropdown } from '../../_shared';
 import '../views.shared.css';
 import '../../_shared/payEditorShared.css';
@@ -76,6 +77,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [taxRatesAutoEstimated, setTaxRatesAutoEstimated] = useState(false);
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
   const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
+  const [filingStatus, setFilingStatus] = useState<TaxFilingStatus>('single');
 
   // Account configuration - start with default "My Checking" account
   const [accounts, setAccounts] = useState<Account[]>([
@@ -184,6 +186,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     const taxSettings: TaxSettings = {
       taxLines: validatedTaxLines.map((line) => toStoredTaxLine(line, estimateGrossPerPaycheck())),
       additionalWithholding: parsedWithholding,
+      filingStatus,
     };
     updateTaxSettings(taxSettings);
 
@@ -281,51 +284,42 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     return (parseFloat(hourlyRate) || 0) * (parseFloat(hoursPerWeek) || 0) * 52;
   };
 
-  const estimateFederalRate = (annualGross: number) => {
-    if (annualGross <= 25000) return 7;
-    if (annualGross <= 45000) return 10;
-    if (annualGross <= 70000) return 12;
-    if (annualGross <= 100000) return 15;
-    if (annualGross <= 160000) return 18;
-    if (annualGross <= 250000) return 22;
-    return 26;
-  };
-
-  const estimateStateRate = (annualGross: number) => {
-    if (annualGross <= 30000) return 3;
-    if (annualGross <= 60000) return 4;
-    if (annualGross <= 100000) return 5;
-    if (annualGross <= 160000) return 6;
-    return 7;
-  };
-
   const applyEstimatedTaxRates = (lines: EditableTaxLineValues[]) => {
     const annualGross = getEstimatedAnnualGross();
-    const federalRate = estimateFederalRate(annualGross);
-    const stateRate = estimateStateRate(annualGross);
     const grossPerPaycheck = estimateGrossPerPaycheck();
 
+    const estimated = estimateTaxSettings({
+      currency,
+      annualGrossIncome: annualGross,
+      annualTaxableIncome: grossPerPaycheck * getPaychecksPerYear(payFrequency),
+      paychecksPerYear: getPaychecksPerYear(payFrequency),
+      filingStatus,
+    });
+
+    const estimatedByLabel = new Map(
+      estimated.taxSettings.taxLines.map((line) => [line.label.trim().toLowerCase(), line]),
+    );
+
     return lines.map((line) => {
-      const lineWithTaxableIncome = syncEditableTaxLineValues(line, 'taxableIncome', grossPerPaycheck.toFixed(2), grossPerPaycheck);
       const normalizedLabel = line.label.trim().toLowerCase();
+      const suggested = estimatedByLabel.get(normalizedLabel);
+      const lineWithTaxableIncome = syncEditableTaxLineValues(
+        line,
+        'taxableIncome',
+        (suggested?.taxableIncome ?? grossPerPaycheck).toFixed(2),
+        grossPerPaycheck,
+      );
 
-      if (normalizedLabel === 'federal tax') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', String(federalRate), grossPerPaycheck);
+      if (!suggested) {
+        return lineWithTaxableIncome;
       }
 
-      if (normalizedLabel === 'state tax') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', String(stateRate), grossPerPaycheck);
-      }
-
-      if (normalizedLabel === 'social security') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', '6.2', grossPerPaycheck);
-      }
-
-      if (normalizedLabel === 'medicare') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', '1.45', grossPerPaycheck);
-      }
-
-      return lineWithTaxableIncome;
+      return syncEditableTaxLineValues(
+        lineWithTaxableIncome,
+        'rate',
+        String(suggested.rate),
+        grossPerPaycheck,
+      );
     });
   };
 
@@ -572,7 +566,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               <InfoBox>
                 {currency === 'USD' ? (
                   <>
-                    <strong>Starter estimates loaded:</strong> These tax percentages were prefilled from the pay amount you entered.
+                    <strong>Starter estimates loaded:</strong> These tax percentages use progressive federal brackets,
+                    Social Security wage-base capping, and Medicare surtax behavior from the pay amount you entered.
                     Review and adjust them if your actual withholding differs.
                   </>
                 ) : (
@@ -589,7 +584,20 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 onLineBlur={handleTaxLineBlur}
                 onAddLine={handleAddTaxLine}
                 onRemoveLine={handleRemoveTaxLine}
+                showTaxableIncome={false}
               />
+
+              {currency === 'USD' && (
+                <FormGroup label="Federal Filing Status" helperText="Used for IRS federal bracket estimation.">
+                  <Dropdown
+                    value={filingStatus}
+                    onChange={(e) => setFilingStatus(e.target.value as TaxFilingStatus)}
+                  >
+                    <option value="single">Single</option>
+                    <option value="married_filing_jointly">Married Filing Jointly</option>
+                  </Dropdown>
+                </FormGroup>
+              )}
 
               <FormGroup 
                 label="Additional Withholding (per paycheck)" 

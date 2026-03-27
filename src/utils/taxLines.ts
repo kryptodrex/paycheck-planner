@@ -23,8 +23,46 @@ export function calculateTaxLineAmountFromRate(taxableIncome: number, rate: numb
   return roundUpToCent((taxableIncome * rate) / 100);
 }
 
-export function getTaxableIncomeForTaxLine(defaultTaxableIncome: number, line: TaxLine): number {
-  return roundToCent(Math.max(0, line.taxableIncome ?? defaultTaxableIncome));
+function normalizeTaxLabel(label: string): string {
+  return label.trim().toLowerCase();
+}
+
+function isFederalOrStateStyleTaxLine(label: string): boolean {
+  return /(federal|state|local|income\s*tax|withholding)/.test(label);
+}
+
+function isSocialSecurityTaxLine(label: string): boolean {
+  return /(social\s*security|oasdi|fica\s*social|sui)/.test(label);
+}
+
+function isMedicareTaxLine(label: string): boolean {
+  return /(medicare|fica\s*medicare)/.test(label);
+}
+
+export function getTaxableIncomeForTaxLine(defaultTaxableIncome: number, line: TaxLine, grossPay?: number): number {
+  const fallbackTaxableIncome = roundToCent(Math.max(0, defaultTaxableIncome));
+  const storedTaxableIncome = roundToCent(Math.max(0, line.taxableIncome ?? fallbackTaxableIncome));
+
+  if (!Number.isFinite(grossPay) || grossPay === undefined || grossPay <= 0) {
+    return storedTaxableIncome;
+  }
+
+  const normalizedLabel = normalizeTaxLabel(line.label || '');
+  const safeGrossPay = roundToCent(Math.max(0, grossPay));
+
+  if (isFederalOrStateStyleTaxLine(normalizedLabel)) {
+    return roundToCent(Math.min(storedTaxableIncome, fallbackTaxableIncome));
+  }
+
+  if (isSocialSecurityTaxLine(normalizedLabel)) {
+    return roundToCent(Math.min(safeGrossPay, storedTaxableIncome > 0 ? storedTaxableIncome : safeGrossPay));
+  }
+
+  if (isMedicareTaxLine(normalizedLabel)) {
+    return safeGrossPay;
+  }
+
+  return storedTaxableIncome;
 }
 
 export function calculateTaxLineRateFromAmount(taxableIncome: number, amount: number): number {
@@ -35,8 +73,8 @@ export function calculateTaxLineRateFromAmount(taxableIncome: number, amount: nu
   return Math.round((((amount / taxableIncome) * 100) + Number.EPSILON) * 10000) / 10000;
 }
 
-export function calculateTaxLineAmount(taxableIncome: number, line: TaxLine): number {
-  const taxableIncomeForLine = getTaxableIncomeForTaxLine(taxableIncome, line);
+export function calculateTaxLineAmount(taxableIncome: number, line: TaxLine, grossPay?: number): number {
+  const taxableIncomeForLine = getTaxableIncomeForTaxLine(taxableIncome, line, grossPay);
   if (getTaxLineCalculationType(line) === 'fixed') {
     return roundUpToCent(Math.max(0, line.amount || 0));
   }

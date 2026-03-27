@@ -96,7 +96,7 @@ export function calculatePaycheckBreakdown(input?: BudgetCalculationInput | null
   const taxLineAmounts: TaxLineAmount[] = (input.taxSettings.taxLines || []).map((line) => ({
     id: line.id,
     label: line.label,
-    amount: calculateTaxLineAmount(taxableIncome, line),
+    amount: calculateTaxLineAmount(taxableIncome, line, grossPay),
   }));
 
   const additionalWithholding = roundUpToCent(input.taxSettings.additionalWithholding || 0);

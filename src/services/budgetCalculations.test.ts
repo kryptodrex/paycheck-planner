@@ -223,4 +223,45 @@ describe('budgetCalculations', () => {
     expect(breakdown.totalTaxes).toBe(290);
     expect(breakdown.netPay).toBe(1710);
   });
+
+  it('dynamically rebases federal and state lines after pre-tax deductions while keeping FICA on gross wages', () => {
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary: 52000,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [
+        {
+          id: 'deduction-1',
+          name: 'Traditional 401k',
+          amount: 100,
+          isPercentage: false,
+        },
+      ],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [
+          { id: 'tax-federal', label: 'Federal Withholding', rate: 10, taxableIncome: 2000, calculationType: 'percentage' },
+          { id: 'tax-state', label: 'State Withholding', rate: 5, taxableIncome: 2000, calculationType: 'percentage' },
+          { id: 'tax-ss', label: 'OASDI (USA)', rate: 6.2, taxableIncome: 2000, calculationType: 'percentage' },
+          { id: 'tax-medicare', label: 'Medicare (USA)', rate: 1.45, taxableIncome: 2000, calculationType: 'percentage' },
+        ],
+        additionalWithholding: 0,
+      },
+    });
+
+    expect(breakdown.grossPay).toBe(2000);
+    expect(breakdown.preTaxDeductions).toBe(100);
+    expect(breakdown.taxableIncome).toBe(1900);
+    expect(breakdown.taxLineAmounts).toEqual([
+      { id: 'tax-federal', label: 'Federal Withholding', amount: 190 },
+      { id: 'tax-state', label: 'State Withholding', amount: 95 },
+      { id: 'tax-ss', label: 'OASDI (USA)', amount: 124 },
+      { id: 'tax-medicare', label: 'Medicare (USA)', amount: 29 },
+    ]);
+    expect(breakdown.totalTaxes).toBe(438);
+    expect(breakdown.netPay).toBe(1462);
+  });
 });

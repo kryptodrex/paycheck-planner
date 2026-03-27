@@ -133,6 +133,7 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
         { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: 0,
+      filingStatus: 'single',
     };
   } else if ('federalTaxRate' in migrated.taxSettings) {
     // Migrate old fixed-field format to dynamic taxLines
@@ -151,10 +152,12 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
         { id: crypto.randomUUID(), label: 'Medicare', rate: old.medicareRate ?? 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: old.additionalWithholding ?? 0,
+      filingStatus: 'single',
     };
   } else {
     migrated.taxSettings = {
       ...migrated.taxSettings,
+      filingStatus: migrated.taxSettings.filingStatus === 'married_filing_jointly' ? 'married_filing_jointly' : 'single',
       taxLines: (migrated.taxSettings.taxLines || []).map((line) => ({
         ...line,
         amount: typeof line.amount === 'number' ? line.amount : 0,

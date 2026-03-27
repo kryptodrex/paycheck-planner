@@ -88,4 +88,20 @@ describe('taxLines', () => {
     expect(nextLine.amount).toBe('120.00');
     expect(nextLine.rate).toBe('10');
   });
+
+  it('uses post pre-tax taxable income for withholding lines and gross wages for Medicare lines', () => {
+    const federalAmount = calculateTaxLineAmount(
+      1900,
+      { id: 'tax-fed', label: 'Federal Withholding', rate: 10, taxableIncome: 2000, calculationType: 'percentage' },
+      2000,
+    );
+    const medicareAmount = calculateTaxLineAmount(
+      1900,
+      { id: 'tax-med', label: 'Medicare (USA)', rate: 1.45, taxableIncome: 2000, calculationType: 'percentage' },
+      2000,
+    );
+
+    expect(federalAmount).toBe(190);
+    expect(medicareAmount).toBe(29);
+  });
 });

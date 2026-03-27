@@ -32,9 +32,12 @@ export interface TaxLine {
   calculationType?: TaxLineCalculationType;
 }
 
+export type TaxFilingStatus = 'single' | 'married_filing_jointly';
+
 export interface TaxSettings {
   taxLines: TaxLine[];
   additionalWithholding: number;
+  filingStatus?: TaxFilingStatus;
 }
 
 export interface Benefit {
