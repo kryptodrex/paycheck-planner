@@ -432,7 +432,7 @@ const KeyMetrics: React.FC<KeyMetricsProps> = ({
             id="key-metrics-taxes-card"
             className="taxes-card"
             icon={<Scale className="ui-icon ui-icon-lg" />}
-            title={<>Total <GlossaryTerm termId="withholding">TAXES</GlossaryTerm></>}
+            title={<>Total Estimated <GlossaryTerm termId="withholding">TAXES</GlossaryTerm></>}
             contextLabel="Withheld"
             contextTone="negative"
             ariaLabel="Open taxes tab"

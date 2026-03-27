@@ -779,7 +779,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
         <div className="flow-stage">
           <div id="pay-breakdown-total-taxes" className="stage-box taxes-box">
-            <h3><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></h3>
+            <h3><GlossaryTerm termId="withholding">Total Estimated Taxes</GlossaryTerm></h3>
             <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.totalTaxes, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-breakdown">
               {displayBreakdown.taxLineAmounts.map(line => (
