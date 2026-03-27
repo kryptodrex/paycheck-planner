@@ -6,6 +6,7 @@ import type { PayFrequency } from '../../../types/frequencies';
 import type { PaySettings } from '../../../types/payroll';
 import type { AuditHistoryTarget } from '../../../types/audit';
 import { convertBudgetAmounts } from '../../../services/budgetCurrencyConversion';
+import { getExchangeRate, getLastUpdatedTimestamp } from '../../../services/currencyRateFetcher';
 import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
 import { getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } from '../../../utils/payPeriod';
 import { normalizeStoredAllocationAmount } from '../../../utils/allocationEditor';
@@ -14,7 +15,7 @@ import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../
 import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup, InfoBox } from '../../_shared';
 import '../../_shared/payEditorShared.css';
 import './PaySettingsModal.css';
-import { Banknote } from 'lucide-react';
+import { Banknote, RefreshCw } from 'lucide-react';
 
 interface PaySettingsModalProps {
   isOpen: boolean;
@@ -52,13 +53,16 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
   const [originalCurrency, setOriginalCurrency] = useState('USD');
   const [exchangeRate, setExchangeRate] = useState('');
   const [fieldErrors, setFieldErrors] = useState<PaySettingsFieldErrors>({});
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+  const [lastUpdatedTimestamp, setLastUpdatedTimestamp] = useState<number | null>(null);
+  const [inverseRate, setInverseRate] = useState<string | null>(null);
   const formContainerRef = useRef<HTMLDivElement | null>(null);
+  const rateFetchAbortRef = useRef<AbortController | null>(null);
 
   // Pre-fill form when modal opens
   useEffect(() => {
     if (isOpen && budgetData) {
       const currentCurrency = budgetData.settings.currency || 'USD';
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEditPayType(budgetData.paySettings.payType);
       setEditPayFrequency(budgetData.paySettings.payFrequency);
       prevEditPayFrequencyRef.current = budgetData.paySettings.payFrequency;
@@ -74,6 +78,71 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       setFieldErrors({});
     }
   }, [isOpen, budgetData]);
+
+  // Fetch live exchange rate when currency changes
+  useEffect(() => {
+    if (!isOpen || editCurrency === originalCurrency) {
+      setExchangeRate('');
+      setIsFetchingRate(false);
+      setLastUpdatedTimestamp(null);
+      setInverseRate(null);
+      return;
+    }
+
+    // Abort any previous request
+    if (rateFetchAbortRef.current) {
+      rateFetchAbortRef.current.abort();
+    }
+    rateFetchAbortRef.current = new AbortController();
+
+    const fetchRate = async () => {
+      setIsFetchingRate(true);
+      try {
+        const result = await getExchangeRate(originalCurrency, editCurrency);
+        if (result) {
+          // Format rate with reasonable precision (8 decimal places for most currency pairs)
+          const formattedRate = result.rate.toFixed(8).replace(/\.?0+$/, '');
+          setExchangeRate(formattedRate);
+          
+          // Get and set the last updated timestamp
+          const timestamp = getLastUpdatedTimestamp(originalCurrency, editCurrency);
+          setLastUpdatedTimestamp(timestamp);
+        } else {
+          console.warn(`Failed to fetch exchange rate for ${originalCurrency} → ${editCurrency}`);
+        }
+      } catch (error) {
+        console.warn('Error fetching exchange rate:', error);
+      } finally {
+        setIsFetchingRate(false);
+      }
+    };
+
+    fetchRate();
+
+    return () => {
+      if (rateFetchAbortRef.current) {
+        rateFetchAbortRef.current.abort();
+      }
+    };
+  }, [isOpen, editCurrency, originalCurrency]);
+
+  // Calculate inverse rate when exchange rate changes
+  useEffect(() => {
+    if (!exchangeRate || editCurrency === originalCurrency) {
+      setInverseRate(null);
+      return;
+    }
+
+    const rate = parseFloat(exchangeRate);
+    if (Number.isFinite(rate) && rate > 0) {
+      const inverse = 1 / rate;
+      // Format with 8 decimal places, remove trailing zeros
+      const formattedInverse = inverse.toFixed(8).replace(/\.?0+$/, '');
+      setInverseRate(formattedInverse);
+    } else {
+      setInverseRate(null);
+    }
+  }, [exchangeRate, editCurrency, originalCurrency]);
 
   // Handle Esc key
   useEffect(() => {
@@ -149,7 +218,9 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
 
   const suggestedLeftoverPerPaycheck = getSuggestedLeftoverPerPaycheck(estimateGrossPerPaycheck());
 
-  const formattedSuggestedLeftover = formatSuggestedLeftover(suggestedLeftoverPerPaycheck, editCurrency);
+  const isCurrencyPendingSave = editCurrency !== originalCurrency;
+  const displayedAmountCurrency = isCurrencyPendingSave ? originalCurrency : editCurrency;
+  const formattedSuggestedLeftover = formatSuggestedLeftover(suggestedLeftoverPerPaycheck, displayedAmountCurrency);
 
   const handleSaveSettings = () => {
     const parsedAnnualSalary = parseFloat(editAnnualSalary);
@@ -328,17 +399,59 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
 
         {editCurrency !== originalCurrency && (
           <FormGroup 
-            label="Exchange Rate (Optional)" 
-            helperText={`Enter the exchange rate from ${originalCurrency} to ${editCurrency} to convert all existing amounts. Example: if 1 ${originalCurrency} = 0.92 ${editCurrency}, enter 0.92. To convert back, calculate the inverse rate (1 ÷ original_rate) for best precision instead of rounding. Leave blank to only change the currency symbol without converting amounts.`}
+            label="Exchange Rate (Live from API)" 
+            helperText={`The exchange rate from ${originalCurrency} to ${editCurrency} has been auto-fetched and will be used to convert all existing amounts when you save. You can override it by editing the field above. Pay amounts stay displayed in ${originalCurrency} until you save. Leave it blank to only change the currency symbol without converting any amounts.`}
           >
-            <input
-              type="number"
-              value={exchangeRate}
-              onChange={(e) => setExchangeRate(e.target.value)}
-              placeholder="e.g., 0.92"
-              min="0"
-              step="0.00000001"
-            />
+            <div className="pay-settings-exchange-rate-block">
+              <div className="pay-settings-exchange-rate-input-row">
+                <input
+                  type="number"
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(e.target.value)}
+                  placeholder={isFetchingRate ? 'Fetching...' : 'e.g., 0.92'}
+                  min="0"
+                  step="0.00000001"
+                  disabled={isFetchingRate}
+                />
+              </div>
+
+              <div className="pay-settings-exchange-rate-meta-row">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="small"
+                  title="Refresh Exchange Rate"
+                  onClick={async () => {
+                    setIsFetchingRate(true);
+                    const result = await getExchangeRate(originalCurrency, editCurrency);
+                    if (result) {
+                      const formattedRate = result.rate.toFixed(8).replace(/\.?0+$/, '');
+                      setExchangeRate(formattedRate);
+                      const timestamp = getLastUpdatedTimestamp(originalCurrency, editCurrency);
+                      setLastUpdatedTimestamp(timestamp);
+                    }
+                    setIsFetchingRate(false);
+                  }}
+                  disabled={isFetchingRate}
+                >
+                  <RefreshCw className="ui-icon" aria-hidden="true" size={14} />
+                  Refresh rate
+                </Button>
+              </div>
+
+              <div className="pay-settings-exchange-rate-meta-text">
+                {lastUpdatedTimestamp && !isFetchingRate && (
+                  <div>
+                    Last updated: {new Date(lastUpdatedTimestamp).toLocaleString()}
+                  </div>
+                )}
+                {inverseRate && (
+                  <div className="pay-settings-exchange-rate-inverse">
+                    Inverse: 1 {editCurrency} = {inverseRate} {originalCurrency}
+                  </div>
+                )}
+              </div>
+            </div>
           </FormGroup>
         )}
 
@@ -347,7 +460,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
             <FormGroup label="Annual Salary" required error={fieldErrors.annualSalary}>
               <FormattedNumberInput
                 className={fieldErrors.annualSalary ? 'field-error' : ''}
-                prefix={getCurrencySymbol(editCurrency)}
+                prefix={getCurrencySymbol(displayedAmountCurrency)}
                 value={editAnnualSalary}
                 decimals={0}
                 onChange={(e) => {
@@ -365,7 +478,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
               <FormGroup label="Hourly Rate" required error={fieldErrors.hourlyRate}>
                 <InputWithPrefix
                   className={fieldErrors.hourlyRate ? 'field-error' : ''}
-                  prefix={getCurrencySymbol(editCurrency)}
+                  prefix={getCurrencySymbol(displayedAmountCurrency)}
                   type="number"
                   value={editHourlyRate}
                   onChange={(e) => {
@@ -446,7 +559,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
         >
           <InputWithPrefix
             className={fieldErrors.minLeftover ? 'field-error' : ''}
-            prefix={getCurrencySymbol(editCurrency)}
+            prefix={getCurrencySymbol(displayedAmountCurrency)}
             type="number"
             value={editMinLeftover}
             onChange={(e) => {

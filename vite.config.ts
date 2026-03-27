@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
+      'import.meta.env.VITE_CURRENCY_CONVERSION_URL': JSON.stringify(getEnv('CURRENCY_CONVERSION_URL')),
     },
     plugins: [
       react(),
