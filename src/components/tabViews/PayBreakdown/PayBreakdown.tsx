@@ -5,7 +5,13 @@ import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
-import { getPaychecksPerYear, getDisplayModeLabel } from '../../../utils/payPeriod';
+import {
+  calculateGrossPayPerPaycheck,
+  getDisplayModeLabel,
+  getDisplayModeOccurrencesPerYear,
+  getPaychecksPerYear,
+} from '../../../utils/payPeriod';
+import { calculateOtherIncomeAnnualAmount } from '../../../utils/otherIncome';
 import { fromAllocationDisplayAmount, normalizeStoredAllocationAmount, toAllocationDisplayAmount } from '../../../utils/allocationEditor';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
@@ -185,6 +191,29 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const selectedFullyResolved = selectedProjectedRemaining >= targetLeftoverPerPaycheck;
 
   const displayBreakdown = calculateDisplayPayBreakdown(annualBreakdown, displayMode, paychecksPerYear);
+  const baseGrossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
+  const displayModeOccurrencesPerYear = getDisplayModeOccurrencesPerYear(displayMode, paychecksPerYear);
+
+  const otherIncomeBreakdownForTreatment = (treatment: 'gross' | 'taxable' | 'net') => {
+    return (budgetData.otherIncome || [])
+      .filter((entry) => entry.enabled !== false && entry.payTreatment === treatment)
+      .map((entry) => {
+        const annualAmount = calculateOtherIncomeAnnualAmount(entry, baseGrossPayPerPaycheck, paychecksPerYear);
+        return {
+          id: `other-income-${treatment}-${entry.id}`,
+          label: entry.name,
+          amount: roundToCent(annualAmount / displayModeOccurrencesPerYear),
+        };
+      })
+      .filter((item) => item.amount > 0);
+  };
+
+  const grossOtherIncomeItems = otherIncomeBreakdownForTreatment('gross');
+  const taxableOtherIncomeItems = otherIncomeBreakdownForTreatment('taxable');
+  const netOtherIncomeItems = otherIncomeBreakdownForTreatment('net');
+  const baseGrossAmount = roundToCent(Math.max(0, displayBreakdown.grossPay - (displayBreakdown.otherIncomeGross || 0)));
+  const baseTaxableAmount = roundToCent(Math.max(0, displayBreakdown.taxableIncome - (displayBreakdown.otherIncomeTaxable || 0)));
+  const baseNetAmount = roundToCent(Math.max(0, displayBreakdown.netPay - (displayBreakdown.otherIncomeNet || 0)));
 
   // Pre-tax and post-tax deduction line items for display in the Gross-to-Net flow
   const preTaxLineItems = buildPreTaxLineItems(
@@ -739,13 +768,35 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         <div className="flow-stage">
           <div id="pay-breakdown-gross-pay" className="stage-box gross-box">
             <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
-            <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <div className="stage-detail">
               {budgetData.paySettings.payType === 'salary' 
                 ? `${formatWithSymbol(budgetData.paySettings.annualSalary || 0, currency, { maximumFractionDigits: 0 })}/year`
                 : `${getCurrencySymbol(currency)}${budgetData.paySettings.hourlyRate}/hr × ${(((budgetData.paySettings.hoursPerPayPeriod || 0) * getPaychecksPerYear(budgetData.paySettings.payFrequency)) / 52).toFixed(2)} hrs/week`
               }
             </div>
+            {grossOtherIncomeItems.length > 0 && (
+              <>
+                <AmountBreakdown
+                  items={[
+                    {
+                      id: 'base-gross-pay',
+                      label: 'Base gross pay',
+                      amount: baseGrossAmount,
+                    },
+                  ]}
+                  rowLineLocation="bottom"
+                  formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                />
+                <AmountBreakdown
+                  items={grossOtherIncomeItems}
+                  rowLineLocation="bottom"
+                  formatAmount={(amount) => `+${formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  className="other-income-breakdown"
+                />
+              </>
+            )}
+            <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            {grossOtherIncomeItems.length > 0 && <div className="stage-detail">Total after gross additions</div>}
           </div>
         </div>
 
@@ -772,8 +823,29 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         <div className="flow-stage">
           <div id="pay-breakdown-taxable-income" className="stage-box taxable-box">
             <h3><GlossaryTerm termId="taxable-income">Taxable Income</GlossaryTerm></h3>
+            {taxableOtherIncomeItems.length > 0 && (
+              <>
+                <AmountBreakdown
+                  items={[
+                    {
+                      id: 'base-taxable-income',
+                      label: 'Base taxable income',
+                      amount: baseTaxableAmount,
+                    },
+                  ]}
+                  rowLineLocation="bottom"
+                  formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                />
+                <AmountBreakdown
+                  items={taxableOtherIncomeItems}
+                  rowLineLocation="bottom"
+                  formatAmount={(amount) => `+${formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  className="other-income-breakdown"
+                />
+              </>
+            )}
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="stage-detail">Subject to taxes</div>
+            <div className="stage-detail">{taxableOtherIncomeItems.length > 0 ? 'Total after taxable additions' : 'Subject to taxes'}</div>
           </div>
         </div>
 
@@ -822,8 +894,29 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         <div className="flow-stage">
           <div id="pay-breakdown-net-pay" className="stage-box net-box">
             <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
+            {netOtherIncomeItems.length > 0 && (
+              <>
+                <AmountBreakdown
+                  items={[
+                    {
+                      id: 'base-net-pay',
+                      label: 'Base net pay',
+                      amount: baseNetAmount,
+                    },
+                  ]}
+                  rowLineLocation="bottom"
+                  formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                />
+                <AmountBreakdown
+                  items={netOtherIncomeItems}
+                  rowLineLocation="bottom"
+                  formatAmount={(amount) => `+${formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  className="other-income-breakdown"
+                />
+              </>
+            )}
             <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
+            <div className="stage-detail">{netOtherIncomeItems.length > 0 ? 'Total after net additions' : `${netPct.toFixed(1)}% of gross`}</div>
           </div>
         </div>
         </div>

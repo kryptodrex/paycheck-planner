@@ -36,6 +36,7 @@ import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountD
 const VALID_OTHER_INCOME_TYPES = [
   'bonus',
   'commission',
+  'personal-business',
   'rental-income',
   'retirement-withdrawal',
   'disability',

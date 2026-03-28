@@ -87,6 +87,19 @@ const SNAPSHOTS: Record<AuditEntityType, () => unknown> = {
     carrier: 'Delta Dental',
     effectiveDate: '2026-01-01',
   }),
+  'other-income': () => ({
+    id: uuidv4(),
+    name: 'Weekend Consulting',
+    incomeType: 'personal-business',
+    amountMode: 'fixed',
+    amount: 350,
+    frequency: 'monthly',
+    enabled: true,
+    isTaxable: true,
+    payTreatment: 'gross',
+    withholdingMode: 'manual',
+    notes: 'Part-time client work',
+  }),
   account: () => {
     const accountId = uuidv4();
     return {

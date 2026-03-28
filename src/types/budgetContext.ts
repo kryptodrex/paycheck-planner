@@ -1,7 +1,7 @@
 import type { Account } from './accounts';
 import type { BudgetData } from './budget';
 import type { Bill, Loan, SavingsContribution } from './obligations';
-import type { Benefit, Deduction, PaySettings, PaycheckBreakdown, RetirementElection, TaxSettings } from './payroll';
+import type { Benefit, Deduction, OtherIncome, PaySettings, PaycheckBreakdown, RetirementElection, TaxSettings } from './payroll';
 import type { BudgetSettings } from './settings';
 
 export interface BudgetContextType {
@@ -44,6 +44,9 @@ export interface BudgetContextType {
   addBenefit: (benefit: Omit<Benefit, 'id'>) => void;
   updateBenefit: (id: string, benefit: Partial<Benefit>) => void;
   deleteBenefit: (id: string) => void;
+  addOtherIncome: (income: Omit<OtherIncome, 'id'>) => void;
+  updateOtherIncome: (id: string, income: Partial<OtherIncome>) => void;
+  deleteOtherIncome: (id: string) => void;
   addSavingsContribution: (contribution: Omit<SavingsContribution, 'id'>) => void;
   updateSavingsContribution: (id: string, contribution: Partial<SavingsContribution>) => void;
   deleteSavingsContribution: (id: string) => void;

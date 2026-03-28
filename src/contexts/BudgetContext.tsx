@@ -21,6 +21,7 @@ import type {
 import type {
   Benefit,
   Deduction,
+  OtherIncome,
   PaySettings,
   PaycheckBreakdown,
   RetirementElection,
@@ -956,6 +957,63 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   }, [applyBudgetMutation]);
 
   /**
+   * Add a new other income entry
+   */
+  const addOtherIncome = useCallback((income: Omit<OtherIncome, 'id'>) => {
+    applyBudgetMutation(
+      (current) => {
+        const existing = current.otherIncome ?? [];
+        return {
+          ...current,
+          otherIncome: [
+            ...existing,
+            {
+              ...income,
+              enabled: income.enabled !== false,
+              id: crypto.randomUUID(),
+            },
+          ],
+        };
+      },
+      { description: 'Add other income' },
+    );
+  }, [applyBudgetMutation]);
+
+  /**
+   * Update an existing other income entry
+   */
+  const updateOtherIncome = useCallback((id: string, income: Partial<OtherIncome>) => {
+    applyBudgetMutation(
+      (current) => {
+        const existing = current.otherIncome ?? [];
+        return {
+          ...current,
+          otherIncome: existing.map((entry) =>
+            entry.id === id ? { ...entry, ...income } : entry,
+          ),
+        };
+      },
+      { description: 'Update other income' },
+    );
+  }, [applyBudgetMutation]);
+
+  /**
+   * Delete an existing other income entry
+   */
+  const deleteOtherIncome = useCallback((id: string) => {
+    applyBudgetMutation(
+      (current) => {
+        const existing = current.otherIncome ?? [];
+        return {
+          ...current,
+          otherIncome: existing.filter((entry) => entry.id !== id),
+        };
+      },
+      { description: 'Delete other income' },
+    );
+  }, [applyBudgetMutation]);
+
+  /**
    * Add a new savings/investment contribution
    */
   const addSavingsContribution = useCallback((contribution: Omit<SavingsContribution, 'id'>) => {
@@ -1168,6 +1226,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     addBenefit,
     updateBenefit,
     deleteBenefit,
+    addOtherIncome,
+    updateOtherIncome,
+    deleteOtherIncome,
     addSavingsContribution,
     updateSavingsContribution,
     deleteSavingsContribution,

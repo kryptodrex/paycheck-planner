@@ -1,13 +1,13 @@
 // Utility functions for managing dashboard tabs
-import { Wallet, LayoutGrid, ClipboardList, Landmark, PiggyBank, Scale } from 'lucide-react';
+import { Wallet, LayoutGrid, ClipboardList, Landmark, PiggyBank, Scale, HandCoins } from 'lucide-react';
 import type { TabConfig } from '../types/tabs';
 
-export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
+export type TabId = 'metrics' | 'breakdown' | 'other-income' | 'bills' | 'loans' | 'savings' | 'taxes';
 
 export function normalizeLegacyTabId(tabId?: string | null): TabId | null {
   if (!tabId) return null;
   if (tabId === 'benefits') return 'savings';
-  if (tabId === 'metrics' || tabId === 'breakdown' || tabId === 'bills' || tabId === 'loans' || tabId === 'savings' || tabId === 'taxes') {
+  if (tabId === 'metrics' || tabId === 'breakdown' || tabId === 'other-income' || tabId === 'bills' || tabId === 'loans' || tabId === 'savings' || tabId === 'taxes') {
     return tabId;
   }
   return null;
@@ -36,11 +36,19 @@ export function getDefaultTabConfigs(): TabConfig[] {
       pinned: false,
     },
     {
+      id: 'other-income',
+      label: 'Other Income',
+      icon: HandCoins,
+      visible: true,
+      order: 2,
+      pinned: false,
+    },
+    {
       id: 'bills',
       label: 'Bills',
       icon: ClipboardList,
       visible: true,
-      order: 2,
+      order: 3,
       pinned: false,
     },
     {
@@ -48,7 +56,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       label: 'Savings',
       icon: PiggyBank,
       visible: true,
-      order: 3,
+      order: 4,
       pinned: false,
     },
     {
@@ -56,7 +64,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       label: 'Loans',
       icon: Landmark,
       visible: true,
-      order: 4,
+      order: 5,
       pinned: false,
     },
     {
@@ -64,7 +72,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       label: 'Taxes',
       icon: Scale,
       visible: true,
-      order: 5,
+      order: 6,
       pinned: false,
     },
   ];

@@ -5,6 +5,7 @@ export type AuditEntityType =
   | 'retirement-election'
   | 'loan'
   | 'benefit'
+  | 'other-income'
   | 'account'
   | 'allocation-item'
   | 'pay-settings'

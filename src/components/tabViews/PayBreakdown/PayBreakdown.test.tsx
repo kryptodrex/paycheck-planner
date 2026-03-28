@@ -38,6 +38,47 @@ const {
     ],
     bills: [],
     benefits: [],
+    otherIncome: [
+      {
+        id: 'oi-gross',
+        name: 'Gross Side Work',
+        incomeType: 'personal-business',
+        amountMode: 'fixed',
+        amount: 120,
+        frequency: 'monthly',
+        enabled: true,
+        notes: '',
+        isTaxable: true,
+        payTreatment: 'gross',
+        withholdingMode: 'manual',
+      },
+      {
+        id: 'oi-taxable',
+        name: 'Taxable Bonus',
+        incomeType: 'bonus',
+        amountMode: 'fixed',
+        amount: 60,
+        frequency: 'monthly',
+        enabled: true,
+        notes: '',
+        isTaxable: true,
+        payTreatment: 'taxable',
+        withholdingMode: 'manual',
+      },
+      {
+        id: 'oi-net',
+        name: 'Net Reimbursement',
+        incomeType: 'reimbursement',
+        amountMode: 'fixed',
+        amount: 30,
+        frequency: 'monthly',
+        enabled: true,
+        notes: '',
+        isTaxable: false,
+        payTreatment: 'net',
+        withholdingMode: 'none',
+      },
+    ],
     retirement: [],
     loans: [],
     savingsContributions: [],
@@ -68,6 +109,9 @@ vi.mock('../../../hooks', () => ({
 vi.mock('../../../services/budgetCalculations', () => ({
   calculateAnnualizedPayBreakdown: vi.fn(() => ({
     grossPay: 24000,
+    otherIncomeGross: 1440,
+    otherIncomeTaxable: 720,
+    otherIncomeNet: 360,
     preTaxDeductions: 0,
     taxableIncome: 24000,
     totalTaxes: 0,
@@ -215,6 +259,21 @@ describe('PayBreakdown custom allocation validation', () => {
 
     expect(screen.getByText(/overallocation:/i)).toBeInTheDocument();
     expect(screen.getByText(/allocations exceed net pay/i)).toBeInTheDocument();
+  });
+
+  it('shows other income contribution details in gross, taxable, and net stages', () => {
+    render(
+      <PayBreakdown
+        displayMode="monthly"
+      />,
+    );
+
+    expect(screen.getByText('Gross Side Work')).toBeInTheDocument();
+    expect(screen.getByText('Taxable Bonus')).toBeInTheDocument();
+    expect(screen.getByText('Net Reimbursement')).toBeInTheDocument();
+    expect(screen.getByText('+$120.00')).toBeInTheDocument();
+    expect(screen.getByText('+$60.00')).toBeInTheDocument();
+    expect(screen.getByText('+$30.00')).toBeInTheDocument();
   });
 
 });

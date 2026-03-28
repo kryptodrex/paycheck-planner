@@ -85,6 +85,10 @@
   margin: 0;
 }
 
+.other-income-breakdown .breakdown-amount {
+  color: var(--success-color);
+}
+
 .stage-breakdown {
   display: none;
 }

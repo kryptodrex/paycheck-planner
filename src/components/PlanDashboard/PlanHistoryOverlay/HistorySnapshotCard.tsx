@@ -45,6 +45,7 @@ export const CARD_ENTITY_TYPES = new Set<AuditEntityType>([
   'bill',
   'deduction',
   'benefit',
+  'other-income',
   'savings-contribution',
   'retirement-election',
   'loan',
@@ -198,6 +199,34 @@ const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
           {s.discretionary === true && <PillBadge variant="warning">Discretionary</PillBadge>}
         </>
       ),
+      isPaused: s.enabled === false,
+    };
+  },
+
+  'other-income': (s) => {
+    const amountMode = String(s.amountMode ?? 'fixed');
+    const amount = Number(s.amount ?? 0);
+    const percentOfGross = Number(s.percentOfGross ?? 0);
+    const frequency = String(s.frequency ?? 'monthly');
+    const freqLabel = FREQ_LABELS[frequency] ?? frequency;
+    const payTreatment = String(s.payTreatment ?? 'gross');
+    const isPercentOfGross = amountMode === 'percent-of-gross';
+    const percentDisplay = `${(Number.isFinite(percentOfGross) ? percentOfGross : 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
+    const valueDisplay = isPercentOfGross ? percentDisplay : fmt(amount);
+    const treatmentLabel = payTreatment === 'taxable'
+      ? 'Taxable Only'
+      : payTreatment === 'net'
+        ? 'Add to Net Pay'
+        : 'Add to Gross Pay';
+
+    return {
+      title: String(s.name ?? '(unnamed)'),
+      subtitle: isPercentOfGross
+        ? `Percent of base gross pay: ${percentDisplay}`
+        : `Received ${freqLabel}: ${fmt(amount)}`,
+      amount: valueDisplay,
+      amountLabel: isPercentOfGross ? 'Of gross pay' : freqLabel,
+      badges: <PillBadge variant="success">{treatmentLabel}</PillBadge>,
       isPaused: s.enabled === false,
     };
   },

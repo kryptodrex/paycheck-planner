@@ -71,6 +71,7 @@ export interface RetirementElection {
 export type OtherIncomeType =
   | 'bonus'
   | 'commission'
+  | 'personal-business'
   | 'rental-income'
   | 'retirement-withdrawal'
   | 'disability'

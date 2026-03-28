@@ -1,0 +1,112 @@
+.other-income-section {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.other-income-manager .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.other-income-manager .section-header h2 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.other-income-manager .section-header p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.other-income-manager .section-total {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.other-income-manager .section-total > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.other-income-manager .section-total-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.other-income-manager .section-total-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.other-income-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.other-income-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.other-income-details .detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.other-income-details .label {
+  color: var(--text-secondary);
+}
+
+.other-income-details .value {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.other-income-notes {
+  margin-top: 0.35rem;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.other-income-manager .form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.other-income-treatment-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.other-income-withholding-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 900px) {
+  .other-income-manager .form-row {
+    grid-template-columns: 1fr;
+  }
+}

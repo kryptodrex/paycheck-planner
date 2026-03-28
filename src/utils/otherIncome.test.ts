@@ -6,6 +6,7 @@ import {
   calculateOtherIncomePerPaycheckTotals,
   getOtherIncomeOccurrencesPerYear,
 } from './otherIncome';
+import { roundToCent } from './money';
 
 describe('otherIncome', () => {
   it('resolves supported other income frequencies to annual occurrences', () => {
@@ -97,5 +98,65 @@ describe('otherIncome', () => {
       taxable: 60,
       net: 24,
     });
+  });
+
+  it('keeps yearly totals exact when converting through per-paycheck amounts', () => {
+    const paychecksPerYear = 26;
+
+    const annualBonus = calculateOtherIncomeAnnualAmount({
+      id: 'bonus-10pct',
+      name: 'Annual Bonus',
+      incomeType: 'bonus',
+      amountMode: 'percent-of-gross',
+      amount: 0,
+      percentOfGross: 10,
+      frequency: 'yearly',
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'auto',
+    }, 90000 / paychecksPerYear, paychecksPerYear);
+
+    const bonusPerPaycheck = calculateOtherIncomePerPaycheckAmount({
+      id: 'bonus-10pct',
+      name: 'Annual Bonus',
+      incomeType: 'bonus',
+      amountMode: 'percent-of-gross',
+      amount: 0,
+      percentOfGross: 10,
+      frequency: 'yearly',
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'auto',
+    }, 90000 / paychecksPerYear, paychecksPerYear);
+
+    expect(roundToCent(annualBonus)).toBe(9000);
+    expect(roundToCent(bonusPerPaycheck * paychecksPerYear)).toBe(9000);
+
+    const annualRental = calculateOtherIncomeAnnualAmount({
+      id: 'rental-monthly',
+      name: 'Rental Income',
+      incomeType: 'rental-income',
+      amountMode: 'fixed',
+      amount: 1500,
+      frequency: 'monthly',
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'manual',
+    }, 0, paychecksPerYear);
+
+    const rentalPerPaycheck = calculateOtherIncomePerPaycheckAmount({
+      id: 'rental-monthly',
+      name: 'Rental Income',
+      incomeType: 'rental-income',
+      amountMode: 'fixed',
+      amount: 1500,
+      frequency: 'monthly',
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'manual',
+    }, 0, paychecksPerYear);
+
+    expect(roundToCent(annualRental)).toBe(18000);
+    expect(roundToCent(rentalPerPaycheck * paychecksPerYear)).toBe(18000);
   });
 });

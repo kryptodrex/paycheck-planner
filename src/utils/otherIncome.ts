@@ -38,9 +38,7 @@ export function calculateOtherIncomePerPaycheckAmount(
     return 0;
   }
 
-  return roundToCent(
-    calculateOtherIncomeAnnualAmount(entry, baseGrossPayPerPaycheck, paychecksPerYear) / paychecksPerYear,
-  );
+  return calculateOtherIncomeAnnualAmount(entry, baseGrossPayPerPaycheck, paychecksPerYear) / paychecksPerYear;
 }
 
 export function calculateOtherIncomePerPaycheckTotals(

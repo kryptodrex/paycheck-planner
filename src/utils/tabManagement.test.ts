@@ -12,10 +12,11 @@ import {
 describe('tabManagement utilities', () => {
   it('returns default tab configs with expected order', () => {
     const defaults = getDefaultTabConfigs();
-    expect(defaults).toHaveLength(6);
+    expect(defaults).toHaveLength(7);
     expect(defaults.map((tab) => tab.id)).toEqual([
       'metrics',
       'breakdown',
+      'other-income',
       'bills',
       'savings',
       'loans',
@@ -50,9 +51,10 @@ describe('tabManagement utilities', () => {
     ];
 
     const initialized = initializeTabConfigs(existing);
-    expect(initialized).toHaveLength(6);
+    expect(initialized).toHaveLength(7);
     expect(initialized[0].id).toBe('breakdown');
     expect(initialized.some((tab) => tab.id === 'taxes')).toBe(true);
+    expect(initialized.some((tab) => tab.id === 'other-income')).toBe(true);
   });
 
   it('returns visible and hidden tabs sorted by order', () => {
@@ -78,7 +80,7 @@ describe('tabManagement utilities', () => {
     const visibleIds = getVisibleTabs(reordered).map((tab) => tab.id);
     const hiddenIds = getHiddenTabs(reordered).map((tab) => tab.id);
 
-    expect(visibleIds).toEqual(['breakdown', 'bills', 'metrics', 'savings', 'loans']);
+    expect(visibleIds).toEqual(['breakdown', 'other-income', 'metrics', 'bills', 'savings', 'loans']);
     expect(hiddenIds).toEqual(['taxes']);
   });
 });

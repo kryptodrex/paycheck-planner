@@ -15,6 +15,7 @@ import { FileStorageService } from '../../services/fileStorage';
 import SetupWizard from '../views/SetupWizard';
 import KeyMetrics from '../tabViews/KeyMetrics';
 import PayBreakdown from '../tabViews/PayBreakdown';
+import OtherIncomeManager from '../tabViews/OtherIncomeManager';
 import BillsManager from '../tabViews/BillsManager';
 import LoansManager from '../tabViews/LoansManager';
 import SavingsManager from '../tabViews/SavingsManager';
@@ -56,7 +57,7 @@ interface PlanDashboardProps {
   onUndoRedoSuccess?: (action: 'undo' | 'redo') => void;
 }
 
-const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
+const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'other-income', 'bills', 'loans', 'taxes', 'savings'];
 
 /** Timing constants for the search-result scroll + highlight behaviour */
 const SEARCH_SCROLL_INITIAL_DELAY_MS = 80;
@@ -201,6 +202,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   >(undefined);
   const [pendingSavingsSearchTargetId, setPendingSavingsSearchTargetId] = useState<string | undefined>(undefined);
   const [savingsSearchRequestKey, setSavingsSearchRequestKey] = useState(0);
+  const [pendingOtherIncomeSearchAction, setPendingOtherIncomeSearchAction] = useState<
+    | 'add-other-income'
+    | 'edit-other-income'
+    | 'delete-other-income'
+    | 'toggle-other-income'
+    | undefined
+  >(undefined);
+  const [pendingOtherIncomeSearchTargetId, setPendingOtherIncomeSearchTargetId] = useState<string | undefined>(undefined);
+  const [otherIncomeSearchRequestKey, setOtherIncomeSearchRequestKey] = useState(0);
   const [taxSearchOpenSettingsRequestKey, setTaxSearchOpenSettingsRequestKey] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const [historyTarget, setHistoryTarget] = useState<AuditHistoryTarget | null>(null);
@@ -1164,6 +1174,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           setPendingSavingsSearchAction: setPendingSavingsSearchAction as SearchActionContext['setPendingSavingsSearchAction'],
           setPendingSavingsSearchTargetId: setPendingSavingsSearchTargetId as SearchActionContext['setPendingSavingsSearchTargetId'],
           setSavingsSearchRequestKey: setSavingsSearchRequestKey as SearchActionContext['setSavingsSearchRequestKey'],
+          setPendingOtherIncomeSearchAction: setPendingOtherIncomeSearchAction as SearchActionContext['setPendingOtherIncomeSearchAction'],
+          setPendingOtherIncomeSearchTargetId: setPendingOtherIncomeSearchTargetId as SearchActionContext['setPendingOtherIncomeSearchTargetId'],
+          setOtherIncomeSearchRequestKey: setOtherIncomeSearchRequestKey as SearchActionContext['setOtherIncomeSearchRequestKey'],
           setTaxSearchOpenSettingsRequestKey: setTaxSearchOpenSettingsRequestKey as SearchActionContext['setTaxSearchOpenSettingsRequestKey'],
           selectTab: selectTab as SearchActionContext['selectTab'],
           setShowAccountsModal: setShowAccountsModal as SearchActionContext['setShowAccountsModal'],
@@ -1219,7 +1232,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         setShowSettings(true);
       }
     },
-    [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight],
+    [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setPendingOtherIncomeSearchAction, setPendingOtherIncomeSearchTargetId, setOtherIncomeSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight],
   );
 
   const handleOpenObjectHistory = useCallback((target: AuditHistoryTarget) => {
@@ -1341,6 +1354,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             return {
               ...current,
               benefits: upsertById(current.benefits, snapshot as unknown as typeof current.benefits[number]),
+            };
+          case 'other-income':
+            return {
+              ...current,
+              otherIncome: upsertById(
+                current.otherIncome || [],
+                snapshot as unknown as NonNullable<typeof current.otherIncome>[number],
+              ),
             };
           case 'account':
             return {
@@ -1825,6 +1846,21 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             onNavigateToLoans={(accountId) => {
               openTabFromLink('loans', { scrollToAccountId: accountId, scrollToRetirement: false });
             }} 
+            onViewHistory={handleOpenObjectHistory}
+          />
+        </div>
+        <div
+          className={`tab-panel ${activeTab === 'other-income' ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current['other-income'] = element;
+          }}
+        >
+          <OtherIncomeManager
+            searchActionRequestKey={otherIncomeSearchRequestKey}
+            searchActionType={pendingOtherIncomeSearchAction}
+            searchActionTargetId={pendingOtherIncomeSearchTargetId}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={activeTab === 'other-income' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
