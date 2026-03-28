@@ -137,6 +137,9 @@ describe('budgetCalculations', () => {
 
     expect(annualBreakdown).toEqual({
       grossPay: 130000,
+      otherIncomeGross: 0,
+      otherIncomeTaxable: 0,
+      otherIncomeNet: 0,
       preTaxDeductions: 4550,
       taxableIncome: 125450,
       taxLineAmounts: [
@@ -151,6 +154,9 @@ describe('budgetCalculations', () => {
 
     expect(monthlyBreakdown).toEqual({
       grossPay: 10833.34,
+      otherIncomeGross: 0,
+      otherIncomeTaxable: 0,
+      otherIncomeNet: 0,
       preTaxDeductions: 379.17,
       taxableIncome: 10454.17,
       taxLineAmounts: [
@@ -263,5 +269,97 @@ describe('budgetCalculations', () => {
     ]);
     expect(breakdown.totalTaxes).toBe(438);
     expect(breakdown.netPay).toBe(1462);
+  });
+
+  it('applies gross, taxable-only, and net-only other income treatments separately', () => {
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary: 52000,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      otherIncome: [
+        {
+          id: 'gross-income',
+          name: 'Commission',
+          incomeType: 'commission',
+          amountMode: 'fixed',
+          amount: 260,
+          frequency: 'monthly',
+          isTaxable: true,
+          payTreatment: 'gross',
+          withholdingMode: 'auto',
+        },
+        {
+          id: 'taxable-income',
+          name: 'Supplemental Taxable',
+          incomeType: 'other',
+          amountMode: 'fixed',
+          amount: 130,
+          frequency: 'monthly',
+          isTaxable: true,
+          payTreatment: 'taxable',
+          withholdingMode: 'manual',
+        },
+        {
+          id: 'net-income',
+          name: 'Reimbursement',
+          incomeType: 'reimbursement',
+          amountMode: 'fixed',
+          amount: 52,
+          frequency: 'monthly',
+          isTaxable: false,
+          payTreatment: 'net',
+          withholdingMode: 'none',
+        },
+      ],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [
+          { id: 'tax-fed', label: 'Federal Tax', rate: 10, calculationType: 'percentage' },
+        ],
+        additionalWithholding: 0,
+      },
+    });
+
+    expect(breakdown.grossPay).toBe(2120);
+    expect(breakdown.otherIncomeGross).toBe(120);
+    expect(breakdown.otherIncomeTaxable).toBe(60);
+    expect(breakdown.otherIncomeNet).toBe(24);
+    expect(breakdown.taxableIncome).toBe(2180);
+    expect(breakdown.taxLineAmounts).toEqual([
+      { id: 'tax-fed', label: 'Federal Tax', amount: 218 },
+    ]);
+    expect(breakdown.totalTaxes).toBe(218);
+    expect(breakdown.netPay).toBe(1986);
+  });
+
+  it('annualizes and redisplays other income treatment totals consistently', () => {
+    const annualBreakdown = calculateAnnualizedPayBreakdown(
+      {
+        grossPay: 2120,
+        otherIncomeGross: 120,
+        otherIncomeTaxable: 60,
+        otherIncomeNet: 24,
+        preTaxDeductions: 0,
+        taxableIncome: 2180,
+        taxLineAmounts: [],
+        additionalWithholding: 0,
+        totalTaxes: 218,
+        netPay: 1986,
+      },
+      26,
+    );
+
+    expect(annualBreakdown.otherIncomeGross).toBe(3120);
+    expect(annualBreakdown.otherIncomeTaxable).toBe(1560);
+    expect(annualBreakdown.otherIncomeNet).toBe(624);
+
+    const monthlyBreakdown = calculateDisplayPayBreakdown(annualBreakdown, 'monthly', 26);
+    expect(monthlyBreakdown.otherIncomeGross).toBe(260);
+    expect(monthlyBreakdown.otherIncomeTaxable).toBe(130);
+    expect(monthlyBreakdown.otherIncomeNet).toBe(52);
   });
 });

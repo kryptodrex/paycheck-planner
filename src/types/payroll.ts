@@ -1,4 +1,4 @@
-import type { PayFrequency } from './frequencies';
+import type { CoreFrequency, PayFrequency } from './frequencies';
 
 export type PayType = 'salary' | 'hourly';
 
@@ -68,6 +68,39 @@ export interface RetirementElection {
   yearlyLimit?: number;
 }
 
+export type OtherIncomeType =
+  | 'bonus'
+  | 'commission'
+  | 'rental-income'
+  | 'retirement-withdrawal'
+  | 'disability'
+  | 'reimbursement'
+  | 'investment-income'
+  | 'other';
+
+export type OtherIncomeAmountMode = 'fixed' | 'percent-of-gross';
+
+export type OtherIncomePayTreatment = 'gross' | 'taxable' | 'net';
+
+export type OtherIncomeWithholdingMode = 'manual' | 'auto' | 'none';
+
+export interface OtherIncome {
+  id: string;
+  name: string;
+  incomeType: OtherIncomeType;
+  amountMode: OtherIncomeAmountMode;
+  amount: number;
+  percentOfGross?: number;
+  frequency: CoreFrequency;
+  enabled?: boolean;
+  notes?: string;
+  isTaxable: boolean;
+  payTreatment: OtherIncomePayTreatment;
+  withholdingMode: OtherIncomeWithholdingMode;
+  withholdingProfileId?: string;
+  activeMonths?: number[];
+}
+
 export interface TaxLineAmount {
   id: string;
   label: string;
@@ -76,6 +109,9 @@ export interface TaxLineAmount {
 
 export interface PaycheckBreakdown {
   grossPay: number;
+  otherIncomeGross?: number;
+  otherIncomeTaxable?: number;
+  otherIncomeNet?: number;
   preTaxDeductions: number;
   taxableIncome: number;
   taxLineAmounts: TaxLineAmount[];

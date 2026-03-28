@@ -367,6 +367,7 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
       payFrequency,
     },
     preTaxDeductions: [],
+    otherIncome: [],
     taxSettings: estimatedTaxSettings,
     accounts,
     bills,
