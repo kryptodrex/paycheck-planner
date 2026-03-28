@@ -16,6 +16,7 @@ import type {
   OtherIncome,
   OtherIncomeAmountMode,
   OtherIncomePayTreatment,
+  OtherIncomeTimingMode,
   OtherIncomeType,
   OtherIncomeWithholdingMode,
 } from '../types/payroll';
@@ -49,6 +50,7 @@ const VALID_OTHER_INCOME_AMOUNT_MODES = ['fixed', 'percent-of-gross'] as const s
 const VALID_OTHER_INCOME_FREQUENCIES = ['weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'yearly'] as const;
 const VALID_OTHER_INCOME_PAY_TREATMENTS = ['gross', 'taxable', 'net'] as const satisfies readonly OtherIncomePayTreatment[];
 const VALID_OTHER_INCOME_WITHHOLDING_MODES = ['manual', 'auto', 'none'] as const satisfies readonly OtherIncomeWithholdingMode[];
+const VALID_OTHER_INCOME_TIMING_MODES = ['average', 'payout'] as const satisfies readonly OtherIncomeTimingMode[];
 
 function isOtherIncomeType(value: string): value is OtherIncomeType {
   return VALID_OTHER_INCOME_TYPES.includes(value as OtherIncomeType);
@@ -68,6 +70,10 @@ function isOtherIncomePayTreatment(value: string): value is OtherIncomePayTreatm
 
 function isOtherIncomeWithholdingMode(value: string): value is OtherIncomeWithholdingMode {
   return VALID_OTHER_INCOME_WITHHOLDING_MODES.includes(value as OtherIncomeWithholdingMode);
+}
+
+function isOtherIncomeTimingMode(value: string): value is OtherIncomeTimingMode {
+  return VALID_OTHER_INCOME_TIMING_MODES.includes(value as OtherIncomeTimingMode);
 }
 
 function normalizeOtherIncomeEntry(entry: unknown): OtherIncome {
@@ -106,6 +112,9 @@ function normalizeOtherIncomeEntry(entry: unknown): OtherIncome {
     withholdingMode: typeof candidate.withholdingMode === 'string' && isOtherIncomeWithholdingMode(candidate.withholdingMode)
       ? candidate.withholdingMode
       : 'manual',
+    timingMode: typeof candidate.timingMode === 'string' && isOtherIncomeTimingMode(candidate.timingMode)
+      ? candidate.timingMode
+      : 'average',
     withholdingProfileId: typeof candidate.withholdingProfileId === 'string' && candidate.withholdingProfileId.trim() !== ''
       ? candidate.withholdingProfileId
       : undefined,

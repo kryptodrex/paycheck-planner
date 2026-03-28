@@ -40,6 +40,7 @@ const {
         notes: 'Client retainers',
         isTaxable: true,
         payTreatment: 'net',
+        timingMode: 'average',
         withholdingMode: 'manual',
       },
     ],
@@ -100,6 +101,7 @@ describe('OtherIncomeManager', () => {
     const selects = screen.getAllByRole('combobox');
     await user.selectOptions(selects[0], 'personal-business');
     await user.selectOptions(selects[1], 'gross');
+    await user.selectOptions(selects[2], 'average');
 
     await user.type(screen.getByPlaceholderText('0.00'), '650');
     await user.click(screen.getByRole('button', { name: /add entry/i }));
@@ -109,6 +111,7 @@ describe('OtherIncomeManager', () => {
       incomeType: 'personal-business',
       amount: 650,
       payTreatment: 'gross',
+      timingMode: 'average',
     }));
   });
 });

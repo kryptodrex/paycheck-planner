@@ -33,6 +33,10 @@ export function calculateOtherIncomePerPaycheckAmount(
   baseGrossPayPerPaycheck: number,
   paychecksPerYear: number,
 ): number {
+  if ((entry.timingMode || 'average') === 'payout') {
+    return 0;
+  }
+
   if (!Number.isFinite(paychecksPerYear) || paychecksPerYear <= 0) {
     return 0;
   }

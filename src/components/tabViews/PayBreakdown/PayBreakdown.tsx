@@ -196,7 +196,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
   const otherIncomeBreakdownForTreatment = (treatment: 'gross' | 'taxable' | 'net') => {
     return (budgetData.otherIncome || [])
-      .filter((entry) => entry.enabled !== false && entry.payTreatment === treatment)
+      .filter((entry) => entry.enabled !== false && (entry.timingMode || 'average') === 'average' && entry.payTreatment === treatment)
       .map((entry) => {
         const annualAmount = calculateOtherIncomeAnnualAmount(entry, baseGrossPayPerPaycheck, paychecksPerYear);
         return {

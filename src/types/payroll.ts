@@ -85,6 +85,8 @@ export type OtherIncomePayTreatment = 'gross' | 'taxable' | 'net';
 
 export type OtherIncomeWithholdingMode = 'manual' | 'auto' | 'none';
 
+export type OtherIncomeTimingMode = 'average' | 'payout';
+
 export interface OtherIncome {
   id: string;
   name: string;
@@ -98,6 +100,7 @@ export interface OtherIncome {
   isTaxable: boolean;
   payTreatment: OtherIncomePayTreatment;
   withholdingMode: OtherIncomeWithholdingMode;
+  timingMode?: OtherIncomeTimingMode;
   withholdingProfileId?: string;
   activeMonths?: number[];
 }

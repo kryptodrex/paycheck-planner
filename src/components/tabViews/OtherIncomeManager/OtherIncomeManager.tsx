@@ -11,10 +11,12 @@ import { calculateOtherIncomeAnnualAmount, calculateOtherIncomePerPaycheckAmount
 import {
   OTHER_INCOME_AMOUNT_MODE_OPTIONS,
   OTHER_INCOME_PAY_TREATMENT_OPTIONS,
+  OTHER_INCOME_TIMING_MODE_OPTIONS,
   OTHER_INCOME_TYPE_OPTIONS,
   OTHER_INCOME_WITHHOLDING_MODE_OPTIONS,
   getOtherIncomeAmountModeLabel,
   getOtherIncomePayTreatmentLabel,
+  getOtherIncomeTimingModeLabel,
   getOtherIncomeTypeLabel,
   getOtherIncomeWithholdingModeLabel,
 } from '../../../utils/otherIncomeLabels';
@@ -72,6 +74,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
   const [percentOfGross, setPercentOfGross] = useState('');
   const [frequency, setFrequency] = useState<OtherIncome['frequency']>('monthly');
   const [payTreatment, setPayTreatment] = useState<OtherIncome['payTreatment']>('gross');
+  const [timingMode, setTimingMode] = useState<NonNullable<OtherIncome['timingMode']>>('average');
   const [withholdingMode, setWithholdingMode] = useState<OtherIncome['withholdingMode']>('manual');
   const [notes, setNotes] = useState('');
   const lastHandledSearchActionKeyRef = useRef(0);
@@ -157,6 +160,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     setPercentOfGross('');
     setFrequency('monthly');
     setPayTreatment('gross');
+    setTimingMode('average');
     setWithholdingMode('manual');
     setNotes('');
     incomeErrors.clearErrors();
@@ -170,6 +174,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     setPercentOfGross(entry.percentOfGross != null && entry.percentOfGross > 0 ? String(entry.percentOfGross) : '');
     setFrequency(entry.frequency);
     setPayTreatment(entry.payTreatment);
+    setTimingMode(entry.timingMode || 'average');
     setWithholdingMode(entry.withholdingMode);
     setNotes(entry.notes || '');
     incomeErrors.clearErrors();
@@ -246,6 +251,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
       notes: notes.trim(),
       isTaxable: payTreatment !== 'net',
       payTreatment,
+      timingMode,
       withholdingMode,
       withholdingProfileId: undefined,
       activeMonths: undefined,
@@ -349,6 +355,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                       <PillBadge variant="accent">{getOtherIncomeTypeLabel(entry.incomeType)}</PillBadge>
                       <PillBadge variant="info">{getOtherIncomePayTreatmentLabel(entry.payTreatment)}</PillBadge>
                       <PillBadge variant="neutral">{getOtherIncomeAmountModeLabel(entry.amountMode)}</PillBadge>
+                      <PillBadge variant="outline">{entry.timingMode === 'payout' ? 'Payout-Timed' : 'Averaged'}</PillBadge>
                     </>
                   }
                   isPaused={!isEnabled}
@@ -368,10 +375,19 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                       <span className="value">{getOtherIncomePayTreatmentLabel(entry.payTreatment)}</span>
                     </div>
                     <div className="detail">
+                      <span className="label">Timing</span>
+                      <span className="value">{getOtherIncomeTimingModeLabel(entry.timingMode)}</span>
+                    </div>
+                    <div className="detail">
                       <span className="label">Withholding mode</span>
                       <span className="value">{getOtherIncomeWithholdingModeLabel(entry.withholdingMode)}</span>
                     </div>
                   </div>
+                  {(entry.timingMode || 'average') === 'payout' && (
+                    <div className="other-income-v1-note">
+                      V1 behavior: payout-timed entries are excluded from averaged paycheck calculations.
+                    </div>
+                  )}
                   {entry.notes && <div className="other-income-notes">{entry.notes}</div>}
                 </SectionItemCard>
               );
@@ -430,6 +446,27 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         <p className="other-income-treatment-note">{getTreatmentHelperText(payTreatment)}</p>
 
         <div className="form-row">
+          <FormGroup label="Timing Mode" required>
+            <Dropdown value={timingMode} onChange={(event) => setTimingMode(event.target.value as NonNullable<OtherIncome['timingMode']>)}>
+              {OTHER_INCOME_TIMING_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </Dropdown>
+          </FormGroup>
+          <FormGroup label="Withholding Mode" required>
+            <Dropdown value={withholdingMode} onChange={(event) => setWithholdingMode(event.target.value as OtherIncome['withholdingMode'])}>
+              {OTHER_INCOME_WITHHOLDING_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </Dropdown>
+          </FormGroup>
+        </div>
+
+        <p className="other-income-withholding-note">
+          V1 timing behavior: payout-timed entries are saved but excluded from averaged paycheck forecasts until v2 cashflow timing is added.
+        </p>
+
+        <div className="form-row">
           <FormGroup label="Amount Style" required>
             <Dropdown value={amountMode} onChange={(event) => setAmountMode(event.target.value as OtherIncome['amountMode'])}>
               {OTHER_INCOME_AMOUNT_MODE_OPTIONS.map((option) => (
@@ -483,13 +520,6 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         )}
 
         <div className="form-row">
-          <FormGroup label="Withholding Mode" required>
-            <Dropdown value={withholdingMode} onChange={(event) => setWithholdingMode(event.target.value as OtherIncome['withholdingMode'])}>
-              {OTHER_INCOME_WITHHOLDING_MODE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </Dropdown>
-          </FormGroup>
           <FormGroup label="Estimated Income Per Paycheck">
             <InputWithPrefix
               prefix={getCurrencySymbol(currency)}
@@ -507,6 +537,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                   notes,
                   isTaxable: payTreatment !== 'net',
                   payTreatment,
+                  timingMode,
                   withholdingMode,
                 },
                 grossPayPerPaycheck,

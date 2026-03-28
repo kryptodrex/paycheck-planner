@@ -87,6 +87,12 @@
   font-size: 0.86rem;
 }
 
+.other-income-v1-note {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
 .other-income-manager .form-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
