@@ -1,7 +1,7 @@
 import type { BudgetData } from '../types/budget';
 import type { PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
-import { roundUpToCent } from '../utils/money';
+import { roundToCent, roundUpToCent } from '../utils/money';
 import { getDisplayModeOccurrencesPerYear, getPaychecksPerYear } from '../utils/payPeriod';
 import { calculateOtherIncomePerPaycheckTotals } from '../utils/otherIncome';
 import { calculateTaxLineAmount } from '../utils/taxLines';
@@ -158,17 +158,17 @@ export function calculateAnnualizedPaySummary(
   breakdown: PaycheckBreakdown,
   paychecksPerYear: number,
 ): AnnualizedPaySummary {
-  const annualGross = roundUpToCent(breakdown.grossPay * paychecksPerYear);
-  const annualNet = roundUpToCent(breakdown.netPay * paychecksPerYear);
-  const annualTaxes = roundUpToCent(breakdown.totalTaxes * paychecksPerYear);
+  const annualGross = roundToCent(breakdown.grossPay * paychecksPerYear);
+  const annualNet = roundToCent(breakdown.netPay * paychecksPerYear);
+  const annualTaxes = roundToCent(breakdown.totalTaxes * paychecksPerYear);
 
   return {
     annualGross,
     annualNet,
     annualTaxes,
-    monthlyGross: roundUpToCent(annualGross / 12),
-    monthlyNet: roundUpToCent(annualNet / 12),
-    monthlyTaxes: roundUpToCent(annualTaxes / 12),
+    monthlyGross: roundToCent(annualGross / 12),
+    monthlyNet: roundToCent(annualNet / 12),
+    monthlyTaxes: roundToCent(annualTaxes / 12),
   };
 }
 
@@ -176,20 +176,20 @@ export function calculateAnnualizedPayBreakdown(
   breakdown: PaycheckBreakdown,
   paychecksPerYear: number,
 ): PayBreakdownSummary {
-  const annualGross = roundUpToCent(breakdown.grossPay * paychecksPerYear);
-  const annualOtherIncomeGross = roundUpToCent((breakdown.otherIncomeGross || 0) * paychecksPerYear);
-  const annualOtherIncomeTaxable = roundUpToCent((breakdown.otherIncomeTaxable || 0) * paychecksPerYear);
-  const annualOtherIncomeNet = roundUpToCent((breakdown.otherIncomeNet || 0) * paychecksPerYear);
-  const annualPreTaxDeductions = roundUpToCent(breakdown.preTaxDeductions * paychecksPerYear);
-  const annualTaxableIncome = roundUpToCent(breakdown.taxableIncome * paychecksPerYear);
+  const annualGross = roundToCent(breakdown.grossPay * paychecksPerYear);
+  const annualOtherIncomeGross = roundToCent((breakdown.otherIncomeGross || 0) * paychecksPerYear);
+  const annualOtherIncomeTaxable = roundToCent((breakdown.otherIncomeTaxable || 0) * paychecksPerYear);
+  const annualOtherIncomeNet = roundToCent((breakdown.otherIncomeNet || 0) * paychecksPerYear);
+  const annualPreTaxDeductions = roundToCent(breakdown.preTaxDeductions * paychecksPerYear);
+  const annualTaxableIncome = roundToCent(breakdown.taxableIncome * paychecksPerYear);
   const annualTaxLineAmounts = breakdown.taxLineAmounts.map((line) => ({
     ...line,
-    amount: roundUpToCent(line.amount * paychecksPerYear),
+    amount: roundToCent(line.amount * paychecksPerYear),
   }));
-  const annualAdditionalWithholding = roundUpToCent(breakdown.additionalWithholding * paychecksPerYear);
-  const annualTotalTaxes = roundUpToCent(breakdown.totalTaxes * paychecksPerYear);
-  const annualNetPay = roundUpToCent(breakdown.netPay * paychecksPerYear);
-  const annualPostTaxDeductions = roundUpToCent(
+  const annualAdditionalWithholding = roundToCent(breakdown.additionalWithholding * paychecksPerYear);
+  const annualTotalTaxes = roundToCent(breakdown.totalTaxes * paychecksPerYear);
+  const annualNetPay = roundToCent(breakdown.netPay * paychecksPerYear);
+  const annualPostTaxDeductions = roundToCent(
     Math.max(0, annualGross - annualPreTaxDeductions - annualTotalTaxes - annualNetPay),
   );
 
@@ -216,19 +216,19 @@ export function calculateDisplayPayBreakdown(
   const divisor = getDisplayModeOccurrencesPerYear(mode, paychecksPerYear);
 
   return {
-    grossPay: roundUpToCent(annualBreakdown.grossPay / divisor),
-    otherIncomeGross: roundUpToCent((annualBreakdown.otherIncomeGross || 0) / divisor),
-    otherIncomeTaxable: roundUpToCent((annualBreakdown.otherIncomeTaxable || 0) / divisor),
-    otherIncomeNet: roundUpToCent((annualBreakdown.otherIncomeNet || 0) / divisor),
-    preTaxDeductions: roundUpToCent(annualBreakdown.preTaxDeductions / divisor),
-    taxableIncome: roundUpToCent(annualBreakdown.taxableIncome / divisor),
+    grossPay: roundToCent(annualBreakdown.grossPay / divisor),
+    otherIncomeGross: roundToCent((annualBreakdown.otherIncomeGross || 0) / divisor),
+    otherIncomeTaxable: roundToCent((annualBreakdown.otherIncomeTaxable || 0) / divisor),
+    otherIncomeNet: roundToCent((annualBreakdown.otherIncomeNet || 0) / divisor),
+    preTaxDeductions: roundToCent(annualBreakdown.preTaxDeductions / divisor),
+    taxableIncome: roundToCent(annualBreakdown.taxableIncome / divisor),
     taxLineAmounts: annualBreakdown.taxLineAmounts.map((line) => ({
       ...line,
-      amount: roundUpToCent(line.amount / divisor),
+      amount: roundToCent(line.amount / divisor),
     })),
-    additionalWithholding: roundUpToCent(annualBreakdown.additionalWithholding / divisor),
-    totalTaxes: roundUpToCent(annualBreakdown.totalTaxes / divisor),
-    postTaxDeductions: roundUpToCent(annualBreakdown.postTaxDeductions / divisor),
-    netPay: roundUpToCent(annualBreakdown.netPay / divisor),
+    additionalWithholding: roundToCent(annualBreakdown.additionalWithholding / divisor),
+    totalTaxes: roundToCent(annualBreakdown.totalTaxes / divisor),
+    postTaxDeductions: roundToCent(annualBreakdown.postTaxDeductions / divisor),
+    netPay: roundToCent(annualBreakdown.netPay / divisor),
   };
 }

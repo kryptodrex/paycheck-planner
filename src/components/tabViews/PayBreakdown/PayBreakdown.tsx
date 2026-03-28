@@ -211,7 +211,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const grossOtherIncomeItems = otherIncomeBreakdownForTreatment('gross');
   const taxableOtherIncomeItems = otherIncomeBreakdownForTreatment('taxable');
   const netOtherIncomeItems = otherIncomeBreakdownForTreatment('net');
-  const baseGrossAmount = roundToCent(Math.max(0, displayBreakdown.grossPay - (displayBreakdown.otherIncomeGross || 0)));
+  const baseAnnualGrossAmount = roundToCent(baseGrossPayPerPaycheck * paychecksPerYear);
+  const baseGrossAmount = roundToCent(baseAnnualGrossAmount / displayModeOccurrencesPerYear);
+  const grossAdditionsAmount = roundToCent(grossOtherIncomeItems.reduce((sum, item) => sum + item.amount, 0));
+  const grossTotalAfterAdditions = roundToCent(baseGrossAmount + grossAdditionsAmount);
   const baseTaxableAmount = roundToCent(Math.max(0, displayBreakdown.taxableIncome - (displayBreakdown.otherIncomeTaxable || 0)));
   const baseNetAmount = roundToCent(Math.max(0, displayBreakdown.netPay - (displayBreakdown.otherIncomeNet || 0)));
 
@@ -795,7 +798,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                 />
               </>
             )}
-            <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="stage-amount">
+              {formatWithSymbol(
+                grossOtherIncomeItems.length > 0 ? grossTotalAfterAdditions : displayBreakdown.grossPay,
+                currency,
+                { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+              )}
+            </div>
             {grossOtherIncomeItems.length > 0 && <div className="stage-detail">Total after gross additions</div>}
           </div>
         </div>

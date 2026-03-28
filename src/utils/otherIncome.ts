@@ -1,5 +1,4 @@
 import type { OtherIncome } from '../types/payroll';
-import { roundToCent } from './money';
 import { getPayFrequencyOccurrencesPerYear } from './frequency';
 
 export interface OtherIncomePerPaycheckTotals {
@@ -63,9 +62,5 @@ export function calculateOtherIncomePerPaycheckTotals(
     return sum;
   }, { gross: 0, taxable: 0, net: 0 });
 
-  return {
-    gross: roundToCent(totals.gross),
-    taxable: roundToCent(totals.taxable),
-    net: roundToCent(totals.net),
-  };
+  return totals;
 }

@@ -90,9 +90,9 @@ describe('budgetCalculations', () => {
       annualGross: 130000,
       annualNet: 99482.5,
       annualTaxes: 19467.5,
-      monthlyGross: 10833.34,
+      monthlyGross: 10833.33,
       monthlyNet: 8290.21,
-      monthlyTaxes: 1622.3,
+      monthlyTaxes: 1622.29,
     });
   });
 
@@ -153,7 +153,7 @@ describe('budgetCalculations', () => {
     });
 
     expect(monthlyBreakdown).toEqual({
-      grossPay: 10833.34,
+      grossPay: 10833.33,
       otherIncomeGross: 0,
       otherIncomeTaxable: 0,
       otherIncomeNet: 0,
@@ -164,10 +164,47 @@ describe('budgetCalculations', () => {
         { id: 'tax-2', label: 'State Tax', amount: 522.71 },
       ],
       additionalWithholding: 54.17,
-      totalTaxes: 1622.3,
+      totalTaxes: 1622.29,
       postTaxDeductions: 541.67,
       netPay: 8290.21,
     });
+  });
+
+  it('keeps annual gross and gross other income exact for percent-of-gross entries', () => {
+    const paychecksPerYear = 26;
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary: 90000,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      otherIncome: [
+        {
+          id: 'bonus-percent',
+          name: 'Annual Bonus',
+          incomeType: 'bonus',
+          amountMode: 'percent-of-gross',
+          amount: 0,
+          percentOfGross: 9,
+          frequency: 'yearly',
+          isTaxable: true,
+          payTreatment: 'gross',
+          withholdingMode: 'manual',
+        },
+      ],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [],
+        additionalWithholding: 0,
+      },
+    });
+
+    const annualized = calculateAnnualizedPayBreakdown(breakdown, paychecksPerYear);
+
+    expect(annualized.otherIncomeGross).toBe(8100);
+    expect(annualized.grossPay).toBe(98100);
   });
 
   it('uses fixed tax line amounts when a tax line is configured as fixed', () => {
