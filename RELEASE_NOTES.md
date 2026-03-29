@@ -6,7 +6,7 @@
 
 ### Features
 
-- 
+- Added Other Income support so you can track bonus, commission, rental, retirement withdrawal, reimbursement, investment income, and custom sources with fixed or percent-of-gross rules, choose whether each entry affects gross pay, taxable income, or net pay, and see the impact in paycheck breakdowns and PDF exports.
 
 
 ### Improvements
