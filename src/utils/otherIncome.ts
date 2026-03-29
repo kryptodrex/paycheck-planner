@@ -11,6 +11,12 @@ export function getOtherIncomeOccurrencesPerYear(frequency: OtherIncome['frequen
   return getPayFrequencyOccurrencesPerYear(frequency);
 }
 
+export function getOtherIncomeScheduledOccurrencesPerYear(entry: OtherIncome): number {
+  // Active-month scheduling is intentionally disabled for now.
+  // We keep the field for backward compatibility but ignore it in calculations.
+  return getOtherIncomeOccurrencesPerYear(entry.frequency);
+}
+
 export function calculateOtherIncomeAnnualAmount(
   entry: OtherIncome,
   baseGrossPayPerPaycheck: number,
@@ -20,12 +26,16 @@ export function calculateOtherIncomeAnnualAmount(
     return 0;
   }
 
+  const defaultOccurrences = getOtherIncomeOccurrencesPerYear(entry.frequency);
+  const scheduledOccurrences = getOtherIncomeScheduledOccurrencesPerYear(entry);
+  const scheduleScale = defaultOccurrences > 0 ? scheduledOccurrences / defaultOccurrences : 1;
+
   if (entry.amountMode === 'percent-of-gross') {
     const annualBaseGross = Math.max(0, baseGrossPayPerPaycheck) * Math.max(0, paychecksPerYear);
-    return (annualBaseGross * Math.max(0, entry.percentOfGross || 0)) / 100;
+    return ((annualBaseGross * Math.max(0, entry.percentOfGross || 0)) / 100) * scheduleScale;
   }
 
-  return Math.max(0, entry.amount || 0) * getOtherIncomeOccurrencesPerYear(entry.frequency);
+  return Math.max(0, entry.amount || 0) * scheduledOccurrences;
 }
 
 export function calculateOtherIncomePerPaycheckAmount(

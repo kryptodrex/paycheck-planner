@@ -1,16 +1,19 @@
 import type {
     OtherIncomeAmountMode,
     OtherIncomePayTreatment,
-    OtherIncomeTimingMode,
     OtherIncomeType,
     OtherIncomeWithholdingMode,
 } from '../types/payroll';
 
 export const OTHER_INCOME_TYPE_OPTIONS: Array<{ value: OtherIncomeType; label: string }> = [
+    { value: 'bonus', label: 'Bonus' },
+    { value: 'commission', label: 'Commission' },
     { value: 'personal-business', label: 'Personal Business' },
     { value: 'rental-income', label: 'Rental Property' },
     { value: 'retirement-withdrawal', label: 'Retirement Withdrawal' },
-    { value: 'bonus', label: 'Bonus' },
+    { value: 'disability', label: 'Disability' },
+    { value: 'reimbursement', label: 'Reimbursement' },
+    { value: 'investment-income', label: 'Investment Income' },
     { value: 'other', label: 'Other' },
 ];
 
@@ -31,11 +34,6 @@ export const OTHER_INCOME_WITHHOLDING_MODE_OPTIONS: Array<{ value: OtherIncomeWi
     { value: 'none', label: 'None' },
 ];
 
-export const OTHER_INCOME_TIMING_MODE_OPTIONS: Array<{ value: OtherIncomeTimingMode; label: string }> = [
-    { value: 'average', label: 'Average Across Paychecks' },
-    { value: 'payout', label: 'Payout Timing (Do Not Average)' },
-];
-
 export function getOtherIncomeTypeLabel(value: OtherIncomeType): string {
     return OTHER_INCOME_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? 'Other';
 }
@@ -50,8 +48,4 @@ export function getOtherIncomePayTreatmentLabel(value: OtherIncomePayTreatment):
 
 export function getOtherIncomeWithholdingModeLabel(value: OtherIncomeWithholdingMode): string {
     return OTHER_INCOME_WITHHOLDING_MODE_OPTIONS.find((option) => option.value === value)?.label ?? 'Manual';
-}
-
-export function getOtherIncomeTimingModeLabel(value: OtherIncomeTimingMode | undefined): string {
-    return OTHER_INCOME_TIMING_MODE_OPTIONS.find((option) => option.value === value)?.label ?? 'Average Across Paychecks';
 }

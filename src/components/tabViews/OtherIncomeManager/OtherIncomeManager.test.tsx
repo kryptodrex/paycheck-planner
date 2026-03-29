@@ -40,7 +40,6 @@ const {
         notes: 'Client retainers',
         isTaxable: true,
         payTreatment: 'net',
-        timingMode: 'average',
         withholdingMode: 'manual',
       },
     ],
@@ -96,7 +95,7 @@ describe('OtherIncomeManager', () => {
     render(<OtherIncomeManager displayMode="paycheck" />);
 
     await user.click(screen.getByRole('button', { name: /add other income/i }));
-    await user.type(screen.getByPlaceholderText('e.g., Annual Bonus, Etsy Shop'), 'Freelance Design');
+    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Freelance Design');
 
     const selects = screen.getAllByRole('combobox');
     await user.selectOptions(selects[0], 'personal-business');
@@ -119,11 +118,52 @@ describe('OtherIncomeManager', () => {
     render(<OtherIncomeManager displayMode="paycheck" />);
 
     await user.click(screen.getByRole('button', { name: /add other income/i }));
-    await user.type(screen.getByPlaceholderText('e.g., Annual Bonus, Etsy Shop'), 'Freelance Design');
+    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Freelance Design');
     await user.type(screen.getByPlaceholderText('0.00'), '650');
 
     expect(screen.getByDisplayValue('300.00')).toBeInTheDocument();
     expect(screen.getByDisplayValue('650.00')).toBeInTheDocument();
     expect(screen.getByDisplayValue('7800.00')).toBeInTheDocument();
+  });
+
+  it('shows auto withholding profile selection and saves an explicit profile override', async () => {
+    const user = userEvent.setup();
+
+    render(<OtherIncomeManager displayMode="paycheck" />);
+
+    await user.click(screen.getByRole('button', { name: /add other income/i }));
+
+    await user.selectOptions(screen.getAllByRole('combobox')[4], 'auto');
+
+    expect(screen.getAllByRole('combobox')).toHaveLength(6);
+
+    await user.selectOptions(
+      screen.getAllByRole('combobox')[5],
+      'general-supplemental',
+    );
+
+    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Freelance Design');
+    await user.type(screen.getByPlaceholderText('0.00'), '650');
+    expect(screen.getByText(/auto withholding preview/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /add entry/i }));
+
+    expect(addOtherIncomeMock).toHaveBeenCalledWith(expect.objectContaining({
+      withholdingMode: 'auto',
+      withholdingProfileId: 'general-supplemental',
+    }));
+  });
+
+  it('validates percent-of-gross guardrails', async () => {
+    const user = userEvent.setup();
+
+    render(<OtherIncomeManager displayMode="paycheck" />);
+
+    await user.click(screen.getByRole('button', { name: /add other income/i }));
+    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Side Hustle');
+    await user.selectOptions(screen.getAllByRole('combobox')[2], 'percent-of-gross');
+    await user.type(screen.getByPlaceholderText('0'), '130');
+    await user.click(screen.getByRole('button', { name: /add entry/i }));
+
+    expect(screen.getByText(/percent of gross must be 100 or less/i)).toBeInTheDocument();
   });
 });

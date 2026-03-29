@@ -5,6 +5,7 @@ import {
   calculateOtherIncomePerPaycheckAmount,
   calculateOtherIncomePerPaycheckTotals,
   getOtherIncomeOccurrencesPerYear,
+  getOtherIncomeScheduledOccurrencesPerYear,
 } from './otherIncome';
 import { roundToCent } from './money';
 
@@ -174,5 +175,79 @@ describe('otherIncome', () => {
     }, 90000 / 26, 26);
 
     expect(roundToCent(perPaycheck)).toBe(roundToCent(9000 / 26));
+  });
+
+  it('ignores active months when resolving scheduled annual occurrences', () => {
+    expect(getOtherIncomeScheduledOccurrencesPerYear({
+      id: 'monthly-limited',
+      name: 'Seasonal Consulting',
+      incomeType: 'personal-business',
+      amountMode: 'fixed',
+      amount: 1000,
+      frequency: 'monthly',
+      activeMonths: [1, 4, 7, 10],
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'manual',
+    })).toBe(12);
+
+    expect(getOtherIncomeScheduledOccurrencesPerYear({
+      id: 'quarterly-limited',
+      name: 'Quarterly Bonus',
+      incomeType: 'bonus',
+      amountMode: 'fixed',
+      amount: 2000,
+      frequency: 'quarterly',
+      activeMonths: [3, 9],
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'manual',
+    })).toBe(4);
+
+    expect(getOtherIncomeScheduledOccurrencesPerYear({
+      id: 'weekly-ignored',
+      name: 'Weekly Side Work',
+      incomeType: 'personal-business',
+      amountMode: 'fixed',
+      amount: 200,
+      frequency: 'weekly',
+      activeMonths: [1, 2],
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'manual',
+    })).toBe(52);
+  });
+
+  it('does not apply active-month scaling to annualized amounts', () => {
+    const fixedAnnual = calculateOtherIncomeAnnualAmount({
+      id: 'fixed-active-months',
+      name: 'Seasonal Rental',
+      incomeType: 'rental-income',
+      amountMode: 'fixed',
+      amount: 1200,
+      frequency: 'monthly',
+      activeMonths: [5, 6, 7],
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'manual',
+    }, 2000, 26);
+
+    expect(fixedAnnual).toBe(14400);
+
+    const percentAnnual = calculateOtherIncomeAnnualAmount({
+      id: 'percent-active-months',
+      name: 'Seasonal Bonus',
+      incomeType: 'bonus',
+      amountMode: 'percent-of-gross',
+      amount: 0,
+      percentOfGross: 12,
+      frequency: 'quarterly',
+      activeMonths: [3, 9],
+      isTaxable: true,
+      payTreatment: 'gross',
+      withholdingMode: 'manual',
+    }, 2000, 26);
+
+    expect(percentAnnual).toBe(6240);
   });
 });

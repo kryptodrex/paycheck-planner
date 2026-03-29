@@ -9,18 +9,21 @@ import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent } from '../../../utils/money';
 import { calculateOtherIncomeAnnualAmount, calculateOtherIncomePerPaycheckAmount } from '../../../utils/otherIncome';
 import {
+    calculateOtherIncomeAutoWithholdingDetail,
+    getOtherIncomeWithholdingProfiles,
+    resolveOtherIncomeWithholdingProfile,
+} from '../../../utils/otherIncomeWithholding';
+import {
     OTHER_INCOME_AMOUNT_MODE_OPTIONS,
     OTHER_INCOME_PAY_TREATMENT_OPTIONS,
     OTHER_INCOME_TYPE_OPTIONS,
     OTHER_INCOME_WITHHOLDING_MODE_OPTIONS,
-    getOtherIncomeAmountModeLabel,
     getOtherIncomePayTreatmentLabel,
     getOtherIncomeTypeLabel,
     getOtherIncomeWithholdingModeLabel,
 } from '../../../utils/otherIncomeLabels';
 import {
     calculateGrossPayPerPaycheck,
-    calculateGrossPayPerYear,
     getDisplayModeLabel,
     getDisplayModeOccurrencesPerYear,
     getPaychecksPerYear,
@@ -49,9 +52,9 @@ const FREQUENCY_OPTIONS: Array<{ value: OtherIncome['frequency']; label: string 
     { value: 'bi-weekly', label: 'Bi-weekly' },
     { value: 'semi-monthly', label: 'Semi-monthly' },
     { value: 'monthly', label: 'Monthly' },
-    { value: 'quarterly', label: 'Quarterly' },
-    { value: 'yearly', label: 'Yearly' },
 ];
+
+const PLANNING_INCOME_TYPE_OPTIONS = OTHER_INCOME_TYPE_OPTIONS.filter((option) => option.value !== 'bonus');
 
 const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     searchActionRequestKey,
@@ -67,13 +70,14 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     const incomeErrors = useFieldErrors<OtherIncomeFieldErrors>();
 
     const [incomeName, setIncomeName] = useState('');
-    const [incomeType, setIncomeType] = useState<OtherIncome['incomeType']>('bonus');
+    const [incomeType, setIncomeType] = useState<OtherIncome['incomeType']>('personal-business');
     const [amountMode, setAmountMode] = useState<OtherIncome['amountMode']>('fixed');
     const [amount, setAmount] = useState('');
     const [percentOfGross, setPercentOfGross] = useState('');
     const [frequency, setFrequency] = useState<OtherIncome['frequency']>('monthly');
     const [payTreatment, setPayTreatment] = useState<OtherIncome['payTreatment']>('gross');
     const [withholdingMode, setWithholdingMode] = useState<OtherIncome['withholdingMode']>('manual');
+    const [withholdingProfileId, setWithholdingProfileId] = useState('');
     const [notes, setNotes] = useState('');
     const lastHandledSearchActionKeyRef = useRef(0);
 
@@ -147,8 +151,9 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         return sum + calculateOtherIncomeAnnualAmount(entry, grossPayPerPaycheck, paychecksPerYear);
     }, 0);
     const totalDisplayAmount = roundToCent(totalAnnualAmount / displayModeOccurrencesPerYear);
-    const sortedEntries = [...otherIncomeEntries].sort((left, right) => right.amount - left.amount);
+    const sortedEntries = [...otherIncomeEntries].sort((left, right) => left.name.localeCompare(right.name));
     const editingIncome = incomeEditor.editingEntity;
+
     const previewEntry: OtherIncome = {
         id: editingIncome?.id || 'preview',
         name: incomeName || 'Preview',
@@ -162,12 +167,17 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         isTaxable: payTreatment !== 'net',
         payTreatment,
         withholdingMode,
+        withholdingProfileId: withholdingProfileId || undefined,
     };
+
     const previewAnnualAmount = calculateOtherIncomeAnnualAmount(previewEntry, grossPayPerPaycheck, paychecksPerYear);
     const previewMonthlyAmount = roundToCent(previewAnnualAmount / 12);
     const previewPerPaycheckAmount = roundToCent(
         calculateOtherIncomePerPaycheckAmount(previewEntry, grossPayPerPaycheck, paychecksPerYear),
     );
+    const previewAutoWithholding = calculateOtherIncomeAutoWithholdingDetail(previewEntry, previewPerPaycheckAmount);
+    const withholdingProfiles = getOtherIncomeWithholdingProfiles();
+    const selectedWithholdingProfile = resolveOtherIncomeWithholdingProfile(previewEntry);
 
     function resetForm() {
         setIncomeName('');
@@ -178,6 +188,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         setFrequency('monthly');
         setPayTreatment('gross');
         setWithholdingMode('manual');
+        setWithholdingProfileId('');
         setNotes('');
         incomeErrors.clearErrors();
     }
@@ -191,6 +202,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         setFrequency(entry.frequency);
         setPayTreatment(entry.payTreatment);
         setWithholdingMode(entry.withholdingMode);
+        setWithholdingProfileId(entry.withholdingProfileId || '');
         setNotes(entry.notes || '');
         incomeErrors.clearErrors();
     }
@@ -240,6 +252,8 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
             const numericPercent = Number.parseFloat(percentOfGross);
             if (!Number.isFinite(numericPercent) || numericPercent <= 0) {
                 nextErrors.percentOfGross = 'Enter a percent greater than 0';
+            } else if (numericPercent > 100) {
+                nextErrors.percentOfGross = 'Percent of gross must be 100 or less';
             }
         }
 
@@ -267,8 +281,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
             isTaxable: payTreatment !== 'net',
             payTreatment,
             withholdingMode,
-            withholdingProfileId: undefined,
-            activeMonths: undefined,
+            withholdingProfileId: withholdingProfileId || undefined,
         };
 
         if (editingIncome) {
@@ -308,7 +321,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         <div className="tab-view other-income-manager">
             <PageHeader
                 title="Other Income Sources"
-                subtitle="Track bonuses, side income, reimbursements, and other pay additions"
+                subtitle="Track recurring income from side work, second jobs, and other ongoing sources"
                 icon={<HandCoins className="ui-icon" aria-hidden="true" />}
                 actions={viewModeControl}
             />
@@ -344,14 +357,19 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                             <HandCoins className="ui-icon" />
                         </div>
                         <h3>No Other Income Sources Yet</h3>
-                        <p>Add bonuses, personal business income, reimbursements, or any other recurring pay additions.</p>
+                        <p>Add side business, second job, rental, or other ongoing income you expect paycheck to paycheck.</p>
                     </div>
                 ) : (
                     <div className="other-income-list">
                         {sortedEntries.map((entry) => {
                             const annualAmount = calculateOtherIncomeAnnualAmount(entry, grossPayPerPaycheck, paychecksPerYear);
+                            const monthlyAmount = roundToCent(annualAmount / 12);
+                            const perPaycheckAmount = roundToCent(
+                                calculateOtherIncomePerPaycheckAmount(entry, grossPayPerPaycheck, paychecksPerYear),
+                            );
                             const displayAmount = roundToCent(annualAmount / displayModeOccurrencesPerYear);
                             const isEnabled = entry.enabled !== false;
+                            const autoWithholdingDetail = calculateOtherIncomeAutoWithholdingDetail(entry, perPaycheckAmount);
 
                             return (
                                 <SectionItemCard
@@ -363,11 +381,8 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                                         : `${formatFrequencyLabel(entry.frequency)}: ${formatWithSymbol(entry.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                     amount={formatWithSymbol(displayAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     amountLabel={getDisplayModeLabel(displayMode)}
-                                    badges={
-                                        <>
-                                            <PillBadge variant="accent">{getOtherIncomeTypeLabel(entry.incomeType)}</PillBadge>
-                                        </>
-                                    }
+                                    badges={<PillBadge variant="accent">{getOtherIncomeTypeLabel(entry.incomeType)}</PillBadge>}
+                                    notes={entry.notes}
                                     isPaused={!isEnabled}
                                     onPauseToggle={() => handleToggleIncomeEnabled(entry)}
                                     onEdit={() => handleEditIncome(entry)}
@@ -377,6 +392,18 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                                 >
                                     <div className="other-income-details">
                                         <div className="detail">
+                                            <span className="label">Per Paycheck</span>
+                                            <span className="value">{formatWithSymbol(perPaycheckAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="detail">
+                                            <span className="label">Monthly Average</span>
+                                            <span className="value">{formatWithSymbol(monthlyAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="detail">
+                                            <span className="label">Annual Total</span>
+                                            <span className="value">{formatWithSymbol(annualAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="detail">
                                             <span className="label">Treatment</span>
                                             <span className="value">{getOtherIncomePayTreatmentLabel(entry.payTreatment)}</span>
                                         </div>
@@ -384,8 +411,19 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                                             <span className="label">Withholding Mode</span>
                                             <span className="value">{getOtherIncomeWithholdingModeLabel(entry.withholdingMode)}</span>
                                         </div>
+                                        {autoWithholdingDetail && (
+                                            <>
+                                                <div className="detail">
+                                                    <span className="label">Withholding Profile</span>
+                                                    <span className="value">{autoWithholdingDetail.profileLabel} ({autoWithholdingDetail.rate}%)</span>
+                                                </div>
+                                                <div className="detail">
+                                                    <span className="label">Auto Withholding</span>
+                                                    <span className="value">{formatWithSymbol(autoWithholdingDetail.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
-                                    {entry.notes && <div className="other-income-notes">{entry.notes}</div>}
                                 </SectionItemCard>
                             );
                         })}
@@ -396,6 +434,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
             <Modal
                 isOpen={incomeEditor.isOpen}
                 onClose={closeModal}
+                contentClassName="other-income-modal"
                 header={editingIncome ? 'Edit Other Income' : 'Add Other Income'}
                 headerIcon={editingIncome ? <Edit className="ui-icon" aria-hidden="true" /> : <BanknoteArrowUp className="ui-icon" aria-hidden="true" />}
                 footer={(
@@ -409,7 +448,12 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                     </>
                 )}
             >
-                <FormGroup label="Income Name" required error={incomeErrors.errors.name}>
+                <FormGroup
+                    label="Income Name"
+                    required
+                    error={incomeErrors.errors.name}
+                    helperText={incomeType === 'other' ? 'Tip: Use a specific name to customize this Other income label.' : undefined}
+                >
                     <input
                         type="text"
                         value={incomeName}
@@ -418,7 +462,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                             incomeErrors.clearFieldError('name');
                         }}
                         className={incomeErrors.errors.name ? 'field-error' : ''}
-                        placeholder="e.g., Annual Bonus, Etsy Shop"
+                        placeholder="e.g., Rental Property, Freelance"
                         required
                     />
                 </FormGroup>
@@ -426,7 +470,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                 <div className="form-row">
                     <FormGroup label="Income Type" required>
                         <Dropdown value={incomeType} onChange={(event) => setIncomeType(event.target.value as OtherIncome['incomeType'])}>
-                            {OTHER_INCOME_TYPE_OPTIONS.map((option) => (
+                            {PLANNING_INCOME_TYPE_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                             ))}
                         </Dropdown>
@@ -481,6 +525,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                                 placeholder="0"
                                 step="0.01"
                                 min="0"
+                                max="100"
                                 required
                             />
                         </FormGroup>
@@ -503,6 +548,73 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                         </Dropdown>
                     </FormGroup>
                 </div>
+
+                {withholdingMode === 'auto' && payTreatment !== 'net' && (
+                    <FormGroup
+                        label="Withholding Profile"
+                        helperText="Defaults by income type, but you can override the profile for this entry."
+                    >
+                        <Dropdown value={withholdingProfileId || selectedWithholdingProfile.id} onChange={(event) => setWithholdingProfileId(event.target.value)}>
+                            {withholdingProfiles.map((profile) => (
+                                <option key={profile.id} value={profile.id}>{profile.label} ({profile.rate}%)</option>
+                            ))}
+                        </Dropdown>
+                    </FormGroup>
+                )}
+
+                <div className="other-income-preview-row">
+                    <FormGroup label="Estimated Per Paycheck">
+                        <InputWithPrefix
+                            prefix={getCurrencySymbol(currency)}
+                            type="text"
+                            value={previewPerPaycheckAmount.toFixed(2)}
+                            readOnly
+                        />
+                    </FormGroup>
+                    <FormGroup label="Estimated Per Month">
+                        <InputWithPrefix
+                            prefix={getCurrencySymbol(currency)}
+                            type="text"
+                            value={previewMonthlyAmount.toFixed(2)}
+                            readOnly
+                        />
+                    </FormGroup>
+                    <FormGroup label="Estimated Per Year">
+                        <InputWithPrefix
+                            prefix={getCurrencySymbol(currency)}
+                            type="text"
+                            value={previewAnnualAmount.toFixed(2)}
+                            readOnly
+                        />
+                    </FormGroup>
+                </div>
+
+                {withholdingMode === 'auto' && payTreatment !== 'net' && previewAutoWithholding && (
+                    <div className="other-income-auto-withholding-preview">
+                        <div className="other-income-auto-withholding-preview__header">Auto withholding preview</div>
+                        <div className="other-income-auto-withholding-preview__row">
+                            <span>Profile</span>
+                            <span>{previewAutoWithholding.profileLabel} ({previewAutoWithholding.rate}%)</span>
+                        </div>
+                        <div className="other-income-auto-withholding-preview__row">
+                            <span>Taxable base</span>
+                            <span>{formatWithSymbol(previewAutoWithholding.taxableBase, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="other-income-auto-withholding-preview__row">
+                            <span>Estimated withholding</span>
+                            <span>{formatWithSymbol(previewAutoWithholding.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <p className="other-income-withholding-note">
+                            This adds a separate withholding estimate and does not overwrite manual tax lines or manual additional withholding.
+                        </p>
+                    </div>
+                )}
+
+                {withholdingMode === 'auto' && payTreatment === 'net' && (
+                    <p className="other-income-withholding-note">
+                        Auto withholding does not apply to net-pay income. Switch to Gross or Taxable Only to use an automatic withholding profile.
+                    </p>
+                )}
 
                 <FormGroup label="Notes">
                     <textarea

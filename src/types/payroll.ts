@@ -70,9 +70,13 @@ export interface RetirementElection {
 
 export type OtherIncomeType =
   | 'bonus'
+  | 'commission'
   | 'personal-business'
   | 'rental-income'
   | 'retirement-withdrawal'
+  | 'disability'
+  | 'reimbursement'
+  | 'investment-income'
   | 'other';
 
 export type OtherIncomeAmountMode = 'fixed' | 'percent-of-gross';

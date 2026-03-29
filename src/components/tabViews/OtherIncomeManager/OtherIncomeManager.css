@@ -51,6 +51,10 @@
   color: var(--text-primary);
 }
 
+.other-income-modal {
+  max-width: 600px !important;
+}
+
 .other-income-list {
   display: flex;
   flex-direction: column;
@@ -62,6 +66,7 @@
   flex-direction: column;
   gap: 0.35rem;
   margin-top: 0.45rem;
+  margin-bottom: 0.5rem;
 }
 
 .other-income-details .detail {
@@ -81,10 +86,11 @@
 }
 
 .other-income-notes {
-  margin-top: 0.35rem;
-  white-space: pre-wrap;
   color: var(--text-secondary);
-  font-size: 0.86rem;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  background: var(--bg-primary);
+  border-radius: 4px;
 }
 
 .other-income-v1-note {
@@ -115,6 +121,35 @@
   margin: 0;
   font-size: 0.82rem;
   color: var(--text-tertiary);
+}
+
+.other-income-auto-withholding-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, var(--accent-primary) 8%);
+}
+
+.other-income-auto-withholding-preview__header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.other-income-auto-withholding-preview__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.other-income-auto-withholding-preview__row span:last-child {
+  color: var(--text-primary);
+  text-align: right;
 }
 
 @media (max-width: 900px) {
