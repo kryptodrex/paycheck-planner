@@ -869,9 +869,21 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                   <span>{formatWithSymbol(line.amount, currency, { maximumFractionDigits: 2 })}</span>
                 </div>
               ))}
+              {(displayBreakdown.otherIncomeAutoWithholdingLineItems || []).map((line) => (
+                <div key={line.id} className="breakdown-item">
+                  <span>{line.label}</span>
+                  <span>{formatWithSymbol(line.amount, currency, { maximumFractionDigits: 2 })}</span>
+                </div>
+              ))}
+              {(displayBreakdown.otherIncomeAutoWithholding || 0) > 0 && (
+                <div className="breakdown-item">
+                  <span>Other Income Auto Withholding</span>
+                  <span>{formatWithSymbol(displayBreakdown.otherIncomeAutoWithholding || 0, currency, { maximumFractionDigits: 2 })}</span>
+                </div>
+              )}
               {displayBreakdown.additionalWithholding > 0 && (
                 <div className="breakdown-item">
-                  <span>Additional Withholding</span>
+                  <span>Manual Additional Withholding</span>
                   <span>{formatWithSymbol(displayBreakdown.additionalWithholding, currency, { maximumFractionDigits: 2 })}</span>
                 </div>
               )}

@@ -366,11 +366,77 @@ describe('budgetCalculations', () => {
     expect(breakdown.otherIncomeTaxable).toBe(60);
     expect(breakdown.otherIncomeNet).toBe(24);
     expect(breakdown.taxableIncome).toBe(2180);
+    expect(breakdown.otherIncomeAutoWithholding).toBe(26.4);
+    expect(breakdown.otherIncomeAutoWithholdingLineItems).toEqual([
+      {
+        id: 'other-income-auto-gross-income',
+        label: 'Auto Withholding - Commission (22%)',
+        amount: 26.4,
+        sourceIncomeId: 'gross-income',
+        sourceIncomeName: 'Commission',
+        profileId: 'general-supplemental',
+        profileLabel: 'General Supplemental Income',
+        rate: 22,
+        taxableBase: 120,
+      },
+    ]);
     expect(breakdown.taxLineAmounts).toEqual([
       { id: 'tax-fed', label: 'Federal Tax', amount: 218 },
     ]);
-    expect(breakdown.totalTaxes).toBe(218);
-    expect(breakdown.netPay).toBe(1986);
+    expect(breakdown.totalTaxes).toBe(244.4);
+    expect(breakdown.netPay).toBe(1959.6);
+  });
+
+  it('adds auto-withholding deltas without mutating manual tax lines or manual withholding', () => {
+    const breakdown = calculatePaycheckBreakdown({
+      paySettings: {
+        payType: 'salary',
+        annualSalary: 52000,
+        payFrequency: 'bi-weekly',
+      },
+      preTaxDeductions: [],
+      otherIncome: [
+        {
+          id: 'auto-bonus',
+          name: 'Annual Bonus',
+          incomeType: 'bonus',
+          amountMode: 'fixed',
+          amount: 2600,
+          frequency: 'yearly',
+          isTaxable: true,
+          payTreatment: 'gross',
+          withholdingMode: 'auto',
+        },
+        {
+          id: 'manual-income',
+          name: 'Manual Income',
+          incomeType: 'other',
+          amountMode: 'fixed',
+          amount: 130,
+          frequency: 'monthly',
+          isTaxable: true,
+          payTreatment: 'taxable',
+          withholdingMode: 'manual',
+        },
+      ],
+      benefits: [],
+      retirement: [],
+      taxSettings: {
+        taxLines: [
+          { id: 'tax-fed', label: 'Federal Tax', rate: 10, calculationType: 'percentage' },
+          { id: 'tax-state', label: 'State Tax', rate: 5, calculationType: 'percentage' },
+        ],
+        additionalWithholding: 20,
+      },
+    });
+
+    expect(breakdown.taxLineAmounts).toEqual([
+      { id: 'tax-fed', label: 'Federal Tax', amount: 216 },
+      { id: 'tax-state', label: 'State Tax', amount: 108 },
+    ]);
+    expect(breakdown.additionalWithholding).toBe(20);
+    expect(breakdown.otherIncomeAutoWithholding).toBe(22);
+    expect(breakdown.totalTaxes).toBe(366);
   });
 
   it('annualizes and redisplays other income treatment totals consistently', () => {

@@ -1,9 +1,10 @@
 import type { BudgetData } from '../types/budget';
-import type { PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
+import type { OtherIncomeWithholdingAmount, PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
 import { roundToCent, roundUpToCent } from '../utils/money';
 import { getDisplayModeOccurrencesPerYear, getPaychecksPerYear } from '../utils/payPeriod';
-import { calculateOtherIncomePerPaycheckTotals } from '../utils/otherIncome';
+import { calculateOtherIncomePerPaycheckAmount, calculateOtherIncomePerPaycheckTotals } from '../utils/otherIncome';
+import { calculateOtherIncomeAutoWithholdingDetail } from '../utils/otherIncomeWithholding';
 import { calculateTaxLineAmount } from '../utils/taxLines';
 
 type BudgetCalculationInput = Pick<
@@ -106,9 +107,36 @@ export function calculatePaycheckBreakdown(input?: BudgetCalculationInput | null
     amount: calculateTaxLineAmount(taxableIncome, line, grossPay),
   }));
 
+  const autoWithholdingDetails = (input.otherIncome || []).reduce<OtherIncomeWithholdingAmount[]>((items, entry) => {
+    const taxableBase = calculateOtherIncomePerPaycheckAmount(entry, baseGrossPay, paychecksPerYear);
+    const detail = calculateOtherIncomeAutoWithholdingDetail(entry, taxableBase);
+    if (!detail) {
+      return items;
+    }
+
+    items.push({
+      id: `other-income-auto-${entry.id}`,
+      label: `Auto Withholding - ${entry.name} (${detail.rate}%)`,
+      amount: detail.amount,
+      sourceIncomeId: detail.entryId,
+      sourceIncomeName: detail.entryName,
+      profileId: detail.profileId,
+      profileLabel: detail.profileLabel,
+      rate: detail.rate,
+      taxableBase: detail.taxableBase,
+    });
+    return items;
+  }, []);
+
+  const otherIncomeAutoWithholding = roundUpToCent(
+    autoWithholdingDetails.reduce((sum, item) => sum + item.amount, 0),
+  );
+
   const additionalWithholding = roundUpToCent(input.taxSettings.additionalWithholding || 0);
   const totalTaxes = roundUpToCent(
-    taxLineAmounts.reduce((sum, line) => sum + line.amount, 0) + additionalWithholding,
+    taxLineAmounts.reduce((sum, line) => sum + line.amount, 0)
+      + additionalWithholding
+      + otherIncomeAutoWithholding,
   );
 
   let netPayBeforePostTax = roundUpToCent(taxableIncome - totalTaxes);
@@ -145,6 +173,12 @@ export function calculatePaycheckBreakdown(input?: BudgetCalculationInput | null
     otherIncomeGross: otherIncomeTotals.gross,
     otherIncomeTaxable: otherIncomeTotals.taxable,
     otherIncomeNet: otherIncomeTotals.net,
+    ...(otherIncomeAutoWithholding > 0
+      ? {
+        otherIncomeAutoWithholding,
+        otherIncomeAutoWithholdingLineItems: autoWithholdingDetails,
+      }
+      : {}),
     preTaxDeductions,
     taxableIncome,
     taxLineAmounts,
@@ -180,6 +214,12 @@ export function calculateAnnualizedPayBreakdown(
   const annualOtherIncomeGross = roundToCent((breakdown.otherIncomeGross || 0) * paychecksPerYear);
   const annualOtherIncomeTaxable = roundToCent((breakdown.otherIncomeTaxable || 0) * paychecksPerYear);
   const annualOtherIncomeNet = roundToCent((breakdown.otherIncomeNet || 0) * paychecksPerYear);
+  const annualOtherIncomeAutoWithholding = roundToCent((breakdown.otherIncomeAutoWithholding || 0) * paychecksPerYear);
+  const annualOtherIncomeAutoWithholdingLineItems = (breakdown.otherIncomeAutoWithholdingLineItems || []).map((line) => ({
+    ...line,
+    amount: roundToCent(line.amount * paychecksPerYear),
+    taxableBase: roundToCent(line.taxableBase * paychecksPerYear),
+  }));
   const annualPreTaxDeductions = roundToCent(breakdown.preTaxDeductions * paychecksPerYear);
   const annualTaxableIncome = roundToCent(breakdown.taxableIncome * paychecksPerYear);
   const annualTaxLineAmounts = breakdown.taxLineAmounts.map((line) => ({
@@ -198,6 +238,12 @@ export function calculateAnnualizedPayBreakdown(
     otherIncomeGross: annualOtherIncomeGross,
     otherIncomeTaxable: annualOtherIncomeTaxable,
     otherIncomeNet: annualOtherIncomeNet,
+    ...(annualOtherIncomeAutoWithholding > 0
+      ? {
+        otherIncomeAutoWithholding: annualOtherIncomeAutoWithholding,
+        otherIncomeAutoWithholdingLineItems: annualOtherIncomeAutoWithholdingLineItems,
+      }
+      : {}),
     preTaxDeductions: annualPreTaxDeductions,
     taxableIncome: annualTaxableIncome,
     taxLineAmounts: annualTaxLineAmounts,
@@ -220,6 +266,16 @@ export function calculateDisplayPayBreakdown(
     otherIncomeGross: roundToCent((annualBreakdown.otherIncomeGross || 0) / divisor),
     otherIncomeTaxable: roundToCent((annualBreakdown.otherIncomeTaxable || 0) / divisor),
     otherIncomeNet: roundToCent((annualBreakdown.otherIncomeNet || 0) / divisor),
+    ...(annualBreakdown.otherIncomeAutoWithholding && annualBreakdown.otherIncomeAutoWithholding > 0
+      ? {
+        otherIncomeAutoWithholding: roundToCent(annualBreakdown.otherIncomeAutoWithholding / divisor),
+        otherIncomeAutoWithholdingLineItems: (annualBreakdown.otherIncomeAutoWithholdingLineItems || []).map((line) => ({
+          ...line,
+          amount: roundToCent(line.amount / divisor),
+          taxableBase: roundToCent(line.taxableBase / divisor),
+        })),
+      }
+      : {}),
     preTaxDeductions: roundToCent(annualBreakdown.preTaxDeductions / divisor),
     taxableIncome: roundToCent(annualBreakdown.taxableIncome / divisor),
     taxLineAmounts: annualBreakdown.taxLineAmounts.map((line) => ({

@@ -107,11 +107,25 @@ export interface TaxLineAmount {
   amount: number;
 }
 
+export interface OtherIncomeWithholdingAmount {
+  id: string;
+  label: string;
+  amount: number;
+  sourceIncomeId: string;
+  sourceIncomeName: string;
+  profileId: string;
+  profileLabel: string;
+  rate: number;
+  taxableBase: number;
+}
+
 export interface PaycheckBreakdown {
   grossPay: number;
   otherIncomeGross?: number;
   otherIncomeTaxable?: number;
   otherIncomeNet?: number;
+  otherIncomeAutoWithholding?: number;
+  otherIncomeAutoWithholdingLineItems?: OtherIncomeWithholdingAmount[];
   preTaxDeductions: number;
   taxableIncome: number;
   taxLineAmounts: TaxLineAmount[];
