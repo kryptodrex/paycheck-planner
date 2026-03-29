@@ -11,6 +11,10 @@
   overflow: hidden;
 }
 
+.date-input-calendar-mode {
+  overflow: visible;
+}
+
 .date-input.day-month {
   padding: 0 0.25rem;
 }
@@ -18,6 +22,57 @@
 .date-input.day-month .date-input-select-container {
   flex: 1;
   min-width: 0;
+}
+
+.date-input-display {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 0.75rem;
+  padding-right: 0.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-family: inherit;
+  font-weight: 500;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.date-input-field {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 0.75rem;
+  padding-right: 0.5rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-family: inherit;
+  font-weight: 500;
+  min-height: 48px;
+  outline: none;
+}
+
+.date-input-field::placeholder {
+  color: var(--text-tertiary);
+}
+
+.date-input-display:disabled,
+.date-input-field:disabled,
+.date-input-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.date-input-display:focus-visible,
+.date-input-field:focus-visible,
+.date-input-trigger:focus-visible,
+.date-input-day:focus-visible,
+.date-input-nav:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-accent);
 }
 
 .date-input input {
@@ -98,23 +153,20 @@
 }
 
 .date-input-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   align-self: stretch;
-  width: 2.75rem;
-  border: none;
+  min-width: 3rem;
   border-left: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  padding: 0;
-  cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding-inline: 0.75rem;
+  margin: 0;
 }
 
-.date-input-trigger:hover {
-  background: var(--surface-accent-subtle);
-  color: var(--accent-primary);
+.date-input-trigger.btn-secondary:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
 }
 
 .date-input-calendar {
@@ -156,6 +208,99 @@
   pointer-events: none;
 }
 
+.date-input-popover {
+  z-index: 2200;
+  padding: 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-elevated, var(--bg-secondary));
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28);
+}
+
+.date-input-popover-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.date-input-month-label {
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.date-input-nav {
+  min-width: 2.4rem;
+}
+
+.date-input-nav.btn-secondary:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.date-input-weekdays,
+.date-input-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.date-input-weekdays {
+  margin-bottom: 0.35rem;
+}
+
+.date-input-weekdays span {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  padding: 0.35rem 0;
+}
+
+.date-input-day {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: 8px;
+  width: 100%;
+  aspect-ratio: 1;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.date-input-day:hover {
+  background: var(--surface-accent-subtle);
+}
+
+.date-input-day.outside-month {
+  color: var(--text-tertiary);
+}
+
+.date-input-day.today {
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
+.date-input-day.selected {
+  background: var(--accent-primary);
+  color: var(--button-primary-text, #fff);
+  font-weight: 700;
+}
+
+.date-input-day:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.date-input-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.55rem;
+}
+
 [data-theme="dark"] .date-input input {
   color-scheme: dark;
 }
@@ -165,6 +310,14 @@
 }
 
 @media (max-width: 600px) {
+  .date-input-display,
+  .date-input-field {
+    padding: 0.65rem;
+    padding-right: 0.4rem;
+    font-size: 0.95rem;
+    min-height: 44px;
+  }
+
   .date-input input {
     padding: 0.65rem;
     padding-right: 0.4rem;
@@ -182,6 +335,7 @@
   }
 
   .date-input-trigger {
-    width: 2.5rem;
+    min-width: 2.6rem;
+    padding-inline: 0.6rem;
   }
 }
