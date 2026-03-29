@@ -18,7 +18,7 @@
     calc(-1 * var(--page-header-inline-bleed)) 0 0 0 var(--bg-secondary),
     var(--page-header-inline-bleed) 0 0 0 var(--bg-secondary),
     0 10px 16px color-mix(in srgb, var(--bg-secondary) 78%, transparent);
-  /* flex-wrap: wrap; */
+  flex-wrap: wrap;
   gap: 1rem;
   /* border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, rgba(255, 255, 255, 0.35) 30%); */
 }
