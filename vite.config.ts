@@ -19,7 +19,6 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
-      'import.meta.env.VITE_CURRENCY_CONVERSION_URL': JSON.stringify(getEnv('CURRENCY_CONVERSION_URL')),
     },
     plugins: [
       react(),
@@ -33,6 +32,8 @@ export default defineConfig(({ mode }) => {
               'process.env.FEEDBACK_FORM_ENTRY_CATEGORY': JSON.stringify(getEnv('FEEDBACK_FORM_ENTRY_CATEGORY')),
               'process.env.FEEDBACK_FORM_ENTRY_SUBJECT': JSON.stringify(getEnv('FEEDBACK_FORM_ENTRY_SUBJECT')),
               'process.env.FEEDBACK_FORM_ENTRY_DETAILS': JSON.stringify(getEnv('FEEDBACK_FORM_ENTRY_DETAILS')),
+              'process.env.LATEST_RELEASE_URL': JSON.stringify(getEnv('LATEST_RELEASE_URL')),
+              'process.env.CURRENCY_CONVERSION_URL': JSON.stringify(getEnv('CURRENCY_CONVERSION_URL')),
             },
           },
         },

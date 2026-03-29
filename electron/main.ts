@@ -9,7 +9,7 @@ import { watch, type FSWatcher } from 'fs';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { MENU_EVENTS, menuChannel, type MenuEventName } from '../src/constants/events';
-import { FEEDBACK_FORM_ENTRY_IDS, FEEDBACK_FORM_URL } from './constants';
+import { FEEDBACK_FORM_ENTRY_IDS, FEEDBACK_FORM_URL, LATEST_RELEASE_URL } from './constants';
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
@@ -88,6 +88,29 @@ const pushAppLog = (level: 'INFO' | 'DEBUG', args: unknown[]) => {
     appLogBuffer.splice(0, appLogBuffer.length - MAX_LOG_BUFFER_ENTRIES);
   }
 };
+
+async function openLatestReleaseFromHelpMenu() {
+  try {
+    if (!LATEST_RELEASE_URL.trim()) {
+      await dialog.showMessageBox({
+        type: 'warning',
+        title: 'Latest Version URL Not Configured',
+        message: 'LATEST_RELEASE_URL is not configured in the Electron environment.',
+      });
+      return;
+    }
+
+    const releaseUrl = new URL(LATEST_RELEASE_URL);
+    await shell.openExternal(releaseUrl.toString());
+  } catch (error) {
+    console.error('Error opening latest release URL:', error);
+    await dialog.showMessageBox({
+      type: 'error',
+      title: 'Unable to Open Latest Version',
+      message: 'Could not open the latest version link. Please check your LATEST_RELEASE_URL setting.',
+    });
+  }
+}
 
 const originalConsoleLog = console.log.bind(console);
 const originalConsoleInfo = console.info.bind(console);
@@ -1193,7 +1216,6 @@ function createApplicationMenu() {
           }
         },
       },
-      { type: 'separator' },
       {
         label: 'Keyboard Shortcuts',
         accelerator: isMac ? 'Cmd+Shift+K' : 'Ctrl+Shift+K',
@@ -1202,6 +1224,13 @@ function createApplicationMenu() {
           if (targetWindow) {
             sendMenuEvent(targetWindow, MENU_EVENTS.openKeyboardShortcuts);
           }
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Check Latest Version',
+        click: async () => {
+          await openLatestReleaseFromHelpMenu();
         },
       },
     ],
