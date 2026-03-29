@@ -14,8 +14,8 @@ export function normalizeLegacyTabId(tabId?: string | null): TabId | null {
 }
 
 /**
- * Get the default tab configuration
- * All tabs are visible by default, allowing users to hide them as needed
+ * Get the default tab configuration.
+ * Less-common workflow tabs can start hidden and be enabled from Manage Tabs.
  */
 export function getDefaultTabConfigs(): TabConfig[] {
   return [
@@ -39,7 +39,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       id: 'other-income',
       label: 'Other Income',
       icon: HandCoins,
-      visible: true,
+      visible: false,
       order: 2,
       pinned: false,
     },

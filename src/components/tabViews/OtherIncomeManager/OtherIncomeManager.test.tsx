@@ -101,7 +101,6 @@ describe('OtherIncomeManager', () => {
     const selects = screen.getAllByRole('combobox');
     await user.selectOptions(selects[0], 'personal-business');
     await user.selectOptions(selects[1], 'gross');
-    await user.selectOptions(selects[2], 'average');
 
     await user.type(screen.getByPlaceholderText('0.00'), '650');
     await user.click(screen.getByRole('button', { name: /add entry/i }));
@@ -111,7 +110,20 @@ describe('OtherIncomeManager', () => {
       incomeType: 'personal-business',
       amount: 650,
       payTreatment: 'gross',
-      timingMode: 'average',
     }));
+  });
+
+  it('shows per-paycheck, monthly, and annual previews in the editor', async () => {
+    const user = userEvent.setup();
+
+    render(<OtherIncomeManager displayMode="paycheck" />);
+
+    await user.click(screen.getByRole('button', { name: /add other income/i }));
+    await user.type(screen.getByPlaceholderText('e.g., Annual Bonus, Etsy Shop'), 'Freelance Design');
+    await user.type(screen.getByPlaceholderText('0.00'), '650');
+
+    expect(screen.getByDisplayValue('300.00')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('650.00')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('7800.00')).toBeInTheDocument();
   });
 });

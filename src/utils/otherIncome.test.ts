@@ -160,9 +160,9 @@ describe('otherIncome', () => {
     expect(roundToCent(rentalPerPaycheck * paychecksPerYear)).toBe(18000);
   });
 
-  it('excludes payout-timed entries from per-paycheck averaging in v1', () => {
+  it('always averages annualized income across paychecks', () => {
     const perPaycheck = calculateOtherIncomePerPaycheckAmount({
-      id: 'bonus-payout',
+      id: 'bonus-yearly',
       name: 'Annual Bonus',
       incomeType: 'bonus',
       amountMode: 'fixed',
@@ -170,10 +170,9 @@ describe('otherIncome', () => {
       frequency: 'yearly',
       isTaxable: true,
       payTreatment: 'gross',
-      timingMode: 'payout',
       withholdingMode: 'manual',
     }, 90000 / 26, 26);
 
-    expect(perPaycheck).toBe(0);
+    expect(roundToCent(perPaycheck)).toBe(roundToCent(9000 / 26));
   });
 });

@@ -158,3 +158,11 @@ export function calculateGrossPayPerPaycheck(paySettings: PaySettings): number {
 
   return (paySettings.hourlyRate || 0) * (paySettings.hoursPerPayPeriod || 0);
 }
+
+export function calculateGrossPayPerYear(paySettings: PaySettings): number {
+  if (paySettings.payType === 'salary') {
+    return (paySettings.annualSalary || 0);
+  }
+
+  return (paySettings.hourlyRate || 0) * (paySettings.hoursPerPayPeriod || 0) * getPaychecksPerYear(paySettings.payFrequency);
+}
