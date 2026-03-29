@@ -5,6 +5,10 @@
   flex-shrink: 0;
 }
 
+.view-mode-button--open {
+  z-index: 160;
+}
+
 .view-mode-button__trigger {
   width: 100%;
   min-height: 2.75rem;
