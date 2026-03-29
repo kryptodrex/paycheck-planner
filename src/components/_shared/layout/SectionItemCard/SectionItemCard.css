@@ -101,6 +101,15 @@
   margin-top: 0.75rem;
 }
 
+.item-card-notes {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
 /* Actions footer */
 .item-card-actions {
   display: flex;
