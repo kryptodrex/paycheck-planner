@@ -119,13 +119,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   const lastHandledSearchActionKeyRef = useRef(0);
   const [useCompactHeaderActions, setUseCompactHeaderActions] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 980px)').matches;
+    return window.matchMedia('(max-width: 1290px)').matches;
   });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const mediaQuery = window.matchMedia('(max-width: 980px)');
+    const mediaQuery = window.matchMedia('(max-width: 1290px)');
     const handleChange = (event: MediaQueryListEvent) => {
       setUseCompactHeaderActions(event.matches);
     };
