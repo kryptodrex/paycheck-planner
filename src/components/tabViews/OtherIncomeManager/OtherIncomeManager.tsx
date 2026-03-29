@@ -81,6 +81,34 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     const [notes, setNotes] = useState('');
     const lastHandledSearchActionKeyRef = useRef(0);
 
+    function resetForm() {
+        setIncomeName('');
+        setIncomeType('personal-business');
+        setAmountMode('fixed');
+        setAmount('');
+        setPercentOfGross('');
+        setFrequency('monthly');
+        setPayTreatment('gross');
+        setWithholdingMode('manual');
+        setWithholdingProfileId('');
+        setNotes('');
+        incomeErrors.clearErrors();
+    }
+
+    function populateForm(entry: OtherIncome) {
+        setIncomeName(entry.name);
+        setIncomeType(entry.incomeType);
+        setAmountMode(entry.amountMode);
+        setAmount(entry.amount > 0 ? String(entry.amount) : '');
+        setPercentOfGross(entry.percentOfGross != null && entry.percentOfGross > 0 ? String(entry.percentOfGross) : '');
+        setFrequency(entry.frequency);
+        setPayTreatment(entry.payTreatment);
+        setWithholdingMode(entry.withholdingMode);
+        setWithholdingProfileId(entry.withholdingProfileId || '');
+        setNotes(entry.notes || '');
+        incomeErrors.clearErrors();
+    }
+
     useEffect(() => {
         if (!budgetData) {
             return;
@@ -134,6 +162,8 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         deleteOtherIncome,
         incomeEditor,
         openConfirmDialog,
+        populateForm,
+        resetForm,
         searchActionRequestKey,
         searchActionTargetId,
         searchActionType,
@@ -178,34 +208,6 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     const previewAutoWithholding = calculateOtherIncomeAutoWithholdingDetail(previewEntry, previewPerPaycheckAmount);
     const withholdingProfiles = getOtherIncomeWithholdingProfiles();
     const selectedWithholdingProfile = resolveOtherIncomeWithholdingProfile(previewEntry);
-
-    function resetForm() {
-        setIncomeName('');
-        setIncomeType('personal-business');
-        setAmountMode('fixed');
-        setAmount('');
-        setPercentOfGross('');
-        setFrequency('monthly');
-        setPayTreatment('gross');
-        setWithholdingMode('manual');
-        setWithholdingProfileId('');
-        setNotes('');
-        incomeErrors.clearErrors();
-    }
-
-    function populateForm(entry: OtherIncome) {
-        setIncomeName(entry.name);
-        setIncomeType(entry.incomeType);
-        setAmountMode(entry.amountMode);
-        setAmount(entry.amount > 0 ? String(entry.amount) : '');
-        setPercentOfGross(entry.percentOfGross != null && entry.percentOfGross > 0 ? String(entry.percentOfGross) : '');
-        setFrequency(entry.frequency);
-        setPayTreatment(entry.payTreatment);
-        setWithholdingMode(entry.withholdingMode);
-        setWithholdingProfileId(entry.withholdingProfileId || '');
-        setNotes(entry.notes || '');
-        incomeErrors.clearErrors();
-    }
 
     const handleAddIncome = () => {
         resetForm();
