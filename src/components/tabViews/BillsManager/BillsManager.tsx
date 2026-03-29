@@ -730,15 +730,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                       amount={formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}
                       amountLabel={getDisplayModeLabel(displayMode)}
                       badges={bill.discretionary ? <PillBadge variant="warning">Discretionary</PillBadge> : undefined}
+                      notes={bill.notes}
                       isPaused={!isBillEnabled(bill)}
                       onPauseToggle={() => handleToggleBillEnabled(bill)}
                       onHistory={() => handleOpenHistory({ type: 'bill', id: bill.id, name: bill.name })}
                       historyLabel="View History"
                       onEdit={() => handleEditBill(bill)}
                       onDelete={() => handleDeleteBill(bill.id)}
-                    >
-                      {bill.notes && <div className="bill-notes">{bill.notes}</div>}
-                    </SectionItemCard>
+                    />
                   ))}
               </div>
             </div>

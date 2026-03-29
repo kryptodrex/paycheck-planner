@@ -635,14 +635,13 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                       <PillBadge variant="neutral">From {accountName}</PillBadge>
                     </>
                   }
+                  notes={item.notes}
                   isPaused={!isEnabled}
                   onPauseToggle={() => handleToggleSavingsEnabled(item)}
                   onEdit={() => handleEditSavings(item)}
                   onDelete={() => handleDeleteSavings(item.id)}
                   onHistory={() => handleOpenHistory({ type: 'savings-contribution', id: item.id, name: item.name })}
-                >
-                  {item.notes && <div className="savings-notes">{item.notes}</div>}
-                </SectionItemCard>
+                />
               );
             })}
           </div>

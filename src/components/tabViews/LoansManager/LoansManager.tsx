@@ -565,6 +565,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                                     subtitle={`Paid ${formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: ${formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                                     amount={formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     amountLabel={getDisplayModeLabel(displayMode)}
+                                                    notes={loan.notes}
                                                     badges={
                                                         <PillBadge variant="outline">
                                                             {LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}
@@ -590,7 +591,6 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                                             className="deduction-breakdown"
                                                         />
                                                     )}
-                                                    {loan.notes && <div className="loan-notes">{loan.notes}</div>}
                                                 </SectionItemCard>
                                             );
                                         })}

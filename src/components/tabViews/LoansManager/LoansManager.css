@@ -121,15 +121,6 @@
   color: var(--text-primary);
 }
 
-.loans-manager .loan-notes {
-  padding: 0.65rem 0.75rem;
-  background-color: var(--bg-primary);
-  border-radius: 6px;
-  border: 1px solid var(--border-color-light);
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-}
-
 .loans-manager .notes-label {
   font-weight: 600;
   color: var(--text-primary);
