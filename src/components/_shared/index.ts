@@ -27,6 +27,8 @@ export { default as ViewModeSelector } from './layout/ViewModeSelector';
 export { default as CompactViewModeSelector } from './layout/CompactViewModeSelector';
 export { default as ViewModeButton } from './layout/ViewModeButton';
 export { default as PageHeader } from './layout/PageHeader';
+export { default as PeriodSelector } from './layout/PeriodSelector';
+export type { Period } from './layout/PeriodSelector';
 export { default as Banner } from './layout/Banner';
 export { default as ProgressBar } from './feedback/ProgressBar';
 export { default as FileRelinkModal } from './workflows/FileRelinkModal';
