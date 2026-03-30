@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef } from 'react';
 import { Wallet, Info, Plus, X, Banknote } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
-import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
+import { calculateAnnualizedPayBreakdown, calculateCalendarPeriodBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
 import {
@@ -91,6 +91,8 @@ const getCategoryItemCount = (category: AllocationCategory): number | null => {
 interface PayBreakdownProps {
   displayMode: ViewMode;
   viewModeControl?: React.ReactNode;
+  calendarAccurate?: boolean;
+  paychecksInPeriod?: number;
   onOpenPayDetails?: () => void;
   onNavigateToBills?: (accountId: string) => void;
   onNavigateToSavings?: (accountId: string) => void;
@@ -102,6 +104,8 @@ interface PayBreakdownProps {
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
   displayMode,
   viewModeControl,
+  calendarAccurate,
+  paychecksInPeriod,
   onOpenPayDetails,
   onNavigateToBills,
   onNavigateToSavings,
@@ -190,7 +194,10 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   );
   const selectedFullyResolved = selectedProjectedRemaining >= targetLeftoverPerPaycheck;
 
-  const displayBreakdown = calculateDisplayPayBreakdown(annualBreakdown, displayMode, paychecksPerYear);
+  const displayBreakdown =
+    calendarAccurate && paychecksInPeriod !== undefined && paychecksInPeriod > 0
+      ? calculateCalendarPeriodBreakdown(paycheckBreakdown, paychecksInPeriod)
+      : calculateDisplayPayBreakdown(annualBreakdown, displayMode, paychecksPerYear);
   const baseGrossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
   const displayModeOccurrencesPerYear = getDisplayModeOccurrencesPerYear(displayMode, paychecksPerYear);
 

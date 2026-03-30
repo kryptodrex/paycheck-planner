@@ -15,7 +15,7 @@ import {
 import { estimateTaxSettings } from '../../../services/taxEstimationService';
 import type { Account } from '../../../types/accounts';
 import type { PaySettings, TaxSettings, TaxFilingStatus } from '../../../types/payroll';
-import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor, Dropdown } from '../../_shared';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor, Dropdown, DateInput } from '../../_shared';
 import '../views.shared.css';
 import '../../_shared/payEditorShared.css';
 import './SetupWizard.css';
@@ -70,6 +70,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [hourlyRate, setHourlyRate] = useState('');
   const [hoursPerWeek, setHoursPerWeek] = useState('');
   const [payFrequency, setPayFrequency] = useState<PaySettings['payFrequency']>('bi-weekly');
+  const [firstPaycheckDate, setFirstPaycheckDate] = useState('');
   const [minLeftover, setMinLeftover] = useState('0');
 
   const [taxLines, setTaxLines] = useState<EditableTaxLineValues[]>(() => getDefaultTaxLinesForCurrency(budgetData?.settings?.currency || 'USD'));
@@ -168,15 +169,17 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         ? ((parseFloat(hoursPerWeek) || 0) * 52) / paychecksPerYear
         : undefined;
 
+    const isCalendarEligibleFrequency = payFrequency === 'weekly' || payFrequency === 'bi-weekly';
     const paySettings: PaySettings = {
       payType,
       payFrequency,
       minLeftover: parseFloat(minLeftover) || 0,
-      ...(payType === 'salary' 
+      ...(isCalendarEligibleFrequency && firstPaycheckDate ? { firstPaycheckDate } : {}),
+      ...(payType === 'salary'
         ? { annualSalary: parseFloat(annualSalary) || 0 }
-        : { 
+        : {
             hourlyRate: parseFloat(hourlyRate) || 0,
-            hoursPerPayPeriod: computedHoursPerPayPeriod || 0
+            hoursPerPayPeriod: computedHoursPerPayPeriod || 0,
           }
       ),
     };
@@ -517,8 +520,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 />
               </FormGroup>
 
-              {/* Paycheck scheduling inputs intentionally disabled for now.
-                  Keep this area reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
+              {(payFrequency === 'weekly' || payFrequency === 'bi-weekly') && (
+                <FormGroup
+                  label="First Paycheck Date"
+                  helperText="Used to calculate your exact paycheck dates for calendar-accurate monthly and quarterly views."
+                >
+                  <DateInput
+                    value={firstPaycheckDate}
+                    onChange={(e) => setFirstPaycheckDate(e.target.value)}
+                    data-pay-setting-field="firstPaycheckDate"
+                  />
+                </FormGroup>
+              )}
 
               <FormGroup 
                 label="Target Leftover Per Pay Period" 

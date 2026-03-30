@@ -254,6 +254,26 @@ export function calculateAnnualizedPayBreakdown(
   };
 }
 
+/**
+ * Scales a per-paycheck breakdown by the number of paychecks in a calendar period
+ * (a specific month or quarter). Returns the same `PayBreakdownSummary` shape as
+ * `calculateAnnualizedPayBreakdown`, so downstream display code is unaware of
+ * which path produced the result.
+ *
+ * When `paychecksInPeriod` is 0 (e.g. a month that falls before the first paycheck),
+ * every field is zero.
+ */
+export function calculateCalendarPeriodBreakdown(
+  perPaycheckBreakdown: PaycheckBreakdown,
+  paychecksInPeriod: number,
+): PayBreakdownSummary {
+  if (paychecksInPeriod <= 0) {
+    return { ...getEmptyPaycheckBreakdown(), postTaxDeductions: 0 };
+  }
+  // The multiplication logic is identical to annualizing — only the multiplier differs.
+  return calculateAnnualizedPayBreakdown(perPaycheckBreakdown, paychecksInPeriod);
+}
+
 export function calculateDisplayPayBreakdown(
   annualBreakdown: PayBreakdownSummary,
   mode: ViewMode,

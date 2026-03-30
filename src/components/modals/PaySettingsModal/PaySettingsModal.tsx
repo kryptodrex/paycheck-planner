@@ -12,7 +12,7 @@ import { getDisplayModeLabel, getPaychecksPerYear, getPayFrequencyViewMode } fro
 import { normalizeStoredAllocationAmount } from '../../../utils/allocationEditor';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
-import { Modal, Button, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup, InfoBox } from '../../_shared';
+import { Modal, Button, DateInput, ErrorDialog, Dropdown, FormGroup, InputWithPrefix, FormattedNumberInput, RadioGroup, InfoBox } from '../../_shared';
 import '../../_shared/payEditorShared.css';
 import './PaySettingsModal.css';
 import { Banknote, RefreshCw } from 'lucide-react';
@@ -49,6 +49,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
   const [editMinLeftover, setEditMinLeftover] = useState('0');
   // Track previous frequency to scale minLeftover proportionally on change
   const prevEditPayFrequencyRef = useRef<PayFrequency>('bi-weekly');
+  const [editFirstPaycheckDate, setEditFirstPaycheckDate] = useState('');
   const [editCurrency, setEditCurrency] = useState('USD');
   const [originalCurrency, setOriginalCurrency] = useState('USD');
   const [exchangeRate, setExchangeRate] = useState('');
@@ -67,6 +68,7 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       setEditPayFrequency(budgetData.paySettings.payFrequency);
       prevEditPayFrequencyRef.current = budgetData.paySettings.payFrequency;
       setEditMinLeftover(budgetData.paySettings.minLeftover?.toString() || '0');
+      setEditFirstPaycheckDate(budgetData.paySettings.firstPaycheckDate || '');
       setEditCurrency(currentCurrency);
       setOriginalCurrency(currentCurrency);
       setExchangeRate('');
@@ -259,6 +261,10 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
       payType: editPayType,
       payFrequency: editPayFrequency,
       minLeftover: parsedMinLeftover,
+      firstPaycheckDate:
+        editPayFrequency === 'weekly' || editPayFrequency === 'bi-weekly'
+          ? editFirstPaycheckDate || undefined
+          : undefined,
       ...(editPayType === 'salary'
         ? { annualSalary: parsedAnnualSalary }
         : {
@@ -549,8 +555,20 @@ const PaySettingsModal: React.FC<PaySettingsModalProps> = ({ isOpen, onClose, se
           </InfoBox>
         </div>
 
-        {/* Paycheck scheduling inputs intentionally disabled for now.
-            Keep this location reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
+        {(editPayFrequency === 'weekly' || editPayFrequency === 'bi-weekly') && (
+          <div data-pay-setting-field="firstPaycheckDate">
+            <FormGroup
+              label="First Paycheck Date"
+              helperText="Used to calculate your exact paycheck dates for calendar-accurate views."
+            >
+              <DateInput
+                value={editFirstPaycheckDate}
+                onChange={(e) => setEditFirstPaycheckDate(e.target.value)}
+                placeholder="MM/DD/YYYY"
+              />
+            </FormGroup>
+          </div>
+        )}
 
         <FormGroup
           label="Target Leftover Per Pay Period"

@@ -24,9 +24,12 @@ import SettingsModal from '../modals/SettingsModal';
 import AccountsModal from '../modals/AccountsModal';
 import PaySettingsModal from '../modals/PaySettingsModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton } from '../_shared';
+import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton, CalendarAccurateToggle, PeriodSelector } from '../_shared';
+import type { Period } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
+import { getPaychecksInMonth, getPaychecksInQuarter } from '../../utils/payCalendar';
+import type { PayFrequency } from '../../types/frequencies';
 import { useGlobalKeyboardShortcuts } from '../../hooks';
 import type { SearchResult } from '../../utils/planSearch';
 import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
@@ -166,6 +169,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     return getPayFrequencyViewMode(budgetData?.paySettings?.payFrequency ?? 'bi-weekly');
   });
   const [previewDisplayMode, setPreviewDisplayMode] = useState<ViewMode | null>(null);
+  const [calendarAccurate, setCalendarAccurate] = useState<boolean>(
+    () => budgetData?.settings?.calendarAccurate ?? false,
+  );
+  const _todayInit = new Date();
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>(() => ({
+    year: _todayInit.getFullYear(),
+    month: _todayInit.getMonth() + 1,
+  }));
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
@@ -496,6 +507,10 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     } else if (budgetData?.paySettings?.payFrequency) {
       setDisplayMode(getPayFrequencyViewMode(budgetData.paySettings.payFrequency));
     }
+    setCalendarAccurate(budgetData?.settings?.calendarAccurate ?? false);
+    // Reset to current month on plan load — selectedPeriod is intentionally not persisted.
+    const now = new Date();
+    setSelectedPeriod({ year: now.getFullYear(), month: now.getMonth() + 1 });
     setPreviewDisplayMode(null);
   }, [
     budgetData?.settings,
@@ -542,6 +557,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     });
   }, [displayMode, budgetData, updateBudgetSettings]);
 
+  const handleCalendarAccurateChange = useCallback((value: boolean) => {
+    setCalendarAccurate(value);
+    if (budgetData) {
+      updateBudgetSettings({
+        ...budgetData.settings,
+        calendarAccurate: value,
+      });
+    }
+  }, [budgetData, updateBudgetSettings]);
+
   const handleDisplayModePreview = useCallback((newMode: ViewMode | null) => {
     if (!newMode || newMode === displayMode) {
       setPreviewDisplayMode(null);
@@ -553,12 +578,46 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
   const effectiveDisplayMode = previewDisplayMode ?? displayMode;
 
+  // Calendar-accurate mode eligibility
+  const _calendarPayFrequency = budgetData?.paySettings?.payFrequency;
+  const _firstPaycheckDate = budgetData?.paySettings?.firstPaycheckDate;
+  const isCalendarEligibleFrequency =
+    _calendarPayFrequency === 'weekly' || _calendarPayFrequency === 'bi-weekly';
+  const isCalendarModeVisible =
+    (effectiveDisplayMode === 'monthly' || effectiveDisplayMode === 'quarterly') &&
+    isCalendarEligibleFrequency;
+  const isCalendarToggleEnabled = isCalendarModeVisible && !!_firstPaycheckDate;
+  const effectiveCalendarAccurate = calendarAccurate && isCalendarToggleEnabled;
+
+  const paychecksInSelectedPeriod = useMemo(() => {
+    if (!effectiveCalendarAccurate || !_firstPaycheckDate || !_calendarPayFrequency) return 0;
+    if (effectiveDisplayMode === 'monthly') {
+      return getPaychecksInMonth(
+        _firstPaycheckDate,
+        _calendarPayFrequency as PayFrequency,
+        selectedPeriod.year,
+        selectedPeriod.month,
+      );
+    }
+    if (effectiveDisplayMode === 'quarterly') {
+      const quarter = Math.ceil(selectedPeriod.month / 3);
+      return getPaychecksInQuarter(
+        _firstPaycheckDate,
+        _calendarPayFrequency as PayFrequency,
+        selectedPeriod.year,
+        quarter,
+      );
+    }
+    return 0;
+  }, [effectiveCalendarAccurate, _firstPaycheckDate, _calendarPayFrequency, effectiveDisplayMode, selectedPeriod]);
+
   const openPayDetailsModal = useCallback(() => {
     setPendingPaySettingsFieldHighlight(undefined);
     setShowPaySettingsModal(true);
   }, []);
 
   const renderViewModeHeaderControl = () => (
+    <div className="view-mode-control-group">
       <ViewModeButton
         label="View Mode"
         mode={effectiveDisplayMode}
@@ -569,6 +628,22 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         highlightedLabel="Your pay frequency"
         preferredPlacement="up"
       />
+      {isCalendarEligibleFrequency && (
+        <CalendarAccurateToggle
+          value={calendarAccurate}
+          onChange={handleCalendarAccurateChange}
+          disabled={!isCalendarToggleEnabled}
+          disabledReason={
+            !isCalendarModeVisible
+              ? 'Switch to Monthly or Quarterly view to enable calendar mode'
+              : !_firstPaycheckDate
+                ? 'Set your first paycheck date in Pay Settings'
+                : undefined
+          }
+          onOpenPaySettings={isCalendarModeVisible && !_firstPaycheckDate ? openPayDetailsModal : undefined}
+        />
+      )}
+    </div>
   );
 
   const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
@@ -618,6 +693,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         tabPosition,
         tabDisplayMode,
         displayMode,
+        calendarAccurate,
       },
     });
 
@@ -627,7 +703,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     }
 
     return false;
-  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, missingActiveFile, ensureValidSavePath]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, calendarAccurate, missingActiveFile, ensureValidSavePath]);
 
   // Handle explicit save requests (toolbar/menu/keyboard)
   const handleSave = useCallback(async () => {
@@ -1792,6 +1868,17 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             />
           )}
 
+          {effectiveCalendarAccurate && (
+            <div className="calendar-period-bar">
+              <PeriodSelector
+                period={selectedPeriod}
+                paychecksInPeriod={paychecksInSelectedPeriod}
+                displayMode={effectiveDisplayMode as 'monthly' | 'quarterly'}
+                onChange={setSelectedPeriod}
+              />
+            </div>
+          )}
+
           <div className="tab-content" ref={tabContentRef}>
         {viewMode && (
           <div className="view-mode-header">
@@ -1833,6 +1920,8 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <PayBreakdown 
             displayMode={effectiveDisplayMode}
             viewModeControl={activeTab === 'breakdown' ? renderViewModeHeaderControl() : undefined}
+            calendarAccurate={effectiveCalendarAccurate}
+            paychecksInPeriod={paychecksInSelectedPeriod}
             onOpenPayDetails={openPayDetailsModal}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });

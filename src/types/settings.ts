@@ -15,6 +15,7 @@ export interface BudgetSettings {
   tabPosition?: TabPosition;
   tabDisplayMode?: TabDisplayMode;
   displayMode?: ViewMode;
+  calendarAccurate?: boolean;
   windowSize?: {
     width: number;
     height: number;

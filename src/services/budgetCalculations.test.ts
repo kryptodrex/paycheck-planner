@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateAnnualizedPayBreakdown,
   calculateAnnualizedPaySummary,
+  calculateCalendarPeriodBreakdown,
   calculateDisplayPayBreakdown,
   calculatePaycheckBreakdown,
   getEmptyPaycheckBreakdown,
 } from './budgetCalculations';
+import { getPaychecksInMonth } from '../utils/payCalendar';
 
 describe('budgetCalculations', () => {
   it('returns an empty breakdown when no data is provided', () => {
@@ -464,5 +466,127 @@ describe('budgetCalculations', () => {
     expect(monthlyBreakdown.otherIncomeGross).toBe(260);
     expect(monthlyBreakdown.otherIncomeTaxable).toBe(130);
     expect(monthlyBreakdown.otherIncomeNet).toBe(52);
+  });
+});
+
+describe('calculateCalendarPeriodBreakdown', () => {
+  // Simple fixture where gross - preTaxDeductions - totalTaxes - netPay = 0,
+  // so postTaxDeductions is 0 in all cases and assertions stay clean.
+  const perPaycheck = {
+    grossPay: 5000,
+    preTaxDeductions: 200,
+    taxableIncome: 4800,
+    taxLineAmounts: [
+      { id: 'fed', label: 'Federal Tax', amount: 480 },
+      { id: 'state', label: 'State Tax', amount: 240 },
+    ],
+    additionalWithholding: 0,
+    totalTaxes: 720,
+    netPay: 4080,
+  };
+
+  it('scales all fields by 2 for a 2-paycheck period', () => {
+    const result = calculateCalendarPeriodBreakdown(perPaycheck, 2);
+    expect(result.grossPay).toBe(10000);
+    expect(result.otherIncomeGross).toBe(0);
+    expect(result.otherIncomeTaxable).toBe(0);
+    expect(result.otherIncomeNet).toBe(0);
+    expect(result.preTaxDeductions).toBe(400);
+    expect(result.taxableIncome).toBe(9600);
+    expect(result.taxLineAmounts).toEqual([
+      { id: 'fed', label: 'Federal Tax', amount: 960 },
+      { id: 'state', label: 'State Tax', amount: 480 },
+    ]);
+    expect(result.additionalWithholding).toBe(0);
+    expect(result.totalTaxes).toBe(1440);
+    expect(result.postTaxDeductions).toBe(0);
+    expect(result.netPay).toBe(8160);
+  });
+
+  it('scales all fields by 3 for a 3-paycheck period', () => {
+    const result = calculateCalendarPeriodBreakdown(perPaycheck, 3);
+    expect(result.grossPay).toBe(15000);
+    expect(result.preTaxDeductions).toBe(600);
+    expect(result.taxableIncome).toBe(14400);
+    expect(result.taxLineAmounts).toEqual([
+      { id: 'fed', label: 'Federal Tax', amount: 1440 },
+      { id: 'state', label: 'State Tax', amount: 720 },
+    ]);
+    expect(result.totalTaxes).toBe(2160);
+    expect(result.postTaxDeductions).toBe(0);
+    expect(result.netPay).toBe(12240);
+  });
+
+  it('returns all-zero breakdown when paychecksInPeriod is 0', () => {
+    const result = calculateCalendarPeriodBreakdown(perPaycheck, 0);
+    expect(result).toEqual({ ...getEmptyPaycheckBreakdown(), postTaxDeductions: 0 });
+  });
+
+  it('returns all-zero breakdown when paychecksInPeriod is negative', () => {
+    const result = calculateCalendarPeriodBreakdown(perPaycheck, -1);
+    expect(result).toEqual({ ...getEmptyPaycheckBreakdown(), postTaxDeductions: 0 });
+  });
+
+  it('scales otherIncomeAutoWithholding and its line items', () => {
+    const withAutoWithholding = {
+      ...perPaycheck,
+      otherIncomeAutoWithholding: 26.4,
+      otherIncomeAutoWithholdingLineItems: [
+        {
+          id: 'oi-auto-1',
+          label: 'Auto Withholding - Commission (22%)',
+          amount: 26.4,
+          sourceIncomeId: 'inc-1',
+          sourceIncomeName: 'Commission',
+          profileId: 'general-supplemental',
+          profileLabel: 'General Supplemental Income',
+          rate: 22,
+          taxableBase: 120,
+        },
+      ],
+    };
+
+    const result = calculateCalendarPeriodBreakdown(withAutoWithholding, 2);
+    expect(result.otherIncomeAutoWithholding).toBe(52.8);
+    expect(result.otherIncomeAutoWithholdingLineItems).toEqual([
+      {
+        id: 'oi-auto-1',
+        label: 'Auto Withholding - Commission (22%)',
+        amount: 52.8,
+        sourceIncomeId: 'inc-1',
+        sourceIncomeName: 'Commission',
+        profileId: 'general-supplemental',
+        profileLabel: 'General Supplemental Income',
+        rate: 22,
+        taxableBase: 240,
+      },
+    ]);
+  });
+
+  it('annual parity: summing all 12 monthly calendar breakdowns ≈ perPaycheck × 26 for bi-weekly', () => {
+    // Use a non-round salary so rounding accumulates and the tolerance check is meaningful.
+    // $100,000 / 26 = $3,846.153846... per paycheck.
+    const salaryBreakdown = calculatePaycheckBreakdown({
+      paySettings: { payType: 'salary', annualSalary: 100000, payFrequency: 'bi-weekly' },
+      preTaxDeductions: [],
+      benefits: [],
+      retirement: [],
+      taxSettings: { taxLines: [], additionalWithholding: 0 },
+    });
+
+    let grossSum = 0;
+    let netSum = 0;
+
+    // Anchor 2026-01-02: summing all 12 monthly paycheck counts gives exactly 26.
+    for (let month = 1; month <= 12; month++) {
+      const count = getPaychecksInMonth('2026-01-02', 'bi-weekly', 2026, month);
+      const periodBreakdown = calculateCalendarPeriodBreakdown(salaryBreakdown, count);
+      grossSum += periodBreakdown.grossPay;
+      netSum += periodBreakdown.netPay;
+    }
+
+    // Rounding across 12 months should deviate by less than $0.10
+    expect(Math.abs(grossSum - salaryBreakdown.grossPay * 26)).toBeLessThan(0.10);
+    expect(Math.abs(netSum - salaryBreakdown.netPay * 26)).toBeLessThan(0.10);
   });
 });
