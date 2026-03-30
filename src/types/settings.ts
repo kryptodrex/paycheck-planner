@@ -1,5 +1,5 @@
 import type { TabConfig, TabDisplayMode, TabPosition } from './tabs';
-import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from './appearance';
+import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, FontPreference, StateCueMode, ThemeMode } from './appearance';
 import type { ViewMode } from './viewMode';
 
 export type KeyMetricsBreakdownView = 'flow' | 'stacked' | 'pie';
@@ -37,5 +37,6 @@ export interface AppSettings {
   colorVisionMode?: ColorVisionMode;
   stateCueMode?: StateCueMode;
   fontScale?: number;
+  fontPreference?: FontPreference;
   glossaryTermsEnabled?: boolean;
 }

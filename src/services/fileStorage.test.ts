@@ -106,6 +106,41 @@ describe('FileStorageService', () => {
     expect(stored.fontScale).toBe(0.9);
   });
 
+  it('returns fontPreference as system default when not present in stored settings', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        themeMode: 'light',
+        appearancePreset: 'default',
+        fontScale: 1,
+      }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+    expect(settings.fontPreference).toBe('system');
+  });
+
+  it('round-trips fontPreference through saveAppSettings and getAppSettings', () => {
+    FileStorageService.saveAppSettings({
+      fontPreference: 'atkinson',
+    });
+
+    const settings = FileStorageService.getAppSettings();
+    expect(settings.fontPreference).toBe('atkinson');
+  });
+
+  it('normalizes an invalid fontPreference to system default on load', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        fontPreference: 'comic-sans-ms',
+      }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+    expect(settings.fontPreference).toBe('system');
+  });
+
   it('adds and de-duplicates recent files', () => {
     FileStorageService.addRecentFile('/a/first.ppb');
     FileStorageService.addRecentFile('/a/second.ppb');

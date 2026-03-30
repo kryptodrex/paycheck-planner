@@ -218,4 +218,40 @@ describe('SettingsModal', () => {
     expect(screen.getByLabelText(/search settings/i)).toHaveValue('');
     expect(screen.getByRole('radio', { name: /paycheck planner purple/i })).toBeInTheDocument();
   });
+
+  it('renders the font preference dropdown in the Accessibility section', () => {
+    renderSettingsModal();
+
+    expect(screen.getByLabelText('App Font')).toBeInTheDocument();
+    expect(screen.getByLabelText('App Font')).toHaveValue('system');
+  });
+
+  it('persists font preference selection through settings storage', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.selectOptions(screen.getByLabelText('App Font'), 'atkinson');
+
+    const storedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || '{}');
+    expect(storedSettings.fontPreference).toBe('atkinson');
+  });
+
+  it('shows a font preview sentence below the font dropdown', () => {
+    renderSettingsModal();
+
+    const preview = document.querySelector('.settings-font-preview');
+    expect(preview).toBeInTheDocument();
+    expect(preview).toHaveTextContent('The quick brown fox jumps over the lazy dog.');
+  });
+
+  it('surfaces accessibility section when searching for font-related terms', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.type(screen.getByLabelText(/search settings/i), 'dyslexic');
+
+    expect(screen.getByRole('heading', { name: 'Accessibility' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Appearance' })).not.toBeInTheDocument();
+  });
 });
+

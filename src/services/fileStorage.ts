@@ -27,6 +27,7 @@ import {
   normalizeAppearancePreset,
   normalizeColorVisionMode,
   normalizeCustomAppearance,
+  normalizeFontPreference,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeStateCueMode,
@@ -202,6 +203,7 @@ function normalizeAppSettingsValue(
   normalized.colorVisionMode = normalizeColorVisionMode(normalized.colorVisionMode);
   normalized.stateCueMode = normalizeStateCueMode(normalized.stateCueMode);
   normalized.fontScale = normalizeFontScale(normalized.fontScale);
+  normalized.fontPreference = normalizeFontPreference(normalized.fontPreference);
 
   return normalized;
 }
