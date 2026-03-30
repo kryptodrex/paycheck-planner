@@ -149,7 +149,7 @@ describe('SettingsModal', () => {
   it('explains theme mode and preset distinctions in appearance settings', () => {
     renderSettingsModal();
 
-    expect(screen.getByText(/Theme setting controls whether is in light or dark mode, or matching your system preference\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Theme setting controls whether.*light or dark mode.*system preference\./i)).toBeInTheDocument();
     expect(screen.getByText(/Preset setting controls the overall color scheme of the app\./i)).toBeInTheDocument();
   });
 

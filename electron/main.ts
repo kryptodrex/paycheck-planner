@@ -1207,6 +1207,15 @@ function createApplicationMenu() {
     label: 'Help',
     submenu: [
       {
+        label: 'FAQs',
+        click: () => {
+          const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+          if (targetWindow) {
+            sendMenuEvent(targetWindow, MENU_EVENTS.openAppFaq);
+          }
+        },
+      },
+      {
         label: 'Glossary of Terms',
         accelerator: isMac ? 'Cmd+Shift+G' : 'Ctrl+Shift+G',
         click: () => {

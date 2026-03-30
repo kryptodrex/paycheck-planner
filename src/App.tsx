@@ -12,6 +12,7 @@ import { TransientStatusIndicator } from './components/_shared'
 import './App.css'
 
 const AboutModal = lazy(() => import('./components/modals/AboutModal'))
+const AppFaqModal = lazy(() => import('./components/modals/AppFaqModal'))
 const GlossaryModal = lazy(() => import('./components/modals/GlossaryModal'))
 const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'))
 
@@ -41,6 +42,7 @@ function App() {
   // Track if about modal is open
   const [showAbout, setShowAbout] = useState(false)
   // Track if glossary modal is open
+  const [showAppFaq, setShowAppFaq] = useState(false)
   const [showGlossary, setShowGlossary] = useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [zoomIndicatorMessage, setZoomIndicatorMessage] = useState<string | null>(null)
@@ -162,6 +164,16 @@ function App() {
   }, [])
 
   // Listen for glossary menu event from Electron Help menu
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openAppFaq, () => {
+      setShowAppFaq(true)
+    })
+
+    return unsubscribe
+  }, [])
+
   useEffect(() => {
     if (!window.electronAPI?.onMenuEvent) return
 
@@ -287,6 +299,12 @@ function App() {
       )}
       <Suspense fallback={null}>
         <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AppFaqModal
+          isOpen={showAppFaq}
+          onClose={() => setShowAppFaq(false)}
+        />
       </Suspense>
       <Suspense fallback={null}>
         <GlossaryModal

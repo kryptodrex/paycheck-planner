@@ -575,6 +575,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
                     </option>
                   ))}
                 </Dropdown>
+                <p
+                  className="settings-font-preview"
+                  style={{ fontFamily: FONT_STACKS[settings.fontPreference] }}
+                  aria-label={`Font preview in ${FONT_OPTIONS.find((option) => option.value === settings.fontPreference)?.label}`}
+                >
+                  The quick brown fox jumps over the lazy dog.
+                </p>
                 <p className="settings-search-hint">
                   {FONT_OPTIONS.find((o) => o.value === settings.fontPreference)?.description}
                 </p>

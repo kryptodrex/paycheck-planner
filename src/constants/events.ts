@@ -7,6 +7,7 @@ export const MENU_EVENTS = {
   copyPlan: 'copy-plan',
   openSettings: 'open-settings',
   openAbout: 'open-about',
+  openAppFaq: 'open-app-faq',
   openGlossary: 'open-glossary',
   openKeyboardShortcuts: 'open-keyboard-shortcuts',
   openPayOptions: 'open-pay-options',

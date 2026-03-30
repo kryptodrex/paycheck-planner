@@ -1,0 +1,215 @@
+.app-faq-modal {
+  --faq-sticky-search-top: 0rem;
+  --faq-sticky-sidebar-top: 7.75rem;
+  max-width: min(980px, 96vw);
+}
+
+.app-faq-modal .modal-body {
+    padding-top: 0 !important;
+}
+
+.app-faq-search-wrap {
+  position: sticky;
+  top: var(--faq-sticky-search-top);
+  z-index: 30;
+  background: var(--bg-primary);
+  margin: 0 -1.5rem 1rem;
+  padding: 1rem 1.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.app-faq-search-label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.app-faq-search-input {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 0.7rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0.65rem 0.8rem;
+  font: inherit;
+}
+
+.app-faq-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.app-faq-search-input:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-accent-soft);
+  border-color: var(--accent-primary);
+}
+
+.app-faq-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.app-faq-sidebar {
+  position: sticky;
+  top: var(--faq-sticky-sidebar-top);
+  z-index: 20;
+  display: grid;
+  gap: 0.45rem;
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 0.85rem;
+  padding: 0.55rem;
+}
+
+.app-faq-sidebar-item {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  border-radius: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.app-faq-sidebar-item:hover {
+  color: var(--text-primary);
+  background: var(--surface-accent-subtle);
+}
+
+.app-faq-sidebar-item.active {
+  color: var(--text-primary);
+  background: var(--surface-accent-subtle);
+  border-color: var(--border-accent-soft);
+}
+
+.app-faq-sidebar-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-accent-soft);
+}
+
+.app-faq-sidebar-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  padding: 0.4rem;
+}
+
+.app-faq-content {
+  min-width: 0;
+}
+
+.app-faq-empty-state {
+  border: 1px dashed var(--border-color);
+  border-radius: 0.85rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  padding: 1rem;
+}
+
+.app-faq-section {
+  margin-bottom: 1.8rem;
+  scroll-margin-top: calc(var(--faq-sticky-sidebar-top) + 1rem);
+}
+
+.app-faq-section h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.07rem;
+}
+
+.app-faq-section-description {
+  margin: 0.4rem 0 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.app-faq-question-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.app-faq-card {
+  border: 1px solid var(--border-color);
+  border-radius: 0.8rem;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.app-faq-card.expanded {
+  border-color: var(--border-accent-soft);
+}
+
+.app-faq-question {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-faq-question:hover {
+  background: color-mix(in srgb, var(--surface-accent-subtle) 80%, transparent);
+}
+
+.app-faq-question:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-primary) 38%, transparent);
+}
+
+.app-faq-chevron {
+  transition: transform 0.2s ease;
+}
+
+.app-faq-card.expanded .app-faq-chevron {
+  transform: rotate(180deg);
+}
+
+.app-faq-answer {
+  border-top: 1px solid var(--border-color);
+  padding: 0.7rem 0.85rem 0.85rem;
+}
+
+.app-faq-answer p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 920px) {
+  .app-faq-layout {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .app-faq-sidebar {
+    position: static;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.5rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .app-faq-sidebar-item {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .app-faq-section {
+    scroll-margin-top: 0.75rem;
+  }
+}
