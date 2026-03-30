@@ -87,3 +87,21 @@
 [data-theme='dark'] .pill-toggle {
   background: var(--bg-tertiary);
 }
+
+/* ── Size variants ────────────────────────────────────────────── */
+
+/* default: full-width, large padding (existing behaviour) */
+.pill-toggle.pill-toggle-default {
+  width: 100%;
+}
+
+/* small: auto-width, compact padding — for toolbars and action bars */
+.pill-toggle.pill-toggle-small {
+  width: auto;
+}
+
+.pill-toggle.pill-toggle-small .pill-toggle-option {
+  min-width: 58px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+}
