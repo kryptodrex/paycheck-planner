@@ -7,9 +7,10 @@ import './AppFaqModal.css';
 interface AppFaqModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialItemId?: string;
 }
 
-const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose }) => {
+const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose, initialItemId }) => {
   const [query, setQuery] = useState('');
   const [activeSectionId, setActiveSectionId] = useState<string>(appFaqSections[0].id);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
@@ -84,6 +85,22 @@ const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose }) => {
     setActiveSectionId(appFaqSections[0].id);
     setExpandedIds([]);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !initialItemId) return;
+
+    const section = appFaqSections.find((s) => s.items.some((item) => item.id === initialItemId));
+    if (!section) return;
+
+    setActiveSectionId(section.id);
+    setExpandedIds([initialItemId]);
+
+    const timeoutId = window.setTimeout(() => {
+      const el = document.getElementById(`faq-item-${initialItemId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 80);
+    return () => window.clearTimeout(timeoutId);
+  }, [isOpen, initialItemId]);
 
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
@@ -168,7 +185,7 @@ const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose }) => {
                   const answerId = `faq-answer-${item.id}`;
 
                   return (
-                    <article key={item.id} className={`app-faq-card ${expanded ? 'expanded' : ''}`}>
+                    <article key={item.id} id={`faq-item-${item.id}`} className={`app-faq-card ${expanded ? 'expanded' : ''}`}>
                       <button
                         type="button"
                         className="app-faq-question"

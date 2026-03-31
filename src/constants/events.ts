@@ -27,6 +27,7 @@ export type MenuEventName = (typeof MENU_EVENTS)[keyof typeof MENU_EVENTS];
 
 export const APP_CUSTOM_EVENTS = {
   openGlossary: 'app:open-glossary',
+  openAppFaq: 'app:open-app-faq',
   themeModeChanged: 'theme-mode-changed',
   appearanceSettingsChanged: 'appearance-settings-changed',
   glossaryTermsChanged: 'glossary-terms-changed',

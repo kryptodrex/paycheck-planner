@@ -102,6 +102,21 @@ export const appFaqSections: AppFaqSection[] = [
     ],
   },
   {
+    id: 'bills-and-allocations',
+    title: 'Bills and Allocations',
+    description: 'Details about managing bills and allocating funds across accounts.',
+    searchTerms: 'bills stable allocation per paycheck buffer account starting balance seed bi-weekly smooth',
+    items: [
+      {
+        id: 'account-starting-buffer',
+        question: 'What is the suggested starting buffer for an account?',
+        answer:
+          'The suggested starting buffer is the amount to make sure you have in an account you are allocating funds to at the beginning of the year. It is calculated based on your monthly allocation totals for that account and your pay frequency. Seeding the account with at least the given amount before you start ensures you always have enough to cover the allocations for the months with fewer paychecks, even before the longer months can replenish it.',
+        keywords: ['buffer', 'starting balance', 'account', 'bi-weekly', 'stable allocation', 'seed', 'shortfall', 'suggested'],
+      },
+    ],
+  },
+  {
     id: 'imports-exports-and-safety',
     title: 'Imports, Exports, and Safety',
     description: 'Backups, importing app data, and encryption basics.',

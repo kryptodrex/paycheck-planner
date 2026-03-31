@@ -5,6 +5,9 @@ import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateCalendarPeriodBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
+import { calculateConservativeBuffer, calculateRecommendedBuffer } from '../../../utils/accountAllocation';
+import { getMinPaychecksInMonth } from '../../../utils/payCalendar';
+import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import {
   calculateGrossPayPerPaycheck,
   getDisplayModeLabel,
@@ -140,6 +143,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+  const firstPaycheckDate = budgetData.paySettings.firstPaycheckDate;
+  const isVariablePayFrequency =
+    budgetData.paySettings.payFrequency === 'weekly' || budgetData.paySettings.payFrequency === 'bi-weekly';
+  const minPaychecksInMonth =
+    firstPaycheckDate && isVariablePayFrequency
+      ? getMinPaychecksInMonth(firstPaycheckDate, budgetData.paySettings.payFrequency, new Date().getFullYear())
+      : null;
   // Get per-paycheck breakdown for allocation purposes
   const paycheckBreakdown = calculatePaycheckBreakdown();
   const annualBreakdown = calculateAnnualizedPayBreakdown(paycheckBreakdown, paychecksPerYear);
@@ -982,7 +992,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
               const accountAmount = toDisplayAmount(fundingItem.totalAmount, paychecksPerYear, displayMode);
               const isEditing = editingAccountIds.has(fundingItem.account.id);
               const displayAccount = isEditing ? draftAccounts.get(fundingItem.account.id) : fundingItem.account;
-              
+              const accountMonthlyTotal = roundToCent(fundingItem.totalAmount * paychecksPerYear / 12);
+              const accountBuffer = accountMonthlyTotal > 0
+                ? (minPaychecksInMonth !== null
+                  ? calculateRecommendedBuffer(accountMonthlyTotal, paychecksPerYear, minPaychecksInMonth)
+                  : calculateConservativeBuffer(accountMonthlyTotal))
+                : 0;
+
               if (!displayAccount) return null;
               
               return (
@@ -999,18 +1015,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       Amount to {fundingItem.account.name}
                     </span>
                     <div className="waterfall-account-row-right">
-                      {!isEditing ? (
-                        <>
-                          
-                            {onViewHistory && (
-                              <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => onViewHistory({ entityType: 'allocation-item', entityId: fundingItem.account.id, title: `${fundingItem.account.name} Allocations` })}>
-                                View History
-                              </Button>
-                            )}
-                            <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
-                        </>
-                      ) : null
-                      }
                       <span className="waterfall-amount">{formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
@@ -1137,6 +1141,43 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       );
                     })
                   )}
+                  <div className="waterfall-account-row-footer">
+                    {!isEditing && fundingItem.totalAmount > 0 && (
+                      <div className="account-allocation-hint">
+                        <span className="allocation-hint-text">
+                          Allocate {formatWithSymbol(fundingItem.totalAmount, currency, { minimumFractionDigits: 2 })} per paycheck
+                        </span>
+                        {accountBuffer > 0 && (
+                          <button
+                            type="button"
+                            className="allocation-hint-text allocation-hint-buffer"
+                            onClick={() =>
+                              window.dispatchEvent(
+                                new CustomEvent(APP_CUSTOM_EVENTS.openAppFaq, {
+                                  detail: { itemId: 'account-starting-buffer' },
+                                }),
+                              )
+                            }
+                          >
+                            Suggested buffer: {formatWithSymbol(accountBuffer, currency, { minimumFractionDigits: 2 })} ↗
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <div className="footer-actions">
+                      {!isEditing ? (
+                        <>
+                          {onViewHistory && (
+                            <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => onViewHistory({ entityType: 'allocation-item', entityId: fundingItem.account.id, title: `${fundingItem.account.name} Allocations` })}>
+                              View History
+                            </Button>
+                          )}
+                          <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
+                        </> 
+                      ) : null
+                      }
+                    </div>
+                  </div>
                 </React.Fragment>
               );
             })}
