@@ -24,7 +24,7 @@ import SettingsModal from '../modals/SettingsModal';
 import AccountsModal from '../modals/AccountsModal';
 import PaySettingsModal from '../modals/PaySettingsModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton, CalendarAccurateToggle, PeriodSelector } from '../_shared';
+import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton, PillToggle, PeriodSelector } from '../_shared';
 import type { Period } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
@@ -128,6 +128,7 @@ const areAuditEntriesEquivalent = (a: AuditEntry, b: AuditEntry): boolean => {
 };
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, onUndoRedoSuccess }) => {
+
   const {
     budgetData,
     saveBudget,
@@ -173,9 +174,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     () => budgetData?.settings?.calendarAccurate ?? false,
   );
   const _todayInit = new Date();
+  const _initialPlanYear = budgetData?.year ?? _todayInit.getFullYear();
+  const _initialMonth =
+    _todayInit.getFullYear() === _initialPlanYear
+      ? _todayInit.getMonth() + 1
+      : 1;
   const [selectedPeriod, setSelectedPeriod] = useState<Period>(() => ({
-    year: _todayInit.getFullYear(),
-    month: _todayInit.getMonth() + 1,
+    year: _initialPlanYear,
+    month: _initialMonth,
   }));
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
@@ -508,12 +514,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       setDisplayMode(getPayFrequencyViewMode(budgetData.paySettings.payFrequency));
     }
     setCalendarAccurate(budgetData?.settings?.calendarAccurate ?? false);
-    // Reset to current month on plan load — selectedPeriod is intentionally not persisted.
+    // Reset to plan-year period on plan load — selectedPeriod is intentionally not persisted.
     const now = new Date();
-    setSelectedPeriod({ year: now.getFullYear(), month: now.getMonth() + 1 });
+    const planYear = budgetData?.year ?? now.getFullYear();
+    const month = now.getFullYear() === planYear ? now.getMonth() + 1 : 1;
+    setSelectedPeriod({ year: planYear, month });
     setPreviewDisplayMode(null);
   }, [
     budgetData?.settings,
+    budgetData?.year,
     budgetData?.settings?.tabDisplayMode,
     budgetData?.settings?.tabPosition,
     budgetData?.settings?.displayMode,
@@ -615,36 +624,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     setPendingPaySettingsFieldHighlight(undefined);
     setShowPaySettingsModal(true);
   }, []);
-
-  const renderViewModeHeaderControl = () => (
-    <div className="view-mode-control-group">
-      <ViewModeButton
-        label="View Mode"
-        mode={effectiveDisplayMode}
-        selectedMode={displayMode}
-        onChange={handleDisplayModeChange}
-        onPreviewChange={handleDisplayModePreview}
-        highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
-        highlightedLabel="Your pay frequency"
-        preferredPlacement="up"
-      />
-      {isCalendarEligibleFrequency && (
-        <CalendarAccurateToggle
-          value={calendarAccurate}
-          onChange={handleCalendarAccurateChange}
-          disabled={!isCalendarToggleEnabled}
-          disabledReason={
-            !isCalendarModeVisible
-              ? 'Switch to Monthly or Quarterly view to enable calendar mode'
-              : !_firstPaycheckDate
-                ? 'Set your first paycheck date in Pay Settings'
-                : undefined
-          }
-          onOpenPaySettings={isCalendarModeVisible && !_firstPaycheckDate ? openPayDetailsModal : undefined}
-        />
-      )}
-    </div>
-  );
 
   const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
     const currentPath = budgetData?.settings?.filePath;
@@ -1868,14 +1847,67 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             />
           )}
 
-          {effectiveCalendarAccurate && (
-            <div className="calendar-period-bar">
-              <PeriodSelector
-                period={selectedPeriod}
-                paychecksInPeriod={paychecksInSelectedPeriod}
-                displayMode={effectiveDisplayMode as 'monthly' | 'quarterly'}
-                onChange={setSelectedPeriod}
-              />
+          {!viewMode && (
+            activeTab === 'breakdown' ||
+            activeTab === 'other-income' ||
+            activeTab === 'bills' ||
+            activeTab === 'loans' ||
+            activeTab === 'taxes' ||
+            activeTab === 'savings'
+          ) && (
+            <div className="dashboard-view-bar">
+              <div className="dashboard-view-bar-controls">
+                <ViewModeButton
+                  label="View Mode"
+                  size="small"
+                  mode={effectiveDisplayMode}
+                  selectedMode={displayMode}
+                  onChange={handleDisplayModeChange}
+                  onPreviewChange={handleDisplayModePreview}
+                  highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
+                  highlightedLabel="Your pay frequency"
+                  preferredPlacement="down"
+                />
+                {isCalendarEligibleFrequency && (
+                  <div
+                    className="dashboard-view-bar-toggle-wrapper"
+                    title={
+                      !isCalendarModeVisible
+                        ? 'Switch to Monthly or Quarterly view to enable calendar mode'
+                        : !_firstPaycheckDate
+                          ? 'Set your first paycheck date in Pay Settings'
+                          : undefined
+                    }
+                  >
+                    <PillToggle
+                      size="small"
+                      value={calendarAccurate}
+                      onChange={handleCalendarAccurateChange}
+                      leftLabel="Average"
+                      rightLabel="Calendar"
+                      disabled={!isCalendarToggleEnabled}
+                    />
+                  </div>
+                )}
+                {isCalendarModeVisible && !_firstPaycheckDate && (
+                  <button
+                    type="button"
+                    className="dashboard-view-bar-setup-hint"
+                    onClick={openPayDetailsModal}
+                  >
+                    Set first paycheck date →
+                  </button>
+                )}
+              </div>
+              {effectiveCalendarAccurate && (
+                <PeriodSelector
+                  period={selectedPeriod}
+                  planYear={budgetData.year}
+                  paychecksInPeriod={paychecksInSelectedPeriod}
+                  displayMode={effectiveDisplayMode as 'monthly' | 'quarterly'}
+                  onChange={setSelectedPeriod}
+                />
+              )}
             </div>
           )}
 
@@ -1919,7 +1951,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         >
           <PayBreakdown 
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'breakdown' ? renderViewModeHeaderControl() : undefined}
             calendarAccurate={effectiveCalendarAccurate}
             paychecksInPeriod={paychecksInSelectedPeriod}
             onOpenPayDetails={openPayDetailsModal}
@@ -1949,7 +1980,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingOtherIncomeSearchAction}
             searchActionTargetId={pendingOtherIncomeSearchTargetId}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'other-income' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1965,7 +1995,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingBillsSearchAction}
             searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'bills' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1981,7 +2010,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingLoansSearchAction}
             searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'loans' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1994,7 +2022,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <TaxBreakdown 
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'taxes' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -2011,7 +2038,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingSavingsSearchAction}
             searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'savings' ? renderViewModeHeaderControl() : undefined}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>

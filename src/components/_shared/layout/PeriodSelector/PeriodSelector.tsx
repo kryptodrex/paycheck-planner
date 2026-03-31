@@ -17,6 +17,7 @@ export interface Period {
 
 interface PeriodSelectorProps {
   period: Period;
+  planYear: number;
   paychecksInPeriod: number;
   displayMode: 'monthly' | 'quarterly';
   onChange: (period: Period) => void;
@@ -50,6 +51,7 @@ function getPaycheckLabel(count: number): string {
 
 const PeriodSelector: React.FC<PeriodSelectorProps> = ({
   period,
+  planYear,
   paychecksInPeriod,
   displayMode,
   onChange,
@@ -64,32 +66,15 @@ const PeriodSelector: React.FC<PeriodSelectorProps> = ({
       : period.year === currentYear && Math.ceil(period.month / 3) === Math.ceil(currentMonth / 3);
 
   const label = getPeriodLabel(period, displayMode);
+  const previousPeriod = navigatePeriod(period, -1, displayMode);
+  const nextPeriod = navigatePeriod(period, 1, displayMode);
+  const canGoPrevious = previousPeriod.year === planYear;
+  const canGoNext = nextPeriod.year === planYear;
+  const canJumpToToday = currentYear === planYear;
 
   return (
     <div className="period-selector" aria-label={`Period: ${label}, ${getPaycheckLabel(paychecksInPeriod)}`}>
-      <Button
-        variant="secondary"
-        size="xsmall"
-        onClick={() => onChange(navigatePeriod(period, -1, displayMode))}
-        title="Previous period"
-        aria-label="Previous period"
-      >
-        <ChevronLeft className="ui-icon" aria-hidden="true" />
-      </Button>
-      <span className="period-selector-label">{label}</span>
-      <Button
-        variant="secondary"
-        size="xsmall"
-        onClick={() => onChange(navigatePeriod(period, 1, displayMode))}
-        title="Next period"
-        aria-label="Next period"
-      >
-        <ChevronRight className="ui-icon" aria-hidden="true" />
-      </Button>
-      <PillBadge variant="accent" className="period-selector-badge">
-        {getPaycheckLabel(paychecksInPeriod)}
-      </PillBadge>
-      {!isCurrentPeriod && (
+      {canJumpToToday && !isCurrentPeriod && (
         <Button
           variant="utility"
           size="xsmall"
@@ -99,6 +84,30 @@ const PeriodSelector: React.FC<PeriodSelectorProps> = ({
           Today
         </Button>
       )}
+      <Button
+        variant="secondary"
+        size="xsmall"
+        onClick={() => onChange(previousPeriod)}
+        title="Previous period"
+        aria-label="Previous period"
+        disabled={!canGoPrevious}
+      >
+        <ChevronLeft className="ui-icon" aria-hidden="true" />
+      </Button>
+      <span className="period-selector-label">{label}</span>
+      <Button
+        variant="secondary"
+        size="xsmall"
+        onClick={() => onChange(nextPeriod)}
+        title="Next period"
+        aria-label="Next period"
+        disabled={!canGoNext}
+      >
+        <ChevronRight className="ui-icon" aria-hidden="true" />
+      </Button>
+      <PillBadge variant="accent" className="period-selector-badge">
+        {getPaycheckLabel(paychecksInPeriod)}
+      </PillBadge>
     </div>
   );
 };
