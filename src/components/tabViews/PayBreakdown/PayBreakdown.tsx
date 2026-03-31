@@ -200,16 +200,24 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
       : calculateDisplayPayBreakdown(annualBreakdown, displayMode, paychecksPerYear);
   const baseGrossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
   const displayModeOccurrencesPerYear = getDisplayModeOccurrencesPerYear(displayMode, paychecksPerYear);
+  const periodMultiplier =
+    calendarAccurate && paychecksInPeriod !== undefined && paychecksInPeriod > 0
+      ? paychecksInPeriod
+      : null;
 
   const otherIncomeBreakdownForTreatment = (treatment: 'gross' | 'taxable' | 'net') => {
     return (budgetData.otherIncome || [])
       .filter((entry) => entry.enabled !== false && entry.payTreatment === treatment)
       .map((entry) => {
         const annualAmount = calculateOtherIncomeAnnualAmount(entry, baseGrossPayPerPaycheck, paychecksPerYear);
+        const shouldScaleByPaycheckCount = entry.frequency === 'weekly' || entry.frequency === 'bi-weekly';
+        const amount = periodMultiplier !== null && shouldScaleByPaycheckCount
+          ? roundToCent((annualAmount / paychecksPerYear) * periodMultiplier)
+          : roundToCent(annualAmount / displayModeOccurrencesPerYear);
         return {
           id: `other-income-${treatment}-${entry.id}`,
           label: entry.name,
-          amount: roundToCent(annualAmount / displayModeOccurrencesPerYear),
+          amount,
         };
       })
       .filter((item) => item.amount > 0);
@@ -219,7 +227,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const taxableOtherIncomeItems = otherIncomeBreakdownForTreatment('taxable');
   const netOtherIncomeItems = otherIncomeBreakdownForTreatment('net');
   const baseAnnualGrossAmount = roundToCent(baseGrossPayPerPaycheck * paychecksPerYear);
-  const baseGrossAmount = roundToCent(baseAnnualGrossAmount / displayModeOccurrencesPerYear);
+  const baseGrossAmount = periodMultiplier !== null
+    ? roundToCent(baseGrossPayPerPaycheck * periodMultiplier)
+    : roundToCent(baseAnnualGrossAmount / displayModeOccurrencesPerYear);
   const grossAdditionsAmount = roundToCent(grossOtherIncomeItems.reduce((sum, item) => sum + item.amount, 0));
   const grossTotalAfterAdditions = roundToCent(baseGrossAmount + grossAdditionsAmount);
   const baseTaxableAmount = roundToCent(Math.max(0, displayBreakdown.taxableIncome - (displayBreakdown.otherIncomeTaxable || 0)));
@@ -236,6 +246,11 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     budgetData.benefits || [],
     budgetData.retirement || [],
     grossPayPerPaycheck,
+  );
+  const toDeductionLineDisplayAmount = (perPaycheckAmount: number): number => (
+    periodMultiplier !== null
+      ? roundToCent(perPaycheckAmount * periodMultiplier)
+      : toDisplayAmount(perPaycheckAmount, paychecksPerYear, displayMode)
   );
 
   // Calculate percentages for flow details
@@ -824,7 +839,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                 items={preTaxLineItems.map(item => ({
                   id: item.id,
                   label: item.label,
-                  amount: toDisplayAmount(item.amount, paychecksPerYear, displayMode),
+                  amount: toDeductionLineDisplayAmount(item.amount),
                 }))}
                 negative
                 rowLineLocation="bottom"
@@ -907,7 +922,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                 items={postTaxLineItems.map(item => ({
                   id: item.id,
                   label: item.label,
-                  amount: toDisplayAmount(item.amount, paychecksPerYear, displayMode),
+                  amount: toDeductionLineDisplayAmount(item.amount),
                 }))}
                 negative
                 formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

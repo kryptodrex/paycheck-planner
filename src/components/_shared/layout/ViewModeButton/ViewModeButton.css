@@ -52,9 +52,9 @@
 }
 
 .view-mode-button__trigger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--bg-tertiary) 78%, var(--accent-primary) 22%);
+  background: color-mix(in srgb, var(--bg-tertiary) 90%, var(--accent-primary) 10%);
   border-color: var(--border-color-hover, var(--accent-primary));
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), 0 0 0 1px color-mix(in srgb, var(--accent-primary) 18%, transparent);
 }
 
 .view-mode-button__trigger:focus-visible {

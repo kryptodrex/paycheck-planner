@@ -9,6 +9,8 @@ const {
   openConfirmDialogMock,
   closeConfirmDialogMock,
   confirmCurrentDialogMock,
+  buildPreTaxLineItemsMock,
+  buildPostTaxLineItemsMock,
   mockBudgetData,
 } = vi.hoisted(() => ({
   updateBudgetDataMock: vi.fn(),
@@ -19,6 +21,8 @@ const {
   openConfirmDialogMock: vi.fn(),
   closeConfirmDialogMock: vi.fn(),
   confirmCurrentDialogMock: vi.fn(),
+  buildPreTaxLineItemsMock: vi.fn((): Array<{ id: string; label: string; amount: number }> => []),
+  buildPostTaxLineItemsMock: vi.fn((): Array<{ id: string; label: string; amount: number }> => []),
   mockBudgetData: {
     settings: { currency: 'USD' },
     paySettings: {
@@ -120,12 +124,25 @@ vi.mock('../../../services/budgetCalculations', () => ({
     postTaxDeductions: 0,
     netPay: 14400,
   })),
+  calculateCalendarPeriodBreakdown: vi.fn((_perPaycheckBreakdown, paychecksInPeriod: number) => ({
+    grossPay: 2000 * paychecksInPeriod,
+    otherIncomeGross: 120 * paychecksInPeriod,
+    otherIncomeTaxable: 60 * paychecksInPeriod,
+    otherIncomeNet: 30 * paychecksInPeriod,
+    preTaxDeductions: 482.69 * paychecksInPeriod,
+    taxableIncome: 2000 * paychecksInPeriod,
+    totalTaxes: 0,
+    taxLineAmounts: [],
+    additionalWithholding: 0,
+    postTaxDeductions: 0,
+    netPay: 1200 * paychecksInPeriod,
+  })),
   calculateDisplayPayBreakdown: vi.fn((annualBreakdown) => annualBreakdown),
 }));
 
 vi.mock('../../../utils/deductionLineItems', () => ({
-  buildPreTaxLineItems: vi.fn(() => []),
-  buildPostTaxLineItems: vi.fn(() => []),
+  buildPreTaxLineItems: buildPreTaxLineItemsMock,
+  buildPostTaxLineItems: buildPostTaxLineItemsMock,
 }));
 
 vi.mock('../../../services/reallocationPlanner', () => ({
@@ -157,6 +174,10 @@ describe('PayBreakdown custom allocation validation', () => {
     openConfirmDialogMock.mockClear();
     closeConfirmDialogMock.mockClear();
     confirmCurrentDialogMock.mockClear();
+    buildPreTaxLineItemsMock.mockReset();
+    buildPostTaxLineItemsMock.mockReset();
+    buildPreTaxLineItemsMock.mockReturnValue([]);
+    buildPostTaxLineItemsMock.mockReturnValue([]);
 
     localStorage.clear();
 
@@ -274,6 +295,43 @@ describe('PayBreakdown custom allocation validation', () => {
     expect(screen.getByText('+$120.00')).toBeInTheDocument();
     expect(screen.getByText('+$60.00')).toBeInTheDocument();
     expect(screen.getByText('+$30.00')).toBeInTheDocument();
+  });
+
+  it('keeps monthly-frequency other income details stable in calendar mode even during 3-paycheck periods', () => {
+    render(
+      <PayBreakdown
+        displayMode="monthly"
+        calendarAccurate={true}
+        paychecksInPeriod={3}
+      />,
+    );
+
+    expect(screen.getByText('Gross Side Work')).toBeInTheDocument();
+    expect(screen.getByText('Taxable Bonus')).toBeInTheDocument();
+    expect(screen.getByText('Net Reimbursement')).toBeInTheDocument();
+    expect(screen.getByText('+$120.00')).toBeInTheDocument();
+    expect(screen.getByText('+$60.00')).toBeInTheDocument();
+    expect(screen.getByText('+$30.00')).toBeInTheDocument();
+  });
+
+  it('scales pre-tax deduction line items with selected paycheck count in calendar mode', () => {
+    buildPreTaxLineItemsMock.mockReturnValue([
+      { id: 'pretax-401k', label: '401(k)', amount: 279.39 },
+      { id: 'pretax-health', label: 'Health Insurance', amount: 203.3 },
+    ]);
+
+    render(
+      <PayBreakdown
+        displayMode="monthly"
+        calendarAccurate={true}
+        paychecksInPeriod={3}
+      />,
+    );
+
+    expect(screen.getByText(/401\(k\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/health insurance/i)).toBeInTheDocument();
+    expect(screen.getByText(/838\.17/)).toBeInTheDocument();
+    expect(screen.getByText(/609\.90/)).toBeInTheDocument();
   });
 
 });
