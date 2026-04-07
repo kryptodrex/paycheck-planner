@@ -11,7 +11,14 @@
 
 ### Improvements
 
-- 
+- Reallocation Review modal redesigned with per-item slider controls for savings and retirement proposals so you can fine-tune how much of each item to free up rather than accepting the algorithm's amounts wholesale.
+- Added Auto-Balance mode to the Reallocation Review modal: adjusting one slider automatically redistributes the freed target proportionally across the remaining adjustable items.
+- Reallocation algorithm now spreads reduction proposals proportionally across eligible savings and retirement items instead of greedily exhausting them one at a time.
+- Bills and deductions in the Reallocation Review modal are now grouped by category with section-level "Pause all / Clear all" and "Reset section" controls.
+- Added a "Protect from reallocation suggestions" toggle to savings contributions and retirement elections so specific items are never included in reallocation proposals.
+- Protected savings and retirement items are now marked with a "Protected" badge in the Savings Manager.
+
+
 
 
 ### Bug Fixes
