@@ -66,6 +66,7 @@ export interface RetirementElection {
   employerMatchCap: number;
   employerMatchCapIsPercentage: boolean;
   yearlyLimit?: number;
+  reallocationProtected?: boolean;
 }
 
 export type OtherIncomeType =

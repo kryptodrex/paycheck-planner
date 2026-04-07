@@ -91,7 +91,7 @@ function buildSavingsCandidates(
   paychecksPerYear: number,
 ): ReallocationCandidate[] {
   return savingsContributions
-    .filter((contribution) => contribution.enabled !== false && contribution.amount > 0)
+    .filter((contribution) => contribution.enabled !== false && contribution.amount > 0 && contribution.reallocationProtected !== true)
     .map((contribution) => ({
       sourceType: contribution.type,
       sourceId: contribution.id,
@@ -142,7 +142,8 @@ function buildBillCandidates(
       maxRemainingIncreasePerPaycheck: getBillPerPaycheckAmount(bill, paychecksPerYear),
       policy: 'pause-only' as const,
     }))
-    .sort((left, right) => right.currentPerPaycheckAmount - left.currentPerPaycheckAmount);
+    // Smallest-first: pausing a smaller discretionary bill is less disruptive.
+    .sort((left, right) => left.currentPerPaycheckAmount - right.currentPerPaycheckAmount);
 }
 
 function getBenefitPerPaycheckAmount(
@@ -224,6 +225,7 @@ function buildRetirementCandidates(
     .filter(
       (election) =>
         election.enabled !== false &&
+        election.reallocationProtected !== true &&
         getRetirementPerPaycheckAmount(election, input.grossPayPerPaycheck) > 0,
     )
     .map((election) => {
@@ -291,6 +293,8 @@ function getCandidates(input: ReallocationPlannerInput): ReallocationCandidate[]
 
 export function createReallocationPlan(input: ReallocationPlannerInput): ReallocationPlan {
   const MIN_ACTIONABLE_REALLOCATION = 1;
+  // Items whose proposed amount would fall below this fraction of their original are fully paused/zeroed.
+  const TRIVIAL_REMAINDER_RATIO = 0.1;
 
   const targetRemainingPerPaycheck = roundToCent(
     Math.max(0, input.targetRemainingPerPaycheck || 0),
@@ -313,71 +317,102 @@ export function createReallocationPlan(input: ReallocationPlannerInput): Realloc
     };
   }
 
-  const candidates = getCandidates(input);
+  const allCandidates = getCandidates(input);
+
+  // Split into type-ordered groups.  Within each group the candidate order is
+  // preserved (smallest-first for pause-only, largest-first for others).
+  const groups: ReallocationCandidate[][] = [
+    allCandidates.filter((c) => c.sourceType === 'bill'),
+    allCandidates.filter((c) => c.sourceType === 'deduction'),
+    allCandidates.filter((c) => c.sourceType === 'custom-allocation'),
+    allCandidates.filter((c) => c.sourceType === 'savings'),
+    allCandidates.filter((c) => c.sourceType === 'investment'),
+    allCandidates.filter((c) => c.sourceType === 'retirement'),
+  ];
+
   const proposals: ReallocationProposal[] = [];
   let remainingShortfall = shortfallPerPaycheck;
 
-  for (const candidate of candidates) {
+  for (const group of groups) {
     if (remainingShortfall < MIN_ACTIONABLE_REALLOCATION) break;
+    if (group.length === 0) continue;
 
-    if (candidate.policy === 'pause-only') {
-      const freedPerPaycheckAmount = candidate.maxRemainingIncreasePerPaycheck;
+    const groupTotal = roundToCent(
+      group.reduce((sum, c) => sum + c.maxRemainingIncreasePerPaycheck, 0),
+    );
+
+    if (groupTotal <= 0) continue;
+
+    if (group[0].policy === 'pause-only') {
+      // Pause-only items: process smallest-first until shortfall is covered.
+      for (const candidate of group) {
+        if (remainingShortfall < MIN_ACTIONABLE_REALLOCATION) break;
+        const freed = candidate.maxRemainingIncreasePerPaycheck;
+        if (freed < MIN_ACTIONABLE_REALLOCATION) continue;
+        proposals.push({
+          sourceType: candidate.sourceType,
+          sourceId: candidate.sourceId,
+          label: candidate.label,
+          currentPerPaycheckAmount: candidate.currentPerPaycheckAmount,
+          proposedPerPaycheckAmount: 0,
+          freedPerPaycheckAmount: freed,
+          action: 'pause',
+        });
+        remainingShortfall = roundToCent(Math.max(0, remainingShortfall - freed));
+      }
+      continue;
+    }
+
+    // Reduce-or-pause / reduce-or-zero: distribute proportionally across the group.
+    const neededFromGroup = Math.min(remainingShortfall, groupTotal);
+
+    for (const candidate of group) {
+      if (neededFromGroup < MIN_ACTIONABLE_REALLOCATION) break;
+      if (candidate.maxRemainingIncreasePerPaycheck <= 0) continue;
+
+      const share = roundToCent(
+        neededFromGroup * (candidate.maxRemainingIncreasePerPaycheck / groupTotal),
+      );
+      const freedPerPaycheckAmount = roundToCent(
+        Math.min(candidate.maxRemainingIncreasePerPaycheck, share),
+      );
+
+      if (freedPerPaycheckAmount < MIN_ACTIONABLE_REALLOCATION) continue;
+
+      const sourceReductionPerPaycheck = roundToCent(
+        (candidate.currentPerPaycheckAmount * freedPerPaycheckAmount) /
+          candidate.maxRemainingIncreasePerPaycheck,
+      );
+      const proposedPerPaycheckAmount = roundToCent(
+        Math.max(0, candidate.currentPerPaycheckAmount - sourceReductionPerPaycheck),
+      );
+
+      // Pause/zero if remainder would be trivially small (< $1 or < 10% of original).
+      const isReductionTrivial =
+        proposedPerPaycheckAmount > 0 &&
+        (proposedPerPaycheckAmount < 1 ||
+          (candidate.policy !== 'reduce-or-zero' &&
+            proposedPerPaycheckAmount / candidate.currentPerPaycheckAmount < TRIVIAL_REMAINDER_RATIO));
+      const shouldCollapse = proposedPerPaycheckAmount <= 0 || isReductionTrivial;
+      const action: ReallocationProposalAction =
+        candidate.policy === 'reduce-or-zero'
+          ? shouldCollapse ? 'zero' : 'reduce'
+          : shouldCollapse ? 'pause' : 'reduce';
+
+      const finalFreed = shouldCollapse ? candidate.maxRemainingIncreasePerPaycheck : freedPerPaycheckAmount;
+
       proposals.push({
         sourceType: candidate.sourceType,
         sourceId: candidate.sourceId,
         label: candidate.label,
         currentPerPaycheckAmount: candidate.currentPerPaycheckAmount,
-        proposedPerPaycheckAmount: 0,
-        freedPerPaycheckAmount,
-        action: 'pause',
+        proposedPerPaycheckAmount: shouldCollapse ? 0 : proposedPerPaycheckAmount,
+        freedPerPaycheckAmount: finalFreed,
+        action,
       });
-      remainingShortfall = roundToCent(Math.max(0, remainingShortfall - freedPerPaycheckAmount));
-      continue;
     }
 
-    const maxFreedPerPaycheckAmount = candidate.maxRemainingIncreasePerPaycheck;
-    const freedPerPaycheckAmount = roundToCent(
-      Math.min(maxFreedPerPaycheckAmount, remainingShortfall),
-    );
-
-    if (freedPerPaycheckAmount < MIN_ACTIONABLE_REALLOCATION) continue;
-
-    const sourceReductionPerPaycheck = roundToCent(
-      (candidate.currentPerPaycheckAmount * freedPerPaycheckAmount) /
-        candidate.maxRemainingIncreasePerPaycheck,
-    );
-
-    const proposedPerPaycheckAmount = roundToCent(
-      Math.max(0, candidate.currentPerPaycheckAmount - sourceReductionPerPaycheck),
-    );
-
-    // Keep custom allocations in "reduce" mode unless the remainder is tiny.
-    // Other sources still use the <10% fallback to avoid pointless tiny leftovers.
-    const isReductionTrivial =
-      proposedPerPaycheckAmount > 0
-      && (
-        proposedPerPaycheckAmount < 1
-        || (
-          candidate.policy !== 'reduce-or-zero'
-          && (proposedPerPaycheckAmount / candidate.currentPerPaycheckAmount) < 0.1
-        )
-      );
-    const shouldZeroOut = proposedPerPaycheckAmount <= 0 || isReductionTrivial;
-    const action: ReallocationProposalAction = candidate.policy === 'reduce-or-zero'
-      ? (shouldZeroOut ? 'zero' : 'reduce')
-      : (shouldZeroOut ? 'pause' : 'reduce');
-
-    proposals.push({
-      sourceType: candidate.sourceType,
-      sourceId: candidate.sourceId,
-      label: candidate.label,
-      currentPerPaycheckAmount: candidate.currentPerPaycheckAmount,
-      proposedPerPaycheckAmount: action === 'pause' || action === 'zero' ? 0 : proposedPerPaycheckAmount,
-      freedPerPaycheckAmount,
-      action,
-    });
-
-    remainingShortfall = roundToCent(remainingShortfall - freedPerPaycheckAmount);
+    remainingShortfall = roundToCent(Math.max(0, remainingShortfall - neededFromGroup));
   }
 
   const totalFreedPerPaycheck = roundToCent(
@@ -433,6 +468,71 @@ export interface AppliedReallocationResult {
   benefits: Benefit[];
   savingsContributions: SavingsContribution[];
   retirementElections: RetirementElection[];
+}
+
+/**
+ * Rebuilds a ReallocationPlan using user-supplied override amounts.
+ *
+ * @param plan         The algorithm-generated plan to override.
+ * @param overrides    Map of sourceId → user's desired freedPerPaycheckAmount.
+ *                     Any sourceId not present keeps its algorithm value.
+ */
+export function buildOverriddenPlan(
+  plan: ReallocationPlan,
+  overrides: Map<string, number>,
+): ReallocationPlan {
+  const updatedProposals = plan.proposals.map((proposal) => {
+    const overrideFreed = overrides.get(proposal.sourceId);
+    if (overrideFreed === undefined) return proposal;
+
+    const clampedFreed = roundToCent(
+      Math.max(0, Math.min(overrideFreed, proposal.currentPerPaycheckAmount)),
+    );
+
+    if (clampedFreed <= 0) {
+      // User set the slider/toggle to zero — skip this item entirely.
+      return {
+        ...proposal,
+        freedPerPaycheckAmount: 0,
+        proposedPerPaycheckAmount: proposal.currentPerPaycheckAmount,
+        action: proposal.action, // preserve display label
+      };
+    }
+
+    const newProposed = roundToCent(
+      Math.max(0, proposal.currentPerPaycheckAmount - clampedFreed),
+    );
+    const shouldCollapse = newProposed <= 0 || newProposed < 1;
+    const action: ReallocationProposalAction =
+      proposal.action === 'zero'
+        ? shouldCollapse ? 'zero' : 'reduce'
+        : shouldCollapse ? 'pause' : 'reduce';
+
+    return {
+      ...proposal,
+      freedPerPaycheckAmount: shouldCollapse ? proposal.currentPerPaycheckAmount : clampedFreed,
+      proposedPerPaycheckAmount: shouldCollapse ? 0 : newProposed,
+      action,
+    };
+  });
+
+  // Only include proposals where the user actually wants to free some amount.
+  const activeProposals = updatedProposals.filter((p) => p.freedPerPaycheckAmount > 0);
+
+  const totalFreedPerPaycheck = roundToCent(
+    activeProposals.reduce((sum, p) => sum + p.freedPerPaycheckAmount, 0),
+  );
+  const projectedRemainingPerPaycheck = roundToCent(
+    plan.currentRemainingPerPaycheck + totalFreedPerPaycheck,
+  );
+
+  return {
+    ...plan,
+    proposals: activeProposals,
+    totalFreedPerPaycheck,
+    projectedRemainingPerPaycheck,
+    fullyResolved: projectedRemainingPerPaycheck >= plan.targetRemainingPerPaycheck - 0.01,
+  };
 }
 
 function convertPerPaycheckBillToStoredAmount(

@@ -14,7 +14,7 @@ import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, Toggle } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -81,10 +81,12 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
   const [savingsType, setSavingsType] = useState<SavingsContribution['type']>('savings');
   const [savingsAccountId, setSavingsAccountId] = useState('');
   const [savingsNotes, setSavingsNotes] = useState('');
+  const [savingsReallocationProtected, setSavingsReallocationProtected] = useState(false);
   const [savingsFieldErrors, setSavingsFieldErrors] = useState<SavingsFieldErrors>({});
 
   const [showAddRetirement, setShowAddRetirement] = useState(false);
   const [editingRetirement, setEditingRetirement] = useState<RetirementElection | null>(null);
+  const [retirementReallocationProtected, setRetirementReallocationProtected] = useState(false);
   const [retirementType, setRetirementType] = useState<RetirementElection['type']>('401k');
   const [retirementCustomLabel, setRetirementCustomLabel] = useState('');
   const [employeeAmount, setEmployeeAmount] = useState('');
@@ -158,6 +160,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           setSavingsType(item.type);
           setSavingsAccountId(item.accountId);
           setSavingsNotes(item.notes || '');
+          setSavingsReallocationProtected(item.reallocationProtected === true);
           setSavingsFieldErrors({});
           setShowAddSavings(true);
         }
@@ -198,6 +201,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           setRetirementSourceAccountId(election.sourceAccountId || '');
           setRetirementIsPreTax(election.isPreTax !== false);
           setYearlyLimit((election.yearlyLimit || '').toString());
+          setRetirementReallocationProtected(election.reallocationProtected === true);
           setRetirementFieldErrors({});
           setRetirementFormMessage(null);
           setShowAddRetirement(true);
@@ -215,6 +219,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
         setRetirementSourceAccountId('');
         setRetirementIsPreTax(true);
         setYearlyLimit('');
+        setRetirementReallocationProtected(false);
         setRetirementFieldErrors({});
         setRetirementFormMessage(null);
         setShowAddRetirement(true);
@@ -228,6 +233,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       setSavingsType('savings');
       setSavingsAccountId(budgetData.accounts[0]?.id || '');
       setSavingsNotes('');
+      setSavingsReallocationProtected(false);
       setSavingsFieldErrors({});
       setShowAddSavings(true);
     }, 0);
@@ -319,6 +325,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     setSavingsType('savings');
     setSavingsAccountId(budgetData.accounts[0]?.id || '');
     setSavingsNotes('');
+    setSavingsReallocationProtected(false);
     setSavingsFieldErrors({});
     setShowAddSavings(true);
   };
@@ -331,6 +338,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     setSavingsType(item.type);
     setSavingsAccountId(item.accountId);
     setSavingsNotes(item.notes || '');
+    setSavingsReallocationProtected(item.reallocationProtected === true);
     setSavingsFieldErrors({});
     setShowAddSavings(true);
   };
@@ -365,6 +373,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       type: savingsType,
       notes: savingsNotes.trim() || undefined,
       enabled: editingSavings ? editingSavings.enabled !== false : true,
+      reallocationProtected: savingsReallocationProtected || undefined,
     };
 
     if (editingSavings) {
@@ -452,6 +461,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     setRetirementSourceAccountId('');
     setRetirementIsPreTax(true);
     setYearlyLimit('');
+    setRetirementReallocationProtected(false);
     setRetirementFieldErrors({});
     setRetirementFormMessage(null);
     setShowAddRetirement(true);
@@ -467,6 +477,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
     setRetirementSourceAccountId(election.sourceAccountId || '');
     setRetirementIsPreTax(election.isPreTax !== false);
     setYearlyLimit((election.yearlyLimit || '').toString());
+    setRetirementReallocationProtected(election.reallocationProtected === true);
     setRetirementFieldErrors({});
     setRetirementFormMessage(null);
     setShowAddRetirement(true);
@@ -529,6 +540,7 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
       employerMatchCap: 0,
       employerMatchCapIsPercentage: false,
       yearlyLimit: parsedYearlyLimit,
+      reallocationProtected: retirementReallocationProtected || undefined,
     };
 
     if (editingRetirement) {
@@ -633,6 +645,9 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                         {item.type === 'investment' ? 'Investment' : 'Savings'}
                       </PillBadge>
                       <PillBadge variant="neutral">From {accountName}</PillBadge>
+                      {item.reallocationProtected && (
+                        <PillBadge variant="warning">Protected</PillBadge>
+                      )}
                     </>
                   }
                   notes={item.notes}
@@ -703,6 +718,9 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
                         {isPreTaxRetirement ? 'Pre-Tax' : 'Post-Tax'}
                       </PillBadge>
                       <PillBadge variant="neutral">{sourceLabel}</PillBadge>
+                      {retirement.reallocationProtected && (
+                        <PillBadge variant="warning">Protected</PillBadge>
+                      )}
                     </>
                   }
                   isPaused={!isEnabled}
@@ -843,6 +861,12 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             rows={2}
           />
         </FormGroup>
+
+        <Toggle
+          checked={savingsReallocationProtected}
+          onChange={setSavingsReallocationProtected}
+          label="Protect from reallocation suggestions"
+        />
       </Modal>
 
       <Modal
@@ -995,6 +1019,11 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           </div>
         </div>
 
+        <Toggle
+          checked={retirementReallocationProtected}
+          onChange={setRetirementReallocationProtected}
+          label="Protect from reallocation suggestions"
+        />
       </Modal>
 
       <ConfirmDialog

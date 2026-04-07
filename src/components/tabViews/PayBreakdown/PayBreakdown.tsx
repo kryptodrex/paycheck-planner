@@ -25,7 +25,7 @@ import type { ViewMode } from '../../../types/viewMode';
 import type { AuditHistoryTarget } from '../../../types/audit';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
-import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
+import { applyReallocationPlan, createReallocationPlan, type ReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
 import { Alert, Button, ConfirmDialog, InputWithPrefix, PageHeader, AmountBreakdown, Toast } from '../../_shared';
 import ReallocationReviewModal from '../../modals/ReallocationReviewModal/ReallocationReviewModal';
 import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../modals/ReallocationSummaryModal/ReallocationSummaryModal';
@@ -123,7 +123,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const [validationMessages, setValidationMessages] = useState<Map<string, ValidationMessage>>(new Map());
   const [inputValues, setInputValues] = useState<Map<string, number>>(new Map()); // Local input values to prevent conversion flicker
   const [showReallocationModal, setShowReallocationModal] = useState(false);
-  const [selectedReallocationIds, setSelectedReallocationIds] = useState<string[]>([]);
   const [showReallocationSummaryModal, setShowReallocationSummaryModal] = useState(false);
   const [reallocationSummaryItems, setReallocationSummaryItems] = useState<ReallocationSummaryItem[]>([]);
   const [selectedReallocationSummaryIds, setSelectedReallocationSummaryIds] = useState<string[]>([]);
@@ -190,19 +189,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     customAllocations,
   });
 
-  const selectedReallocationProposals = reallocationPlan.proposals.filter((proposal) =>
-    selectedReallocationIds.includes(proposal.sourceId),
-  );
-  const selectedFreedPerPaycheck = roundToCent(
-    selectedReallocationProposals.reduce(
-      (sum, proposal) => sum + proposal.freedPerPaycheckAmount,
-      0,
-    ),
-  );
-  const selectedProjectedRemaining = roundToCent(
-    leftoverPerPaycheck + selectedFreedPerPaycheck,
-  );
-  const selectedFullyResolved = selectedProjectedRemaining >= targetLeftoverPerPaycheck;
+
 
   const displayBreakdown =
     calendarAccurate && paychecksInPeriod !== undefined && paychecksInPeriod > 0
@@ -268,7 +255,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const netPct = grossPay > 0 ? (displayBreakdown.netPay / grossPay) * 100 : 0;
 
   const openReallocationModal = () => {
-    setSelectedReallocationIds(reallocationPlan.proposals.map((proposal) => proposal.sourceId));
     setShowReallocationModal(true);
   };
 
@@ -333,7 +319,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const cloneSavingsForSnapshot = (items: SavingsContribution[]): SavingsContribution[] => items.map((item) => ({ ...item }));
   const cloneRetirementForSnapshot = (items: RetirementElection[]): RetirementElection[] => items.map((item) => ({ ...item }));
 
-  const handleApplyReallocation = () => {
+  const handleApplyReallocation = (overriddenPlan: ReallocationPlan) => {
     const beforeSnapshot: ReallocationUndoSnapshot = {
       accounts: cloneAccountsForSnapshot(budgetData.accounts),
       bills: cloneBillsForSnapshot(budgetData.bills || []),
@@ -342,13 +328,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
       retirement: cloneRetirementForSnapshot(budgetData.retirement || []),
     };
 
-    const filteredPlan = {
-      ...reallocationPlan,
-      proposals: selectedReallocationProposals,
-      totalFreedPerPaycheck: selectedFreedPerPaycheck,
-      projectedRemainingPerPaycheck: selectedProjectedRemaining,
-      fullyResolved: selectedFullyResolved,
-    };
+    const filteredPlan = overriddenPlan;
 
     const applied = applyReallocationPlan(
       {
@@ -1236,14 +1216,9 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
       <ReallocationReviewModal
         isOpen={showReallocationModal}
+        plan={reallocationPlan}
         onClose={closeReallocationModal}
         onApply={handleApplyReallocation}
-        proposals={reallocationPlan.proposals}
-        selectedIds={selectedReallocationIds}
-        onSelectedIdsChange={setSelectedReallocationIds}
-        selectedFullyResolved={selectedFullyResolved}
-        selectedProjectedRemaining={selectedProjectedRemaining}
-        selectedFreedPerPaycheck={selectedFreedPerPaycheck}
         leftoverPerPaycheck={leftoverPerPaycheck}
         targetLeftoverPerPaycheck={targetLeftoverPerPaycheck}
         currency={currency}

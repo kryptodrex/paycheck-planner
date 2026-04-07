@@ -9,6 +9,7 @@ export interface SavingsContribution {
   type: 'savings' | 'investment';
   enabled?: boolean;
   notes?: string;
+  reallocationProtected?: boolean;
 }
 
 export interface Bill {
