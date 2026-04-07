@@ -16,6 +16,8 @@ export { default as RadioGroup } from './controls/RadioGroup';
 export { default as CheckboxGroup } from './controls/CheckboxGroup';
 export { default as Toggle } from './controls/Toggle';
 export { default as PillToggle } from './controls/PillToggle';
+export { default as Slider } from './controls/Slider';
+export type { SliderSize } from './controls/Slider';
 export { default as PillBadge } from './controls/PillBadge';
 export type { PillBadgeVariant } from './controls/PillBadge';
 export { default as SectionItemCard } from './layout/SectionItemCard';
