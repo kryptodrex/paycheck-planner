@@ -269,3 +269,20 @@ export function getMinPaychecksInMonth(
   }
   return min === Infinity ? 0 : min;
 }
+
+/**
+ * Returns a 12-element array of paycheck counts per calendar month for the
+ * given year. Index 0 = January, index 11 = December.
+ */
+export function getPaychecksPerMonthInYear(
+  firstPaycheckDate: string,
+  frequency: PayFrequency,
+  year: number,
+  semiMonthlyDays?: SemiMonthlyDays,
+): number[] {
+  const counts: number[] = [];
+  for (let month = 1; month <= 12; month++) {
+    counts.push(getPaychecksInMonth(firstPaycheckDate, frequency, year, month, semiMonthlyDays));
+  }
+  return counts;
+}

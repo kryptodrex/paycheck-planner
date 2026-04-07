@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  calculateConservativeBuffer,
   calculateRecommendedBuffer,
   calculateStableAllocation,
 } from './accountAllocation';
@@ -41,48 +40,45 @@ describe('calculateStableAllocation', () => {
 });
 
 describe('calculateRecommendedBuffer', () => {
-  // allocation rounds to $553.85; $553.85 × 2 = $1,107.70; buffer = $1,200 - $1,107.70 = $92.30
-  it('bi-weekly min=2: $1,200 - ($553.85 × 2) = $92.30', () => {
-    expect(calculateRecommendedBuffer(1200, 26, 2)).toBe(92.30);
+  // Bi-weekly starting Jan 9 2026: months Jan–Apr have 2 paychecks, May and Oct have 3.
+  // Alloc = $461.54/paycheck. 4 consecutive short months → trough after Apr = -$307.68.
+  // True required buffer = $307.68.
+  const biWeeklyJan9 = [2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 2, 2];
+
+  it('bi-weekly Jan 9 start: 4 consecutive short months require $307.68', () => {
+    expect(calculateRecommendedBuffer(1000, 26, biWeeklyJan9)).toBe(307.68);
   });
 
-  // allocation rounds to $276.92; $276.92 × 4 = $1,107.68; buffer = $1,200 - $1,107.68 = $92.32
-  it('weekly min=4: $1,200 - ($276.92 × 4) = $92.32', () => {
-    expect(calculateRecommendedBuffer(1200, 52, 4)).toBe(92.32);
+  // Weekly starting Jan 9 2026: no more than one 4-paycheck month in a row before
+  // a 5-paycheck month rescues it. Single-month shortfall is sufficient ($76.91).
+  // Months: Jan=5, Feb=4, Mar=4, Apr=4, May=5, Jun=4, Jul=5, Aug=4, Sep=4, Oct=5, Nov=4, Dec=4
+  const weeklyJan9 = [5, 4, 4, 4, 5, 4, 5, 4, 4, 5, 4, 4];
+
+  it('weekly Jan 9 start: single-month shortfall sufficient, buffer = $76.91', () => {
+    expect(calculateRecommendedBuffer(1000, 52, weeklyJan9)).toBe(76.91);
   });
 
-  it('monthly min=1: $1,200 - ($1,200 × 1) = $0', () => {
-    expect(calculateRecommendedBuffer(1200, 12, 1)).toBe(0);
-  });
-
-  it('semi-monthly min=2: $1,200 - ($600 × 2) = $0', () => {
-    expect(calculateRecommendedBuffer(1200, 24, 2)).toBe(0);
+  // An even 12×2 bi-weekly-like schedule — always 2 per month, always self-funding.
+  it('returns 0 when account is always self-funding', () => {
+    // semi-monthly: exactly 2 paychecks every month, alloc = $600, deposit = $1,200, bills = $1,200 → net 0
+    const even = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+    expect(calculateRecommendedBuffer(1200, 24, even)).toBe(0);
   });
 
   it('returns 0 when monthlyTotal is 0', () => {
-    expect(calculateRecommendedBuffer(0, 26, 2)).toBe(0);
+    expect(calculateRecommendedBuffer(0, 26, biWeeklyJan9)).toBe(0);
   });
 
-  it('clamps to 0 when allocation covers more than the monthly total', () => {
-    // If minPaychecks is very large, deposited > monthlyTotal → buffer stays 0
-    expect(calculateRecommendedBuffer(100, 26, 100)).toBe(0);
+  it('returns 0 when paychecksPerYear is 0', () => {
+    expect(calculateRecommendedBuffer(1000, 0, biWeeklyJan9)).toBe(0);
+  });
+
+  it('clamps to 0 when allocation more than covers every month', () => {
+    // Large paychecksPerYear → tiny allocation per paycheck, but if every month has
+    // enough paychecks to cover the bill, no buffer is needed.
+    // 12 months × 10 paychecks each: alloc = $1,000×12/120 = $100; deposit = $1,000 = bills
+    const plenty = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10];
+    expect(calculateRecommendedBuffer(1000, 120, plenty)).toBe(0);
   });
 });
 
-describe('calculateConservativeBuffer', () => {
-  it('equals one full month total', () => {
-    expect(calculateConservativeBuffer(1200)).toBe(1200);
-  });
-
-  it('returns 0 for zero monthly total', () => {
-    expect(calculateConservativeBuffer(0)).toBe(0);
-  });
-
-  it('returns 0 for negative monthly total', () => {
-    expect(calculateConservativeBuffer(-50)).toBe(0);
-  });
-
-  it('rounds to nearest cent', () => {
-    expect(calculateConservativeBuffer(123.456)).toBe(123.46);
-  });
-});
