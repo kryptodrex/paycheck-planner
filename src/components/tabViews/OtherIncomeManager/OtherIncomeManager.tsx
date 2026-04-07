@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BanknoteArrowUp, Edit, HandCoins, Plus } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../hooks';
@@ -81,7 +81,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     const [notes, setNotes] = useState('');
     const lastHandledSearchActionKeyRef = useRef(0);
 
-    function resetForm() {
+    const resetForm = useCallback(() => {
         setIncomeName('');
         setIncomeType('personal-business');
         setAmountMode('fixed');
@@ -93,9 +93,9 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         setWithholdingProfileId('');
         setNotes('');
         incomeErrors.clearErrors();
-    }
+    }, [incomeErrors]);
 
-    function populateForm(entry: OtherIncome) {
+    const populateForm = useCallback((entry: OtherIncome) => {
         setIncomeName(entry.name);
         setIncomeType(entry.incomeType);
         setAmountMode(entry.amountMode);
@@ -107,7 +107,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
         setWithholdingProfileId(entry.withholdingProfileId || '');
         setNotes(entry.notes || '');
         incomeErrors.clearErrors();
-    }
+    }, [incomeErrors]);
 
     useEffect(() => {
         if (!budgetData) {

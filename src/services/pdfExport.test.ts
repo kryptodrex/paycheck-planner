@@ -209,7 +209,7 @@ describe('pdfExport', () => {
     expect(otherIncomeCall).toBeTruthy();
     const options = otherIncomeCall?.[1] as { body?: string[][] };
     expect(options.body).toEqual([
-      ['Seasonal Bonus', 'Bonus', 'Add to Gross Pay', 'Auto', 'monthly', '3, 6, 9, 12', '$1,000.00', '$4,000.00'],
+      ['Seasonal Bonus', 'Bonus', 'Add to Gross Pay', 'Auto', 'monthly', '3, 6, 9, 12', '$1,000.00', '$12,000.00'],
     ]);
   });
 

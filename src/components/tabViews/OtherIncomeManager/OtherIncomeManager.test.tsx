@@ -95,7 +95,7 @@ describe('OtherIncomeManager', () => {
     render(<OtherIncomeManager displayMode="paycheck" />);
 
     await user.click(screen.getByRole('button', { name: /add other income/i }));
-    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Freelance Design');
+    await user.type(screen.getByPlaceholderText('e.g., Rental Property, Freelance'), 'Freelance Design');
 
     const selects = screen.getAllByRole('combobox');
     await user.selectOptions(selects[0], 'personal-business');
@@ -118,7 +118,7 @@ describe('OtherIncomeManager', () => {
     render(<OtherIncomeManager displayMode="paycheck" />);
 
     await user.click(screen.getByRole('button', { name: /add other income/i }));
-    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Freelance Design');
+    await user.type(screen.getByPlaceholderText('e.g., Rental Property, Freelance'), 'Freelance Design');
     await user.type(screen.getByPlaceholderText('0.00'), '650');
 
     expect(screen.getByDisplayValue('300.00')).toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('OtherIncomeManager', () => {
       'general-supplemental',
     );
 
-    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Freelance Design');
+    await user.type(screen.getByPlaceholderText('e.g., Rental Property, Freelance'), 'Freelance Design');
     await user.type(screen.getByPlaceholderText('0.00'), '650');
     expect(screen.getByText(/auto withholding preview/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /add entry/i }));
@@ -159,7 +159,7 @@ describe('OtherIncomeManager', () => {
     render(<OtherIncomeManager displayMode="paycheck" />);
 
     await user.click(screen.getByRole('button', { name: /add other income/i }));
-    await user.type(screen.getByPlaceholderText('e.g., Weekend Studio, Freelance Design'), 'Side Hustle');
+    await user.type(screen.getByPlaceholderText('e.g., Rental Property, Freelance'), 'Side Hustle');
     await user.selectOptions(screen.getAllByRole('combobox')[2], 'percent-of-gross');
     await user.type(screen.getByPlaceholderText('0'), '130');
     await user.click(screen.getByRole('button', { name: /add entry/i }));

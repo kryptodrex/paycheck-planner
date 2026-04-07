@@ -272,6 +272,19 @@ const DateInput: React.FC<DateInputProps> = ({
 
   const daysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
 
+  const startWeekday = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), 1).getDay();
+  const calendarDays = React.useMemo(() => {
+    const firstCellDate = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), 1 - startWeekday);
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(firstCellDate.getTime() + index * DAY_MS);
+      return {
+        key: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
+        date,
+        inMonth: date.getMonth() === displayMonth.getMonth() && date.getFullYear() === displayMonth.getFullYear(),
+      };
+    });
+  }, [displayMonth, startWeekday]);
+
   const emitDateValue = (month: number, day: number) => {
     const nextValue = `${safeYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     emitSyntheticChange(onChange, nextValue);
@@ -350,19 +363,6 @@ const DateInput: React.FC<DateInputProps> = ({
   const navigateMonth = (offset: number) => {
     setDisplayMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   };
-
-  const startWeekday = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), 1).getDay();
-  const calendarDays = React.useMemo(() => {
-    const firstCellDate = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), 1 - startWeekday);
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(firstCellDate.getTime() + index * DAY_MS);
-      return {
-        key: `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`,
-        date,
-        inMonth: date.getMonth() === displayMonth.getMonth() && date.getFullYear() === displayMonth.getFullYear(),
-      };
-    });
-  }, [displayMonth, startWeekday]);
 
   const emitDate = (nextDate: Date) => {
     if (!canSelectDate(nextDate)) {

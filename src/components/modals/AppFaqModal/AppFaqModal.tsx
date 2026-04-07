@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { HelpCircle, ChevronDown } from 'lucide-react';
 import { Button, Modal } from '../../_shared';
 import { appFaqSections, type AppFaqSection } from '../../../data/appFaqs';
@@ -65,13 +65,15 @@ const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose, initialItemI
 
     const firstVisible = visibleSections[0].id;
     if (!visibleSectionIds.has(activeSectionId)) {
-      setActiveSectionId(firstVisible);
+      startTransition(() => setActiveSectionId(firstVisible));
     }
 
     if (searchTokens.length > 0) {
       const firstQuestion = visibleSections[0].items[0];
       if (firstQuestion) {
-        setExpandedIds((prev) => (prev.includes(firstQuestion.id) ? prev : [firstQuestion.id]));
+        startTransition(() =>
+          setExpandedIds((prev) => (prev.includes(firstQuestion.id) ? prev : [firstQuestion.id]))
+        );
       }
     }
   }, [activeSectionId, searchTokens.length, visibleSectionIds, visibleSections]);
@@ -81,9 +83,11 @@ const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose, initialItemI
       return;
     }
 
-    setQuery('');
-    setActiveSectionId(appFaqSections[0].id);
-    setExpandedIds([]);
+    startTransition(() => {
+      setQuery('');
+      setActiveSectionId(appFaqSections[0].id);
+      setExpandedIds([]);
+    });
   }, [isOpen]);
 
   useEffect(() => {
@@ -92,8 +96,10 @@ const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose, initialItemI
     const section = appFaqSections.find((s) => s.items.some((item) => item.id === initialItemId));
     if (!section) return;
 
-    setActiveSectionId(section.id);
-    setExpandedIds([initialItemId]);
+    startTransition(() => {
+      setActiveSectionId(section.id);
+      setExpandedIds([initialItemId]);
+    });
 
     const timeoutId = window.setTimeout(() => {
       const el = document.getElementById(`faq-item-${initialItemId}`);
