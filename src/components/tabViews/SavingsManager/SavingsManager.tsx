@@ -14,7 +14,7 @@ import { formatBillFrequency } from '../../../utils/billFrequency';
 import { getRetirementPlanDisplayLabel, RETIREMENT_PLAN_OPTIONS } from '../../../utils/retirement';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { roundToCent } from '../../../utils/money';
-import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, RadioGroup, SectionItemCard, Toggle } from '../../_shared';
+import { Alert, Banner, Button, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, PillToggle, RadioGroup, SectionItemCard } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './SavingsManager.css';
@@ -862,11 +862,14 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
           />
         </FormGroup>
 
-        <Toggle
-          checked={savingsReallocationProtected}
-          onChange={setSavingsReallocationProtected}
-          label="Protect from reallocation suggestions"
-        />
+        <FormGroup label="Protect from reallocation suggestions?">
+          <PillToggle
+            value={savingsReallocationProtected}
+            onChange={setSavingsReallocationProtected}
+            leftLabel="No"
+            rightLabel="Yes"
+          />
+        </FormGroup>
       </Modal>
 
       <Modal
@@ -992,6 +995,17 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             </FormGroup>
           )}
 
+          <div className="retirement-form-divider">
+            <FormGroup label="Protect from reallocation suggestions?">
+              <PillToggle
+                value={savingsReallocationProtected}
+                onChange={setSavingsReallocationProtected}
+                leftLabel="No"
+                rightLabel="Yes"
+              />
+            </FormGroup>
+          </div>
+
           {retirementFormMessage && <Alert type={retirementFormMessage.type}>{retirementFormMessage.message}</Alert>}
 
           <div className="retirement-form-divider">
@@ -1018,12 +1032,6 @@ const SavingsManager: React.FC<SavingsManagerProps> = ({
             )}
           </div>
         </div>
-
-        <Toggle
-          checked={retirementReallocationProtected}
-          onChange={setRetirementReallocationProtected}
-          label="Protect from reallocation suggestions"
-        />
       </Modal>
 
       <ConfirmDialog

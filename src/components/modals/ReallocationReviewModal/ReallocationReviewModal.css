@@ -8,6 +8,19 @@
   gap: 1rem;
 }
 
+.reallocation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  --page-header-sticky-offset: 1.5rem;
+  --page-header-inline-bleed: 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-primary);
+  padding-bottom: 1rem;
+}
+
 /* ── Summary cards ── */
 .reallocation-summary-grid {
   display: grid;
@@ -36,17 +49,6 @@
 }
 
 /* ── Progress bar ── */
-.reallocation-progress-section {
-  --progress-fill: var(--error-color);
-}
-
-.reallocation-progress-section--warning {
-  --progress-fill: var(--warning-color);
-}
-
-.reallocation-progress-section--success {
-  --progress-fill: var(--success-color);
-}
 
 .reallocation-progress-label-text {
   font-size: 0.875rem;

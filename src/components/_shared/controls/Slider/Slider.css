@@ -45,10 +45,37 @@
   left: 0;
   top: 0;
   bottom: 0;
-  background: var(--info-color);
+  background: var(--accent-primary);
   border-radius: 999px;
   pointer-events: none;
   transition: width 0.05s ease;
+}
+
+/* Snap target marker — a thin tick line on the track */
+.shared-slider-snap {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 220%;
+  background: var(--warning-color);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.9;
+}
+
+/* Wide grab-zone halo behind the tick so the snap zone is visually apparent */
+.shared-slider-snap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  background: color-mix(in srgb, var(--warning-color) 18%, transparent);
+  border-radius: 4px;
 }
 
 .shared-slider.disabled .shared-slider-fill {
@@ -76,7 +103,7 @@
 .shared-slider-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  background: var(--info-color);
+  background: var(--accent-primary);
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   transition: box-shadow 0.15s ease, transform 0.1s ease;
@@ -104,7 +131,7 @@
 
 /* ── Firefox thumb ── */
 .shared-slider-input::-moz-range-thumb {
-  background: var(--info-color);
+  background: var(--accent-primary);
   border: none;
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
@@ -142,11 +169,11 @@
 }
 
 .shared-slider-input:focus-visible::-webkit-slider-thumb {
-  outline: 2px solid var(--info-color);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 
 .shared-slider-input:focus-visible::-moz-range-thumb {
-  outline: 2px solid var(--info-color);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }

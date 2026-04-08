@@ -62,7 +62,7 @@
 }
 
 .toggle-input:checked + .toggle-switch {
-  background-color: var(--info-color);
+  background-color: var(--accent-primary);
 }
 
 .toggle-input:checked + .toggle-switch .toggle-slider {
@@ -70,7 +70,7 @@
 }
 
 .toggle-input:focus + .toggle-switch {
-  outline: 2px solid var(--info-color);
+  outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
 

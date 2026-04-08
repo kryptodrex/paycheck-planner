@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../../../types/accounts';
 import type { Bill } from '../../../types/obligations';
 import type { Benefit } from '../../../types/payroll';
@@ -72,16 +72,22 @@ function applyAutoBalance(
       newOverrides.set(p.sourceId, Math.max(0, roundToCent(freed - reduction)));
     }
   } else {
-    // Under-freed: fill gap from adjustable items in order
-    let gap = -delta;
-    for (const p of adjustable) {
-      if (gap < 0.005) break;
+    // Under-freed: fill gap proportionally by each item's remaining capacity.
+    // Greedy fill (first item absorbs everything) creates an asymmetry with the
+    // proportional reduction above, causing repeated toggle cycles to drain
+    // lower-priority items toward zero.
+    const gap = -delta;
+    const totalAvailable = adjustable.reduce((sum, p) => {
       const freed = newOverrides.get(p.sourceId) ?? 0;
-      const available = p.currentPerPaycheckAmount - freed;
+      return sum + Math.max(0, p.currentPerPaycheckAmount - freed);
+    }, 0);
+    if (totalAvailable < 0.005) return newOverrides;
+    for (const p of adjustable) {
+      const freed = newOverrides.get(p.sourceId) ?? 0;
+      const available = Math.max(0, p.currentPerPaycheckAmount - freed);
       if (available <= 0) continue;
-      const increase = roundToCent(Math.min(available, gap));
+      const increase = roundToCent(gap * (available / totalAvailable));
       newOverrides.set(p.sourceId, roundToCent(freed + increase));
-      gap -= increase;
     }
   }
 
@@ -122,7 +128,42 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
   const [overrides, setOverrides] = useState<Map<string, number>>(
     () => new Map(plan.proposals.map((p) => [p.sourceId, p.freedPerPaycheckAmount])),
   );
-  const [autoBalance, setAutoBalance] = useState(false);
+  const [autoBalance, setAutoBalance] = useState(true);
+
+  // Local undo stack — tracks overrides snapshots so Cmd+Z reverts modal changes
+  // without touching the global plan undo history.
+  const undoStackRef = useRef<Map<string, number>[]>([]);
+
+  const captureOverridesForUndo = useCallback((currentOverrides: Map<string, number>) => {
+    undoStackRef.current = [
+      ...undoStackRef.current.slice(-49),
+      new Map(currentOverrides),
+    ];
+  }, []);
+
+  const handleUndoOverride = useCallback(() => {
+    const stack = undoStackRef.current;
+    if (stack.length === 0) return;
+    const prev = stack[stack.length - 1];
+    undoStackRef.current = stack.slice(0, -1);
+    setOverrides(prev);
+  }, []);
+
+  // Intercept Cmd+Z / Ctrl+Z while the modal is open and apply local undo.
+  // Uses document capture so it fires after PlanDashboard's global handler has
+  // already bailed (because isModalOpen() returns true there).
+  useEffect(() => {
+    const isMac = navigator.platform.toLowerCase().includes('mac');
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const modifierKey = isMac ? e.metaKey : e.ctrlKey;
+      if (!modifierKey || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'z') return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      handleUndoOverride();
+    };
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [handleUndoOverride]);
 
   const totalFreed = useMemo(
     () =>
@@ -142,10 +183,11 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
       ? Math.min(100, (totalFreed / plan.shortfallPerPaycheck) * 100)
       : 100;
 
-  const progressVariant =
-    progressPercentage >= 100 ? 'success' : progressPercentage >= 50 ? 'warning' : 'danger';
-
   const fullyResolved = projectedRemaining >= plan.targetRemainingPerPaycheck - 0.01;
+  const isOverResolved = projectedRemaining > plan.targetRemainingPerPaycheck + 0.01;
+  const overReductionAmount = isOverResolved
+    ? roundToCent(projectedRemaining - plan.targetRemainingPerPaycheck)
+    : 0;
 
   const fmt = useCallback(
     (amountPerPaycheck: number) =>
@@ -173,6 +215,7 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
 
   const handleToggleChange = useCallback(
     (sourceId: string, checked: boolean, maxAmount: number) => {
+      captureOverridesForUndo(overrides);
       setOverrides((prev) => {
         const next = new Map(prev);
         next.set(sourceId, checked ? maxAmount : 0);
@@ -181,15 +224,17 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
           : next;
       });
     },
-    [autoBalance, plan.proposals, plan.shortfallPerPaycheck],
+    [autoBalance, captureOverridesForUndo, overrides, plan.proposals, plan.shortfallPerPaycheck],
   );
 
   const handleResetAll = useCallback(() => {
+    captureOverridesForUndo(overrides);
     setOverrides(new Map(plan.proposals.map((p) => [p.sourceId, p.freedPerPaycheckAmount])));
-  }, [plan.proposals]);
+  }, [captureOverridesForUndo, overrides, plan.proposals]);
 
   const handleResetSection = useCallback(
     (type: ReallocationProposalSourceType) => {
+      captureOverridesForUndo(overrides);
       setOverrides((prev) => {
         const next = new Map(prev);
         plan.proposals
@@ -198,11 +243,12 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
         return next;
       });
     },
-    [plan.proposals],
+    [captureOverridesForUndo, overrides, plan.proposals],
   );
 
   const handlePauseAllSection = useCallback(
     (type: ReallocationProposalSourceType) => {
+      captureOverridesForUndo(overrides);
       setOverrides((prev) => {
         const next = new Map(prev);
         plan.proposals
@@ -211,11 +257,12 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
         return next;
       });
     },
-    [plan.proposals],
+    [captureOverridesForUndo, overrides, plan.proposals],
   );
 
   const handleClearSection = useCallback(
     (type: ReallocationProposalSourceType) => {
+      captureOverridesForUndo(overrides);
       setOverrides((prev) => {
         const next = new Map(prev);
         plan.proposals
@@ -224,36 +271,12 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
         return next;
       });
     },
-    [plan.proposals],
+    [captureOverridesForUndo, overrides, plan.proposals],
   );
 
   const handleApply = useCallback(() => {
     onApply(buildOverriddenPlan(plan, overrides));
   }, [onApply, plan, overrides]);
-
-  const getSourceBadge = useCallback(
-    (
-      sourceType: ReallocationProposalSourceType,
-    ): { label: string; variant: 'accent' | 'info' | 'warning' | 'neutral' } => {
-      switch (sourceType) {
-        case 'bill':
-          return { label: 'Bill', variant: 'neutral' };
-        case 'deduction':
-          return { label: 'Deduction', variant: 'neutral' };
-        case 'custom-allocation':
-          return { label: 'Custom Allocation', variant: 'info' };
-        case 'savings':
-          return { label: 'Savings', variant: 'accent' };
-        case 'investment':
-          return { label: 'Investment', variant: 'info' };
-        case 'retirement':
-          return { label: 'Retirement', variant: 'warning' };
-        default:
-          return { label: 'Source', variant: 'neutral' };
-      }
-    },
-    [],
-  );
 
   const getOriginLabel = useCallback(
     (proposal: ReallocationProposal): string | null => {
@@ -289,9 +312,11 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
     return map;
   }, [plan.proposals]);
 
-  const progressLabel = fullyResolved
-    ? `Goal met — ${fmt(projectedRemaining)} projected remaining`
-    : `${fmt(totalFreed)} freed of ${fmt(plan.shortfallPerPaycheck)} needed`;
+  const progressLabel = isOverResolved
+    ? `${fmt(overReductionAmount)} over target: slide items right to reduce`
+    : fullyResolved
+      ? `Goal met: ${fmt(projectedRemaining)} projected remaining`
+      : `${fmt(totalFreed)} freed of ${fmt(plan.shortfallPerPaycheck)} needed`;
 
   if (!isOpen) return null;
 
@@ -313,43 +338,41 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
       }
     >
       <div className="reallocation-modal-body">
-        <Alert type={fullyResolved ? 'success' : 'warning'}>
-          {fullyResolved
-            ? `These changes raise your remaining to ${fmt(projectedRemaining)}, meeting your target.`
-            : `These changes raise your remaining to ${fmt(projectedRemaining)}, still below your target of ${fmt(plan.targetRemainingPerPaycheck)}.`}
-        </Alert>
+        <div className="reallocation-summary">
+          <Alert type={isOverResolved ? 'info' : fullyResolved ? 'success' : 'warning'}>
+            {isOverResolved
+              ? `You're freeing ${fmt(overReductionAmount)} more than needed. Slide items right to reduce over-contribution.`
+              : fullyResolved
+                ? `These changes raise your remaining to ${fmt(projectedRemaining)}, meeting your target.`
+                : `These changes raise your remaining to ${fmt(projectedRemaining)}, still below your target of ${fmt(plan.targetRemainingPerPaycheck)}.`}
+          </Alert>
+          <div className="reallocation-summary-grid">
+            <div className="reallocation-summary-card">
+              <span className="reallocation-summary-label">Current Remaining</span>
+              <strong>{fmt(leftoverPerPaycheck)}</strong>
+            </div>
+            <div className="reallocation-summary-card">
+              <span className="reallocation-summary-label">Target Remaining</span>
+              <strong>{fmt(targetLeftoverPerPaycheck)}</strong>
+            </div>
+            <div className="reallocation-summary-card reallocation-summary-card--projected">
+              <span className="reallocation-summary-label">Projected Remaining</span>
+              <strong>{fmt(projectedRemaining)}</strong>
+            </div>
+          </div>
 
-        <div className="reallocation-summary-grid">
-          <div className="reallocation-summary-card">
-            <span className="reallocation-summary-label">Current Remaining</span>
-            <strong>{fmt(leftoverPerPaycheck)}</strong>
-          </div>
-          <div className="reallocation-summary-card">
-            <span className="reallocation-summary-label">Target Remaining</span>
-            <strong>{fmt(targetLeftoverPerPaycheck)}</strong>
-          </div>
-          <div className="reallocation-summary-card reallocation-summary-card--projected">
-            <span className="reallocation-summary-label">Projected Remaining</span>
-            <strong>{fmt(projectedRemaining)}</strong>
-          </div>
-        </div>
-
-        <div
-          className={`reallocation-progress-section reallocation-progress-section--${progressVariant}`}
-        >
           <ProgressBar
-            percentage={progressPercentage}
-            label={
-              <span className="reallocation-progress-label-text">{progressLabel}</span>
-            }
-          />
-        </div>
-
-        <div className="reallocation-controls-row">
-          <Toggle checked={autoBalance} onChange={setAutoBalance} label="Auto-balance mode" />
-          <Button variant="secondary" onClick={handleResetAll}>
-            Reset to suggestions
-          </Button>
+              percentage={progressPercentage}
+              label={
+                <span className="reallocation-progress-label-text">{progressLabel}</span>
+              }
+            />
+          <div className="reallocation-controls-row">
+            <Toggle checked={autoBalance} onChange={setAutoBalance} label="Auto-balance mode" />
+            <Button variant="secondary" onClick={handleResetAll}>
+              Reset to suggestions
+            </Button>
+          </div>
         </div>
 
         <div className="reallocation-proposal-list">
@@ -401,13 +424,27 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
                   {sectionProposals.map((proposal) => {
                     const overrideFreed =
                       overrides.get(proposal.sourceId) ?? proposal.freedPerPaycheckAmount;
-                    const sourceBadge = getSourceBadge(proposal.sourceType);
                     const originLabel = getOriginLabel(proposal);
                     const newProposed = Math.max(
                       0,
                       proposal.currentPerPaycheckAmount - overrideFreed,
                     );
                     const isActive = overrideFreed > 0.005;
+
+                    // Snap target: the retained value that would bring total freed
+                    // exactly to the shortfall, holding all other items fixed.
+                    // Disabled when auto-balance is ON — after each move totalFreed ≈
+                    // shortfall, so snapRetained ≈ current value and the threshold
+                    // check would always fire, locking the slider in place.
+                    const snapPoint = (() => {
+                      if (autoBalance) return undefined;
+                      if (PAUSE_ONLY_TYPES.has(proposal.sourceType)) return undefined;
+                      const otherFreed = roundToCent(totalFreed - overrideFreed);
+                      const snapFreed = roundToCent(plan.shortfallPerPaycheck - otherFreed);
+                      const snapRetained = roundToCent(proposal.currentPerPaycheckAmount - snapFreed);
+                      if (snapRetained < 0 || snapRetained > proposal.currentPerPaycheckAmount) return undefined;
+                      return snapRetained;
+                    })();
 
                     return (
                       <div key={proposal.sourceId} className="reallocation-row">
@@ -440,22 +477,37 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
                               }
                               label={
                                 isActive
-                                  ? `Pause — frees ${fmt(proposal.currentPerPaycheckAmount)} ${displayModeLabel.toLowerCase()}`
-                                  : `Skip — currently ${fmt(proposal.currentPerPaycheckAmount)} ${displayModeLabel.toLowerCase()}`
+                                  ? `Pause: frees ${fmt(proposal.currentPerPaycheckAmount)} ${displayModeLabel.toLowerCase()}`
+                                  : `Skip: currently ${fmt(proposal.currentPerPaycheckAmount)} ${displayModeLabel.toLowerCase()}`
                               }
                             />
                           ) : (
                             <div className="reallocation-slider-area">
                               <Slider
-                                value={overrideFreed}
+                                value={newProposed}
                                 min={0}
                                 max={proposal.currentPerPaycheckAmount}
                                 step={0.01}
                                 size="md"
-                                aria-label={`Adjust freed amount for ${proposal.label}`}
-                                onChange={(val) =>
-                                  handleSliderChange(proposal.sourceId, val)
-                                }
+                                snapPoint={snapPoint}
+                                aria-label={`Adjust retained amount for ${proposal.label}`}
+                                onChangeStart={() => captureOverridesForUndo(overrides)}
+                                onChange={(val) => {
+                                  // Snap to target when within 3% of the range (min 50¢)
+                                  const snapThreshold = Math.max(
+                                    0.5,
+                                    proposal.currentPerPaycheckAmount * 0.03,
+                                  );
+                                  const retained =
+                                    snapPoint !== undefined &&
+                                    Math.abs(val - snapPoint) < snapThreshold
+                                      ? snapPoint
+                                      : val;
+                                  handleSliderChange(
+                                    proposal.sourceId,
+                                    proposal.currentPerPaycheckAmount - retained,
+                                  );
+                                }}
                               />
                               <div className="reallocation-slider-labels">
                                 <span className="reallocation-slider-bound">
