@@ -415,9 +415,6 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
                           <div className="reallocation-row-info">
                             <span className="reallocation-proposal-title">{proposal.label}</span>
                             <div className="reallocation-proposal-badges">
-                              <PillBadge variant={sourceBadge.variant}>
-                                {sourceBadge.label}
-                              </PillBadge>
                               {originLabel && (
                                 <PillBadge variant="outline">{originLabel}</PillBadge>
                               )}

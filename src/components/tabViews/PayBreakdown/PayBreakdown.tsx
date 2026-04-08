@@ -1214,20 +1214,22 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         </div>
       )}
 
-      <ReallocationReviewModal
-        isOpen={showReallocationModal}
-        plan={reallocationPlan}
-        onClose={closeReallocationModal}
-        onApply={handleApplyReallocation}
-        leftoverPerPaycheck={leftoverPerPaycheck}
-        targetLeftoverPerPaycheck={targetLeftoverPerPaycheck}
-        currency={currency}
-        paychecksPerYear={paychecksPerYear}
-        displayMode={displayMode}
-        accounts={budgetData.accounts}
-        bills={budgetData.bills || []}
-        benefits={budgetData.benefits || []}
-      />
+      {showReallocationModal && (
+        <ReallocationReviewModal
+          isOpen={showReallocationModal}
+          plan={reallocationPlan}
+          onClose={closeReallocationModal}
+          onApply={handleApplyReallocation}
+          leftoverPerPaycheck={leftoverPerPaycheck}
+          targetLeftoverPerPaycheck={targetLeftoverPerPaycheck}
+          currency={currency}
+          paychecksPerYear={paychecksPerYear}
+          displayMode={displayMode}
+          accounts={budgetData.accounts}
+          bills={budgetData.bills || []}
+          benefits={budgetData.benefits || []}
+        />
+      )}
 
       <ReallocationSummaryModal
         isOpen={showReallocationSummaryModal}
