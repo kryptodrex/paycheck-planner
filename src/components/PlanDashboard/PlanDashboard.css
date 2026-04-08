@@ -49,43 +49,6 @@
   min-width: 0;
 }
 
-/* Calendar period bar — appears above tab content when calendar-accurate mode is active */
-/* Action bar — always visible on view-mode tabs, houses ViewMode + calendar toggle + period selector */
-.dashboard-view-bar {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 12px 6px 8px;
-  border-bottom: 1px solid var(--border-primary);
-  background: var(--bg-primary);
-}
-
-.dashboard-view-bar-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dashboard-view-bar-toggle-wrapper {
-  display: inline-flex;
-}
-
-.dashboard-view-bar-setup-hint {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 0.75rem;
-  color: var(--accent-primary);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.dashboard-view-bar-setup-hint:hover {
-  text-decoration: underline;
-}
-
 .plan-loading-screen {
   height: 100vh;
   width: 100%;

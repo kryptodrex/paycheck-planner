@@ -24,7 +24,7 @@ import SettingsModal from '../modals/SettingsModal';
 import AccountsModal from '../modals/AccountsModal';
 import PaySettingsModal from '../modals/PaySettingsModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
-import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton, PillToggle, PeriodSelector } from '../_shared';
+import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton } from '../_shared';
 import type { Period } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
@@ -113,6 +113,9 @@ const isEditableTarget = (target: EventTarget | null): boolean => {
     target.isContentEditable
   );
 };
+
+/** Returns true when any modal overlay is visible in the DOM. */
+const isModalOpen = (): boolean => !!document.querySelector('.modal-overlay');
 
 const areAuditEntriesEquivalent = (a: AuditEntry, b: AuditEntry): boolean => {
   if (a === b) return true;
@@ -256,6 +259,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       return;
     }
 
+    // Don't fire plan-level undo while a modal is open — the modal manages its own undo.
+    if (isModalOpen()) return;
+
     if (canUndo) {
       undo();
       onUndoRedoSuccess?.('undo');
@@ -267,6 +273,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       document.execCommand('redo');
       return;
     }
+
+    // Don't fire plan-level redo while a modal is open.
+    if (isModalOpen()) return;
 
     if (canRedo) {
       redo();
@@ -566,16 +575,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     });
   }, [displayMode, budgetData, updateBudgetSettings]);
 
-  const handleCalendarAccurateChange = useCallback((value: boolean) => {
-    setCalendarAccurate(value);
-    if (budgetData) {
-      updateBudgetSettings({
-        ...budgetData.settings,
-        calendarAccurate: value,
-      });
-    }
-  }, [budgetData, updateBudgetSettings]);
-
   const handleDisplayModePreview = useCallback((newMode: ViewMode | null) => {
     if (!newMode || newMode === displayMode) {
       setPreviewDisplayMode(null);
@@ -597,6 +596,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     isCalendarEligibleFrequency;
   const isCalendarToggleEnabled = isCalendarModeVisible && !!_firstPaycheckDate;
   const effectiveCalendarAccurate = calendarAccurate && isCalendarToggleEnabled;
+
+  const viewModeControl = !viewMode ? (
+    <ViewModeButton
+      label="View Mode"
+      mode={effectiveDisplayMode}
+      selectedMode={displayMode}
+      onChange={handleDisplayModeChange}
+      onPreviewChange={handleDisplayModePreview}
+      highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
+      highlightedLabel="Your pay frequency"
+      preferredPlacement="down"
+    />
+  ) : null;
 
   const paychecksInSelectedPeriod = useMemo(() => {
     if (!effectiveCalendarAccurate || !_firstPaycheckDate || !_calendarPayFrequency) return 0;
@@ -1190,7 +1202,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       key: 'z',
       mac: true,
       windows: true,
-      shouldHandle: (e) => !isEditableTarget(e.target),
+      shouldHandle: (e) => !isEditableTarget(e.target) && !isModalOpen(),
       callback: handleUndoAction,
     },
     {
@@ -1198,13 +1210,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       mac: true,
       windows: true,
       shift: true,
-      shouldHandle: (e) => !isEditableTarget(e.target),
+      shouldHandle: (e) => !isEditableTarget(e.target) && !isModalOpen(),
       callback: handleRedoAction,
     },
     {
       key: 'y',
       windows: true,
-      shouldHandle: (e) => !isEditableTarget(e.target),
+      shouldHandle: (e) => !isEditableTarget(e.target) && !isModalOpen(),
       callback: handleRedoAction,
     },
   ]);
@@ -1847,70 +1859,6 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             />
           )}
 
-          {!viewMode && (
-            activeTab === 'breakdown' ||
-            activeTab === 'other-income' ||
-            activeTab === 'bills' ||
-            activeTab === 'loans' ||
-            activeTab === 'taxes' ||
-            activeTab === 'savings'
-          ) && (
-            <div className="dashboard-view-bar">
-              <div className="dashboard-view-bar-controls">
-                <ViewModeButton
-                  label="View Mode"
-                  size="small"
-                  mode={effectiveDisplayMode}
-                  selectedMode={displayMode}
-                  onChange={handleDisplayModeChange}
-                  onPreviewChange={handleDisplayModePreview}
-                  highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
-                  highlightedLabel="Your pay frequency"
-                  preferredPlacement="down"
-                />
-                {isCalendarEligibleFrequency && (
-                  <div
-                    className="dashboard-view-bar-toggle-wrapper"
-                    title={
-                      !isCalendarModeVisible
-                        ? 'Switch to Monthly or Quarterly view to enable calendar mode'
-                        : !_firstPaycheckDate
-                          ? 'Set your first paycheck date in Pay Settings'
-                          : undefined
-                    }
-                  >
-                    <PillToggle
-                      size="small"
-                      value={calendarAccurate}
-                      onChange={handleCalendarAccurateChange}
-                      leftLabel="Average"
-                      rightLabel="Calendar"
-                      disabled={!isCalendarToggleEnabled}
-                    />
-                  </div>
-                )}
-                {isCalendarModeVisible && !_firstPaycheckDate && (
-                  <button
-                    type="button"
-                    className="dashboard-view-bar-setup-hint"
-                    onClick={openPayDetailsModal}
-                  >
-                    Set first paycheck date →
-                  </button>
-                )}
-              </div>
-              {effectiveCalendarAccurate && (
-                <PeriodSelector
-                  period={selectedPeriod}
-                  planYear={budgetData.year}
-                  paychecksInPeriod={paychecksInSelectedPeriod}
-                  displayMode={effectiveDisplayMode as 'monthly' | 'quarterly'}
-                  onChange={setSelectedPeriod}
-                />
-              )}
-            </div>
-          )}
-
           <div className="tab-content" ref={tabContentRef}>
         {viewMode && (
           <div className="view-mode-header">
@@ -1953,6 +1901,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             displayMode={effectiveDisplayMode}
             calendarAccurate={effectiveCalendarAccurate}
             paychecksInPeriod={paychecksInSelectedPeriod}
+            viewModeControl={viewModeControl}
             onOpenPayDetails={openPayDetailsModal}
             onNavigateToBills={(accountId) => {
               openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
@@ -1980,6 +1929,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingOtherIncomeSearchAction}
             searchActionTargetId={pendingOtherIncomeSearchTargetId}
             displayMode={effectiveDisplayMode}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -1995,6 +1945,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingBillsSearchAction}
             searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={effectiveDisplayMode}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -2010,6 +1961,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingLoansSearchAction}
             searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={effectiveDisplayMode}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -2022,6 +1974,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <TaxBreakdown 
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={effectiveDisplayMode}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
@@ -2038,6 +1991,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingSavingsSearchAction}
             searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={effectiveDisplayMode}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
