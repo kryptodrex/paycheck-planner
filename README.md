@@ -18,6 +18,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Pay structure**: Enter whether you're paid salary or hourly
 - **Pay frequency**: Select weekly, bi-weekly, semi-monthly, or monthly pay periods
 - **Tax assumptions**: Configure federal, state, Social Security, Medicare rates, and additional withholdings
+- **Smart tax estimates**: One-click auto-estimation using progressive federal brackets, FICA wage-base capping, and Medicare surtax rules
 - **Starting accounts**: Create initial accounts (checking, savings, investments, etc.)
 
 ### 3) Comprehensive Paycheck Analysis
@@ -52,10 +53,20 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - View total bill allocation vs. remaining funds
 - Mark items as discretionary to control what is eligible for automated reallocation
 
+#### Other Income
+- Track bonus, commission, rental, retirement withdrawal, reimbursement, investment, and custom income sources
+- Choose fixed dollar or percent-of-gross rules per entry
+- Control whether each entry affects gross pay, taxable income, or net pay
+- See impact reflected in paycheck breakdowns and PDF exports
+
 #### Smart Reallocation
 - Automatically rebalance eligible spending categories when Remaining falls below target
 - Uses safe-source guardrails (for example discretionary items and configurable contribution categories)
 - Review a clear summary of all amount changes after each automated reallocation
+- Per-item slider controls for savings and retirement proposals to fine-tune freed amounts
+- Auto-Balance mode: adjusting one slider redistributes proportionally across remaining items
+- Protect specific savings or retirement items from ever being included in reallocation proposals
+- Suggested account buffer amounts displayed for weekly and bi-weekly pay frequencies
 
 #### Benefits & Deductions
 - Add any employer-provided benefits (health insurance, FSA, HSA, etc.)
@@ -87,6 +98,8 @@ Walk through initial configuration with an intuitive step-by-step wizard:
   - Medicare (1.45% default)
   - Additional withholding amounts
 - Configure tax lines as either percentages or fixed dollar amounts to match pay-stub behavior
+- One-click "Auto-estimate rates" action using IRS-backed progressive brackets and FICA rules
+- All tax estimation data ships locally — no network required
 - Instant recalculation of net pay as you adjust rates
 
 ### 5) Plan Management
@@ -138,7 +151,9 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 
 #### Application Features
 - **Settings panel**: Configure appearance presets, dark-mode behavior, high-contrast mode, zoom/font scaling, and glossary tooltips
+- **Font customization**: Choose from system fonts or set any locally installed font; includes dyslexia-friendly and accessibility options
 - **Glossary**: Built-in financial terms reference accessible from Help menu or inline tooltips
+- **Frequently Asked Questions**: Searchable FAQ modal with categorized, expandable question/answer drawers, accessible from the Help menu
 - **Keyboard shortcuts reference**: View all available shortcuts in a dedicated in-app dialog, accessible from the Help menu
 - **In-app feedback**: Submit bug reports and feature requests directly from within the app via the Help menu
 - **About dialog**: Version info, credits, license
@@ -148,20 +163,22 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 ### 7) User Interface & Experience
 
 #### Theme Support
-- **Curated preset pairs**: Choose from more polished light/dark appearance presets
+- **Curated preset pairs**: Choose from light/dark appearance presets
 - **Manual dark-mode overrides**: Adjust dark behavior independently when preferred
 - **High-contrast mode**: Boost readability and separation for accessibility-sensitive workflows
 - **Persistent preference**: Appearance choices saved across sessions
-
-#### Visual Refresh
-- App-wide Lucide iconography replaces legacy emoji indicators
-- Account icon picker lets you choose from a larger icon catalog per account
 
 #### Glossary & Help
 - **Interactive tooltips**: Hover over or click glossary terms for definitions
 - **Toggle on/off**: Disable glossary tooltips in Settings if preferred
 - **Searchable glossary**: Access full glossary from Help menu
 - **Deep linking**: Open glossary to specific term from inline references
+
+#### Currency & Conversion
+- **Live exchange rates**: Automatic rate fetching via Frankfurter.app when changing currency
+- **Offline fallback**: Falls back to cached rates when offline, or manual entry when no cache exists
+- **Inverse rate display**: Auto-calculated inverse exchange rate shown in real time to eliminate manual math
+- **Precision**: 8-decimal-place precision prevents round-trip rounding errors
 
 #### Data Validation
 - Real-time validation of numeric inputs

@@ -213,13 +213,16 @@ Renderer Process (React + Context + Hooks)
   ├─ tabViews/SavingsManager/ (savings and retirement planning)
   ├─ tabViews/TaxBreakdown/ (tax withholding detail)
   ├─ modals/AccountsModal/ (checking, savings, etc.)
-  ├─ modals/SettingsModal/ (theme, glossary tooltips config)
+  ├─ modals/SettingsModal/ (theme, font, glossary tooltips config)
   ├─ modals/AboutModal/ (version, credits, license)
   ├─ modals/GlossaryModal/ (searchable financial terms reference)
   ├─ modals/ExportModal/ (PDF export with password protection)
   ├─ modals/PaySettingsModal/ (edit pay settings post-setup)
   ├─ modals/FeedbackModal/ (in-app bug/feature feedback submission)
   ├─ modals/KeyboardShortcutsModal/ (keyboard shortcuts reference dialog)
+  ├─ modals/AppFaqModal/ (searchable FAQ with expandable drawers)
+  ├─ modals/ReallocationReviewModal/ (reallocation proposal review with sliders)
+  ├─ modals/ReallocationSummaryModal/ (post-reallocation summary and undo)
   ├─ views/EncryptionSetup/ (encryption enable/disable/rekey flow)
   └─ _shared/ (Button, Modal, Card, Input, Toggle, PillToggle, etc.)
 
@@ -229,22 +232,36 @@ Services
   ├─ accountsService.ts (accounts CRUD, default account setup, account validation)
   ├─ budgetCalculations.ts (gross-to-net calculations, paycheck math, deduction totals)
   ├─ budgetCurrencyConversion.ts (currency conversion and formatting for budget values)
+  ├─ currencyRateFetcher.ts (live exchange rates via Frankfurter API, 24h cache, offline fallback)
+  ├─ taxEstimationService.ts (progressive federal brackets, FICA/Medicare, state-rate heuristics)
+  ├─ reallocationPlanner.ts (automated reallocation proposals and application)
   └─ pdfExport.ts (jsPDF generation with password protection)
 
 Utilities
-  ├─ payPeriod.ts (paycheck frequency calculations)
+  ├─ payPeriod.ts (paycheck frequency calculations via Record lookups)
+  ├─ payCalendar.ts (paycheck date generation with exhaustive frequency handling)
   ├─ currency.ts (formatting with symbol placement)
   ├─ money.ts (rounding and financial math)
   ├─ billFrequency.ts (bill frequency calculations)
   ├─ frequency.ts (general frequency conversion helpers)
-  ├─ accountDefaults.ts (default account configurations)
+  ├─ accountDefaults.ts (default account configurations via Record lookups)
   ├─ accountGrouping.ts (group and sort accounts by type)
+  ├─ accountAllocation.ts (account allocation helpers)
   ├─ allocationEditor.ts (stable round-trip conversion for editable allocation amounts)
-  ├─ tabManagement.ts (tab visibility and ordering)
+  ├─ assertNever.ts (exhaustive switch/union guard — compile-time + runtime safety)
+  ├─ auditHistory.ts (audit history tracking and diffing)
+  ├─ deductionLineItems.ts (pre-tax and post-tax deduction line item builders)
   ├─ displayAmounts.ts (format amounts for display with period normalization)
   ├─ filePath.ts (file path utilities for platform-safe path handling)
+  ├─ otherIncome.ts (other income annual amount calculations)
+  ├─ otherIncomeLabels.ts (other income display labels)
+  ├─ otherIncomeWithholding.ts (other income tax withholding)
   ├─ paySuggestions.ts (generate leftover/allocation suggestions based on pay)
+  ├─ planSearch.ts (plan-wide search index builder and query engine)
   ├─ retirement.ts (retirement contribution limits and calculation helpers)
+  ├─ tabManagement.ts (tab visibility and ordering)
+  ├─ taxLines.ts (tax line helpers for estimation and display)
+  ├─ viewModePreferences.ts (view mode preference persistence)
   └─ demoDataGenerator.ts (demo plan generation)
 
 Electron Main Process
@@ -293,13 +310,16 @@ paycheck-planner/
 │   │   │   └── TaxBreakdown/ (tax detail)
 │   │   ├── modals/
 │   │   │   ├── AccountsModal/ (accounts CRUD)
-│   │   │   ├── SettingsModal/ (app preferences)
+│   │   │   ├── SettingsModal/ (app preferences + font)
 │   │   │   ├── AboutModal/ (version/license)
 │   │   │   ├── GlossaryModal/ (terms reference)
 │   │   │   ├── ExportModal/ (PDF export)
 │   │   │   ├── PaySettingsModal/ (pay settings editor)
 │   │   │   ├── FeedbackModal/ (in-app feedback)
-│   │   │   └── KeyboardShortcutsModal/ (shortcuts reference)
+│   │   │   ├── KeyboardShortcutsModal/ (shortcuts reference)
+│   │   │   ├── AppFaqModal/ (searchable FAQ)
+│   │   │   ├── ReallocationReviewModal/ (reallocation review with sliders)
+│   │   │   └── ReallocationSummaryModal/ (post-reallocation summary + undo)
 │   │   └── _shared/ (reusable UI components)
 │   ├── contexts/
 │   │   ├── BudgetContext.tsx (budget state management)
@@ -317,24 +337,62 @@ paycheck-planner/
 │   │   ├── accountsService.ts (accounts CRUD + validation)
 │   │   ├── budgetCalculations.ts (gross-to-net + deduction math)
 │   │   ├── budgetCurrencyConversion.ts (currency conversion for budget values)
+│   │   ├── currencyRateFetcher.ts (live exchange rates + caching)
+│   │   ├── taxEstimationService.ts (smart tax auto-estimation)
+│   │   ├── reallocationPlanner.ts (automated reallocation proposals)
 │   │   └── pdfExport.ts (PDF generation)
 │   ├── types/
+│   │   ├── accounts.ts (account data + stored allocation category types)
 │   │   ├── auth.ts (budget data types)
+│   │   ├── budget.ts (budget document type)
+│   │   ├── budgetContext.ts (context value type)
+│   │   ├── fieldErrors.ts (shared field-error types)
+│   │   ├── frequencies.ts (PayFrequency, BillFrequency, etc.)
+│   │   ├── obligations.ts (Bill, Loan, Benefit, SavingsContribution)
+│   │   ├── payBreakdown.ts (runtime AllocationCategory discriminated union)
+│   │   ├── payroll.ts (PaySettings, RetirementElection)
+│   │   ├── settings.ts (app settings types)
+│   │   ├── tabs.ts (tab types)
+│   │   ├── viewMode.ts (ViewMode, SelectableViewMode)
 │   │   └── electron.d.ts (Electron API types)
 │   ├── utils/
 │   │   ├── payPeriod.ts
+│   │   ├── payCalendar.ts
 │   │   ├── currency.ts
 │   │   ├── money.ts
 │   │   ├── billFrequency.ts
 │   │   ├── frequency.ts
 │   │   ├── accountDefaults.ts
 │   │   ├── accountGrouping.ts
-│   │   ├── tabManagement.ts
+│   │   ├── accountAllocation.ts
+│   │   ├── allocationEditor.ts
+│   │   ├── assertNever.ts
+│   │   ├── auditHistory.ts
+│   │   ├── deductionLineItems.ts
 │   │   ├── displayAmounts.ts
 │   │   ├── filePath.ts
+│   │   ├── otherIncome.ts
+│   │   ├── planSearch.ts
+│   │   ├── tabManagement.ts
 │   │   ├── paySuggestions.ts
 │   │   ├── retirement.ts
+│   │   ├── taxLines.ts
+│   │   ├── viewModePreferences.ts
 │   │   └── demoDataGenerator.ts
+│   ├── constants/
+│   │   ├── frequencies.ts (frequency + view mode constants)
+│   │   ├── tabIds.ts (centralized tab identifiers)
+│   │   ├── loanTypes.ts (loan type metadata)
+│   │   ├── retirementTypes.ts (retirement plan type metadata)
+│   │   ├── reallocationSourceTypes.ts (reallocation source type metadata)
+│   │   ├── accountPalette.ts (account type colors)
+│   │   ├── appearancePresets.ts (theme presets)
+│   │   ├── storage.ts (localStorage keys)
+│   │   └── events.ts (custom app events)
+│   ├── data/
+│   │   ├── glossary.ts (financial terms glossary)
+│   │   ├── appFaqs.ts (FAQ content)
+│   │   └── usTaxData.ts (IRS-backed US tax rules)
 │   ├── App.tsx (main app component)
 │   ├── App.css
 │   ├── main.tsx (React entry point)
