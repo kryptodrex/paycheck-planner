@@ -7,6 +7,7 @@ interface PillToggleProps {
   leftLabel?: string;
   rightLabel?: string;
   disabled?: boolean;
+  size?: 'default' | 'small';
   className?: string;
 }
 
@@ -16,10 +17,11 @@ const PillToggle: React.FC<PillToggleProps> = ({
   leftLabel = 'Off',
   rightLabel = 'On',
   disabled = false,
+  size = 'default',
   className = '',
 }) => {
   return (
-    <div className={`pill-toggle ${disabled ? 'disabled' : ''} ${className}`.trim()}>
+    <div className={`pill-toggle pill-toggle-${size} ${disabled ? 'disabled' : ''} ${className}`.trim()}>
       <div className={`pill-toggle-slider ${value ? 'active' : ''}`} />
       <button
         type="button"

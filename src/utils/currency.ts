@@ -81,3 +81,24 @@ export function formatWithSymbol(
   const formatted = safeAmount.toLocaleString('en-US', options);
   return `${symbol}${formatted}`;
 }
+
+/**
+ * Calculate the precise inverse of an exchange rate with formatting
+ * @param exchangeRate - The exchange rate to invert (e.g., 0.92 for 1 USD = 0.92 EUR)
+ * @param precision - Number of decimal places to display (stripped of trailing zeros)
+ * @returns Formatted inverse rate string, or null if rate is invalid
+ * @example
+ * calculateInverseRate(0.92) => "1.08695652" // 1 EUR ≈ 1.08695652 USD (trailing zeros stripped)
+ * calculateInverseRate(149.5) => "0.00668896" // 1 JPY ≈ 0.00668896 USD
+ */
+export function calculateInverseRate(exchangeRate: number, precision = 8): string | null {
+  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+    return null;
+  }
+
+  const inverse = 1 / exchangeRate;
+  // Format to specified precision and remove trailing zeros
+  const formatted = inverse.toFixed(precision).replace(/\.?0+$/, '');
+  return formatted;
+}
+

@@ -13,6 +13,8 @@ interface TaxLinesEditorProps {
   onRemoveLine: (id: string) => void;
   introContent?: React.ReactNode;
   addButtonLabel?: string;
+  showTaxableIncome?: boolean;
+  taxableIncomeLabel?: string;
 }
 
 const TaxLinesEditor: React.FC<TaxLinesEditorProps> = ({
@@ -24,6 +26,8 @@ const TaxLinesEditor: React.FC<TaxLinesEditorProps> = ({
   onRemoveLine,
   introContent,
   addButtonLabel = '+ Add Tax Line',
+  showTaxableIncome = true,
+  taxableIncomeLabel = 'Taxable Income Base',
 }) => {
   return (
     <div className="tax-lines-editor">
@@ -94,18 +98,29 @@ const TaxLinesEditor: React.FC<TaxLinesEditorProps> = ({
                     onBlur={() => onLineBlur(line.id, 'rate')}
                   />
                 </FormGroup>
-                <FormGroup label="Taxable Income" error={taxableIncomeError}>
-                  <InputWithPrefix
-                    prefix={getCurrencySymbol(currency)}
-                    className={taxableIncomeError ? 'field-error' : ''}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.taxableIncome}
-                    onChange={(e) => onLineChange(line.id, 'taxableIncome', e.target.value)}
-                    onBlur={() => onLineBlur(line.id, 'taxableIncome')}
-                  />
-                </FormGroup>
+                {showTaxableIncome ? (
+                  <FormGroup label={taxableIncomeLabel} error={taxableIncomeError}>
+                    <InputWithPrefix
+                      prefix={getCurrencySymbol(currency)}
+                      className={taxableIncomeError ? 'field-error' : ''}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.taxableIncome}
+                      onChange={(e) => onLineChange(line.id, 'taxableIncome', e.target.value)}
+                      onBlur={() => onLineBlur(line.id, 'taxableIncome')}
+                    />
+                  </FormGroup>
+                ) : (
+                  <FormGroup label="Estimated Amount">
+                    <InputWithPrefix
+                      prefix={getCurrencySymbol(currency)}
+                      type="number"
+                      value={line.amount}
+                      disabled
+                    />
+                  </FormGroup>
+                )}
               </div>
             )}
 

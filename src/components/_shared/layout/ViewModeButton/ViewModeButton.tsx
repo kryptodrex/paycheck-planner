@@ -19,6 +19,7 @@ export interface ViewModeButtonProps<T extends string = SelectableViewMode> {
   highlightedValue?: T;
   highlightedLabel?: string;
   label?: string;
+  size?: 'default' | 'small';
   preferredPlacement?: 'up' | 'down';
   disabled?: boolean;
 }
@@ -37,6 +38,7 @@ const ViewModeButton = <T extends string = SelectableViewMode,>({
   highlightedValue,
   highlightedLabel = 'Pay frequency',
   label = 'Amounts',
+  size = 'default',
   preferredPlacement = 'down',
   disabled = false,
 }: ViewModeButtonProps<T>) => {
@@ -171,7 +173,7 @@ const ViewModeButton = <T extends string = SelectableViewMode,>({
   return (
     <div
       ref={containerRef}
-      className={`view-mode-button${expanded ? ' view-mode-button--open' : ''}`}
+      className={`view-mode-button view-mode-button--${size}${expanded ? ' view-mode-button--open' : ''}`}
       style={lockedWidth ? { width: `${lockedWidth}px` } : undefined}
       onBlur={(event) => {
         if (!containerRef.current?.contains(event.relatedTarget as Node)) {

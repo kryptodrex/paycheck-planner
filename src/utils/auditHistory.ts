@@ -1,6 +1,6 @@
 import type { Account, AccountAllocationCategory } from '../types/accounts';
 import type { BudgetData } from '../types/budget';
-import type { Benefit, Deduction, RetirementElection } from '../types/payroll';
+import type { Benefit, Deduction, OtherIncome, RetirementElection } from '../types/payroll';
 import type { Bill, Loan, SavingsContribution } from '../types/obligations';
 import type { AuditEntry, AuditEntityType } from '../types/audit';
 
@@ -224,6 +224,16 @@ export const buildAuditEntries = (params: {
       entityType: 'benefit',
       prev: prev.benefits || [],
       next: next.benefits || [],
+      sourceAction,
+      note,
+    }),
+  );
+
+  entries.push(
+    ...buildCollectionEntries<OtherIncome>({
+      entityType: 'other-income',
+      prev: prev.otherIncome || [],
+      next: next.otherIncome || [],
       sourceAction,
       note,
     }),

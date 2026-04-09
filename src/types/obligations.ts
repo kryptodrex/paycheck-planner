@@ -1,4 +1,5 @@
 import type { BillFrequency, LoanPaymentFrequency, SavingsFrequency } from './frequencies';
+import type { LoanType } from '../constants/loanTypes';
 
 export interface SavingsContribution {
   id: string;
@@ -9,6 +10,7 @@ export interface SavingsContribution {
   type: 'savings' | 'investment';
   enabled?: boolean;
   notes?: string;
+  reallocationProtected?: boolean;
 }
 
 export interface Bill {
@@ -35,7 +37,7 @@ export interface LoanPaymentLine {
 export interface Loan {
   id: string;
   name: string;
-  type: 'mortgage' | 'auto' | 'student' | 'personal' | 'credit-card' | 'other';
+  type: LoanType;
   principal: number;
   currentBalance: number;
   interestRate: number;

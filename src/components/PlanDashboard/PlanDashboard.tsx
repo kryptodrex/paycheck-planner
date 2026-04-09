@@ -15,6 +15,7 @@ import { FileStorageService } from '../../services/fileStorage';
 import SetupWizard from '../views/SetupWizard';
 import KeyMetrics from '../tabViews/KeyMetrics';
 import PayBreakdown from '../tabViews/PayBreakdown';
+import OtherIncomeManager from '../tabViews/OtherIncomeManager';
 import BillsManager from '../tabViews/BillsManager';
 import LoansManager from '../tabViews/LoansManager';
 import SavingsManager from '../tabViews/SavingsManager';
@@ -24,8 +25,11 @@ import AccountsModal from '../modals/AccountsModal';
 import PaySettingsModal from '../modals/PaySettingsModal';
 import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton } from '../_shared';
+import type { Period } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
 import { getPayFrequencyViewMode } from '../../utils/payPeriod';
+import { getPaychecksInMonth, getPaychecksInQuarter } from '../../utils/payCalendar';
+import type { PayFrequency } from '../../types/frequencies';
 import { useGlobalKeyboardShortcuts } from '../../hooks';
 import type { SearchResult } from '../../utils/planSearch';
 import { getActionHandler, type SearchActionContext } from '../../utils/searchRegistry';
@@ -36,6 +40,7 @@ import type { AccountAllocationCategory } from '../../types/accounts';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
+import { TAB_IDS } from '../../constants/tabIds';
 
 type TabScrollPosition = 'top' | 'bottom';
 
@@ -56,7 +61,7 @@ interface PlanDashboardProps {
   onUndoRedoSuccess?: (action: 'undo' | 'redo') => void;
 }
 
-const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'bills', 'loans', 'taxes', 'savings'];
+const VALID_TABS: TabId[] = Object.values(TAB_IDS);
 
 /** Timing constants for the search-result scroll + highlight behaviour */
 const SEARCH_SCROLL_INITIAL_DELAY_MS = 80;
@@ -110,6 +115,9 @@ const isEditableTarget = (target: EventTarget | null): boolean => {
   );
 };
 
+/** Returns true when any modal overlay is visible in the DOM. */
+const isModalOpen = (): boolean => !!document.querySelector('.modal-overlay');
+
 const areAuditEntriesEquivalent = (a: AuditEntry, b: AuditEntry): boolean => {
   if (a === b) return true;
   return (
@@ -124,6 +132,7 @@ const areAuditEntriesEquivalent = (a: AuditEntry, b: AuditEntry): boolean => {
 };
 
 const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, onUndoRedoSuccess }) => {
+
   const {
     budgetData,
     saveBudget,
@@ -150,7 +159,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       return normalizedSavedTab;
     }
 
-    return 'metrics' as TabId;
+    return TAB_IDS.metrics;
   };
 
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
@@ -165,6 +174,19 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     return getPayFrequencyViewMode(budgetData?.paySettings?.payFrequency ?? 'bi-weekly');
   });
   const [previewDisplayMode, setPreviewDisplayMode] = useState<ViewMode | null>(null);
+  const [calendarAccurate, setCalendarAccurate] = useState<boolean>(
+    () => budgetData?.settings?.calendarAccurate ?? false,
+  );
+  const _todayInit = new Date();
+  const _initialPlanYear = budgetData?.year ?? _todayInit.getFullYear();
+  const _initialMonth =
+    _todayInit.getFullYear() === _initialPlanYear
+      ? _todayInit.getMonth() + 1
+      : 1;
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>(() => ({
+    year: _initialPlanYear,
+    month: _initialMonth,
+  }));
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [copyYearError, setCopyYearError] = useState<string | null>(null);
@@ -201,6 +223,15 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
   >(undefined);
   const [pendingSavingsSearchTargetId, setPendingSavingsSearchTargetId] = useState<string | undefined>(undefined);
   const [savingsSearchRequestKey, setSavingsSearchRequestKey] = useState(0);
+  const [pendingOtherIncomeSearchAction, setPendingOtherIncomeSearchAction] = useState<
+    | 'add-other-income'
+    | 'edit-other-income'
+    | 'delete-other-income'
+    | 'toggle-other-income'
+    | undefined
+  >(undefined);
+  const [pendingOtherIncomeSearchTargetId, setPendingOtherIncomeSearchTargetId] = useState<string | undefined>(undefined);
+  const [otherIncomeSearchRequestKey, setOtherIncomeSearchRequestKey] = useState(0);
   const [taxSearchOpenSettingsRequestKey, setTaxSearchOpenSettingsRequestKey] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const [historyTarget, setHistoryTarget] = useState<AuditHistoryTarget | null>(null);
@@ -229,6 +260,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       return;
     }
 
+    // Don't fire plan-level undo while a modal is open — the modal manages its own undo.
+    if (isModalOpen()) return;
+
     if (canUndo) {
       undo();
       onUndoRedoSuccess?.('undo');
@@ -240,6 +274,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       document.execCommand('redo');
       return;
     }
+
+    // Don't fire plan-level redo while a modal is open.
+    if (isModalOpen()) return;
 
     if (canRedo) {
       redo();
@@ -486,9 +523,16 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     } else if (budgetData?.paySettings?.payFrequency) {
       setDisplayMode(getPayFrequencyViewMode(budgetData.paySettings.payFrequency));
     }
+    setCalendarAccurate(budgetData?.settings?.calendarAccurate ?? false);
+    // Reset to plan-year period on plan load — selectedPeriod is intentionally not persisted.
+    const now = new Date();
+    const planYear = budgetData?.year ?? now.getFullYear();
+    const month = now.getFullYear() === planYear ? now.getMonth() + 1 : 1;
+    setSelectedPeriod({ year: planYear, month });
     setPreviewDisplayMode(null);
   }, [
     budgetData?.settings,
+    budgetData?.year,
     budgetData?.settings?.tabDisplayMode,
     budgetData?.settings?.tabPosition,
     budgetData?.settings?.displayMode,
@@ -543,23 +587,56 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
 
   const effectiveDisplayMode = previewDisplayMode ?? displayMode;
 
+  // Calendar-accurate mode eligibility
+  const _calendarPayFrequency = budgetData?.paySettings?.payFrequency;
+  const _firstPaycheckDate = budgetData?.paySettings?.firstPaycheckDate;
+  const isCalendarEligibleFrequency =
+    _calendarPayFrequency === 'weekly' || _calendarPayFrequency === 'bi-weekly';
+  const isCalendarModeVisible =
+    (effectiveDisplayMode === 'monthly' || effectiveDisplayMode === 'quarterly') &&
+    isCalendarEligibleFrequency;
+  const isCalendarToggleEnabled = isCalendarModeVisible && !!_firstPaycheckDate;
+  const effectiveCalendarAccurate = calendarAccurate && isCalendarToggleEnabled;
+
+  const viewModeControl = !viewMode ? (
+    <ViewModeButton
+      label="View Mode"
+      mode={effectiveDisplayMode}
+      selectedMode={displayMode}
+      onChange={handleDisplayModeChange}
+      onPreviewChange={handleDisplayModePreview}
+      highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
+      highlightedLabel="Your pay frequency"
+      preferredPlacement="down"
+    />
+  ) : null;
+
+  const paychecksInSelectedPeriod = useMemo(() => {
+    if (!effectiveCalendarAccurate || !_firstPaycheckDate || !_calendarPayFrequency) return 0;
+    if (effectiveDisplayMode === 'monthly') {
+      return getPaychecksInMonth(
+        _firstPaycheckDate,
+        _calendarPayFrequency as PayFrequency,
+        selectedPeriod.year,
+        selectedPeriod.month,
+      );
+    }
+    if (effectiveDisplayMode === 'quarterly') {
+      const quarter = Math.ceil(selectedPeriod.month / 3);
+      return getPaychecksInQuarter(
+        _firstPaycheckDate,
+        _calendarPayFrequency as PayFrequency,
+        selectedPeriod.year,
+        quarter,
+      );
+    }
+    return 0;
+  }, [effectiveCalendarAccurate, _firstPaycheckDate, _calendarPayFrequency, effectiveDisplayMode, selectedPeriod]);
+
   const openPayDetailsModal = useCallback(() => {
     setPendingPaySettingsFieldHighlight(undefined);
     setShowPaySettingsModal(true);
   }, []);
-
-  const renderViewModeHeaderControl = () => (
-      <ViewModeButton
-        label="View Mode"
-        mode={effectiveDisplayMode}
-        selectedMode={displayMode}
-        onChange={handleDisplayModeChange}
-        onPreviewChange={handleDisplayModePreview}
-        highlightedValue={budgetData ? getPayFrequencyViewMode(budgetData.paySettings.payFrequency) : undefined}
-        highlightedLabel="Your pay frequency"
-        preferredPlacement="up"
-      />
-  );
 
   const ensureValidSavePath = useCallback(async (): Promise<boolean> => {
     const currentPath = budgetData?.settings?.filePath;
@@ -608,6 +685,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         tabPosition,
         tabDisplayMode,
         displayMode,
+        calendarAccurate,
       },
     });
 
@@ -617,7 +695,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     }
 
     return false;
-  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, missingActiveFile, ensureValidSavePath]);
+  }, [saveBudget, activeTab, budgetData, tabPosition, tabDisplayMode, displayMode, calendarAccurate, missingActiveFile, ensureValidSavePath]);
 
   // Handle explicit save requests (toolbar/menu/keyboard)
   const handleSave = useCallback(async () => {
@@ -972,7 +1050,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     
     // If hiding the active tab, switch to metrics
     if (!visible && activeTab === tabId) {
-      setActiveTab('metrics');
+      setActiveTab(TAB_IDS.metrics);
     }
   }, [activeTab, budgetData, openErrorDialog, tabConfigs, updateBudgetSettings]);
 
@@ -1125,7 +1203,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       key: 'z',
       mac: true,
       windows: true,
-      shouldHandle: (e) => !isEditableTarget(e.target),
+      shouldHandle: (e) => !isEditableTarget(e.target) && !isModalOpen(),
       callback: handleUndoAction,
     },
     {
@@ -1133,13 +1211,13 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       mac: true,
       windows: true,
       shift: true,
-      shouldHandle: (e) => !isEditableTarget(e.target),
+      shouldHandle: (e) => !isEditableTarget(e.target) && !isModalOpen(),
       callback: handleRedoAction,
     },
     {
       key: 'y',
       windows: true,
-      shouldHandle: (e) => !isEditableTarget(e.target),
+      shouldHandle: (e) => !isEditableTarget(e.target) && !isModalOpen(),
       callback: handleRedoAction,
     },
   ]);
@@ -1164,6 +1242,9 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           setPendingSavingsSearchAction: setPendingSavingsSearchAction as SearchActionContext['setPendingSavingsSearchAction'],
           setPendingSavingsSearchTargetId: setPendingSavingsSearchTargetId as SearchActionContext['setPendingSavingsSearchTargetId'],
           setSavingsSearchRequestKey: setSavingsSearchRequestKey as SearchActionContext['setSavingsSearchRequestKey'],
+          setPendingOtherIncomeSearchAction: setPendingOtherIncomeSearchAction as SearchActionContext['setPendingOtherIncomeSearchAction'],
+          setPendingOtherIncomeSearchTargetId: setPendingOtherIncomeSearchTargetId as SearchActionContext['setPendingOtherIncomeSearchTargetId'],
+          setOtherIncomeSearchRequestKey: setOtherIncomeSearchRequestKey as SearchActionContext['setOtherIncomeSearchRequestKey'],
           setTaxSearchOpenSettingsRequestKey: setTaxSearchOpenSettingsRequestKey as SearchActionContext['setTaxSearchOpenSettingsRequestKey'],
           selectTab: selectTab as SearchActionContext['selectTab'],
           setShowAccountsModal: setShowAccountsModal as SearchActionContext['setShowAccountsModal'],
@@ -1219,7 +1300,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         setShowSettings(true);
       }
     },
-    [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight],
+    [openTabFromLink, selectTab, setPendingBillsSearchAction, setPendingBillsSearchTargetId, setBillsSearchRequestKey, setPendingLoansSearchAction, setPendingLoansSearchTargetId, setLoansSearchRequestKey, setPendingSavingsSearchAction, setPendingSavingsSearchTargetId, setSavingsSearchRequestKey, setPendingOtherIncomeSearchAction, setPendingOtherIncomeSearchTargetId, setOtherIncomeSearchRequestKey, setTaxSearchOpenSettingsRequestKey, setShowAccountsModal, setShowSettings, setSettingsInitialSection, setScrollToAccountId, setPendingPaySettingsFieldHighlight],
   );
 
   const handleOpenObjectHistory = useCallback((target: AuditHistoryTarget) => {
@@ -1341,6 +1422,14 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             return {
               ...current,
               benefits: upsertById(current.benefits, snapshot as unknown as typeof current.benefits[number]),
+            };
+          case 'other-income':
+            return {
+              ...current,
+              otherIncome: upsertById(
+                current.otherIncome || [],
+                snapshot as unknown as NonNullable<typeof current.otherIncome>[number],
+              ),
             };
           case 'account':
             return {
@@ -1779,7 +1868,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           </div>
         )}
         <div
-          className={`tab-panel ${activeTab === 'metrics' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.metrics ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.metrics = element;
           }}
@@ -1787,49 +1876,66 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <KeyMetrics
             onOpenPayDetails={openPayDetailsModal}
             onNavigateToTaxes={() => {
-              openTabFromLink('taxes');
+              openTabFromLink(TAB_IDS.taxes);
             }}
             onNavigateToNetPay={() => {
-              openTabFromLink('breakdown');
+              openTabFromLink(TAB_IDS.breakdown);
             }}
             onNavigateToSavings={() => {
-              openTabFromLink('savings', { scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.savings, { scrollToRetirement: false });
             }}
             onNavigateToBills={() => {
-              openTabFromLink('bills', { scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.bills, { scrollToRetirement: false });
             }}
             onNavigateToRemaining={() => {
-              openTabFromLink('breakdown', { scrollPosition: 'bottom', scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.breakdown, { scrollPosition: 'bottom', scrollToRetirement: false });
             }}
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'breakdown' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.breakdown ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.breakdown = element;
           }}
         >
           <PayBreakdown 
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'breakdown' ? renderViewModeHeaderControl() : undefined}
+            calendarAccurate={effectiveCalendarAccurate}
+            paychecksInPeriod={paychecksInSelectedPeriod}
+            viewModeControl={viewModeControl}
             onOpenPayDetails={openPayDetailsModal}
             onNavigateToBills={(accountId) => {
-              openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.bills, { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
             onNavigateToSavings={() => {
-              openTabFromLink('savings', { scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.savings, { scrollToRetirement: false });
             }}
             onNavigateToRetirement={() => {
-              openTabFromLink('savings', { scrollToRetirement: true });
+              openTabFromLink(TAB_IDS.savings, { scrollToRetirement: true });
             }}
             onNavigateToLoans={(accountId) => {
-              openTabFromLink('loans', { scrollToAccountId: accountId, scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.loans, { scrollToAccountId: accountId, scrollToRetirement: false });
             }} 
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'bills' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.otherIncome ? 'active' : ''}`}
+          ref={(element) => {
+            tabPanelRefs.current['other-income'] = element;
+          }}
+        >
+          <OtherIncomeManager
+            searchActionRequestKey={otherIncomeSearchRequestKey}
+            searchActionType={pendingOtherIncomeSearchAction}
+            searchActionTargetId={pendingOtherIncomeSearchTargetId}
+            displayMode={effectiveDisplayMode}
+            viewModeControl={viewModeControl}
+            onViewHistory={handleOpenObjectHistory}
+          />
+        </div>
+        <div
+          className={`tab-panel ${activeTab === TAB_IDS.bills ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.bills = element;
           }}
@@ -1840,12 +1946,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingBillsSearchAction}
             searchActionTargetId={pendingBillsSearchTargetId}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'bills' ? renderViewModeHeaderControl() : undefined}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'loans' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.loans ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.loans = element;
           }}
@@ -1856,12 +1962,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingLoansSearchAction}
             searchActionTargetId={pendingLoansSearchTargetId}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'loans' ? renderViewModeHeaderControl() : undefined}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'taxes' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.taxes ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.taxes = element;
           }}
@@ -1869,12 +1975,12 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <TaxBreakdown 
             searchOpenSettingsRequestKey={taxSearchOpenSettingsRequestKey}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'taxes' ? renderViewModeHeaderControl() : undefined}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'savings' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.savings ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.savings = element;
           }}
@@ -1886,7 +1992,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             searchActionType={pendingSavingsSearchAction}
             searchActionTargetId={pendingSavingsSearchTargetId}
             displayMode={effectiveDisplayMode}
-            viewModeControl={activeTab === 'savings' ? renderViewModeHeaderControl() : undefined}
+            viewModeControl={viewModeControl}
             onViewHistory={handleOpenObjectHistory}
           />
         </div>

@@ -1,10 +1,11 @@
 import { DEFAULT_APPEARANCE_PRESET } from '../constants/appearancePresets';
 import type { AppSettings } from '../types/settings';
-import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from '../types/appearance';
+import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, FontPreference, StateCueMode, ThemeMode } from '../types/appearance';
 
 export const MIN_FONT_SCALE = 0.90;
 export const MAX_FONT_SCALE = 1.25;
 export const DEFAULT_FONT_SCALE = 1;
+export const DEFAULT_FONT_PREFERENCE: FontPreference = 'system';
 export const DEFAULT_APPEARANCE_MODE: AppearanceMode = 'preset';
 export const DEFAULT_COLOR_VISION_MODE: ColorVisionMode = 'normal';
 export const DEFAULT_STATE_CUE_MODE: StateCueMode = 'minimal';
@@ -107,4 +108,21 @@ export function normalizeStateCueMode(value: unknown): StateCueMode {
   }
 
   return DEFAULT_STATE_CUE_MODE;
+}
+
+export function isFontPreference(value: unknown): value is FontPreference {
+  return (
+    value === 'system' ||
+    value === 'inter' ||
+    value === 'verdana' ||
+    value === 'atkinson' ||
+    value === 'open-dyslexic'
+  );
+}
+
+export function normalizeFontPreference(value: unknown): FontPreference {
+  if (isFontPreference(value)) {
+    return value;
+  }
+  return DEFAULT_FONT_PREFERENCE;
 }

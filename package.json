@@ -1,7 +1,7 @@
 {
   "name": "paycheck-planner",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Desktop paycheck planning and budget management application.",
   "author": {
     "name": "Paycheck Planner",
@@ -93,6 +93,9 @@
     }
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/atkinson-hyperlegible": "^5.2.8",
+    "@fontsource/opendyslexic": "^5.2.5",
     "keytar": "^7.9.0"
   },
   "devDependencies": {
@@ -117,13 +120,13 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jest-axe": "^10.0.0",
+    "jsdom": "^29.0.0",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
-    "jsdom": "^29.0.0",
     "lucide-react": "^0.577.0",
+    "png2icons": "^2.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "png2icons": "^2.0.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1",

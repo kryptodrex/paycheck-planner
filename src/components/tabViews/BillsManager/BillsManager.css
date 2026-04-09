@@ -11,14 +11,6 @@
   gap: 0.75rem;
 }
 
-.bills-manager .bill-notes {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  padding: 0.5rem;
-  background: var(--bg-primary);
-  border-radius: 4px;
-}
-
 .bills-manager .benefit-source-note {
   margin-top: 0.5rem;
   color: var(--text-secondary);
@@ -75,15 +67,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 980px) {
-  .bills-manager .bills-add-expense {
-    width: 100%;
-  }
-
-  .bills-manager .bills-add-expense-trigger {
-    width: 100%;
-  }
-
+@media (max-width: 1290px) {
   .bills-manager .bills-add-expense-menu {
     left: 0;
     right: 0;

@@ -1,22 +1,7 @@
 import type { RetirementElection } from '../types/payroll';
+import { RETIREMENT_PLAN_METADATA, RETIREMENT_PLAN_LABELS } from '../constants/retirementTypes';
 
-export const RETIREMENT_PLAN_OPTIONS: Array<{ value: RetirementElection['type']; label: string }> = [
-  { value: '401k', label: '401(k)' },
-  { value: '403b', label: '403(b)' },
-  { value: 'roth-ira', label: 'Roth IRA' },
-  { value: 'traditional-ira', label: 'Traditional IRA' },
-  { value: 'pension', label: 'Pension' },
-  { value: 'other', label: 'Other' },
-];
-
-const RETIREMENT_PLAN_LABELS: Record<RetirementElection['type'], string> = {
-  '401k': '401(k)',
-  '403b': '403(b)',
-  'roth-ira': 'Roth IRA',
-  'traditional-ira': 'Traditional IRA',
-  pension: 'Pension',
-  other: 'Other',
-};
+export { RETIREMENT_PLAN_METADATA as RETIREMENT_PLAN_OPTIONS };
 
 export function getRetirementPlanDisplayLabel(
   retirement: Pick<RetirementElection, 'type' | 'customLabel'>

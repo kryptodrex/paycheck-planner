@@ -106,6 +106,41 @@ describe('FileStorageService', () => {
     expect(stored.fontScale).toBe(0.9);
   });
 
+  it('returns fontPreference as system default when not present in stored settings', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        themeMode: 'light',
+        appearancePreset: 'default',
+        fontScale: 1,
+      }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+    expect(settings.fontPreference).toBe('system');
+  });
+
+  it('round-trips fontPreference through saveAppSettings and getAppSettings', () => {
+    FileStorageService.saveAppSettings({
+      fontPreference: 'atkinson',
+    });
+
+    const settings = FileStorageService.getAppSettings();
+    expect(settings.fontPreference).toBe('atkinson');
+  });
+
+  it('normalizes an invalid fontPreference to system default on load', () => {
+    localStorage.setItem(
+      STORAGE_KEYS.settings,
+      JSON.stringify({
+        fontPreference: 'comic-sans-ms',
+      }),
+    );
+
+    const settings = FileStorageService.getAppSettings();
+    expect(settings.fontPreference).toBe('system');
+  });
+
   it('adds and de-duplicates recent files', () => {
     FileStorageService.addRecentFile('/a/first.ppb');
     FileStorageService.addRecentFile('/a/second.ppb');
@@ -194,6 +229,7 @@ describe('FileStorageService', () => {
   it('creates default tax lines with percentage mode metadata', () => {
     const budget = FileStorageService.createEmptyBudget(2026, 'USD');
 
+    expect(budget.otherIncome).toEqual([]);
     expect(budget.taxSettings.taxLines).toEqual([
       { id: 'uuid-mock', label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },
       { id: 'uuid-mock', label: 'State Tax', rate: 0, amount: 0, calculationType: 'percentage' },
@@ -511,10 +547,10 @@ describe('FileStorageService', () => {
       expect(loaded?.taxSettings.additionalWithholding).toBe(50);
     });
 
-    it('initializes missing optional arrays (benefits, retirement, savingsContributions) in old plans', async () => {
+    it('initializes missing optional arrays (benefits, otherIncome, retirement, savingsContributions) in old plans', async () => {
       const strippedPlan = {
         ...makeLegacyPlanBase(),
-        // omit benefits, retirement, savingsContributions entirely
+        // omit benefits, otherIncome, retirement, savingsContributions entirely
       };
       Object.assign(window.electronAPI, {
         loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(strippedPlan) })),
@@ -523,8 +559,54 @@ describe('FileStorageService', () => {
       const loaded = await FileStorageService.loadBudget('/tmp/stripped-plan.ppb');
 
       expect(Array.isArray(loaded?.benefits)).toBe(true);
+      expect(Array.isArray(loaded?.otherIncome)).toBe(true);
       expect(Array.isArray(loaded?.retirement)).toBe(true);
       expect(Array.isArray(loaded?.savingsContributions)).toBe(true);
+    });
+
+    it('normalizes malformed other income entries when loading legacy plans', async () => {
+      const planWithMalformedOtherIncome = {
+        ...makeLegacyPlanBase(),
+        otherIncome: [
+          {
+            id: '',
+            name: '',
+            incomeType: 'side-hustle',
+            amountMode: 'ratio',
+            amount: -50,
+            percentOfGross: -12,
+            frequency: 'annually',
+            enabled: 'yes',
+            notes: 123,
+            isTaxable: 'sometimes',
+            payTreatment: 'bonus',
+            withholdingMode: 'hybrid',
+            withholdingProfileId: '',
+            activeMonths: [0, 3, 3, 13, 6],
+          },
+        ],
+      };
+
+      Object.assign(window.electronAPI, {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(planWithMalformedOtherIncome) })),
+      });
+
+      const loaded = await FileStorageService.loadBudget('/tmp/legacy-other-income.ppb');
+
+      expect(loaded?.otherIncome).toHaveLength(1);
+      expect(loaded?.otherIncome?.[0]).toMatchObject({
+        name: 'Other Income',
+        incomeType: 'other',
+        amountMode: 'fixed',
+        amount: 0,
+        frequency: 'monthly',
+        enabled: true,
+        notes: '',
+        isTaxable: true,
+        payTreatment: 'gross',
+        withholdingMode: 'manual',
+        activeMonths: [3, 6],
+      });
     });
   });
 

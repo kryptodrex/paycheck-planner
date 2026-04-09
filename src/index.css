@@ -1,6 +1,7 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
   --font-mono: 'SF Mono', 'Monaco', 'Cascadia Mono', 'Menlo', 'Consolas', monospace;
+  font-family: var(--font-ui);
   --icon-color-default: currentColor;
   --icon-color-muted: var(--text-secondary);
   --icon-color-accent: var(--accent-primary);

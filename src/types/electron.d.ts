@@ -112,8 +112,8 @@ export interface ElectronAPI {
   saveKeychainKey: (service: string, account: string, password: string) => Promise<{ success: boolean; error?: string }>;
   
   // Retrieve an encryption key from the system keychain
-  // Returns the password or an error
-  getKeychainKey: (service: string, account: string) => Promise<{ success: boolean; key?: string; error?: string }>;
+  // Returns the password or an error. biometricFailed is true when Touch ID was cancelled.
+  getKeychainKey: (service: string, account: string) => Promise<{ success: boolean; key?: string; error?: string; biometricFailed?: boolean }>;
   
   // Delete an encryption key from the system keychain
   // Returns whether it succeeded and any error message

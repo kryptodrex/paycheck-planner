@@ -7,6 +7,12 @@ import { formatWithSymbol } from '../utils/currency';
 import { getPaychecksPerYear } from '../utils/payPeriod';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';
 import { getTaxLineCalculationType } from '../utils/taxLines';
+import { calculateOtherIncomeAnnualAmount } from '../utils/otherIncome';
+import {
+  getOtherIncomePayTreatmentLabel,
+  getOtherIncomeTypeLabel,
+  getOtherIncomeWithholdingModeLabel,
+} from '../utils/otherIncomeLabels';
 
 type JsPdfWithAutoTable = jsPDF & {
   lastAutoTable?: {
@@ -23,6 +29,7 @@ export interface PDFExportOptions {
   password?: string;
   includeMetrics?: boolean;
   includePayBreakdown?: boolean;
+  includeOtherIncome?: boolean;
   includeAccounts?: boolean;
   includeBills?: boolean;
   includeBenefits?: boolean;
@@ -44,6 +51,7 @@ export async function exportToPDF(
     password,
     includeMetrics = true,
     includePayBreakdown = true,
+    includeOtherIncome = true,
     includeAccounts = true,
     includeBills = true,
     includeBenefits = true,
@@ -91,6 +99,11 @@ export async function exportToPDF(
   const additionalWithholding = breakdown.additionalWithholding;
   const totalTaxes = breakdown.totalTaxes;
   const netPay = breakdown.netPay;
+  const otherIncomeAutoWithholdingRows = (breakdown.otherIncomeAutoWithholdingLineItems || []).map((line) => [
+    line.label,
+    `${line.rate}% auto`,
+    formatWithSymbol(line.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  ]);
 
   // Calculate total account allocations
   const totalAllocations = budgetData.accounts.reduce((sum, account) => {
@@ -181,14 +194,57 @@ export async function exportToPDF(
     yPosition += 10;
 
     const taxData = [
-        ...taxLineAmounts.map(l => [l.label, l.rateLabel, formatWithSymbol(l.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
-      ['Additional Withholding', '-', formatWithSymbol(additionalWithholding, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+      ...taxLineAmounts.map((line) => [line.label, line.rateLabel, formatWithSymbol(line.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })]),
+      ...otherIncomeAutoWithholdingRows,
+      ['Manual Additional Withholding', '-', formatWithSymbol(additionalWithholding, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
     ];
 
     autoTable(doc, {
       startY: yPosition,
       head: [['Tax Type', 'Rate', 'Amount per Paycheck']],
       body: taxData,
+      theme: 'striped',
+      headStyles: { fillColor: [70, 130, 180] },
+      margin: { left: 20, right: 20 },
+    });
+
+    yPosition = getNextYPosition(doc, yPosition + 15);
+  }
+
+  // Other Income Section
+  if (includeOtherIncome && (budgetData.otherIncome || []).length > 0) {
+    checkPageBreak(60);
+    doc.setFontSize(16);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Other Income', 20, yPosition);
+    yPosition += 10;
+
+    const enabledEntries = (budgetData.otherIncome || []).filter((entry) => entry.enabled !== false);
+    const otherIncomeData = enabledEntries.map((entry) => {
+      const annualAmount = calculateOtherIncomeAnnualAmount(entry, paycheckAmount, getPaychecksPerYear(budgetData.paySettings.payFrequency));
+      const amountLabel = entry.amountMode === 'percent-of-gross'
+        ? `${entry.percentOfGross || 0}% of gross`
+        : formatWithSymbol(entry.amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const activeMonthsLabel = entry.activeMonths && entry.activeMonths.length > 0
+        ? entry.activeMonths.join(', ')
+        : 'All';
+
+      return [
+        entry.name,
+        getOtherIncomeTypeLabel(entry.incomeType),
+        getOtherIncomePayTreatmentLabel(entry.payTreatment),
+        getOtherIncomeWithholdingModeLabel(entry.withholdingMode),
+        entry.frequency,
+        activeMonthsLabel,
+        amountLabel,
+        formatWithSymbol(annualAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      ];
+    });
+
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Income Name', 'Type', 'Treatment', 'Withholding', 'Frequency', 'Months', 'Configured Amount', 'Annual Impact']],
+      body: otherIncomeData,
       theme: 'striped',
       headStyles: { fillColor: [70, 130, 180] },
       margin: { left: 20, right: 20 },

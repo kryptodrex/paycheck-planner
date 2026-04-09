@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_COLOR_VISION_MODE,
   DEFAULT_CUSTOM_APPEARANCE,
+  DEFAULT_FONT_PREFERENCE,
   DEFAULT_FONT_SCALE,
   MAX_FONT_SCALE,
   MIN_FONT_SCALE,
@@ -9,6 +10,7 @@ import {
   normalizeAppearancePreset,
   normalizeColorVisionMode,
   normalizeCustomAppearance,
+  normalizeFontPreference,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeThemeMode,
@@ -93,5 +95,24 @@ describe('appearanceSettings', () => {
     expect(normalizeStateCueMode('minimal')).toBe('minimal');
     expect(normalizeStateCueMode('unknown')).toBe(DEFAULT_STATE_CUE_MODE);
     expect(normalizeStateCueMode(undefined)).toBe(DEFAULT_STATE_CUE_MODE);
+  });
+
+  it('has correct DEFAULT_FONT_PREFERENCE value', () => {
+    expect(DEFAULT_FONT_PREFERENCE).toBe('system');
+  });
+
+  it('normalizes font preference with valid keys round-tripping correctly', () => {
+    expect(normalizeFontPreference('system')).toBe('system');
+    expect(normalizeFontPreference('inter')).toBe('inter');
+    expect(normalizeFontPreference('verdana')).toBe('verdana');
+    expect(normalizeFontPreference('atkinson')).toBe('atkinson');
+    expect(normalizeFontPreference('open-dyslexic')).toBe('open-dyslexic');
+  });
+
+  it('normalizes font preference with unknown or missing values to system default', () => {
+    expect(normalizeFontPreference('comic-sans')).toBe(DEFAULT_FONT_PREFERENCE);
+    expect(normalizeFontPreference(123)).toBe(DEFAULT_FONT_PREFERENCE);
+    expect(normalizeFontPreference(undefined)).toBe(DEFAULT_FONT_PREFERENCE);
+    expect(normalizeFontPreference(null)).toBe(DEFAULT_FONT_PREFERENCE);
   });
 });

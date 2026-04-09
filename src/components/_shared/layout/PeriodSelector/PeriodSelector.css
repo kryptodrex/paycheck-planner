@@ -1,0 +1,19 @@
+/* PeriodSelector — horizontal navigation control for calendar-accurate period selection */
+.period-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.period-selector-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 110px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.period-selector-badge {
+  font-size: 0.75rem;
+}

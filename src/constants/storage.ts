@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   fileToPlanMapping: 'paycheck-planner-file-to-plan-mapping',
   theme: 'paycheck-planner-theme',
   accounts: 'paycheck-planner-accounts',
+  currencyRates: 'paycheck-planner-currency-rates',
 } as const;
 
 export const APP_STORAGE_PREFIX = 'paycheck-planner-';
@@ -14,6 +15,7 @@ export const APP_STORAGE_KEYS = [
   STORAGE_KEYS.fileToPlanMapping,
   STORAGE_KEYS.theme,
   STORAGE_KEYS.accounts,
+  STORAGE_KEYS.currencyRates,
 ] as const;
 
 export const SETTINGS_PLAN_SPECIFIC_FIELDS = ['encryptionEnabled', 'encryptionKey'] as const;

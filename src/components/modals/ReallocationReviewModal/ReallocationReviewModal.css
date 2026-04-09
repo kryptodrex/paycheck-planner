@@ -1,5 +1,5 @@
 .reallocation-modal {
-  max-width: 760px;
+  max-width: 800px;
 }
 
 .reallocation-modal-body {
@@ -8,6 +8,20 @@
   gap: 1rem;
 }
 
+.reallocation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  --page-header-sticky-offset: 1.5rem;
+  --page-header-inline-bleed: 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-primary);
+  padding-bottom: 1rem;
+}
+
+/* ── Summary cards ── */
 .reallocation-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -24,39 +38,128 @@
   background: var(--bg-secondary);
 }
 
+.reallocation-summary-card--projected {
+  border-color: var(--border-accent-soft);
+  background: var(--surface-accent-subtle);
+}
+
 .reallocation-summary-label {
   font-size: 0.82rem;
   color: var(--text-tertiary);
 }
 
+/* ── Progress bar ── */
+
+.reallocation-progress-label-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+/* ── Controls row (auto-balance + reset) ── */
+.reallocation-controls-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.reallocation-controls-row > .toggle-wrapper {
+  flex: 1;
+}
+
+/* ── Sections ── */
 .reallocation-proposal-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.reallocation-checkbox-group .shared-checkbox-option {
-  padding: 0.9rem 1rem;
+.reallocation-section {
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: var(--bg-secondary);
+  overflow: hidden;
 }
 
-.reallocation-checkbox-group .shared-checkbox-description {
-  margin-top: 0.35rem;
-}
-
-.reallocation-option-label {
+.reallocation-section-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  align-items: flex-start;
+  padding: 0.6rem 0.9rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.reallocation-option-heading {
+.reallocation-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reallocation-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.reallocation-section-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.reallocation-section-btn {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.reallocation-section-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* ── Section item rows ── */
+.reallocation-section-items {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+}
+
+.reallocation-row {
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--bg-primary);
+}
+
+.reallocation-row + .reallocation-row {
+  border-top: 1px solid var(--border-color);
+}
+
+/* Row header: name + badges on left, freed amount on right */
+.reallocation-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.reallocation-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
   min-width: 0;
+}
+
+.reallocation-proposal-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
 }
 
 .reallocation-proposal-badges {
@@ -65,24 +168,53 @@
   flex-wrap: wrap;
 }
 
-.reallocation-proposal-title {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.reallocation-proposal-freed {
-  font-family: inherit;
+.reallocation-row-freed {
   font-weight: 700;
   white-space: nowrap;
+  font-size: 0.9375rem;
+  flex-shrink: 0;
+}
+
+.reallocation-row-freed.is-active {
   color: var(--success-color);
 }
 
+.reallocation-row-freed.is-muted {
+  color: var(--text-tertiary);
+}
+
+/* ── Slider area ── */
+.reallocation-slider-area {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.reallocation-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+.reallocation-slider-bound {
+  font-variant-numeric: tabular-nums;
+}
+
+.reallocation-slider-new-value {
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 @media (max-width: 640px) {
-  .reallocation-proposal-freed {
-    grid-column: 2;
+  .reallocation-row-freed {
+    font-size: 0.875rem;
   }
 
-  .reallocation-option-label {
+  .reallocation-row-header {
     flex-direction: column;
+    gap: 0.4rem;
   }
 }

@@ -34,6 +34,8 @@ interface SectionItemCardProps {
   className?: string;
   /** When true, suppresses the action bar (Edit, Delete, Pause, History buttons). Use for read-only snapshot rendering. */
   hideActions?: boolean;
+  /** Optional notes string shown in a styled box below the body and above the action buttons. */
+  notes?: string;
 }
 
 const SectionItemCard: React.FC<SectionItemCardProps> = ({
@@ -53,6 +55,7 @@ const SectionItemCard: React.FC<SectionItemCardProps> = ({
   elementId,
   className,
   hideActions = false,
+  notes,
 }) => {
   const pauseButtonLabel = pauseLabel ?? (isPaused ? 'Resume' : 'Pause');
   const historyButtonLabel = historyLabel ?? 'View History';
@@ -86,6 +89,8 @@ const SectionItemCard: React.FC<SectionItemCardProps> = ({
       </div>
 
       {children && <div className="item-card-body">{children}</div>}
+
+      {notes && <div className="item-card-notes">{notes}</div>}
 
       {!hideActions && (
         <div className="item-card-actions">

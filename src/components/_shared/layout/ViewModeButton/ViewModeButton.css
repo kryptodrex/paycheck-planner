@@ -5,6 +5,10 @@
   flex-shrink: 0;
 }
 
+.view-mode-button--open {
+  z-index: 160;
+}
+
 .view-mode-button__trigger {
   width: 100%;
   min-height: 2.75rem;
@@ -22,10 +26,35 @@
   position: relative;
 }
 
+.view-mode-button--small .view-mode-button__trigger {
+  min-height: 2.15rem;
+  padding: 0.34rem 1.8rem 0.34rem 0.65rem;
+  border-radius: 0.5rem;
+}
+
+.view-mode-button--small .view-mode-button__trigger-copy {
+  gap: 0.35rem;
+}
+
+.view-mode-button--small .view-mode-button__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.view-mode-button--small .view-mode-button__value {
+  font-size: 0.8rem;
+}
+
+.view-mode-button--small .view-mode-button__caret {
+  right: 0.7rem;
+  width: 0.52rem;
+  height: 0.52rem;
+}
+
 .view-mode-button__trigger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--bg-tertiary) 78%, var(--accent-primary) 22%);
+  background: color-mix(in srgb, var(--bg-tertiary) 90%, var(--accent-primary) 10%);
   border-color: var(--border-color-hover, var(--accent-primary));
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), 0 0 0 1px color-mix(in srgb, var(--accent-primary) 18%, transparent);
 }
 
 .view-mode-button__trigger:focus-visible {

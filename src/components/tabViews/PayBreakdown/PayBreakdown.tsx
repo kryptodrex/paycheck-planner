@@ -2,10 +2,19 @@ import React, { useMemo, useState, useRef } from 'react';
 import { Wallet, Info, Plus, X, Banknote } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
-import { calculateAnnualizedPayBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
+import { calculateAnnualizedPayBreakdown, calculateCalendarPeriodBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
-import { getPaychecksPerYear, getDisplayModeLabel } from '../../../utils/payPeriod';
+import { calculateRecommendedBuffer } from '../../../utils/accountAllocation';
+import { getPaychecksPerMonthInYear } from '../../../utils/payCalendar';
+import { APP_CUSTOM_EVENTS } from '../../../constants/events';
+import {
+  calculateGrossPayPerPaycheck,
+  getDisplayModeLabel,
+  getDisplayModeOccurrencesPerYear,
+  getPaychecksPerYear,
+} from '../../../utils/payPeriod';
+import { calculateOtherIncomeAnnualAmount } from '../../../utils/otherIncome';
 import { fromAllocationDisplayAmount, normalizeStoredAllocationAmount, toAllocationDisplayAmount } from '../../../utils/allocationEditor';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
 import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
@@ -14,41 +23,17 @@ import type { Bill, Loan, SavingsContribution } from '../../../types/obligations
 import type { Benefit, RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import type { AuditHistoryTarget } from '../../../types/audit';
+import type { AllocationCategory, AllocationAccount, AccountFunding } from '../../../types/payBreakdown';
+import type { AccountAllocationCategory } from '../../../types/accounts';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
-import { applyReallocationPlan, createReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
+import { applyReallocationPlan, createReallocationPlan, type ReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
 import { Alert, Button, ConfirmDialog, InputWithPrefix, PageHeader, AmountBreakdown, Toast } from '../../_shared';
 import ReallocationReviewModal from '../../modals/ReallocationReviewModal/ReallocationReviewModal';
 import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../modals/ReallocationSummaryModal/ReallocationSummaryModal';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './PayBreakdown.css';
-
-type AllocationCategory = {
-  id: string;
-  name: string;
-  amount: number;
-  isBill?: boolean;        // If true, this is an auto-calculated sum of bills for this account
-  billCount?: number;      // Number of bills in this category (if isBill is true)
-  isBenefit?: boolean;     // If true, this is an auto-calculated sum of account-sourced benefits
-  benefitCount?: number;   // Number of benefits in this category (if isBenefit is true)
-  isRetirement?: boolean;  // If true, this is an auto-calculated sum of account-sourced retirement
-  retirementCount?: number; // Number of retirement contributions in this category (if isRetirement is true)
-  isLoan?: boolean;        // If true, this is an auto-calculated sum of loans for this account
-  loanCount?: number;      // Number of loans in this category (if isLoan is true)
-  isSavings?: boolean;     // If true, this is an auto-calculated sum of savings/investments for this account
-  savingsCount?: number;   // Number of savings/investment items in this category (if isSavings is true)
-};
-
-type AllocationAccount = Account & {
-  allocationCategories: AllocationCategory[];
-};
-
-type AccountFunding = {
-  account: AllocationAccount;
-  totalAmount: number;
-  categories: AllocationCategory[];
-};
 
 type ValidationMessage = {
   type: 'error' | 'warning';
@@ -69,22 +54,18 @@ type ReallocationSummaryMeta = {
 };
 
 
-const isAutoCategory = (category: AllocationCategory): boolean => {
-  return Boolean(category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings);
-};
+const isAutoCategory = (category: AllocationCategory): boolean => category.kind !== 'custom';
 
 const getCategoryItemCount = (category: AllocationCategory): number | null => {
-  if (category.isBill && category.billCount && category.billCount > 0) return category.billCount;
-  if (category.isBenefit && category.benefitCount && category.benefitCount > 0) return category.benefitCount;
-  if (category.isRetirement && category.retirementCount && category.retirementCount > 0) return category.retirementCount;
-  if (category.isLoan && category.loanCount && category.loanCount > 0) return category.loanCount;
-  if (category.isSavings && category.savingsCount && category.savingsCount > 0) return category.savingsCount;
+  if (category.kind !== 'custom' && category.itemCount > 0) return category.itemCount;
   return null;
 };
 
 interface PayBreakdownProps {
   displayMode: ViewMode;
   viewModeControl?: React.ReactNode;
+  calendarAccurate?: boolean;
+  paychecksInPeriod?: number;
   onOpenPayDetails?: () => void;
   onNavigateToBills?: (accountId: string) => void;
   onNavigateToSavings?: (accountId: string) => void;
@@ -96,6 +77,8 @@ interface PayBreakdownProps {
 const PayBreakdown: React.FC<PayBreakdownProps> = ({
   displayMode,
   viewModeControl,
+  calendarAccurate,
+  paychecksInPeriod,
   onOpenPayDetails,
   onNavigateToBills,
   onNavigateToSavings,
@@ -110,14 +93,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const [validationMessages, setValidationMessages] = useState<Map<string, ValidationMessage>>(new Map());
   const [inputValues, setInputValues] = useState<Map<string, number>>(new Map()); // Local input values to prevent conversion flicker
   const [showReallocationModal, setShowReallocationModal] = useState(false);
-  const [selectedReallocationIds, setSelectedReallocationIds] = useState<string[]>([]);
   const [showReallocationSummaryModal, setShowReallocationSummaryModal] = useState(false);
   const [reallocationSummaryItems, setReallocationSummaryItems] = useState<ReallocationSummaryItem[]>([]);
   const [selectedReallocationSummaryIds, setSelectedReallocationSummaryIds] = useState<string[]>([]);
   const [reallocationUndoSnapshot, setReallocationUndoSnapshot] = useState<ReallocationUndoSnapshot | null>(null);
   const [reallocationSummaryMeta, setReallocationSummaryMeta] = useState<ReallocationSummaryMeta | null>(null);
   const [lastUndoCount, setLastUndoCount] = useState(0);
-  
+
   const [reallocationToastMessage, setReallocationToastMessage] = useState<string | null>(null);
   const [reallocationToastType, setReallocationToastType] = useState<'success' | 'warning' | 'error'>('success');
   const [reallocationToastKey, setReallocationToastKey] = useState(0);
@@ -130,6 +112,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
   const currency = budgetData.settings?.currency || 'USD';
   const paychecksPerYear = getPaychecksPerYear(budgetData.paySettings.payFrequency);
+  const firstPaycheckDate = budgetData.paySettings.firstPaycheckDate;
+  const isVariablePayFrequency =
+    budgetData.paySettings.payFrequency === 'weekly' || budgetData.paySettings.payFrequency === 'bi-weekly';
+  const paychecksPerMonth =
+    firstPaycheckDate && isVariablePayFrequency
+      ? getPaychecksPerMonthInYear(firstPaycheckDate, budgetData.paySettings.payFrequency, new Date().getFullYear())
+      : null;
   // Get per-paycheck breakdown for allocation purposes
   const paycheckBreakdown = calculatePaycheckBreakdown();
   const annualBreakdown = calculateAnnualizedPayBreakdown(paycheckBreakdown, paychecksPerYear);
@@ -170,21 +159,48 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     customAllocations,
   });
 
-  const selectedReallocationProposals = reallocationPlan.proposals.filter((proposal) =>
-    selectedReallocationIds.includes(proposal.sourceId),
-  );
-  const selectedFreedPerPaycheck = roundToCent(
-    selectedReallocationProposals.reduce(
-      (sum, proposal) => sum + proposal.freedPerPaycheckAmount,
-      0,
-    ),
-  );
-  const selectedProjectedRemaining = roundToCent(
-    leftoverPerPaycheck + selectedFreedPerPaycheck,
-  );
-  const selectedFullyResolved = selectedProjectedRemaining >= targetLeftoverPerPaycheck;
 
-  const displayBreakdown = calculateDisplayPayBreakdown(annualBreakdown, displayMode, paychecksPerYear);
+
+  const displayBreakdown =
+    calendarAccurate && paychecksInPeriod !== undefined && paychecksInPeriod > 0
+      ? calculateCalendarPeriodBreakdown(paycheckBreakdown, paychecksInPeriod)
+      : calculateDisplayPayBreakdown(annualBreakdown, displayMode, paychecksPerYear);
+  const baseGrossPayPerPaycheck = calculateGrossPayPerPaycheck(budgetData.paySettings);
+  const displayModeOccurrencesPerYear = getDisplayModeOccurrencesPerYear(displayMode, paychecksPerYear);
+  const periodMultiplier =
+    calendarAccurate && paychecksInPeriod !== undefined && paychecksInPeriod > 0
+      ? paychecksInPeriod
+      : null;
+
+  const otherIncomeBreakdownForTreatment = (treatment: 'gross' | 'taxable' | 'net') => {
+    return (budgetData.otherIncome || [])
+      .filter((entry) => entry.enabled !== false && entry.payTreatment === treatment)
+      .map((entry) => {
+        const annualAmount = calculateOtherIncomeAnnualAmount(entry, baseGrossPayPerPaycheck, paychecksPerYear);
+        const shouldScaleByPaycheckCount = entry.frequency === 'weekly' || entry.frequency === 'bi-weekly';
+        const amount = periodMultiplier !== null && shouldScaleByPaycheckCount
+          ? roundToCent((annualAmount / paychecksPerYear) * periodMultiplier)
+          : roundToCent(annualAmount / displayModeOccurrencesPerYear);
+        return {
+          id: `other-income-${treatment}-${entry.id}`,
+          label: entry.name,
+          amount,
+        };
+      })
+      .filter((item) => item.amount > 0);
+  };
+
+  const grossOtherIncomeItems = otherIncomeBreakdownForTreatment('gross');
+  const taxableOtherIncomeItems = otherIncomeBreakdownForTreatment('taxable');
+  const netOtherIncomeItems = otherIncomeBreakdownForTreatment('net');
+  const baseAnnualGrossAmount = roundToCent(baseGrossPayPerPaycheck * paychecksPerYear);
+  const baseGrossAmount = periodMultiplier !== null
+    ? roundToCent(baseGrossPayPerPaycheck * periodMultiplier)
+    : roundToCent(baseAnnualGrossAmount / displayModeOccurrencesPerYear);
+  const grossAdditionsAmount = roundToCent(grossOtherIncomeItems.reduce((sum, item) => sum + item.amount, 0));
+  const grossTotalAfterAdditions = roundToCent(baseGrossAmount + grossAdditionsAmount);
+  const baseTaxableAmount = roundToCent(Math.max(0, displayBreakdown.taxableIncome - (displayBreakdown.otherIncomeTaxable || 0)));
+  const baseNetAmount = roundToCent(Math.max(0, displayBreakdown.netPay - (displayBreakdown.otherIncomeNet || 0)));
 
   // Pre-tax and post-tax deduction line items for display in the Gross-to-Net flow
   const preTaxLineItems = buildPreTaxLineItems(
@@ -198,13 +214,17 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     budgetData.retirement || [],
     grossPayPerPaycheck,
   );
+  const toDeductionLineDisplayAmount = (perPaycheckAmount: number): number => (
+    periodMultiplier !== null
+      ? roundToCent(perPaycheckAmount * periodMultiplier)
+      : toDisplayAmount(perPaycheckAmount, paychecksPerYear, displayMode)
+  );
 
   // Calculate percentages for flow details
   const grossPay = displayBreakdown.grossPay;
   const netPct = grossPay > 0 ? (displayBreakdown.netPay / grossPay) * 100 : 0;
 
   const openReallocationModal = () => {
-    setSelectedReallocationIds(reallocationPlan.proposals.map((proposal) => proposal.sourceId));
     setShowReallocationModal(true);
   };
 
@@ -269,7 +289,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   const cloneSavingsForSnapshot = (items: SavingsContribution[]): SavingsContribution[] => items.map((item) => ({ ...item }));
   const cloneRetirementForSnapshot = (items: RetirementElection[]): RetirementElection[] => items.map((item) => ({ ...item }));
 
-  const handleApplyReallocation = () => {
+  const handleApplyReallocation = (overriddenPlan: ReallocationPlan) => {
     const beforeSnapshot: ReallocationUndoSnapshot = {
       accounts: cloneAccountsForSnapshot(budgetData.accounts),
       bills: cloneBillsForSnapshot(budgetData.bills || []),
@@ -278,13 +298,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
       retirement: cloneRetirementForSnapshot(budgetData.retirement || []),
     };
 
-    const filteredPlan = {
-      ...reallocationPlan,
-      proposals: selectedReallocationProposals,
-      totalFreedPerPaycheck: selectedFreedPerPaycheck,
-      projectedRemainingPerPaycheck: selectedProjectedRemaining,
-      fullyResolved: selectedFullyResolved,
-    };
+    const filteredPlan = overriddenPlan;
 
     const applied = applyReallocationPlan(
       {
@@ -336,7 +350,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     });
     setShowReallocationSummaryModal(true);
 
-    
+
     setShowReallocationModal(false);
   };
 
@@ -575,9 +589,16 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
     const updatedAccounts = budgetData.accounts.map((account) => {
       if (account.id !== accountId) return account;
+      const storedCategories: AccountAllocationCategory[] = cleanedCategories.map((cat) => {
+        if (cat.kind === 'custom') return { id: cat.id, name: cat.name, amount: cat.amount };
+        if (cat.kind === 'bill') return { id: cat.id, name: cat.name, amount: cat.amount, isBill: true, billCount: cat.itemCount };
+        if (cat.kind === 'retirement') return { id: cat.id, name: cat.name, amount: cat.amount, isRetirement: true, retirementCount: cat.itemCount };
+        if (cat.kind === 'loan') return { id: cat.id, name: cat.name, amount: cat.amount, isLoan: true, loanCount: cat.itemCount };
+        return { id: cat.id, name: cat.name, amount: cat.amount, isSavings: true, savingsCount: cat.itemCount };
+      });
       return {
         ...account,
-        allocationCategories: cleanedCategories,
+        allocationCategories: storedCategories,
       };
     });
 
@@ -598,6 +619,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
             id: crypto.randomUUID(),
             name: '',
             amount: 0,
+            kind: 'custom' as const,
           },
         ],
       });
@@ -605,7 +627,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     });
   };
 
-  const updateCategory = (accountId: string, categoryId: string, updates: Partial<AllocationCategory>) => {
+  const updateCategory = (accountId: string, categoryId: string, updates: { name?: string; amount?: number }) => {
     setDraftAccounts((prev) => {
       const account = prev.get(accountId);
       if (!account) return prev;
@@ -642,23 +664,21 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   };
 
   const navigateToCategorySource = (category: AllocationCategory, accountId: string) => {
-    if (category.isBill || category.isBenefit) {
-      onNavigateToBills?.(accountId);
-      return;
-    }
-
-    if (category.isRetirement) {
-      onNavigateToRetirement?.(accountId);
-      return;
-    }
-
-    if (category.isLoan) {
-      onNavigateToLoans?.(accountId);
-      return;
-    }
-
-    if (category.isSavings) {
-      onNavigateToSavings?.(accountId);
+    switch (category.kind) {
+      case 'bill':
+        onNavigateToBills?.(accountId);
+        break;
+      case 'retirement':
+        onNavigateToRetirement?.(accountId);
+        break;
+      case 'loan':
+        onNavigateToLoans?.(accountId);
+        break;
+      case 'savings':
+        onNavigateToSavings?.(accountId);
+        break;
+      default:
+        break;
     }
   };
 
@@ -685,7 +705,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
       previousLeftoverRef.current = leftoverPerPaycheck;
       return;
     }
-    
+
     // If balance just went negative (transition from non-negative to negative)
     if (isCurrentlyNegative && !wasNegative && !negativeBalancePromptedRef.current && reallocationPlan.proposals.length > 0) {
       negativeBalancePromptedRef.current = true;
@@ -698,15 +718,15 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         onConfirm: openReallocationModal,
       });
     }
-    
+
     // Reset the prompt flag when balance goes back to non-negative
     if (!isCurrentlyNegative && wasNegative) {
       negativeBalancePromptedRef.current = false;
     }
-    
+
     previousLeftoverRef.current = leftoverPerPaycheck;
   };
-  
+
   // Call the check function during render
   handleNegativeBalanceCheck();
 
@@ -736,96 +756,178 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         </div>
 
         <div className="visual-flow">
-        <div className="flow-stage">
-          <div id="pay-breakdown-gross-pay" className="stage-box gross-box">
-            <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
-            <div className="stage-amount">{formatWithSymbol(displayBreakdown.grossPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="stage-detail">
-              {budgetData.paySettings.payType === 'salary' 
-                ? `${formatWithSymbol(budgetData.paySettings.annualSalary || 0, currency, { maximumFractionDigits: 0 })}/year`
-                : `${getCurrencySymbol(currency)}${budgetData.paySettings.hourlyRate}/hr × ${(((budgetData.paySettings.hoursPerPayPeriod || 0) * getPaychecksPerYear(budgetData.paySettings.payFrequency)) / 52).toFixed(2)} hrs/week`
-              }
-            </div>
-          </div>
-        </div>
-
-        {displayBreakdown.preTaxDeductions > 0 && (
           <div className="flow-stage">
-            <div id="pay-breakdown-pre-tax-deductions" className="stage-box deduction-box">
-              <h3><GlossaryTerm termId="pre-tax-deduction">Pre-Tax Deductions</GlossaryTerm></h3>
-              <AmountBreakdown
-                items={preTaxLineItems.map(item => ({
-                  id: item.id,
-                  label: item.label,
-                  amount: toDisplayAmount(item.amount, paychecksPerYear, displayMode),
-                }))}
-                negative
-                rowLineLocation="bottom"
-                formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                className="deduction-breakdown"
-              />
-              <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            </div>
-          </div>
-        )}
-
-        <div className="flow-stage">
-          <div id="pay-breakdown-taxable-income" className="stage-box taxable-box">
-            <h3><GlossaryTerm termId="taxable-income">Taxable Income</GlossaryTerm></h3>
-            <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="stage-detail">Subject to taxes</div>
-          </div>
-        </div>
-
-        <div className="flow-stage">
-          <div id="pay-breakdown-total-taxes" className="stage-box taxes-box">
-            <h3><GlossaryTerm termId="withholding">Total Taxes</GlossaryTerm></h3>
-            <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.totalTaxes, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="stage-breakdown">
-              {displayBreakdown.taxLineAmounts.map(line => (
-                <div key={line.id} className="breakdown-item">
-                  <span>{line.label} ({budgetData.taxSettings.taxLines.find(l => l.id === line.id)?.rate ?? 0}%)</span>
-                  <span>{formatWithSymbol(line.amount, currency, { maximumFractionDigits: 2 })}</span>
-                </div>
-              ))}
-              {displayBreakdown.additionalWithholding > 0 && (
-                <div className="breakdown-item">
-                  <span>Additional Withholding</span>
-                  <span>{formatWithSymbol(displayBreakdown.additionalWithholding, currency, { maximumFractionDigits: 2 })}</span>
-                </div>
+            <div id="pay-breakdown-gross-pay" className="stage-box gross-box">
+              <h3><GlossaryTerm termId="gross-pay">Gross Pay</GlossaryTerm></h3>
+              <div className="stage-detail">
+                {budgetData.paySettings.payType === 'salary'
+                  ? `${formatWithSymbol(budgetData.paySettings.annualSalary || 0, currency, { maximumFractionDigits: 0 })}/year`
+                  : `${getCurrencySymbol(currency)}${budgetData.paySettings.hourlyRate}/hr × ${(((budgetData.paySettings.hoursPerPayPeriod || 0) * getPaychecksPerYear(budgetData.paySettings.payFrequency)) / 52).toFixed(2)} hrs/week`
+                }
+              </div>
+              {grossOtherIncomeItems.length > 0 && (
+                <>
+                  <AmountBreakdown
+                    items={[
+                      {
+                        id: 'base-gross-pay',
+                        label: 'Base gross pay',
+                        amount: baseGrossAmount,
+                      },
+                    ]}
+                    rowLineLocation="bottom"
+                    formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  />
+                  <AmountBreakdown
+                    items={grossOtherIncomeItems}
+                    rowLineLocation="bottom"
+                    formatAmount={(amount) => `+${formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    className="other-income-breakdown"
+                  />
+                </>
               )}
+              <div className="stage-amount">
+                {formatWithSymbol(
+                  grossOtherIncomeItems.length > 0 ? grossTotalAfterAdditions : displayBreakdown.grossPay,
+                  currency,
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                )}
+              </div>
+              {grossOtherIncomeItems.length > 0 && <div className="stage-detail">Total after gross additions</div>}
             </div>
           </div>
-          
-        </div>
 
-        {displayBreakdown.postTaxDeductions > 0 && (
+          {displayBreakdown.preTaxDeductions > 0 && (
+            <div className="flow-stage">
+              <div id="pay-breakdown-pre-tax-deductions" className="stage-box deduction-box">
+                <h3><GlossaryTerm termId="pre-tax-deduction">Pre-Tax Deductions</GlossaryTerm></h3>
+                <AmountBreakdown
+                  items={preTaxLineItems.map(item => ({
+                    id: item.id,
+                    label: item.label,
+                    amount: toDeductionLineDisplayAmount(item.amount),
+                  }))}
+                  negative
+                  rowLineLocation="bottom"
+                  formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  className="deduction-breakdown"
+                />
+                <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.preTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              </div>
+            </div>
+          )}
+
           <div className="flow-stage">
-            <div id="pay-breakdown-post-tax-deductions" className="stage-box postax-box">
-              <h3><GlossaryTerm termId="post-tax-deduction">Post-Tax Deductions</GlossaryTerm></h3>
-              <AmountBreakdown
-                items={postTaxLineItems.map(item => ({
-                  id: item.id,
-                  label: item.label,
-                  amount: toDisplayAmount(item.amount, paychecksPerYear, displayMode),
-                }))}
-                negative
-                formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                rowLineLocation="bottom"
-                className="deduction-breakdown"
-              />
-              <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div id="pay-breakdown-taxable-income" className="stage-box taxable-box">
+              <h3><GlossaryTerm termId="taxable-income">Taxable Income</GlossaryTerm></h3>
+              {taxableOtherIncomeItems.length > 0 && (
+                <>
+                  <AmountBreakdown
+                    items={[
+                      {
+                        id: 'base-taxable-income',
+                        label: 'Base taxable income',
+                        amount: baseTaxableAmount,
+                      },
+                    ]}
+                    rowLineLocation="bottom"
+                    formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  />
+                  <AmountBreakdown
+                    items={taxableOtherIncomeItems}
+                    rowLineLocation="bottom"
+                    formatAmount={(amount) => `+${formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    className="other-income-breakdown"
+                  />
+                </>
+              )}
+              <div className="stage-amount">{formatWithSymbol(displayBreakdown.taxableIncome, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="stage-detail">{taxableOtherIncomeItems.length > 0 ? 'Total after taxable additions' : 'Subject to taxes'}</div>
             </div>
           </div>
-        )}
 
-        <div className="flow-stage">
-          <div id="pay-breakdown-net-pay" className="stage-box net-box">
-            <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
-            <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="stage-detail">{netPct.toFixed(1)}% of gross</div>
+          <div className="flow-stage">
+            <div id="pay-breakdown-total-taxes" className="stage-box taxes-box">
+              <h3><GlossaryTerm termId="withholding">Total Estimated Taxes</GlossaryTerm></h3>
+              <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.totalTaxes, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="stage-breakdown">
+                {displayBreakdown.taxLineAmounts.map(line => (
+                  <div key={line.id} className="breakdown-item">
+                    <span>{line.label} ({budgetData.taxSettings.taxLines.find(l => l.id === line.id)?.rate ?? 0}%)</span>
+                    <span>{formatWithSymbol(line.amount, currency, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                ))}
+                {(displayBreakdown.otherIncomeAutoWithholdingLineItems || []).map((line) => (
+                  <div key={line.id} className="breakdown-item">
+                    <span>{line.label}</span>
+                    <span>{formatWithSymbol(line.amount, currency, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                ))}
+                {(displayBreakdown.otherIncomeAutoWithholding || 0) > 0 && (
+                  <div className="breakdown-item">
+                    <span>Other Income Auto Withholding</span>
+                    <span>{formatWithSymbol(displayBreakdown.otherIncomeAutoWithholding || 0, currency, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+                {displayBreakdown.additionalWithholding > 0 && (
+                  <div className="breakdown-item">
+                    <span>Manual Additional Withholding</span>
+                    <span>{formatWithSymbol(displayBreakdown.additionalWithholding, currency, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
-        </div>
+
+          {displayBreakdown.postTaxDeductions > 0 && (
+            <div className="flow-stage">
+              <div id="pay-breakdown-post-tax-deductions" className="stage-box postax-box">
+                <h3><GlossaryTerm termId="post-tax-deduction">Post-Tax Deductions</GlossaryTerm></h3>
+                <AmountBreakdown
+                  items={postTaxLineItems.map(item => ({
+                    id: item.id,
+                    label: item.label,
+                    amount: toDeductionLineDisplayAmount(item.amount),
+                  }))}
+                  negative
+                  formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  rowLineLocation="bottom"
+                  className="deduction-breakdown"
+                />
+                <div className="stage-amount negative">-{formatWithSymbol(displayBreakdown.postTaxDeductions, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flow-stage">
+            <div id="pay-breakdown-net-pay" className="stage-box net-box">
+              <h3><GlossaryTerm termId="net-pay">Net Pay</GlossaryTerm> (Take Home)</h3>
+              {netOtherIncomeItems.length > 0 && (
+                <>
+                  <AmountBreakdown
+                    items={[
+                      {
+                        id: 'base-net-pay',
+                        label: 'Base net pay',
+                        amount: baseNetAmount,
+                      },
+                    ]}
+                    rowLineLocation="bottom"
+                    formatAmount={(amount) => formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  />
+                  <AmountBreakdown
+                    items={netOtherIncomeItems}
+                    rowLineLocation="bottom"
+                    formatAmount={(amount) => `+${formatWithSymbol(amount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    className="other-income-breakdown"
+                  />
+                </>
+              )}
+              <div className="stage-amount">{formatWithSymbol(displayBreakdown.netPay, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div className="stage-detail">{netOtherIncomeItems.length > 0 ? 'Total after net additions' : `${netPct.toFixed(1)}% of gross`}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -835,7 +937,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
           <div className="waterfall-header">
             <h3>Take Home Pay <GlossaryTerm termId="allocation">Allocations</GlossaryTerm></h3>
           </div>
-          
+
           <div className="waterfall-table">
             {/* <div className="waterfall-row waterfall-header-row">
               <span className="waterfall-label">Net Pay</span>
@@ -846,9 +948,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
               const accountAmount = toDisplayAmount(fundingItem.totalAmount, paychecksPerYear, displayMode);
               const isEditing = editingAccountIds.has(fundingItem.account.id);
               const displayAccount = isEditing ? draftAccounts.get(fundingItem.account.id) : fundingItem.account;
-              
+              const accountMonthlyTotal = roundToCent(fundingItem.totalAmount * paychecksPerYear / 12);
+              const accountBuffer = accountMonthlyTotal > 0 && paychecksPerMonth !== null
+                ? calculateRecommendedBuffer(accountMonthlyTotal, paychecksPerYear, paychecksPerMonth)
+                : 0;
+
               if (!displayAccount) return null;
-              
+
               return (
                 <React.Fragment key={fundingItem.account.id}>
                   <div className="waterfall-row waterfall-account-row">
@@ -863,18 +969,6 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       Amount to {fundingItem.account.name}
                     </span>
                     <div className="waterfall-account-row-right">
-                      {!isEditing ? (
-                        <>
-                          
-                            {onViewHistory && (
-                              <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => onViewHistory({ entityType: 'allocation-item', entityId: fundingItem.account.id, title: `${fundingItem.account.name} Allocations` })}>
-                                View History
-                              </Button>
-                            )}
-                            <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
-                        </>
-                      ) : null
-                      }
                       <span className="waterfall-amount">{formatWithSymbol(accountAmount, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </div>
@@ -897,56 +991,61 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                         const categoryItemCount = getCategoryItemCount(category);
 
                         return (
-                        <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${isAutoCategory(category) ? 'bill-category-row' : ''}`}>
-                          {isAutoCategory(category) ? (
-                            <>
-                              <input
-                                type="text"
-                                value={category.name}
-                                onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
-                                placeholder={category.isBill ? 'Bills category name' : (category.isBenefit ? 'Deductions category name' : (category.isRetirement ? 'Retirement category name' : (category.isLoan ? 'Loan Payments category name' : 'Savings category name')))}
-                                className="category-name-input"
-                              />
-                              <div className="bill-amount-display">
-                                {formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                {categoryItemCount && (
-                                  <span className="bill-count-badge">{categoryItemCount}</span>
-                                )}
-                              </div>
-                              <div className="category-spacer"></div>
-                            </>
-                          ) : (
-                            <>
-                              <input
-                                type="text"
-                                value={category.name}
-                                onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
-                                placeholder="Item name"
-                                className="category-name-input"
-                              />
-                              <InputWithPrefix
-                                prefix={getCurrencySymbol(currency)}
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={String(inputValues.has(category.id) ? inputValues.get(category.id) : toAllocationDisplayAmount(category.amount, paychecksPerYear, displayMode))}
-                                onChange={(e) => setInputValues(prev => new Map(prev).set(category.id, parseFloat(e.target.value) || 0))}
-                                onBlur={(e) => {
-                                  const displayValue = parseFloat(e.target.value) || 0;
-                                  updateCategory(displayAccount.id, category.id, { amount: fromAllocationDisplayAmount(displayValue, paychecksPerYear, displayMode) });
-                                  setInputValues(prev => {
-                                    const next = new Map(prev);
-                                    next.delete(category.id);
-                                    return next;
-                                  });
-                                }}
-                              />
-                              <Button className="category-remove-btn" variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">
-                                <X className="ui-icon ui-icon-sm" aria-hidden="true" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                          <div key={category.id} className={`waterfall-row waterfall-category-row category-edit-row ${isAutoCategory(category) ? 'bill-category-row' : ''}`}>
+                            {isAutoCategory(category) ? (
+                              <>
+                                <input
+                                  type="text"
+                                  value={category.name}
+                                  onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
+                                  placeholder={
+                                    category.kind === 'bill' ? 'Bills & Deductions category name' :
+                                    category.kind === 'retirement' ? 'Retirement category name' :
+                                    category.kind === 'loan' ? 'Loan Payments category name' :
+                                    'Savings category name'
+                                  }
+                                  className="category-name-input"
+                                />
+                                <div className="bill-amount-display">
+                                  {formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  {categoryItemCount && (
+                                    <span className="bill-count-badge">{categoryItemCount}</span>
+                                  )}
+                                </div>
+                                <div className="category-spacer"></div>
+                              </>
+                            ) : (
+                              <>
+                                <input
+                                  type="text"
+                                  value={category.name}
+                                  onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
+                                  placeholder="Item name"
+                                  className="category-name-input"
+                                />
+                                <InputWithPrefix
+                                  prefix={getCurrencySymbol(currency)}
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={String(inputValues.has(category.id) ? inputValues.get(category.id) : toAllocationDisplayAmount(category.amount, paychecksPerYear, displayMode))}
+                                  onChange={(e) => setInputValues(prev => new Map(prev).set(category.id, parseFloat(e.target.value) || 0))}
+                                  onBlur={(e) => {
+                                    const displayValue = parseFloat(e.target.value) || 0;
+                                    updateCategory(displayAccount.id, category.id, { amount: fromAllocationDisplayAmount(displayValue, paychecksPerYear, displayMode) });
+                                    setInputValues(prev => {
+                                      const next = new Map(prev);
+                                      next.delete(category.id);
+                                      return next;
+                                    });
+                                  }}
+                                />
+                                <Button className="category-remove-btn" variant="icon" onClick={() => removeCategory(displayAccount.id, category.id)} title="Remove item">
+                                  <X className="ui-icon ui-icon-sm" aria-hidden="true" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         );
                       })}
 
@@ -978,29 +1077,70 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                       const categoryItemCount = getCategoryItemCount(category);
 
                       return (
-                      <div key={category.id} className={`waterfall-row waterfall-category-row ${isAutoCategory(category) ? 'bill-category-view' : ''}`}>
-                        {isAutoCategory(category) ? (
-                          <button
-                            className="waterfall-label category-label category-button"
-                            onClick={() => navigateToCategorySource(category, fundingItem.account.id)}
-                          >
-                            {categoryItemCount && (
-                              <span className="bill-count-badge">{categoryItemCount}</span>
-                            )}
-                            <span className="category-name-text">{category.name}</span>
-                          </button>
-                        ) : (
-                          <div className="waterfall-label category-label category-name-static">
-                            <span className="category-name-text">{category.name}</span>
-                          </div>
-                        )}
-                        <span className="waterfall-amount">
-                          {category.amount === 0 ? '-' : formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
+                        <div key={category.id} className={`waterfall-row waterfall-category-row ${isAutoCategory(category) ? 'bill-category-view' : ''}`}>
+                          {isAutoCategory(category) ? (
+                            <button
+                              className="waterfall-label category-label category-button"
+                              onClick={() => navigateToCategorySource(category, fundingItem.account.id)}
+                            >
+                              {categoryItemCount && (
+                                <span className="bill-count-badge">{categoryItemCount}</span>
+                              )}
+                              <span className="category-name-text">{category.name}</span>
+                            </button>
+                          ) : (
+                            <div className="waterfall-label category-label category-name-static">
+                              <span className="category-name-text">{category.name}</span>
+                            </div>
+                          )}
+                          <span className="waterfall-amount">
+                            {category.amount === 0 ? '-' : formatWithSymbol(toDisplayAmount(category.amount, paychecksPerYear, displayMode), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
                       );
                     })
                   )}
+                  <div className="waterfall-account-row-footer">
+                    {!isEditing && fundingItem.totalAmount > 0 && (
+                      <div className="account-allocation-hint">
+                        {accountBuffer > 0 && isVariablePayFrequency && (
+                          <>
+                            <span className="allocation-hint-text">
+                              Allocate {formatWithSymbol(fundingItem.totalAmount, currency, { minimumFractionDigits: 2 })} per paycheck
+                            </span>
+
+                            <button
+                              type="button"
+                              className="allocation-hint-text allocation-hint-buffer"
+                              onClick={() =>
+                                window.dispatchEvent(
+                                  new CustomEvent(APP_CUSTOM_EVENTS.openAppFaq, {
+                                    detail: { itemId: 'account-starting-buffer' },
+                                  }),
+                                )
+                              }
+                            >
+                              Suggested buffer: {formatWithSymbol(accountBuffer, currency, { minimumFractionDigits: 2 })} ↗
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <span></span>
+                    <div className="footer-actions">
+                      {!isEditing ? (
+                        <>
+                          {onViewHistory && (
+                            <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => onViewHistory({ entityType: 'allocation-item', entityId: fundingItem.account.id, title: `${fundingItem.account.name} Allocations` })}>
+                              View History
+                            </Button>
+                          )}
+                          <Button className="allocation-secondary-btn" variant="secondary" size="xsmall" onClick={() => startAccountEdit(fundingItem.account.id)}>Edit</Button>
+                        </>
+                      ) : null
+                      }
+                    </div>
+                  </div>
                 </React.Fragment>
               );
             })}
@@ -1055,25 +1195,22 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
         </div>
       )}
 
-      <ReallocationReviewModal
-        isOpen={showReallocationModal}
-        onClose={closeReallocationModal}
-        onApply={handleApplyReallocation}
-        proposals={reallocationPlan.proposals}
-        selectedIds={selectedReallocationIds}
-        onSelectedIdsChange={setSelectedReallocationIds}
-        selectedFullyResolved={selectedFullyResolved}
-        selectedProjectedRemaining={selectedProjectedRemaining}
-        selectedFreedPerPaycheck={selectedFreedPerPaycheck}
-        leftoverPerPaycheck={leftoverPerPaycheck}
-        targetLeftoverPerPaycheck={targetLeftoverPerPaycheck}
-        currency={currency}
-        paychecksPerYear={paychecksPerYear}
-        displayMode={displayMode}
-        accounts={budgetData.accounts}
-        bills={budgetData.bills || []}
-        benefits={budgetData.benefits || []}
-      />
+      {showReallocationModal && (
+        <ReallocationReviewModal
+          isOpen={showReallocationModal}
+          plan={reallocationPlan}
+          onClose={closeReallocationModal}
+          onApply={handleApplyReallocation}
+          leftoverPerPaycheck={leftoverPerPaycheck}
+          targetLeftoverPerPaycheck={targetLeftoverPerPaycheck}
+          currency={currency}
+          paychecksPerYear={paychecksPerYear}
+          displayMode={displayMode}
+          accounts={budgetData.accounts}
+          bills={budgetData.bills || []}
+          benefits={budgetData.benefits || []}
+        />
+      )}
 
       <ReallocationSummaryModal
         isOpen={showReallocationSummaryModal}
@@ -1111,7 +1248,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 function calculateBillPerPaycheck(bill: Bill, payFrequency: string): number {
   const paychecksPerYear = getPaychecksPerYear(payFrequency);
   const billsPerYear = getBillFrequencyOccurrencesPerYear(bill.frequency, bill.customFrequencyDays);
-  
+
   // Calculate average per paycheck: (total per year) / (paychecks per year)
   const totalPerYear = bill.amount * billsPerYear;
   return roundUpToCent(totalPerYear / paychecksPerYear);
@@ -1166,14 +1303,11 @@ function normalizeAccounts(
     // Get user-defined categories
     const userCategories = (account.allocationCategories || [])
       .filter(cat => !cat.id.startsWith('__bills_') && !cat.id.startsWith('__benefits_') && !cat.id.startsWith('__retirement_') && !cat.id.startsWith('__loans_') && !cat.id.startsWith('__savings_'))
-      .map((category) => ({
+      .map((category): AllocationCategory => ({
         id: category.id,
         name: category.name,
         amount: category.amount,
-        isBill: false,
-        isBenefit: false,
-        isRetirement: false,
-        isSavings: false,
+        kind: 'custom',
       }));
 
     // Get bills for this account and calculate total
@@ -1195,7 +1329,7 @@ function normalizeAccounts(
     );
 
     const autoCategories: AllocationCategory[] = [];
-    
+
     if (accountBills.length > 0 || accountBenefits.length > 0) {
       const billTotal = accountBills.reduce((sum, bill) => {
         const billPerPaycheck = calculateBillPerPaycheck(bill, payFrequency);
@@ -1222,8 +1356,8 @@ function normalizeAccounts(
         id: `__bills_${account.id}`,
         name: existingBillCategory?.name || existingBenefitCategory?.name || defaultBillsName,
         amount: roundUpToCent(billTotal + deductionsTotal),
-        isBill: true,
-        billCount: accountBills.length + accountBenefits.length,
+        kind: 'bill',
+        itemCount: accountBills.length + accountBenefits.length,
       });
     }
 
@@ -1239,8 +1373,8 @@ function normalizeAccounts(
         id: `__retirement_${account.id}`,
         name: existingRetirementCategory?.name || 'Retirement Plans',
         amount: roundUpToCent(retirementTotal),
-        isRetirement: true,
-        retirementCount: accountRetirement.length,
+        kind: 'retirement',
+        itemCount: accountRetirement.length,
       });
     }
 
@@ -1268,8 +1402,8 @@ function normalizeAccounts(
         id: `__savings_${account.id}`,
         name: existingSavingsCategory?.name || defaultSavingsName + ' Contributions',
         amount: roundUpToCent(savingsTotal),
-        isSavings: true,
-        savingsCount: accountSavings.length,
+        kind: 'savings',
+        itemCount: accountSavings.length,
       });
     }
 
@@ -1290,8 +1424,8 @@ function normalizeAccounts(
         id: `__loans_${account.id}`,
         name: existingLoanCategory?.name || 'Loan Payments',
         amount: roundUpToCent(loanTotal),
-        isLoan: true,
-        loanCount: accountLoans.length,
+        kind: 'loan',
+        itemCount: accountLoans.length,
       });
     }
 
@@ -1306,19 +1440,8 @@ function normalizeAccounts(
 function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number): { accountFunding: AccountFunding[]; remaining: number } {
   const accountFunding: AccountFunding[] = accounts.map((account) => {
     const categories = account.allocationCategories.map((category) => ({
-      id: category.id,
-      name: category.name,
+      ...category,
       amount: Math.max(0, category.amount || 0),
-      isBill: category.isBill,
-      billCount: category.billCount,
-      isBenefit: category.isBenefit,
-      benefitCount: category.benefitCount,
-      isRetirement: category.isRetirement,
-      retirementCount: category.retirementCount,
-      isLoan: category.isLoan,
-      loanCount: category.loanCount,
-      isSavings: category.isSavings,
-      savingsCount: category.savingsCount,
     }));
 
     const totalAmount = categories.reduce((sum, cat) => sum + cat.amount, 0);

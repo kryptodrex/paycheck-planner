@@ -3,15 +3,14 @@ import { LayoutList, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAppDialogs } from '../../../hooks';
 import { ConfirmDialog, ErrorDialog } from '../../_shared';
 import type { TabConfig, TabPosition, TabDisplayMode } from '../../../types/tabs';
+import type { TabId } from '../../../utils/tabManagement';
 import TabPositionHandle from './TabPositionHandle';
 import './PlanTabs.css';
 
-type TabView = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
-
 interface PlanTabsProps {
   visibleTabs: TabConfig[];
-  activeTab: TabView;
-  onTabClick: (tab: TabView, options?: { resetBillsAnchor?: boolean }) => void;
+  activeTab: TabId;
+  onTabClick: (tab: TabId, options?: { resetBillsAnchor?: boolean }) => void;
   onManageTabs: () => void;
   onHideTab: (tabId: string) => void;
   draggedTabIndex: number | null;
@@ -125,7 +124,7 @@ const PlanTabs: React.FC<PlanTabsProps> = ({
         >
           <button
             className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => onTabClick(tab.id as TabView, tab.id === 'bills' ? { resetBillsAnchor: true } : undefined)}
+            onClick={() => onTabClick(tab.id as TabId, tab.id === 'bills' ? { resetBillsAnchor: true } : undefined)}
             title={showLabels ? undefined : tab.label}
           >
             <span className="tab-icon"><tab.icon className="ui-icon" /></span>

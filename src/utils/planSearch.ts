@@ -77,6 +77,13 @@ export interface OpenSavingsAction {
   targetId?: string;
 }
 
+/** Open Other Income tab and trigger an action such as opening add/edit modals. */
+export interface OpenOtherIncomeAction {
+  type: 'open-other-income-action';
+  mode: 'add-other-income' | 'edit-other-income' | 'delete-other-income' | 'toggle-other-income';
+  targetId?: string;
+}
+
 /** Open Tax tab and optionally open tax settings modal. */
 export interface OpenTaxesAction {
   type: 'open-taxes-action';
@@ -96,6 +103,7 @@ export type SearchResultAction =
   | OpenBillsAction
   | OpenLoansAction
   | OpenSavingsAction
+  | OpenOtherIncomeAction
   | OpenTaxesAction
   | OpenViewModeSettingsAction;
 

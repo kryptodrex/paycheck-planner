@@ -37,6 +37,11 @@ export interface SearchActionContext {
   setPendingSavingsSearchTargetId?: (id: string | undefined | ((prev: string | undefined) => string | undefined)) => void;
   setSavingsSearchRequestKey?: (key: number | ((prev: number) => number)) => void;
 
+  // Other income actions
+  setPendingOtherIncomeSearchAction?: (action: string | undefined | ((prev: string | undefined) => string | undefined)) => void;
+  setPendingOtherIncomeSearchTargetId?: (id: string | undefined | ((prev: string | undefined) => string | undefined)) => void;
+  setOtherIncomeSearchRequestKey?: (key: number | ((prev: number) => number)) => void;
+
   // Tax actions
   setTaxSearchOpenSettingsRequestKey?: (key: number | ((prev: number) => number)) => void;
 

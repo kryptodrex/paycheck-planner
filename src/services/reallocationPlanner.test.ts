@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SavingsContribution } from '../types/obligations';
 import type { RetirementElection } from '../types/payroll';
-import { applyReallocationPlan, createReallocationPlan } from './reallocationPlanner';
+import { applyReallocationPlan, buildOverriddenPlan, createReallocationPlan } from './reallocationPlanner';
 
 const baseInput = {
   paySettings: {
@@ -380,5 +380,219 @@ describe('createReallocationPlan', () => {
       action: 'pause',
       freedPerPaycheckAmount: 46.15,
     });
+  });
+
+  it('proportionally distributes reductions across multiple savings items', () => {
+    // Three savings items at $200/paycheck each, shortfall = $180.
+    // New proportional algorithm should split the shortfall across all three (~$60 each)
+    // rather than pausing the first item entirely.
+    const plan = createReallocationPlan({
+      ...baseInput,
+      targetRemainingPerPaycheck: 280,
+      currentRemainingPerPaycheck: 100,
+      grossPayPerPaycheck: 5000,
+      paychecksPerYear: 26,
+      bills: [],
+      benefits: [],
+      savingsContributions: [
+        baseSavings({ id: 'save-a', amount: 200, frequency: 'bi-weekly', name: 'Fund A', type: 'savings' }),
+        baseSavings({ id: 'save-b', amount: 200, frequency: 'bi-weekly', name: 'Fund B', type: 'savings' }),
+        baseSavings({ id: 'save-c', amount: 200, frequency: 'bi-weekly', name: 'Fund C', type: 'savings' }),
+      ],
+      retirementElections: [],
+    });
+
+    // All three items should appear (proportional vs. greedy pause-first).
+    expect(plan.proposals.map((p) => p.sourceId)).toEqual(
+      expect.arrayContaining(['save-a', 'save-b', 'save-c']),
+    );
+    expect(plan.proposals).toHaveLength(3);
+    expect(plan.fullyResolved).toBe(true);
+    expect(plan.totalFreedPerPaycheck).toBe(180);
+    // Each item should be reduced by the same share (~60).
+    for (const proposal of plan.proposals) {
+      expect(proposal.action).toBe('reduce');
+      expect(proposal.freedPerPaycheckAmount).toBeCloseTo(60, 1);
+    }
+  });
+
+  it('bills are proposed in smallest-first order', () => {
+    const plan = createReallocationPlan({
+      ...baseInput,
+      targetRemainingPerPaycheck: 250,
+      currentRemainingPerPaycheck: 100,
+      grossPayPerPaycheck: 5000,
+      paychecksPerYear: 26,
+      bills: [
+        {
+          id: 'bill-big',
+          name: 'Cable TV',
+          amount: 120,
+          frequency: 'monthly',
+          accountId: 'a1',
+          enabled: true,
+          discretionary: true,
+        },
+        {
+          id: 'bill-small',
+          name: 'Spotify',
+          amount: 10,
+          frequency: 'monthly',
+          accountId: 'a1',
+          enabled: true,
+          discretionary: true,
+        },
+      ],
+      savingsContributions: [],
+      retirementElections: [],
+      benefits: [],
+    });
+
+    // The smallest bill should appear first in proposals.
+    expect(plan.proposals[0].sourceId).toBe('bill-small');
+  });
+
+  it('excludes savings contributions with reallocationProtected=true', () => {
+    const plan = createReallocationPlan({
+      ...baseInput,
+      targetRemainingPerPaycheck: 250,
+      currentRemainingPerPaycheck: 100,
+      grossPayPerPaycheck: 5000,
+      paychecksPerYear: 26,
+      bills: [],
+      benefits: [],
+      savingsContributions: [
+        baseSavings({ id: 'save-protected', amount: 300, frequency: 'bi-weekly', name: 'College Fund', reallocationProtected: true }),
+        baseSavings({ id: 'save-open', amount: 200, frequency: 'bi-weekly', name: 'Emergency Fund' }),
+      ],
+      retirementElections: [],
+    });
+
+    const ids = plan.proposals.map((p) => p.sourceId);
+    expect(ids).not.toContain('save-protected');
+    expect(ids).toContain('save-open');
+  });
+
+  it('excludes retirement elections with reallocationProtected=true', () => {
+    const plan = createReallocationPlan({
+      ...baseInput,
+      targetRemainingPerPaycheck: 220,
+      currentRemainingPerPaycheck: 100,
+      grossPayPerPaycheck: 5000,
+      paychecksPerYear: 26,
+      bills: [],
+      benefits: [],
+      savingsContributions: [],
+      retirementElections: [
+        baseRetirement({ id: 'ret-protected', employeeContribution: 6, reallocationProtected: true }),
+        baseRetirement({ id: 'ret-open', employeeContribution: 3 }),
+      ],
+    });
+
+    const ids = plan.proposals.map((p) => p.sourceId);
+    expect(ids).not.toContain('ret-protected');
+    expect(ids).toContain('ret-open');
+  });
+});
+
+describe('buildOverriddenPlan', () => {
+  const planBase = createReallocationPlan({
+    paySettings: {
+      payType: 'salary' as const,
+      annualSalary: 130000,
+      payFrequency: 'bi-weekly' as const,
+      minLeftover: 0,
+    },
+    preTaxDeductions: [],
+    bills: [],
+    benefits: [],
+    taxSettings: {
+      taxLines: [
+        { id: 'fed', label: 'Federal', rate: 10 },
+        { id: 'state', label: 'State', rate: 5 },
+      ],
+      additionalWithholding: 0,
+    },
+    targetRemainingPerPaycheck: 350,
+    currentRemainingPerPaycheck: 100,
+    grossPayPerPaycheck: 5000,
+    paychecksPerYear: 26,
+    savingsContributions: [
+      {
+        id: 'sv-1',
+        name: 'A',
+        amount: 100,
+        frequency: 'bi-weekly',
+        accountId: 'acct-1',
+        type: 'savings',
+        enabled: true,
+      },
+      {
+        id: 'sv-2',
+        name: 'B',
+        amount: 200,
+        frequency: 'bi-weekly',
+        accountId: 'acct-1',
+        type: 'savings',
+        enabled: true,
+      },
+    ],
+    retirementElections: [],
+  });
+
+  it('accepts a full override map and returns a plan reflecting user amounts', () => {
+    const overrides = new Map<string, number>([
+      ['sv-2', 200],
+      ['sv-1', 0],
+    ]);
+
+    const result = buildOverriddenPlan(planBase, overrides);
+
+    // sv-1 override = 0 → excluded from activeProposals
+    expect(result.proposals.map((p) => p.sourceId)).not.toContain('sv-1');
+    // sv-2 fully freed
+    const sv2 = result.proposals.find((p) => p.sourceId === 'sv-2');
+    expect(sv2).toBeDefined();
+    expect(sv2!.freedPerPaycheckAmount).toBe(200);
+    expect(sv2!.proposedPerPaycheckAmount).toBe(0);
+    expect(result.totalFreedPerPaycheck).toBe(200);
+  });
+
+  it('applies a partial override and recalculates totals', () => {
+    const overrides = new Map<string, number>([['sv-2', 50]]);
+
+    const result = buildOverriddenPlan(planBase, overrides);
+
+    const sv2 = result.proposals.find((p) => p.sourceId === 'sv-2');
+    expect(sv2).toBeDefined();
+    expect(sv2!.freedPerPaycheckAmount).toBe(50);
+    expect(sv2!.proposedPerPaycheckAmount).toBe(150);
+    expect(sv2!.action).toBe('reduce');
+  });
+
+  it('excludes proposals with an override of zero from active proposals', () => {
+    const overrides = new Map<string, number>([
+      ['sv-1', 0],
+      ['sv-2', 0],
+    ]);
+
+    const result = buildOverriddenPlan(planBase, overrides);
+
+    expect(result.proposals).toHaveLength(0);
+    expect(result.totalFreedPerPaycheck).toBe(0);
+    expect(result.fullyResolved).toBe(false);
+  });
+
+  it('marks fullyResolved when override amounts cover the shortfall', () => {
+    // planBase shortfall = 250. sv-1 max = 100, sv-2 max = 200.
+    const overrides = new Map<string, number>([
+      ['sv-1', 100],
+      ['sv-2', 150],
+    ]);
+
+    const result = buildOverriddenPlan(planBase, overrides);
+
+    expect(result.totalFreedPerPaycheck).toBe(250);
+    expect(result.fullyResolved).toBe(true);
   });
 });

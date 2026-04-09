@@ -1,10 +1,5 @@
-export type ViewMode =
-	| 'paycheck' // legacy alias for pay-cadence-based amounts
-	| 'weekly'
-	| 'bi-weekly'
-	| 'semi-monthly'
-	| 'monthly'
-	| 'quarterly'
-	| 'yearly';
+import { VIEW_MODES } from '../constants/frequencies';
+
+export type ViewMode = (typeof VIEW_MODES)[keyof typeof VIEW_MODES];
 
 export type SelectableViewMode = Exclude<ViewMode, 'paycheck'>;

@@ -3,6 +3,8 @@ import type { AuditEntityType } from '../../../types/audit';
 import SectionItemCard from '../../_shared/layout/SectionItemCard';
 import AmountBreakdown from '../../_shared/layout/AmountBreakdown';
 import PillBadge from '../../_shared/controls/PillBadge';
+import { LOAN_TYPE_LABELS, type LoanType } from '../../../constants/loanTypes';
+import { RETIREMENT_PLAN_LABELS } from '../../../constants/retirementTypes';
 
 const NOOP = () => {};
 
@@ -17,24 +19,6 @@ const FREQ_LABELS: Record<string, string> = {
   custom: 'Custom',
 };
 
-const LOAN_TYPE_LABELS: Record<string, string> = {
-  mortgage: 'Mortgage',
-  auto: 'Auto Loan',
-  student: 'Student Loan',
-  personal: 'Personal Loan',
-  'credit-card': 'Credit Card',
-  other: 'Other',
-};
-
-const RETIREMENT_TYPE_LABELS: Record<string, string> = {
-  '401k': '401(k)',
-  '403b': '403(b)',
-  'roth-ira': 'Roth IRA',
-  'traditional-ira': 'Traditional IRA',
-  pension: 'Pension',
-  other: 'Other',
-};
-
 const fmt = (amount: number) => `$${amount.toFixed(2)}`;
 
 /**
@@ -45,6 +29,7 @@ export const CARD_ENTITY_TYPES = new Set<AuditEntityType>([
   'bill',
   'deduction',
   'benefit',
+  'other-income',
   'savings-contribution',
   'retirement-election',
   'loan',
@@ -96,7 +81,7 @@ const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
 
   'loan': (s) => {
     const monthlyPayment = Number(s.monthlyPayment ?? 0);
-    const loanType = String(s.type ?? 'other');
+    const loanType = String(s.type ?? 'other') as LoanType;
     const paymentLines = parsePaymentLines(s.paymentBreakdown);
     return {
       title: String(s.name ?? '(unnamed)'),
@@ -154,7 +139,7 @@ const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
     const hasMatch = s.hasEmployerMatch === true;
     const contribDisplay = isPercent ? `${contrib}%` : fmt(contrib);
     return {
-      title: (s.customLabel as string | undefined) || RETIREMENT_TYPE_LABELS[type] || type,
+      title: (s.customLabel as string | undefined) || RETIREMENT_PLAN_LABELS[type as keyof typeof RETIREMENT_PLAN_LABELS] || type,
       subtitle: `${contribDisplay} contribution per paycheck`,
       amount: contribDisplay,
       amountLabel: 'Per paycheck',
@@ -198,6 +183,34 @@ const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
           {s.discretionary === true && <PillBadge variant="warning">Discretionary</PillBadge>}
         </>
       ),
+      isPaused: s.enabled === false,
+    };
+  },
+
+  'other-income': (s) => {
+    const amountMode = String(s.amountMode ?? 'fixed');
+    const amount = Number(s.amount ?? 0);
+    const percentOfGross = Number(s.percentOfGross ?? 0);
+    const frequency = String(s.frequency ?? 'monthly');
+    const freqLabel = FREQ_LABELS[frequency] ?? frequency;
+    const payTreatment = String(s.payTreatment ?? 'gross');
+    const isPercentOfGross = amountMode === 'percent-of-gross';
+    const percentDisplay = `${(Number.isFinite(percentOfGross) ? percentOfGross : 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
+    const valueDisplay = isPercentOfGross ? percentDisplay : fmt(amount);
+    const treatmentLabel = payTreatment === 'taxable'
+      ? 'Taxable Only'
+      : payTreatment === 'net'
+        ? 'Add to Net Pay'
+        : 'Add to Gross Pay';
+
+    return {
+      title: String(s.name ?? '(unnamed)'),
+      subtitle: isPercentOfGross
+        ? `Percent of base gross pay: ${percentDisplay}`
+        : `Received ${freqLabel}: ${fmt(amount)}`,
+      amount: valueDisplay,
+      amountLabel: isPercentOfGross ? 'Of gross pay' : freqLabel,
+      badges: <PillBadge variant="success">{treatmentLabel}</PillBadge>,
       isPaused: s.enabled === false,
     };
   },

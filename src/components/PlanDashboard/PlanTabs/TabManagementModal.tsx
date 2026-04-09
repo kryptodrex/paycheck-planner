@@ -56,6 +56,33 @@ const TabManagementModal: React.FC<TabManagementModalProps> = ({
         </p>
         
         <div className="tab-management-sections">
+          {/* Hidden Tabs Section */}
+          {hiddenTabs.length > 0 && (
+            <div className="tab-management-section">
+              <h3>Hidden Tabs</h3>
+              <div className="tab-list">
+                {hiddenTabs.map((tab) => (
+                  <div key={tab.id} className="tab-management-item">
+                    <div className="tab-info">
+                      <span className="tab-icon"><tab.icon className="ui-icon" /></span>
+                      <span className="tab-label">{tab.label}</span>
+                    </div>
+                    <div className="tab-actions">
+                      <button
+                        className="tab-action-btn tab-action-show"
+                        onClick={() => onToggleTabVisibility(tab.id, true)}
+                        title="Show tab"
+                        aria-label="Show tab"
+                      >
+                        Show
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* Visible Tabs Section */}
           <div className="tab-management-section">
             <h3>Visible Tabs</h3>
@@ -123,33 +150,6 @@ const TabManagementModal: React.FC<TabManagementModalProps> = ({
               })}
             </div>
           </div>
-
-          {/* Hidden Tabs Section */}
-          {hiddenTabs.length > 0 && (
-            <div className="tab-management-section">
-              <h3>Hidden Tabs</h3>
-              <div className="tab-list">
-                {hiddenTabs.map((tab) => (
-                  <div key={tab.id} className="tab-management-item">
-                    <div className="tab-info">
-                      <span className="tab-icon"><tab.icon className="ui-icon" /></span>
-                      <span className="tab-label">{tab.label}</span>
-                    </div>
-                    <div className="tab-actions">
-                      <button
-                        className="tab-action-btn tab-action-show"
-                        onClick={() => onToggleTabVisibility(tab.id, true)}
-                        title="Show tab"
-                        aria-label="Show tab"
-                      >
-                        Show
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </Modal>

@@ -11,7 +11,7 @@ export function formatSearchCurrency(amount: number, currency = 'USD'): string {
 }
 
 export function incrementRequestKey(
-  setter: SearchActionContext['setBillsSearchRequestKey'] | SearchActionContext['setLoansSearchRequestKey'] | SearchActionContext['setSavingsSearchRequestKey'] | SearchActionContext['setTaxSearchOpenSettingsRequestKey'],
+  setter: SearchActionContext['setBillsSearchRequestKey'] | SearchActionContext['setLoansSearchRequestKey'] | SearchActionContext['setSavingsSearchRequestKey'] | SearchActionContext['setOtherIncomeSearchRequestKey'] | SearchActionContext['setTaxSearchOpenSettingsRequestKey'],
 ): void {
   setter?.((prev) => (typeof prev === 'number' ? prev + 1 : 1));
 }
