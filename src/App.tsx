@@ -8,7 +8,7 @@ import EncryptionSetup from './components/views/EncryptionSetup'
 import WelcomeScreen from './components/views/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
 import SettingsModal from './components/modals/SettingsModal'
-import { TransientStatusIndicator } from './components/_shared'
+import { TransientStatusIndicator, ErrorDialog } from './components/_shared'
 import './App.css'
 
 const AboutModal = lazy(() => import('./components/modals/AboutModal'))
@@ -25,7 +25,7 @@ function App() {
   }, []);
   
   // Get the current budget data and actions from our context
-  const { budgetData, saveBudget, saveWindowState, loadBudget } = useBudget()
+  const { budgetData, saveBudget, saveWindowState, loadBudget, errorDialog, closeErrorDialog } = useBudget()
   if (import.meta.env.DEV) console.debug('[APP] Budget data available:', !!budgetData);
 
   // Track if user wants to force encryption setup again (for testing/changing)
@@ -350,6 +350,13 @@ function App() {
       <TransientStatusIndicator
         message={undoRedoMessage}
         zoomFactor={currentZoomFactor}
+      />
+      <ErrorDialog
+        isOpen={!!errorDialog}
+        onClose={closeErrorDialog}
+        title={errorDialog?.title || 'Error'}
+        message={errorDialog?.message || ''}
+        actionLabel={errorDialog?.actionLabel}
       />
     </>
   )
