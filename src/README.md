@@ -34,7 +34,7 @@ Built with Electron, React, TypeScript, and Vite.
   - Accounts manager (checking, savings, investments, etc.)
   - **Customizable tabs**: Show/hide tabs, reorder non-pinned tabs, with pinned tabs (Key Metrics, Pay Breakdown) always visible
 - **Year-based workflows**: Duplicate a plan into a new year, keeping structure while resetting balances.
-- **Security options**: Per-plan encryption can be enabled/disabled; encryption keys are stored in OS keychain via `keytar`.
+- **Security options**: Per-plan encryption can be enabled/disabled; encryption keys are stored via `electron.safeStorage` (OS-level protection, no Keychain password prompts). On Macs with Touch ID enrolled, opening an encrypted plan requires biometric authentication once per session.
 - **Export functionality**: Generate PDF reports with optional password protection and granular section selection.
 - **Desktop UX**: 
   - Native menu integration (File, Edit, View, Window, Help menus)
@@ -182,7 +182,10 @@ This repository uses GitHub Actions workflows in `.github/workflows/`.
   - `planId`
   - encrypted `payload`
 - Encryption uses AES via `crypto-js`.
-- Encryption keys are **not** stored inside plan files or localStorage; they are saved in system keychain via `keytar`.
+- Encryption keys are **not** stored inside plan files or localStorage; they are stored as `safeStorage`-encrypted blobs in `keys.json` inside the app's `userData` directory.
+- On macOS with Touch ID enrolled, `get-keychain-key` IPC calls prompt Touch ID before returning the key. The verification is cached per-plan per-session so saves do not re-prompt.
+- On Windows, `safeStorage` uses DPAPI (cryptographically bound to the Windows user account). On Linux, Chromium's secret store is used. Both provide OS-session-level protection without interactive prompts.
+- Existing plans encrypted with the legacy `keytar` keychain are migrated automatically on first key retrieval: the key is re-saved via `safeStorage` and deleted from the OS keychain.
 - Cross-mode display storage is domain-specific rather than globally yearly-normalized.
   - Manual Pay Breakdown allocation categories are stored as normalized per-paycheck amounts.
   - Bills, loans, savings, and other recurring items keep their existing native/monthly/frequency-based storage models.
@@ -421,9 +424,9 @@ This app must run in Electron mode (not plain browser mode). Use `npm run dev` f
 ### Can’t open an encrypted plan
 
 - Confirm the plan was encrypted during setup.
-- Confirm the encryption key exists for that `planId` in your local keychain.
-- If keychain access is blocked by OS permissions, grant keychain access in System Settings/Preferences and retry.
-- On first run after building, macOS may require keychain authorization.
+- On macOS with Touch ID: ensure Touch ID is enrolled in System Settings → Touch ID & Password. If Touch ID is unavailable the app falls back to `safeStorage` protection without a biometric prompt.
+- If `keys.json` has been deleted from the app's `userData` folder, the key is gone and the plan cannot be recovered without the original key. There is no Keychain fallback once migration has completed.
+- On first run after upgrade from a version that used `keytar`, the key is migrated automatically from the OS keychain on the first open; no user action is needed.
 
 ### Session/window state issues
 

@@ -25,6 +25,12 @@
 - Suggested account buffer amounts now appear in the Pay Breakdown for weekly and bi-weekly pay frequencies to help keep accounts funded during variable paycheck months.
 
 
+### Security
+
+- Encryption keys are now stored using Electron's built-in `safeStorage` API instead of the OS keychain via `keytar`. On macOS this eliminates the repeated "Paycheck Planner wants to use your confidential information" Keychain password prompts. On Windows, keys are protected by DPAPI (bound to your Windows user account). On Linux, Chromium's secret store is used. Existing encrypted plans are migrated automatically on first launch — no action required.
+- On Macs with Touch ID enrolled, opening an encrypted plan now requires a biometric fingerprint scan. The prompt appears once per plan per app session, so saves and other in-session key retrievals do not re-prompt.
+- On devices without Touch ID (Windows, Linux, or older Macs), `safeStorage` protection remains active: keys are cryptographically bound to the OS user session and inaccessible without the system login.
+
 ### Bug Fixes
 
 - 

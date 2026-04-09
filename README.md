@@ -9,7 +9,7 @@
 - **Open an existing plan**: Load any `.budget` file from your computer  
 - **Recent files access**: Quick-reopen from automatically tracked recent plans
 - **Demo mode**: Try a fully-populated demo plan to explore features before entering your own data
-- **Optional encryption**: Choose per-plan encryption during setup; keys are stored securely in your system keychain
+- **Optional encryption**: Choose per-plan encryption during setup; keys are stored securely using OS-level protection (no Keychain password prompts)
 
 ### 2) Guided Setup Wizard
 Walk through initial configuration with an intuitive step-by-step wizard:
@@ -111,8 +111,9 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 
 #### Save & Security
 - **Local storage**: All data stored as `.budget` files on your computer
-- **Optional encryption**: Per-plan AES encryption
-- **Keychain integration**: Encryption keys stored in OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+- **Optional encryption**: Per-plan AES encryption with keys protected at the OS level
+- **Touch ID support**: On Macs with Touch ID, opening an encrypted plan requires a fingerprint scan (once per session)
+- **No Keychain prompts**: Keys are stored via `safeStorage` — no repeated password dialogs on any platform
 - **Auto-save prompts**: Never lose work with save reminders
 - **Recent files**: Automatic tracking of recently opened plans
 - **Session persistence**: Window size, position, and active tab saved and restored
@@ -191,7 +192,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Framework**: Electron + React + TypeScript
 - **Build System**: Vite
 - **Encryption**: AES (crypto-js)
-- **Keychain**: Native OS integration (keytar)
+- **Key Storage**: `electron.safeStorage` (OS-level, no native module required)
 - **PDF Generation**: jsPDF with autoTable
 - **Styling**: CSS with CSS variables for theming (light/dark/system modes via `ThemeContext`)
 
@@ -201,7 +202,7 @@ Walk through initial configuration with an intuitive step-by-step wizard:
 - **Detailed planners**: Need granular control over paycheck allocation and deductions
 - **Multi-account managers**: Track how income flows to different accounts and bills
 - **Yearly budgeters**: Prefer planning by year with clean separation between periods
-- **Security-focused individuals**: Want optional encryption with OS keychain integration
+- **Security-focused individuals**: Want optional encryption with Touch ID biometrics and OS-level key protection
 - **Benefits navigators**: Need to model complex employer benefits and retirement contributions
 
 ## Getting Started
