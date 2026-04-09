@@ -7,6 +7,7 @@ import type { Bill } from '../../../types/obligations';
 import type { Benefit } from '../../../types/payroll';
 import type { BillFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
+import type { BillFieldErrors, BenefitFieldErrors } from '../../../types/fieldErrors';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear } from '../../../utils/payPeriod';
@@ -36,18 +37,6 @@ interface BillsManagerProps {
   viewModeControl?: React.ReactNode;
   onViewHistory?: (target: AuditHistoryTarget) => void;
 }
-
-type BillFieldErrors = {
-  name?: string;
-  amount?: string;
-  accountId?: string;
-};
-
-type BenefitFieldErrors = {
-  name?: string;
-  amount?: string;
-  sourceAccountId?: string;
-};
 
 const MAX_AMOUNT_DECIMALS = 3;
 
@@ -119,13 +108,13 @@ const BillsManager: React.FC<BillsManagerProps> = ({
   const lastHandledSearchActionKeyRef = useRef(0);
   const [useCompactHeaderActions, setUseCompactHeaderActions] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 980px)').matches;
+    return window.matchMedia('(max-width: 1290px)').matches;
   });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const mediaQuery = window.matchMedia('(max-width: 980px)');
+    const mediaQuery = window.matchMedia('(max-width: 1290px)');
     const handleChange = (event: MediaQueryListEvent) => {
       setUseCompactHeaderActions(event.matches);
     };
@@ -730,15 +719,14 @@ const BillsManager: React.FC<BillsManagerProps> = ({
                       amount={formatWithSymbol(displayAmount(convertBillToMonthly(bill.amount, bill.frequency)), currency, { minimumFractionDigits: 2 })}
                       amountLabel={getDisplayModeLabel(displayMode)}
                       badges={bill.discretionary ? <PillBadge variant="warning">Discretionary</PillBadge> : undefined}
+                      notes={bill.notes}
                       isPaused={!isBillEnabled(bill)}
                       onPauseToggle={() => handleToggleBillEnabled(bill)}
                       onHistory={() => handleOpenHistory({ type: 'bill', id: bill.id, name: bill.name })}
                       historyLabel="View History"
                       onEdit={() => handleEditBill(bill)}
                       onDelete={() => handleDeleteBill(bill.id)}
-                    >
-                      {bill.notes && <div className="bill-notes">{bill.notes}</div>}
-                    </SectionItemCard>
+                    />
                   ))}
               </div>
             </div>

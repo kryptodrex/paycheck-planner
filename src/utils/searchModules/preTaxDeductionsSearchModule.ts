@@ -2,6 +2,7 @@ import { TrendingDown } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { formatSearchCurrency } from './moduleUtils';
 
 function buildPreTaxDeductionsResults(budgetData: BudgetData): SearchResult[] {
@@ -17,7 +18,7 @@ function buildPreTaxDeductionsResults(budgetData: BudgetData): SearchResult[] {
         : formatSearchCurrency(deduction.amount, currency) + ' per paycheck',
       category: 'Pre-Tax Deductions',
       categoryIcon: TrendingDown,
-      action: { type: 'navigate-tab', tabId: 'breakdown' },
+      action: { type: 'navigate-tab', tabId: TAB_IDS.breakdown },
     });
   }
 

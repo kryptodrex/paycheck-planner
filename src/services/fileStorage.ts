@@ -12,6 +12,14 @@ import {
 } from '../constants/storage';
 import type { BudgetData } from '../types/budget';
 import type { AppSettings } from '../types/settings';
+import type {
+  OtherIncome,
+  OtherIncomeAmountMode,
+  OtherIncomePayTreatment,
+  OtherIncomeTimingMode,
+  OtherIncomeType,
+  OtherIncomeWithholdingMode,
+} from '../types/payroll';
 import { KeychainService } from './keychainService';
 import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
 import {
@@ -19,12 +27,101 @@ import {
   normalizeAppearancePreset,
   normalizeColorVisionMode,
   normalizeCustomAppearance,
+  normalizeFontPreference,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeStateCueMode,
   normalizeThemeMode,
 } from '../utils/appearanceSettings';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../utils/accountDefaults';
+
+const VALID_OTHER_INCOME_TYPES = [
+  'bonus',
+  'commission',
+  'personal-business',
+  'rental-income',
+  'retirement-withdrawal',
+  'disability',
+  'reimbursement',
+  'investment-income',
+  'other',
+ ] as const satisfies readonly OtherIncomeType[];
+
+const VALID_OTHER_INCOME_AMOUNT_MODES = ['fixed', 'percent-of-gross'] as const satisfies readonly OtherIncomeAmountMode[];
+const VALID_OTHER_INCOME_FREQUENCIES = ['weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'yearly'] as const;
+const VALID_OTHER_INCOME_PAY_TREATMENTS = ['gross', 'taxable', 'net'] as const satisfies readonly OtherIncomePayTreatment[];
+const VALID_OTHER_INCOME_WITHHOLDING_MODES = ['manual', 'auto', 'none'] as const satisfies readonly OtherIncomeWithholdingMode[];
+const VALID_OTHER_INCOME_TIMING_MODES = ['average', 'payout'] as const satisfies readonly OtherIncomeTimingMode[];
+
+function isOtherIncomeType(value: string): value is OtherIncomeType {
+  return VALID_OTHER_INCOME_TYPES.includes(value as OtherIncomeType);
+}
+
+function isOtherIncomeAmountMode(value: string): value is OtherIncomeAmountMode {
+  return VALID_OTHER_INCOME_AMOUNT_MODES.includes(value as OtherIncomeAmountMode);
+}
+
+function isOtherIncomeFrequency(value: string): value is OtherIncome['frequency'] {
+  return VALID_OTHER_INCOME_FREQUENCIES.includes(value as OtherIncome['frequency']);
+}
+
+function isOtherIncomePayTreatment(value: string): value is OtherIncomePayTreatment {
+  return VALID_OTHER_INCOME_PAY_TREATMENTS.includes(value as OtherIncomePayTreatment);
+}
+
+function isOtherIncomeWithholdingMode(value: string): value is OtherIncomeWithholdingMode {
+  return VALID_OTHER_INCOME_WITHHOLDING_MODES.includes(value as OtherIncomeWithholdingMode);
+}
+
+function isOtherIncomeTimingMode(value: string): value is OtherIncomeTimingMode {
+  return VALID_OTHER_INCOME_TIMING_MODES.includes(value as OtherIncomeTimingMode);
+}
+
+function normalizeOtherIncomeEntry(entry: unknown): OtherIncome {
+  const candidate = entry && typeof entry === 'object'
+    ? entry as Record<string, unknown>
+    : {};
+
+  const normalizedActiveMonths = Array.isArray(candidate.activeMonths)
+    ? [...new Set(candidate.activeMonths.filter((month): month is number => Number.isInteger(month) && month >= 1 && month <= 12))].sort((left, right) => left - right)
+    : undefined;
+
+  return {
+    id: typeof candidate.id === 'string' && candidate.id.trim() !== '' ? candidate.id : crypto.randomUUID(),
+    name: typeof candidate.name === 'string' && candidate.name.trim() !== '' ? candidate.name : 'Other Income',
+    incomeType: typeof candidate.incomeType === 'string' && isOtherIncomeType(candidate.incomeType)
+      ? candidate.incomeType
+      : 'other',
+    amountMode: typeof candidate.amountMode === 'string' && isOtherIncomeAmountMode(candidate.amountMode)
+      ? candidate.amountMode
+      : 'fixed',
+    amount: typeof candidate.amount === 'number' && Number.isFinite(candidate.amount) && candidate.amount >= 0
+      ? candidate.amount
+      : 0,
+    percentOfGross: typeof candidate.percentOfGross === 'number' && Number.isFinite(candidate.percentOfGross) && candidate.percentOfGross >= 0
+      ? candidate.percentOfGross
+      : undefined,
+    frequency: typeof candidate.frequency === 'string' && isOtherIncomeFrequency(candidate.frequency)
+      ? candidate.frequency
+      : 'monthly',
+    enabled: candidate.enabled !== false,
+    notes: typeof candidate.notes === 'string' ? candidate.notes : '',
+    isTaxable: candidate.isTaxable !== false,
+    payTreatment: typeof candidate.payTreatment === 'string' && isOtherIncomePayTreatment(candidate.payTreatment)
+      ? candidate.payTreatment
+      : 'gross',
+    withholdingMode: typeof candidate.withholdingMode === 'string' && isOtherIncomeWithholdingMode(candidate.withholdingMode)
+      ? candidate.withholdingMode
+      : 'manual',
+    timingMode: typeof candidate.timingMode === 'string' && isOtherIncomeTimingMode(candidate.timingMode)
+      ? candidate.timingMode
+      : 'average',
+    withholdingProfileId: typeof candidate.withholdingProfileId === 'string' && candidate.withholdingProfileId.trim() !== ''
+      ? candidate.withholdingProfileId
+      : undefined,
+    activeMonths: normalizedActiveMonths && normalizedActiveMonths.length > 0 ? normalizedActiveMonths : undefined,
+  };
+}
 
 const BACKUP_EXCLUDED_KEYS = new Set<string>(BACKUP_EXCLUDED_STORAGE_KEYS);
 
@@ -106,6 +203,7 @@ function normalizeAppSettingsValue(
   normalized.colorVisionMode = normalizeColorVisionMode(normalized.colorVisionMode);
   normalized.stateCueMode = normalizeStateCueMode(normalized.stateCueMode);
   normalized.fontScale = normalizeFontScale(normalized.fontScale);
+  normalized.fontPreference = normalizeFontPreference(normalized.fontPreference);
 
   return normalized;
 }
@@ -133,6 +231,7 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
         { id: crypto.randomUUID(), label: 'Medicare', rate: 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: 0,
+      filingStatus: 'single',
     };
   } else if ('federalTaxRate' in migrated.taxSettings) {
     // Migrate old fixed-field format to dynamic taxLines
@@ -151,10 +250,12 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
         { id: crypto.randomUUID(), label: 'Medicare', rate: old.medicareRate ?? 1.45, amount: 0, calculationType: 'percentage' },
       ],
       additionalWithholding: old.additionalWithholding ?? 0,
+      filingStatus: 'single',
     };
   } else {
     migrated.taxSettings = {
       ...migrated.taxSettings,
+      filingStatus: migrated.taxSettings.filingStatus === 'married_filing_jointly' ? 'married_filing_jointly' : 'single',
       taxLines: (migrated.taxSettings.taxLines || []).map((line) => ({
         ...line,
         amount: typeof line.amount === 'number' ? line.amount : 0,
@@ -166,6 +267,13 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
   // Ensure benefits array exists
   if (!migrated.benefits) {
     migrated.benefits = [];
+  }
+
+  // Ensure otherIncome array exists
+  if (!Array.isArray(migrated.otherIncome)) {
+    migrated.otherIncome = [];
+  } else {
+    migrated.otherIncome = migrated.otherIncome.map((entry) => normalizeOtherIncomeEntry(entry));
   }
 
   // Ensure retirement array exists
@@ -1185,6 +1293,7 @@ export class FileStorageService {
         payFrequency: 'bi-weekly',
       },
       preTaxDeductions: [],
+      otherIncome: [],
       taxSettings: {
         taxLines: [
           { id: crypto.randomUUID(), label: 'Federal Tax', rate: 0, amount: 0, calculationType: 'percentage' },

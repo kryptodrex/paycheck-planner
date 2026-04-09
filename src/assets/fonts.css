@@ -1,0 +1,12 @@
+/* Bundled font imports — loaded at startup so font faces are registered before first paint */
+
+/* Inter Variable — clean, highly legible, neutral. Supports all weights via a single variable font file. */
+@import '@fontsource-variable/inter';
+
+/* Atkinson Hyperlegible — designed for low vision readers by the Braille Institute */
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';
+
+/* OpenDyslexic — designed to improve readability for users with dyslexia */
+@import '@fontsource/opendyslexic/400.css';
+@import '@fontsource/opendyslexic/700.css';

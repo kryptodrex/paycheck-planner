@@ -1,26 +1,26 @@
 // Utility functions for managing dashboard tabs
-import { Wallet, LayoutGrid, ClipboardList, Landmark, PiggyBank, Scale } from 'lucide-react';
+import { Wallet, LayoutGrid, ClipboardList, Landmark, PiggyBank, Scale, HandCoins } from 'lucide-react';
 import type { TabConfig } from '../types/tabs';
+import { TAB_IDS } from '../constants/tabIds';
 
-export type TabId = 'metrics' | 'breakdown' | 'bills' | 'loans' | 'savings' | 'taxes';
+export type { TabId } from '../constants/tabIds';
 
-export function normalizeLegacyTabId(tabId?: string | null): TabId | null {
+export function normalizeLegacyTabId(tabId?: string | null): import('../constants/tabIds').TabId | null {
   if (!tabId) return null;
-  if (tabId === 'benefits') return 'savings';
-  if (tabId === 'metrics' || tabId === 'breakdown' || tabId === 'bills' || tabId === 'loans' || tabId === 'savings' || tabId === 'taxes') {
-    return tabId;
-  }
+  if (tabId === 'benefits') return TAB_IDS.savings;
+  const validIds = Object.values(TAB_IDS) as string[];
+  if (validIds.includes(tabId)) return tabId as import('../constants/tabIds').TabId;
   return null;
 }
 
 /**
- * Get the default tab configuration
- * All tabs are visible by default, allowing users to hide them as needed
+ * Get the default tab configuration.
+ * Less-common workflow tabs can start hidden and be enabled from Manage Tabs.
  */
 export function getDefaultTabConfigs(): TabConfig[] {
   return [
     {
-      id: 'metrics',
+      id: TAB_IDS.metrics,
       label: 'Yearly Metrics',
       icon: LayoutGrid,
       visible: true,
@@ -28,7 +28,7 @@ export function getDefaultTabConfigs(): TabConfig[] {
       pinned: false,
     },
     {
-      id: 'breakdown',
+      id: TAB_IDS.breakdown,
       label: 'Pay Breakdown',
       icon: Wallet,
       visible: true,
@@ -36,35 +36,43 @@ export function getDefaultTabConfigs(): TabConfig[] {
       pinned: false,
     },
     {
-      id: 'bills',
-      label: 'Bills',
-      icon: ClipboardList,
-      visible: true,
+      id: TAB_IDS.otherIncome,
+      label: 'Other Income',
+      icon: HandCoins,
+      visible: false,
       order: 2,
       pinned: false,
     },
     {
-      id: 'savings',
-      label: 'Savings',
-      icon: PiggyBank,
+      id: TAB_IDS.bills,
+      label: 'Bills',
+      icon: ClipboardList,
       visible: true,
       order: 3,
       pinned: false,
     },
     {
-      id: 'loans',
-      label: 'Loans',
-      icon: Landmark,
+      id: TAB_IDS.savings,
+      label: 'Savings',
+      icon: PiggyBank,
       visible: true,
       order: 4,
       pinned: false,
     },
     {
-      id: 'taxes',
+      id: TAB_IDS.loans,
+      label: 'Loans',
+      icon: Landmark,
+      visible: true,
+      order: 5,
+      pinned: false,
+    },
+    {
+      id: TAB_IDS.taxes,
       label: 'Taxes',
       icon: Scale,
       visible: true,
-      order: 5,
+      order: 6,
       pinned: false,
     },
   ];

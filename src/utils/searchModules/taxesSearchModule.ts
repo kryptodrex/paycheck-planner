@@ -3,6 +3,7 @@ import type { BudgetData } from '../../types/budget';
 import { calculatePaycheckBreakdown } from '../../services/budgetCalculations';
 import type { OpenTaxesAction, SearchResult } from '../planSearch';
 import type { SearchActionContext, SearchModule } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { createTypedActionHandler, formatSearchCurrency, incrementRequestKey } from './moduleUtils';
 
 function buildTaxesResults(budgetData: BudgetData): SearchResult[] {
@@ -20,7 +21,7 @@ function buildTaxesResults(budgetData: BudgetData): SearchResult[] {
           : `${line.rate}%`,
       category: 'Tax',
       categoryIcon: Scale,
-      action: { type: 'navigate-tab', tabId: 'taxes', elementId: `tax-line-${line.id}` },
+      action: { type: 'navigate-tab', tabId: TAB_IDS.taxes, elementId: `tax-line-${line.id}` },
     });
   }
 
@@ -31,7 +32,7 @@ function buildTaxesResults(budgetData: BudgetData): SearchResult[] {
       subtitle: formatSearchCurrency(budgetData.taxSettings?.additionalWithholding ?? 0, currency) + ' per paycheck',
       category: 'Tax',
       categoryIcon: Scale,
-      action: { type: 'navigate-tab', tabId: 'taxes', elementId: 'tax-additional-withholding-row' },
+      action: { type: 'navigate-tab', tabId: TAB_IDS.taxes, elementId: 'tax-additional-withholding-row' },
     });
   }
 
@@ -41,7 +42,7 @@ function buildTaxesResults(budgetData: BudgetData): SearchResult[] {
     subtitle: formatSearchCurrency(paycheckBreakdown.totalTaxes, currency) + ' per paycheck',
     category: 'Tax',
     categoryIcon: Scale,
-    action: { type: 'navigate-tab', tabId: 'taxes', elementId: 'tax-total-taxes-row' },
+    action: { type: 'navigate-tab', tabId: TAB_IDS.taxes, elementId: 'tax-total-taxes-row' },
   });
 
   return results;

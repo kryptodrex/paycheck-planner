@@ -2,6 +2,7 @@ import { CreditCard } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { OpenLoansAction, SearchResult } from '../planSearch';
 import type { SearchActionContext, SearchModule } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { createTypedActionHandler, formatSearchCurrency, incrementRequestKey } from './moduleUtils';
 
 function buildLoansResults(budgetData: BudgetData): SearchResult[] {
@@ -42,7 +43,7 @@ function buildLoansResults(budgetData: BudgetData): SearchResult[] {
       searchKeywords: ['loan', 'payment', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
-        tabId: 'loans',
+        tabId: TAB_IDS.loans,
         elementId: `loan-${loan.id}`,
       },
     });

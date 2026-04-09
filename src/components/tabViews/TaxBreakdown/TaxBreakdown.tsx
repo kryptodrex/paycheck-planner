@@ -3,9 +3,9 @@ import { History, Pencil, Scale } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../../utils/payPeriod';
-import { ActionMenuButton, Button, InputWithPrefix, Modal, FormGroup, PageHeader, TaxLinesEditor, InfoBox } from '../../_shared';
+import { ActionMenuButton, Button, InputWithPrefix, Modal, FormGroup, PageHeader, TaxLinesEditor, InfoBox, Dropdown } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
-import type { TaxLine } from '../../../types/payroll';
+import type { TaxLine, TaxFilingStatus } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import type { AuditHistoryTarget } from '../../../types/audit';
 import {
@@ -17,6 +17,7 @@ import {
     validateEditableTaxLineValues,
     syncEditableTaxLineValues,
 } from '../../../utils/taxLines';
+import { estimateTaxSettings } from '../../../services/taxEstimationService';
 import '../tabViews.shared.css';
 import './TaxBreakdown.css';
 
@@ -33,6 +34,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
     const [editLines, setEditLines] = useState<EditableTaxLineValues[]>([]);
     const [additionalWithholding, setAdditionalWithholding] = useState('0');
     const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
+    const [editFilingStatus, setEditFilingStatus] = useState<TaxFilingStatus>('single');
     const [useCompactHeaderActions, setUseCompactHeaderActions] = useState<boolean>(() => {
         if (typeof window === 'undefined') return false;
         return window.matchMedia('(max-width: 980px)').matches;
@@ -72,12 +74,13 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
                 }))
             );
             setAdditionalWithholding(String(taxSettings.additionalWithholding ?? 0));
+            setEditFilingStatus(taxSettings.filingStatus === 'married_filing_jointly' ? 'married_filing_jointly' : 'single');
             setAdditionalWithholdingError(undefined);
             setShowEditModal(true);
         }, 0);
 
         return () => window.clearTimeout(timeoutId);
-    }, [budgetData, searchOpenSettingsRequestKey, taxSettings.additionalWithholding, taxSettings.taxLines, taxableIncomeForEditor]);
+    }, [budgetData, searchOpenSettingsRequestKey, taxSettings.additionalWithholding, taxSettings.filingStatus, taxSettings.taxLines, taxableIncomeForEditor]);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -112,7 +115,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
         }
 
         return formatWithSymbol(
-            convertToDisplayMode(getTaxableIncomeForTaxLine(breakdown.taxableIncome, line), paychecksPerYear, displayMode),
+            convertToDisplayMode(getTaxableIncomeForTaxLine(breakdown.taxableIncome, line, breakdown.grossPay), paychecksPerYear, displayMode),
             currency,
             { minimumFractionDigits: 2, maximumFractionDigits: 2 },
         );
@@ -125,6 +128,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
             }))
         );
         setAdditionalWithholding(String(taxSettings.additionalWithholding ?? 0));
+        setEditFilingStatus(taxSettings.filingStatus === 'married_filing_jointly' ? 'married_filing_jointly' : 'single');
         setAdditionalWithholdingError(undefined);
         setShowEditModal(true);
     };
@@ -176,6 +180,45 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
         setEditLines(prev => prev.filter(line => line.id !== id));
     };
 
+    const handleAutoEstimateTaxLines = () => {
+        const annualGrossIncome = breakdown.grossPay * paychecksPerYear;
+        const annualTaxableIncome = breakdown.taxableIncome * paychecksPerYear;
+        const estimated = estimateTaxSettings({
+            currency,
+            annualGrossIncome,
+            annualTaxableIncome,
+            paychecksPerYear,
+            filingStatus: editFilingStatus,
+        });
+
+        const estimatedByLabel = new Map(
+            estimated.taxSettings.taxLines.map((line) => [line.label.trim().toLowerCase(), line]),
+        );
+
+        setEditLines((prev) => prev.map((line) => {
+            const normalizedLabel = line.label.trim().toLowerCase();
+            const suggested = estimatedByLabel.get(normalizedLabel);
+
+            const updatedTaxable = syncEditableTaxLineValues(
+                line,
+                'taxableIncome',
+                (suggested?.taxableIncome ?? taxableIncomeForEditor).toFixed(2),
+                taxableIncomeForEditor,
+            );
+
+            if (!suggested) {
+                return updatedTaxable;
+            }
+
+            return syncEditableTaxLineValues(
+                updatedTaxable,
+                'rate',
+                String(suggested.rate),
+                taxableIncomeForEditor,
+            );
+        }));
+    };
+
     const handleEditSave = () => {
         let hasErrors = false;
         const validated = editLines.map(line => {
@@ -203,6 +246,7 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
             taxSettings: {
                 taxLines: newTaxLines,
                 additionalWithholding: parsedWithholding,
+                filingStatus: editFilingStatus,
             },
         });
         setShowEditModal(false);
@@ -339,15 +383,38 @@ const TaxBreakdown: React.FC<TaxBreakdownProps> = ({ searchOpenSettingsRequestKe
                     onLineBlur={handleLineBlur}
                     onAddLine={handleAddLine}
                     onRemoveLine={handleRemoveLine}
+                    taxableIncomeLabel="Taxable Income Base"
                     introContent={
                         <div>
                             <p>Here you can modify the name, rate, taxable income, amount, and calculation mode for each line.</p>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+                                <Button type="button" variant="secondary" size="small" onClick={handleAutoEstimateTaxLines}>
+                                    Auto-estimate rates
+                                </Button>
+                            </div>
+                            {currency === 'USD' && (
+                                <div style={{ marginTop: '0.75rem' }}>
+                                    <FormGroup label="Federal Filing Status" helperText="Used for federal bracket estimation.">
+                                        <Dropdown
+                                            value={editFilingStatus}
+                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditFilingStatus(e.target.value as TaxFilingStatus)}
+                                        >
+                                            <option value="single">Single</option>
+                                            <option value="married_filing_jointly">Married Filing Jointly</option>
+                                        </Dropdown>
+                                    </FormGroup>
+                                </div>
+                            )}
                             <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem', marginTop: '1rem' }}>
                                 <InfoBox>
                                     If you select <b>Rate</b> as the calculation mode, the amount will be automatically calculated based on the <b>taxable income and rate</b>.
                                 </InfoBox>
                                 <InfoBox>
                                     If you select <b>Fixed</b> as the calculation mode, you can directly enter the amount, and the rate will be calculated accordingly.
+                                </InfoBox>
+                                <InfoBox>
+                                    <b>Taxable Income Base</b> is the portion of pay this line should apply to per paycheck.
+                                    Leave it as suggested for most cases, or lower it for capped/special taxes.
                                 </InfoBox>
                             </div>
                         </div>

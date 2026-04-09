@@ -1,4 +1,5 @@
-import type { PayFrequency } from './frequencies';
+import type { CoreFrequency, PayFrequency } from './frequencies';
+import type { RetirementPlanType } from '../constants/retirementTypes';
 
 export type PayType = 'salary' | 'hourly';
 
@@ -32,9 +33,12 @@ export interface TaxLine {
   calculationType?: TaxLineCalculationType;
 }
 
+export type TaxFilingStatus = 'single' | 'married_filing_jointly';
+
 export interface TaxSettings {
   taxLines: TaxLine[];
   additionalWithholding: number;
+  filingStatus?: TaxFilingStatus;
 }
 
 export interface Benefit {
@@ -51,7 +55,7 @@ export interface Benefit {
 
 export interface RetirementElection {
   id: string;
-  type: '401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'pension' | 'other';
+  type: RetirementPlanType;
   customLabel?: string;
   employeeContribution: number;
   employeeContributionIsPercentage: boolean;
@@ -63,6 +67,44 @@ export interface RetirementElection {
   employerMatchCap: number;
   employerMatchCapIsPercentage: boolean;
   yearlyLimit?: number;
+  reallocationProtected?: boolean;
+}
+
+export type OtherIncomeType =
+  | 'bonus'
+  | 'commission'
+  | 'personal-business'
+  | 'rental-income'
+  | 'retirement-withdrawal'
+  | 'disability'
+  | 'reimbursement'
+  | 'investment-income'
+  | 'other';
+
+export type OtherIncomeAmountMode = 'fixed' | 'percent-of-gross';
+
+export type OtherIncomePayTreatment = 'gross' | 'taxable' | 'net';
+
+export type OtherIncomeWithholdingMode = 'manual' | 'auto' | 'none';
+
+export type OtherIncomeTimingMode = 'average' | 'payout';
+
+export interface OtherIncome {
+  id: string;
+  name: string;
+  incomeType: OtherIncomeType;
+  amountMode: OtherIncomeAmountMode;
+  amount: number;
+  percentOfGross?: number;
+  frequency: CoreFrequency;
+  enabled?: boolean;
+  notes?: string;
+  isTaxable: boolean;
+  payTreatment: OtherIncomePayTreatment;
+  withholdingMode: OtherIncomeWithholdingMode;
+  timingMode?: OtherIncomeTimingMode;
+  withholdingProfileId?: string;
+  activeMonths?: number[];
 }
 
 export interface TaxLineAmount {
@@ -71,8 +113,25 @@ export interface TaxLineAmount {
   amount: number;
 }
 
+export interface OtherIncomeWithholdingAmount {
+  id: string;
+  label: string;
+  amount: number;
+  sourceIncomeId: string;
+  sourceIncomeName: string;
+  profileId: string;
+  profileLabel: string;
+  rate: number;
+  taxableBase: number;
+}
+
 export interface PaycheckBreakdown {
   grossPay: number;
+  otherIncomeGross?: number;
+  otherIncomeTaxable?: number;
+  otherIncomeNet?: number;
+  otherIncomeAutoWithholding?: number;
+  otherIncomeAutoWithholdingLineItems?: OtherIncomeWithholdingAmount[];
   preTaxDeductions: number;
   taxableIncome: number;
   taxLineAmounts: TaxLineAmount[];

@@ -2,9 +2,11 @@ import type { Account } from '../types/accounts';
 import type { BudgetData } from '../types/budget';
 import type { Bill, Loan, SavingsContribution } from '../types/obligations';
 import type { Benefit, RetirementElection } from '../types/payroll';
+import type { TaxFilingStatus } from '../types/payroll';
 import type { PayFrequency } from '../types/frequencies';
 import { getPaychecksPerYear } from './payPeriod';
 import { getDefaultAccountColor, getDefaultAccountIcon } from './accountDefaults';
+import { estimateTaxSettings } from '../services/taxEstimationService';
 
 /**
  * Generate realistic demo budget data for app demonstration
@@ -39,14 +41,6 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     annualSalary = salaryOptions[Math.floor(Math.random() * salaryOptions.length)];
     annualGrossPay = annualSalary * variance;
   }
-
-  let federalTaxRate = 10;
-  if (annualGrossPay > 50000) federalTaxRate = 12;
-  if (annualGrossPay > 80000) federalTaxRate = 18;
-  if (annualGrossPay > 120000) federalTaxRate = 22;
-  if (annualGrossPay > 200000) federalTaxRate = 28;
-  federalTaxRate += Math.random() * 2;
-  const stateTaxRate = Math.random() < 0.25 ? 0 : 3 + Math.random() * 4;
 
   const checkingId = crypto.randomUUID();
   const accounts: Account[] = [
@@ -122,11 +116,28 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
     });
   }
 
+  const filingStatus: TaxFilingStatus = Math.random() > 0.75 ? 'married_filing_jointly' : 'single';
+
+  const estimatedTaxSettings = estimateTaxSettings({
+    currency,
+    annualGrossIncome: annualGrossPay,
+    annualTaxableIncome: annualGrossPay,
+    paychecksPerYear,
+    filingStatus,
+  }).taxSettings;
+
+  const federalRate = estimatedTaxSettings.taxLines.find((line) => line.label.toLowerCase() === 'federal tax')?.rate ?? 0;
+  const stateRate = estimatedTaxSettings.taxLines.find((line) => line.label.toLowerCase() === 'state tax')?.rate ?? 0;
+  const socialSecurityRate = estimatedTaxSettings.taxLines.find((line) => line.label.toLowerCase() === 'social security')?.rate ?? 6.2;
+  const medicareRate = estimatedTaxSettings.taxLines.find((line) => line.label.toLowerCase() === 'medicare')?.rate ?? 1.45;
+
   const estimatedAnnualNet = estimateAnnualNetPay({
     annualGrossPay,
     paychecksPerYear,
-    federalTaxRate,
-    stateTaxRate,
+    federalTaxRate: federalRate,
+    stateTaxRate: stateRate,
+    socialSecurityRate,
+    medicareRate,
     benefits,
     retirement,
   });
@@ -356,15 +367,8 @@ export function generateDemoBudgetData(year: number, currency: string = 'USD'): 
       payFrequency,
     },
     preTaxDeductions: [],
-    taxSettings: {
-      taxLines: [
-        { id: 'federal', label: 'Federal Tax', rate: Math.round(federalTaxRate * 100) / 100 },
-        { id: 'state', label: 'State Tax', rate: Math.round(stateTaxRate * 100) / 100 },
-        { id: 'social-security', label: 'Social Security', rate: 6.2 },
-        { id: 'medicare', label: 'Medicare', rate: 1.45 },
-      ],
-      additionalWithholding: 0,
-    },
+    otherIncome: [],
+    taxSettings: estimatedTaxSettings,
     accounts,
     bills,
     loans,
@@ -400,6 +404,8 @@ function estimateAnnualNetPay(params: {
   paychecksPerYear: number;
   federalTaxRate: number;
   stateTaxRate: number;
+  socialSecurityRate: number;
+  medicareRate: number;
   benefits: Benefit[];
   retirement: RetirementElection[];
 }): number {
@@ -421,7 +427,7 @@ function estimateAnnualNetPay(params: {
 
   const taxableIncome = Math.max(0, grossPerPaycheck - preTaxPerPaycheck);
   const totalTaxRate =
-    params.federalTaxRate + params.stateTaxRate + 6.2 + 1.45;
+    params.federalTaxRate + params.stateTaxRate + params.socialSecurityRate + params.medicareRate;
   const taxesPerPaycheck = (taxableIncome * totalTaxRate) / 100;
 
   const netPerPaycheck = Math.max(0, taxableIncome - taxesPerPaycheck);

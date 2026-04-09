@@ -63,6 +63,33 @@
   transition: box-shadow 160ms ease;
 }
 
+.pay-settings-exchange-rate-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pay-settings-exchange-rate-input-row input {
+  width: 100%;
+}
+
+.pay-settings-exchange-rate-meta-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pay-settings-exchange-rate-meta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.pay-settings-exchange-rate-inverse {
+  font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .pay-settings-leftover-suggestion {

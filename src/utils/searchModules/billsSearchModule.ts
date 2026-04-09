@@ -9,6 +9,7 @@ import { HeartPulse, ReceiptText } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { SearchResult, OpenBillsAction } from '../planSearch';
 import type { SearchModule, SearchActionContext } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { createTypedActionHandler, formatSearchCurrency, incrementRequestKey } from './moduleUtils';
 
 /**
@@ -52,7 +53,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
       searchKeywords: ['bill', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
-        tabId: 'bills',
+        tabId: TAB_IDS.bills,
         elementId: `bill-${bill.id}`,
       },
     });
@@ -89,7 +90,7 @@ function buildBillsResults(budgetData: BudgetData): SearchResult[] {
         },
       ],
       searchKeywords: ['deduction', 'benefit', 'pause', 'resume', 'edit', 'delete'],
-      action: { type: 'navigate-tab', tabId: 'bills', elementId: `benefit-${benefit.id}` },
+      action: { type: 'navigate-tab', tabId: TAB_IDS.bills, elementId: `benefit-${benefit.id}` },
     });
   }
 

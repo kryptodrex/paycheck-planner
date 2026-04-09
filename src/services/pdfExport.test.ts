@@ -167,7 +167,49 @@ describe('pdfExport', () => {
     expect(taxOptions?.body).toEqual([
       ['Federal Tax', '10%', '$482.50'],
       ['Local Tax', '$45.00 fixed', '$45.00'],
-      ['Additional Withholding', '-', '$25.00'],
+      ['Manual Additional Withholding', '-', '$25.00'],
+    ]);
+  });
+
+  it('renders an Other Income section with configured schedule and annual impact', async () => {
+    const budget = createBudgetFixture();
+    budget.otherIncome = [
+      {
+        id: 'oi-1',
+        name: 'Seasonal Bonus',
+        incomeType: 'bonus',
+        amountMode: 'fixed',
+        amount: 1000,
+        frequency: 'monthly',
+        activeMonths: [3, 6, 9, 12],
+        enabled: true,
+        notes: '',
+        isTaxable: true,
+        payTreatment: 'gross',
+        withholdingMode: 'auto',
+      },
+    ];
+
+    await exportToPDF(budget, {
+      includeMetrics: false,
+      includePayBreakdown: false,
+      includeAccounts: false,
+      includeBills: false,
+      includeBenefits: false,
+      includeRetirement: false,
+      includeTaxes: false,
+      includeOtherIncome: true,
+    });
+
+    const otherIncomeCall = autoTableMock.mock.calls.find((call) => {
+      const options = call[1] as { head?: string[][] };
+      return options.head?.[0]?.[0] === 'Income Name';
+    });
+
+    expect(otherIncomeCall).toBeTruthy();
+    const options = otherIncomeCall?.[1] as { body?: string[][] };
+    expect(options.body).toEqual([
+      ['Seasonal Bonus', 'Bonus', 'Add to Gross Pay', 'Auto', 'monthly', '3, 6, 9, 12', '$1,000.00', '$12,000.00'],
     ]);
   });
 

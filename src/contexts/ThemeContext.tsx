@@ -8,13 +8,14 @@ import {
   normalizeAppearancePreset,
   normalizeColorVisionMode,
   normalizeCustomAppearance,
+  normalizeFontPreference,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeStateCueMode,
   normalizeThemeMode,
 } from '../utils/appearanceSettings';
 import { CUSTOM_THEME_VARIABLES, generateCustomThemeTokens } from '../utils/customTheme';
-import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, StateCueMode, ThemeMode } from '../types/appearance';
+import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, FontPreference, StateCueMode, ThemeMode } from '../types/appearance';
 import type { ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
@@ -26,6 +27,14 @@ interface ThemeContextType {
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
 }
+
+const FONT_STACKS: Record<FontPreference, string> = {
+  system: "system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
+  inter: "'Inter Variable', Inter, system-ui, sans-serif",
+  verdana: "Verdana, Geneva, 'DejaVu Sans', sans-serif",
+  atkinson: "'Atkinson Hyperlegible', Verdana, sans-serif",
+  'open-dyslexic': "OpenDyslexic, Verdana, sans-serif",
+};
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
@@ -55,6 +64,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         colorVisionMode: 'normal' as const,
         stateCueMode: 'minimal' as const,
         fontScale: 1,
+        fontPreference: 'system' as const,
       };
     }
 
@@ -68,6 +78,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         colorVisionMode?: ColorVisionMode;
         stateCueMode?: StateCueMode;
         fontScale?: number;
+        fontPreference?: FontPreference;
       };
 
       return {
@@ -79,6 +90,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         colorVisionMode: normalizeColorVisionMode(settings.colorVisionMode),
         stateCueMode: normalizeStateCueMode(settings.stateCueMode),
         fontScale: normalizeFontScale(settings.fontScale),
+        fontPreference: normalizeFontPreference(settings.fontPreference),
       };
     } catch {
       return {
@@ -90,6 +102,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         colorVisionMode: 'normal' as const,
         stateCueMode: 'minimal' as const,
         fontScale: 1,
+        fontPreference: 'system' as const,
       };
     }
   };
@@ -121,6 +134,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [colorVisionMode, setColorVisionMode] = useState<ColorVisionMode>(() => getCurrentSettings().colorVisionMode);
   const [stateCueMode, setStateCueMode] = useState<StateCueMode>(() => getCurrentSettings().stateCueMode);
   const [fontScale, setFontScale] = useState<number>(() => getCurrentSettings().fontScale);
+  const [fontPreference, setFontPreference] = useState<FontPreference>(() => getCurrentSettings().fontPreference);
 
   // Apply theme to document element
   useEffect(() => {
@@ -144,8 +158,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     root.setAttribute('data-color-vision', colorVisionMode);
     root.setAttribute('data-state-cues', stateCueMode);
     root.style.fontSize = `${Math.round(fontScale * 100)}%`;
+    root.style.setProperty('--font-ui', FONT_STACKS[fontPreference]);
     localStorage.setItem(STORAGE_KEYS.theme, theme);
-  }, [theme, appearanceMode, appearancePreset, customAppearance, highContrastMode, colorVisionMode, stateCueMode, fontScale]);
+  }, [theme, appearanceMode, appearancePreset, customAppearance, highContrastMode, colorVisionMode, stateCueMode, fontScale, fontPreference]);
 
   // Listen for system theme changes when in System mode
   useEffect(() => {
@@ -160,6 +175,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       setColorVisionMode(settings.colorVisionMode);
       setStateCueMode(settings.stateCueMode);
       setFontScale(settings.fontScale);
+      setFontPreference(settings.fontPreference);
 
       if (settings.themeMode === 'light' || settings.themeMode === 'dark') {
         setTheme(settings.themeMode);

@@ -1,0 +1,163 @@
+.other-income-section {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.other-income-manager .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.other-income-manager .section-header h2 {
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.other-income-manager .section-header p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.other-income-manager .section-total {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.other-income-manager .section-total > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.other-income-manager .section-total-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.other-income-manager .section-total-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.other-income-modal {
+  max-width: 600px !important;
+}
+
+.other-income-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.other-income-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  margin-bottom: 0.5rem;
+}
+
+.other-income-details .detail {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.other-income-details .label {
+  color: var(--text-secondary);
+}
+
+.other-income-details .value {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.other-income-notes {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  background: var(--bg-primary);
+  border-radius: 4px;
+}
+
+.other-income-v1-note {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
+.other-income-manager .form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.other-income-manager .other-income-preview-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.other-income-treatment-note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.other-income-withholding-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
+.other-income-auto-withholding-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, var(--accent-primary) 8%);
+}
+
+.other-income-auto-withholding-preview__header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.other-income-auto-withholding-preview__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.other-income-auto-withholding-preview__row span:last-child {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .other-income-manager .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .other-income-manager .other-income-preview-row {
+    grid-template-columns: 1fr;
+  }
+}

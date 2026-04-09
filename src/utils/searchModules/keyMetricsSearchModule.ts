@@ -5,6 +5,7 @@ import { convertBillToYearly } from '../billFrequency';
 import { getPaychecksPerYear } from '../payPeriod';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { formatSearchCurrency } from './moduleUtils';
 
 function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
@@ -27,7 +28,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: TrendingUp,
       action: {
         type: 'navigate-tab',
-        tabId: 'metrics',
+        tabId: TAB_IDS.metrics,
         elementId: 'key-metrics-income-card',
       },
     },
@@ -39,7 +40,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: Scale,
       action: {
         type: 'navigate-tab',
-        tabId: 'metrics',
+        tabId: TAB_IDS.metrics,
         elementId: 'key-metrics-taxes-card',
       },
     },
@@ -51,7 +52,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: ClipboardList,
       action: {
         type: 'navigate-tab',
-        tabId: 'metrics',
+        tabId: TAB_IDS.metrics,
         elementId: 'key-metrics-bills-card',
       },
     },
@@ -63,7 +64,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: PiggyBank,
       action: {
         type: 'navigate-tab',
-        tabId: 'metrics',
+        tabId: TAB_IDS.metrics,
         elementId: 'key-metrics-savings-rate-card',
       },
     },
@@ -75,7 +76,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: HandCoins,
       action: {
         type: 'navigate-tab',
-        tabId: 'metrics',
+        tabId: TAB_IDS.metrics,
         elementId: 'key-metrics-net-pay-card',
       },
     },
@@ -87,7 +88,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: Wallet,
       action: {
         type: 'navigate-tab',
-        tabId: 'metrics',
+        tabId: TAB_IDS.metrics,
         elementId: 'key-metrics-remaining-card',
       },
     },
@@ -99,7 +100,7 @@ function buildKeyMetricsResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: ChartPie,
       action: {
         type: 'navigate-tab',
-        tabId: 'metrics',
+        tabId: TAB_IDS.metrics,
         elementId: 'key-metrics-yearly-breakdown',
       },
     },

@@ -4,12 +4,13 @@ import { APPEARANCE_PRESET_MAP, APPEARANCE_PRESET_OPTIONS } from '../../../const
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { useAppDialogs } from '../../../hooks';
 import { useTheme } from '../../../contexts/ThemeContext';
-import type { AppearancePreset, ColorVisionMode, StateCueMode, ThemeMode } from '../../../types/appearance';
+import type { AppearancePreset, ColorVisionMode, FontPreference, StateCueMode, ThemeMode } from '../../../types/appearance';
 import { Button, Dropdown, ErrorDialog, InfoBox, Modal, PillToggle } from '../../_shared';
 import { FileStorageService } from '../../../services/fileStorage';
 import {
   normalizeAppearancePreset,
   normalizeColorVisionMode,
+  normalizeFontPreference,
   normalizeFontScale,
   normalizeHighContrastMode,
   normalizeStateCueMode,
@@ -31,6 +32,7 @@ interface SettingsState {
   colorVisionMode: ColorVisionMode;
   stateCueMode: StateCueMode;
   fontScale: number;
+  fontPreference: FontPreference;
   glossaryTermsEnabled: boolean;
 }
 
@@ -54,6 +56,22 @@ const STATE_CUE_OPTIONS: Array<{ value: StateCueMode; label: string; description
   },
 ];
 
+const FONT_OPTIONS: Array<{ value: FontPreference; label: string; description: string }> = [
+  { value: 'system', label: 'System Default', description: 'Uses your operating system\'s default interface font.' },
+  { value: 'inter', label: 'Inter', description: 'Clean and highly legible. Consistent appearance across all platforms.' },
+  { value: 'verdana', label: 'Verdana', description: 'Wide, open letterforms — very readable at small sizes.' },
+  { value: 'atkinson', label: 'Atkinson Hyperlegible', description: 'Designed by the Braille Institute for low vision readers.' },
+  { value: 'open-dyslexic', label: 'OpenDyslexic', description: 'Designed to improve readability for users with dyslexia.' },
+];
+
+const FONT_STACKS: Record<FontPreference, string> = {
+  system: "system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
+  inter: "'Inter Variable', Inter, system-ui, sans-serif",
+  verdana: "Verdana, Geneva, 'DejaVu Sans', sans-serif",
+  atkinson: "'Atkinson Hyperlegible', Verdana, sans-serif",
+  'open-dyslexic': 'OpenDyslexic, Verdana, sans-serif',
+};
+
 interface SettingsSection {
   id: string;
   title: string;
@@ -72,7 +90,7 @@ const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     id: 'accessibility',
     title: 'Accessibility',
-    searchTerms: 'contrast high contrast color vision colorblind protanopia deuteranopia tritanopia font scale text size readability state cues labels icons pattern minimal enhanced',
+    searchTerms: 'contrast high contrast color vision colorblind protanopia deuteranopia tritanopia font scale text size readability state cues labels icons pattern minimal enhanced font family typeface dyslexia dyslexic legible inter verdana atkinson open-dyslexic system default',
   },
   {
     id: 'glossary',
@@ -105,6 +123,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
     colorVisionMode: normalizeColorVisionMode(appSettings.colorVisionMode),
     stateCueMode: normalizeStateCueMode(appSettings.stateCueMode),
     fontScale: normalizeFontScale(appSettings.fontScale),
+    fontPreference: normalizeFontPreference(appSettings.fontPreference),
     glossaryTermsEnabled: appSettings.glossaryTermsEnabled !== false,
   });
 
@@ -124,6 +143,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
       colorVisionMode: updated.colorVisionMode,
       stateCueMode: updated.stateCueMode,
       fontScale: updated.fontScale,
+      fontPreference: updated.fontPreference,
       glossaryTermsEnabled: updated.glossaryTermsEnabled,
     });
   };
@@ -187,6 +207,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
 
   const handleStateCueModeChange = (mode: StateCueMode) => {
     const updated = { ...settings, stateCueMode: normalizeStateCueMode(mode) };
+    setSettings(updated);
+    persistSettings(updated);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
+  };
+
+  const handleFontPreferenceChange = (preference: FontPreference) => {
+    const updated = { ...settings, fontPreference: normalizeFontPreference(preference) };
     setSettings(updated);
     persistSettings(updated);
     window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
@@ -431,7 +458,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
               <h3 id="appearance">Appearance</h3>
 
               <InfoBox>
-                Theme setting controls whether is in light or dark mode, or matching your system preference.
+                Theme setting controls whether the app is in light or dark mode, or matching your system preference.
                 {' '}
                 Preset setting controls the overall color scheme of the app.
               </InfoBox>
@@ -533,6 +560,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialS
                   {' • '}
                   Preset: <strong>{APPEARANCE_PRESET_MAP[settings.appearancePreset].label}</strong>
                 </span>
+              </div>
+
+              <div className="settings-group">
+                <label htmlFor="settings-font-preference">App Font</label>
+                <Dropdown
+                  id="settings-font-preference"
+                  value={settings.fontPreference}
+                  onChange={(e) => handleFontPreferenceChange(e.target.value as FontPreference)}
+                >
+                  {FONT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Dropdown>
+                <p
+                  className="settings-font-preview"
+                  style={{ fontFamily: FONT_STACKS[settings.fontPreference] }}
+                  aria-label={`Font preview in ${FONT_OPTIONS.find((option) => option.value === settings.fontPreference)?.label}`}
+                >
+                  The quick brown fox jumps over the lazy dog.
+                </p>
+                <p className="settings-search-hint">
+                  {FONT_OPTIONS.find((o) => o.value === settings.fontPreference)?.description}
+                </p>
               </div>
             </div>
           )}

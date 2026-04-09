@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ShieldCheck, Sun, Moon, Monitor, Palette } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow } from '../../../hooks';
 import { getCurrencySymbol, CURRENCIES } from '../../../utils/currency';
@@ -12,9 +12,16 @@ import {
   toStoredTaxLine,
   validateEditableTaxLineValues,
 } from '../../../utils/taxLines';
+import { estimateTaxSettings } from '../../../services/taxEstimationService';
+import { FileStorageService } from '../../../services/fileStorage';
+import { APP_CUSTOM_EVENTS } from '../../../constants/events';
+import { APPEARANCE_PRESET_OPTIONS } from '../../../constants/appearancePresets';
+import { getDefaultTabConfigs } from '../../../utils/tabManagement';
 import type { Account } from '../../../types/accounts';
-import type { PaySettings, TaxSettings } from '../../../types/payroll';
-import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor, Dropdown } from '../../_shared';
+import type { PaySettings, TaxSettings, TaxFilingStatus } from '../../../types/payroll';
+import type { AppearancePreset, ThemeMode } from '../../../types/appearance';
+import type { TabConfig } from '../../../types/tabs';
+import { Button, FormGroup, InputWithPrefix, RadioGroup, InfoBox, AccountsEditor, EncryptionConfigPanel, ProgressBar, ErrorDialog, TaxLinesEditor, Dropdown, DateInput, Toggle } from '../../_shared';
 import '../views.shared.css';
 import '../../_shared/payEditorShared.css';
 import './SetupWizard.css';
@@ -40,12 +47,22 @@ const getDefaultTaxLinesForCurrency = (currencyCode: string): EditableTaxLineVal
   ];
 };
 
+const TAB_STEP_DESCRIPTIONS: Record<string, string> = {
+  metrics: 'Year-at-a-glance summary of income, taxes, and how your money is allocated across accounts.',
+  breakdown: 'Detailed per-paycheck breakdown showing exactly where each dollar goes.',
+  'other-income': 'Record side jobs, bonuses, freelance payments, or any income separate from your main paycheck.',
+  bills: 'Track recurring fixed bills and subscriptions tied to each pay period.',
+  savings: 'Set aside money for savings goals, emergency funds, and retirement contributions.',
+  loans: 'Monitor loan balances, payments, and estimated payoff timelines.',
+  taxes: 'Detailed view of your tax withholding and effective rate.',
+};
+
 const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const { updatePaySettings, updateTaxSettings, updateBudgetSettings, updateBudgetData, budgetData, beginBatch, commitBatch } = useBudget();
   const { errorDialog, openErrorDialog, closeErrorDialog } = useAppDialogs();
   
   const [step, setStep] = useState(1);
-  const totalSteps = 6; // Increased from 5 to include encryption step
+  const totalSteps = 7;
 
   // Form state
   const [currency, setCurrency] = useState(budgetData?.settings?.currency || 'USD');
@@ -69,6 +86,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [hourlyRate, setHourlyRate] = useState('');
   const [hoursPerWeek, setHoursPerWeek] = useState('');
   const [payFrequency, setPayFrequency] = useState<PaySettings['payFrequency']>('bi-weekly');
+  const [firstPaycheckDate, setFirstPaycheckDate] = useState('');
   const [minLeftover, setMinLeftover] = useState('0');
 
   const [taxLines, setTaxLines] = useState<EditableTaxLineValues[]>(() => getDefaultTaxLinesForCurrency(budgetData?.settings?.currency || 'USD'));
@@ -76,6 +94,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
   const [taxRatesAutoEstimated, setTaxRatesAutoEstimated] = useState(false);
   const [additionalWithholding, setAdditionalWithholding] = useState('0');
   const [additionalWithholdingError, setAdditionalWithholdingError] = useState<string | undefined>();
+  const [filingStatus, setFilingStatus] = useState<TaxFilingStatus>('single');
 
   // Account configuration - start with default "My Checking" account
   const [accounts, setAccounts] = useState<Account[]>([
@@ -87,6 +106,17 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
       icon: getDefaultAccountIcon('checking'),
     },
   ]);
+
+  // Appearance & tab configuration (step 7)
+  const [wizardThemeMode, setWizardThemeMode] = useState<ThemeMode>(() => {
+    const s = FileStorageService.getAppSettings();
+    return s.themeMode ?? 'light';
+  });
+  const [wizardPreset, setWizardPreset] = useState<AppearancePreset>(() => {
+    const s = FileStorageService.getAppSettings();
+    return s.appearancePreset ?? 'default';
+  });
+  const [wizardTabConfigs, setWizardTabConfigs] = useState<TabConfig[]>(() => getDefaultTabConfigs());
 
   const handleNext = () => {
     if (step === 3 && currency === 'USD' && !taxRatesAutoEstimated) {
@@ -156,6 +186,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         ...budgetData.settings,
         currency,
         encryptionEnabled: encryptionEnabled ?? false,
+        tabConfigs: wizardTabConfigs,
       });
     }
 
@@ -166,15 +197,17 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         ? ((parseFloat(hoursPerWeek) || 0) * 52) / paychecksPerYear
         : undefined;
 
+    const isCalendarEligibleFrequency = payFrequency === 'weekly' || payFrequency === 'bi-weekly';
     const paySettings: PaySettings = {
       payType,
       payFrequency,
       minLeftover: parseFloat(minLeftover) || 0,
-      ...(payType === 'salary' 
+      ...(isCalendarEligibleFrequency && firstPaycheckDate ? { firstPaycheckDate } : {}),
+      ...(payType === 'salary'
         ? { annualSalary: parseFloat(annualSalary) || 0 }
-        : { 
+        : {
             hourlyRate: parseFloat(hourlyRate) || 0,
-            hoursPerPayPeriod: computedHoursPerPayPeriod || 0
+            hoursPerPayPeriod: computedHoursPerPayPeriod || 0,
           }
       ),
     };
@@ -184,6 +217,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     const taxSettings: TaxSettings = {
       taxLines: validatedTaxLines.map((line) => toStoredTaxLine(line, estimateGrossPerPaycheck())),
       additionalWithholding: parsedWithholding,
+      filingStatus,
     };
     updateTaxSettings(taxSettings);
 
@@ -212,6 +246,32 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
 
   const handleDeleteAccount = (id: string) => {
     setAccounts((prev) => prev.filter((acc) => acc.id !== id));
+  };
+
+  const handleWizardThemeChange = (mode: ThemeMode) => {
+    const existing = FileStorageService.getAppSettings();
+    FileStorageService.saveAppSettings({ ...existing, themeMode: mode, appearanceMode: 'preset', appearancePreset: wizardPreset });
+    setWizardThemeMode(mode);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.themeModeChanged));
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
+  };
+
+  const handleWizardPresetChange = (preset: AppearancePreset) => {
+    const existing = FileStorageService.getAppSettings();
+    FileStorageService.saveAppSettings({ ...existing, appearanceMode: 'preset', appearancePreset: preset });
+    setWizardPreset(preset);
+    window.dispatchEvent(new Event(APP_CUSTOM_EVENTS.appearanceSettingsChanged));
+  };
+
+  const handleWizardTabToggle = (tabId: string) => {
+    setWizardTabConfigs((prev) => {
+      const visibleCount = prev.filter((t) => t.visible).length;
+      return prev.map((t) => {
+        if (t.id !== tabId) return t;
+        if (t.visible && visibleCount <= 1) return t;
+        return { ...t, visible: !t.visible };
+      });
+    });
   };
 
   const handleTaxLineChange = (id: string, field: 'label' | 'rate' | 'amount' | 'taxableIncome' | 'calculationType', value: string) => {
@@ -281,51 +341,42 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
     return (parseFloat(hourlyRate) || 0) * (parseFloat(hoursPerWeek) || 0) * 52;
   };
 
-  const estimateFederalRate = (annualGross: number) => {
-    if (annualGross <= 25000) return 7;
-    if (annualGross <= 45000) return 10;
-    if (annualGross <= 70000) return 12;
-    if (annualGross <= 100000) return 15;
-    if (annualGross <= 160000) return 18;
-    if (annualGross <= 250000) return 22;
-    return 26;
-  };
-
-  const estimateStateRate = (annualGross: number) => {
-    if (annualGross <= 30000) return 3;
-    if (annualGross <= 60000) return 4;
-    if (annualGross <= 100000) return 5;
-    if (annualGross <= 160000) return 6;
-    return 7;
-  };
-
   const applyEstimatedTaxRates = (lines: EditableTaxLineValues[]) => {
     const annualGross = getEstimatedAnnualGross();
-    const federalRate = estimateFederalRate(annualGross);
-    const stateRate = estimateStateRate(annualGross);
     const grossPerPaycheck = estimateGrossPerPaycheck();
 
+    const estimated = estimateTaxSettings({
+      currency,
+      annualGrossIncome: annualGross,
+      annualTaxableIncome: grossPerPaycheck * getPaychecksPerYear(payFrequency),
+      paychecksPerYear: getPaychecksPerYear(payFrequency),
+      filingStatus,
+    });
+
+    const estimatedByLabel = new Map(
+      estimated.taxSettings.taxLines.map((line) => [line.label.trim().toLowerCase(), line]),
+    );
+
     return lines.map((line) => {
-      const lineWithTaxableIncome = syncEditableTaxLineValues(line, 'taxableIncome', grossPerPaycheck.toFixed(2), grossPerPaycheck);
       const normalizedLabel = line.label.trim().toLowerCase();
+      const suggested = estimatedByLabel.get(normalizedLabel);
+      const lineWithTaxableIncome = syncEditableTaxLineValues(
+        line,
+        'taxableIncome',
+        (suggested?.taxableIncome ?? grossPerPaycheck).toFixed(2),
+        grossPerPaycheck,
+      );
 
-      if (normalizedLabel === 'federal tax') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', String(federalRate), grossPerPaycheck);
+      if (!suggested) {
+        return lineWithTaxableIncome;
       }
 
-      if (normalizedLabel === 'state tax') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', String(stateRate), grossPerPaycheck);
-      }
-
-      if (normalizedLabel === 'social security') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', '6.2', grossPerPaycheck);
-      }
-
-      if (normalizedLabel === 'medicare') {
-        return syncEditableTaxLineValues(lineWithTaxableIncome, 'rate', '1.45', grossPerPaycheck);
-      }
-
-      return lineWithTaxableIncome;
+      return syncEditableTaxLineValues(
+        lineWithTaxableIncome,
+        'rate',
+        String(suggested.rate),
+        grossPerPaycheck,
+      );
     });
   };
 
@@ -365,6 +416,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
         return accounts.length > 0; // Need at least one account
       case 6:
         return encryptionEnabled !== null; // Must have chosen encryption or no encryption
+      case 7:
+        return true;
       default:
         return false;
     }
@@ -411,6 +464,7 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                   <li>Tax withholding estimates</li>
                   <li>Initial setup of your banking accounts</li>
                   <li>Security and encryption settings</li>
+                  <li>Appearance theme and which tabs are visible</li>
                 </ul>
               </InfoBox>
             </div>
@@ -436,6 +490,89 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 generatedKey={generatedEncryptionKey}
                 onGenerateKey={handleGenerateEncryptionKey}
               />
+            </div>
+          )}
+
+          {step === 7 && (
+            <div className="wizard-step">
+              <h2 className="wizard-step-title-with-icon">
+                <Palette className="ui-icon" aria-hidden="true" />
+                Appearance &amp; Tabs
+              </h2>
+              <p className="step-description">
+                Personalize your dashboard theme and choose which tabs are visible when you open your plan.
+              </p>
+
+              <div className="wizard-appearance-section">
+                <h3 className="wizard-appearance-section-title">Theme</h3>
+                <div className="wizard-theme-buttons">
+                  {(['light', 'dark', 'system'] as ThemeMode[]).map((mode) => {
+                    const Icon = mode === 'light' ? Sun : mode === 'dark' ? Moon : Monitor;
+                    const label = mode === 'light' ? 'Light' : mode === 'dark' ? 'Dark' : 'System';
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={`wizard-theme-button${wizardThemeMode === mode ? ' wizard-theme-button--selected' : ''}`}
+                        onClick={() => handleWizardThemeChange(mode)}
+                      >
+                        <Icon className="ui-icon" aria-hidden="true" />
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="wizard-appearance-section">
+                <h3 className="wizard-appearance-section-title">Color Theme</h3>
+                <div className="wizard-preset-grid">
+                  {APPEARANCE_PRESET_OPTIONS.map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      className={`wizard-preset-card${wizardPreset === preset.value ? ' wizard-preset-card--selected' : ''}`}
+                      onClick={() => handleWizardPresetChange(preset.value)}
+                    >
+                      <div className="wizard-preset-swatches">
+                        <span className="wizard-preset-swatch" style={{ background: preset.preview.accent }} />
+                        <span className="wizard-preset-swatch" style={{ background: preset.preview.accentAlt }} />
+                        <span className="wizard-preset-swatch" style={{ background: preset.preview.surface }} />
+                      </div>
+                      <span className="wizard-preset-name">{preset.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="wizard-appearance-section">
+                <h3 className="wizard-appearance-section-title">Visible Tabs</h3>
+                <p className="wizard-tabs-hint">
+                  Enable or disable tabs below. You can reorder them anytime by dragging in the tab bar.
+                </p>
+                <div className="wizard-tabs-list">
+                  {wizardTabConfigs.map((tab) => {
+                    const TabIcon = tab.icon;
+                    return (
+                      <div key={tab.id} className="wizard-tab-row">
+                        <div className="wizard-tab-info">
+                          <TabIcon className="ui-icon wizard-tab-icon" aria-hidden="true" />
+                          <div className="wizard-tab-text">
+                            <span className="wizard-tab-name">{tab.label}</span>
+                            <span className="wizard-tab-description">
+                              {TAB_STEP_DESCRIPTIONS[tab.id] ?? ''}
+                            </span>
+                          </div>
+                        </div>
+                        <Toggle
+                          checked={tab.visible}
+                          onChange={() => handleWizardTabToggle(tab.id)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 
@@ -523,8 +660,18 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 />
               </FormGroup>
 
-              {/* Paycheck scheduling inputs intentionally disabled for now.
-                  Keep this area reserved for re-enabling first-paycheck/semi-monthly date UX later. */}
+              {(payFrequency === 'weekly' || payFrequency === 'bi-weekly') && (
+                <FormGroup
+                  label="First Paycheck Date"
+                  helperText="Used to calculate your exact paycheck dates for calendar-accurate monthly and quarterly views."
+                >
+                  <DateInput
+                    value={firstPaycheckDate}
+                    onChange={(e) => setFirstPaycheckDate(e.target.value)}
+                    data-pay-setting-field="firstPaycheckDate"
+                  />
+                </FormGroup>
+              )}
 
               <FormGroup 
                 label="Target Leftover Per Pay Period" 
@@ -572,7 +719,8 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
               <InfoBox>
                 {currency === 'USD' ? (
                   <>
-                    <strong>Starter estimates loaded:</strong> These tax percentages were prefilled from the pay amount you entered.
+                    <strong>Starter estimates loaded:</strong> These tax percentages use progressive federal brackets,
+                    Social Security wage-base capping, and Medicare surtax behavior from the pay amount you entered.
                     Review and adjust them if your actual withholding differs.
                   </>
                 ) : (
@@ -589,7 +737,20 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onCancel }) => {
                 onLineBlur={handleTaxLineBlur}
                 onAddLine={handleAddTaxLine}
                 onRemoveLine={handleRemoveTaxLine}
+                showTaxableIncome={false}
               />
+
+              {currency === 'USD' && (
+                <FormGroup label="Federal Filing Status" helperText="Used for IRS federal bracket estimation.">
+                  <Dropdown
+                    value={filingStatus}
+                    onChange={(e) => setFilingStatus(e.target.value as TaxFilingStatus)}
+                  >
+                    <option value="single">Single</option>
+                    <option value="married_filing_jointly">Married Filing Jointly</option>
+                  </Dropdown>
+                </FormGroup>
+              )}
 
               <FormGroup 
                 label="Additional Withholding (per paycheck)" 

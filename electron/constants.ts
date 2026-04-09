@@ -6,6 +6,9 @@ loadLocalEnvForElectron();
 // https://docs.google.com/forms/d/e/<FORM_ID>/viewform
 export const FEEDBACK_FORM_URL = process.env.FEEDBACK_FORM_URL || '';
 
+// Set this to your project's latest release URL.
+export const LATEST_RELEASE_URL = process.env.LATEST_RELEASE_URL || '';
+
 // Optional prefill entry IDs from your Google Form.
 // Leave blank to open the form without prefilled values.
 export const FEEDBACK_FORM_ENTRY_IDS = {

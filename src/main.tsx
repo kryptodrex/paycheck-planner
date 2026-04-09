@@ -1,6 +1,7 @@
 // Main entry point for the React application
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './assets/fonts.css'
 import './index.css'
 import App from './App.tsx'
 import { BudgetProvider } from './contexts/BudgetContext'

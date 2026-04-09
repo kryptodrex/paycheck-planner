@@ -8,6 +8,8 @@ export type AppearanceMode = 'preset' | 'custom';
 
 export type AppearancePreset = 'default' | 'ocean' | 'forest' | 'sunset' | 'pink' | 'spreadsheet-core';
 
+export type FontPreference = 'system' | 'inter' | 'verdana' | 'atkinson' | 'open-dyslexic';
+
 export interface CustomAppearanceSettings {
   primaryAccent: string;
   surfaceTint: string;

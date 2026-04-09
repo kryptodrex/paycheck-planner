@@ -10,6 +10,7 @@ import { accountsSearchModule } from './accountsSearchModule';
 import { billsSearchModule } from './billsSearchModule';
 import { keyMetricsSearchModule } from './keyMetricsSearchModule';
 import { loansSearchModule } from './loansSearchModule';
+import { otherIncomeSearchModule } from './otherIncomeSearchModule';
 import { paySettingsSearchModule } from './paySettingsSearchModule';
 import { payBreakdownSearchModule } from './payBreakdownSearchModule';
 import { preTaxDeductionsSearchModule } from './preTaxDeductionsSearchModule';
@@ -27,6 +28,7 @@ export function initializeSearchModules(): void {
   registerSearchModule(billsSearchModule);
   registerSearchModule(keyMetricsSearchModule);
   registerSearchModule(loansSearchModule);
+  registerSearchModule(otherIncomeSearchModule);
   registerSearchModule(payBreakdownSearchModule);
   registerSearchModule(paySettingsSearchModule);
   registerSearchModule(preTaxDeductionsSearchModule);

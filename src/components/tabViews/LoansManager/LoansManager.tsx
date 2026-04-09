@@ -6,6 +6,9 @@ import type { AuditHistoryTarget } from '../../../types/audit';
 import type { Loan, LoanPaymentLine } from '../../../types/obligations';
 import type { LoanPaymentFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
+import type { LoanFieldErrors } from '../../../types/fieldErrors';
+import { LOAN_PAYMENT_FREQUENCY_OPTIONS } from '../../../constants/frequencies';
+import { LOAN_TYPE_METADATA } from '../../../constants/loanTypes';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel } from '../../../utils/payPeriod';
 import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
@@ -26,36 +29,12 @@ interface LoansManagerProps {
     onViewHistory?: (target: AuditHistoryTarget) => void;
 }
 
-type LoanFieldErrors = {
-    name?: string;
-    accountId?: string;
-    paymentLines?: string;
-};
-
 type EditableLoanPaymentLine = {
     id: string;
     label: string;
     amount: string;
     error?: string;
 };
-
-const LOAN_TYPES = [
-    { value: 'mortgage', label: 'Mortgage' },
-    { value: 'auto', label: 'Auto Loan' },
-    { value: 'student', label: 'Student Loan' },
-    { value: 'personal', label: 'Personal Loan' },
-    { value: 'credit-card', label: 'Credit Card' },
-    { value: 'other', label: 'Other' },
-] as const;
-
-const LOAN_PAYMENT_FREQUENCIES: Array<{ value: LoanPaymentFrequency; label: string }> = [
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'bi-weekly', label: 'Bi-weekly' },
-    { value: 'monthly', label: 'Monthly' },
-    { value: 'quarterly', label: 'Quarterly' },
-    { value: 'semi-annual', label: 'Semi-annual' },
-    { value: 'yearly', label: 'Yearly' },
-];
 
 const LOAN_TYPE_DEFAULT_LINES: Record<Loan['type'], Array<{ label: string }>> = {
     mortgage: [
@@ -565,9 +544,10 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                                     subtitle={`Paid ${formatBillFrequency((loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency)}: ${formatWithSymbol(convertMonthlyPaymentToFrequency(loan.monthlyPayment, (loan.paymentFrequency ?? 'monthly') as LoanPaymentFrequency), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                                     amount={formatWithSymbol(displayAmount(loan.monthlyPayment), currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     amountLabel={getDisplayModeLabel(displayMode)}
+                                                    notes={loan.notes}
                                                     badges={
                                                         <PillBadge variant="outline">
-                                                            {LOAN_TYPES.find((type) => type.value === loan.type)?.label ?? 'Loan'}
+                                                            {LOAN_TYPE_METADATA.find((type) => type.value === loan.type)?.label ?? 'Loan'}
                                                         </PillBadge>
                                                     }
                                                     isPaused={!isLoanEnabled(loan)}
@@ -590,7 +570,6 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                                             className="deduction-breakdown"
                                                         />
                                                     )}
-                                                    {loan.notes && <div className="loan-notes">{loan.notes}</div>}
                                                 </SectionItemCard>
                                             );
                                         })}
@@ -645,7 +624,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                 }
                             }}
                         >
-                            {LOAN_TYPES.map((type) => (
+                            {LOAN_TYPE_METADATA.map((type) => (
                                 <option key={type.value} value={type.value}>
                                     {type.label}
                                 </option>
@@ -677,7 +656,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                             value={loanPaymentFrequency}
                             onChange={(event) => setLoanPaymentFrequency(event.target.value as LoanPaymentFrequency)}
                         >
-                            {LOAN_PAYMENT_FREQUENCIES.map((frequency) => (
+                            {LOAN_PAYMENT_FREQUENCY_OPTIONS.map((frequency) => (
                                 <option key={frequency.value} value={frequency.value}>
                                     {frequency.label}
                                 </option>
@@ -739,7 +718,7 @@ const LoansManager: React.FC<LoansManagerProps> = ({
                                 Add Component
                             </Button>
                             <Button variant="tertiary" type="button" onClick={handleApplyTypeDefaults}>
-                                Add Defaults for {LOAN_TYPES.find((type) => type.value === loanType)?.label}
+                                Add Defaults for {LOAN_TYPE_METADATA.find((type) => type.value === loanType)?.label}
                             </Button>
                         </div>
 

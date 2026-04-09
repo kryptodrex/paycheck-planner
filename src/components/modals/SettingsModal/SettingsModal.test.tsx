@@ -149,7 +149,7 @@ describe('SettingsModal', () => {
   it('explains theme mode and preset distinctions in appearance settings', () => {
     renderSettingsModal();
 
-    expect(screen.getByText(/Theme setting controls whether is in light or dark mode, or matching your system preference\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Theme setting controls whether.*light or dark mode.*system preference\./i)).toBeInTheDocument();
     expect(screen.getByText(/Preset setting controls the overall color scheme of the app\./i)).toBeInTheDocument();
   });
 
@@ -218,4 +218,40 @@ describe('SettingsModal', () => {
     expect(screen.getByLabelText(/search settings/i)).toHaveValue('');
     expect(screen.getByRole('radio', { name: /paycheck planner purple/i })).toBeInTheDocument();
   });
+
+  it('renders the font preference dropdown in the Accessibility section', () => {
+    renderSettingsModal();
+
+    expect(screen.getByLabelText('App Font')).toBeInTheDocument();
+    expect(screen.getByLabelText('App Font')).toHaveValue('system');
+  });
+
+  it('persists font preference selection through settings storage', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.selectOptions(screen.getByLabelText('App Font'), 'atkinson');
+
+    const storedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || '{}');
+    expect(storedSettings.fontPreference).toBe('atkinson');
+  });
+
+  it('shows a font preview sentence below the font dropdown', () => {
+    renderSettingsModal();
+
+    const preview = document.querySelector('.settings-font-preview');
+    expect(preview).toBeInTheDocument();
+    expect(preview).toHaveTextContent('The quick brown fox jumps over the lazy dog.');
+  });
+
+  it('surfaces accessibility section when searching for font-related terms', async () => {
+    const user = userEvent.setup();
+    renderSettingsModal();
+
+    await user.type(screen.getByLabelText(/search settings/i), 'dyslexic');
+
+    expect(screen.getByRole('heading', { name: 'Accessibility' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Appearance' })).not.toBeInTheDocument();
+  });
 });
+

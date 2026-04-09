@@ -204,9 +204,9 @@
 }
 
 .manage-tabs-button:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border-bottom-color: var(--accent-primary) !important;
+  color: var(--text-accent);
+  border-bottom-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }
 
 .manage-tabs-button:focus {
@@ -287,8 +287,8 @@
   border-right: none;
 }
 
-.tab-position-top .tab-button.active {
-  border-bottom-color: var(--accent-primary);
+.tab-position-top .tab-button.active, .tab-position-top .manage-tabs-button:hover {
+  border-bottom-color: var(--accent-primary) !important;
 }
 
 /* Bottom Position */
@@ -309,7 +309,7 @@
   border-right: none;
 }
 
-.tab-position-bottom .tab-button.active {
+.tab-position-bottom .tab-button.active, .tab-position-bottom .manage-tabs-button:hover {
   border-top-color: var(--accent-primary);
 }
 
@@ -340,7 +340,7 @@
   min-height: 52px;
 }
 
-.tab-position-left .tab-button.active {
+.tab-position-left .tab-button.active, .tab-position-left .manage-tabs-button:hover {
   border-right-color: var(--accent-primary);
 }
 
@@ -378,7 +378,7 @@
   min-height: 52px;
 }
 
-.tab-position-right .tab-button.active {
+.tab-position-right .tab-button.active, .tab-position-right .manage-tabs-button:hover {
   border-left-color: var(--accent-primary);
 }
 
