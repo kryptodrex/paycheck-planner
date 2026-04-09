@@ -20,6 +20,7 @@ export interface FicaRuleSet {
   medicareEmployeeRate: number;
   medicareAdditionalRate: number;
   medicareAdditionalThresholdSingle: number;
+  medicareAdditionalThresholdMarried: number;
 }
 
 export interface StateTaxBandRule {
@@ -73,6 +74,7 @@ export const US_FICA_RULES_2026: FicaRuleSet = {
   medicareEmployeeRate: 0.0145,
   medicareAdditionalRate: 0.009,
   medicareAdditionalThresholdSingle: 200000,
+  medicareAdditionalThresholdMarried: 250000,
 };
 
 // State tax remains a heuristic in-app model for now.

@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
   return {
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
+      __CURRENCY_API_URL__: JSON.stringify(getEnv('CURRENCY_CONVERSION_URL') || 'https://api.frankfurter.app/latest'),
     },
     plugins: [
       react(),

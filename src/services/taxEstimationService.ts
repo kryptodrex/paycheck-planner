@@ -119,9 +119,12 @@ export function estimateTaxSettings(input: TaxEstimationInput): TaxEstimationRes
     US_FICA_RULES_2026.socialSecurityWageBase / safePaychecks,
   );
 
+  const annualMedicareSurtaxThreshold = filingStatus === 'married_filing_jointly'
+    ? US_FICA_RULES_2026.medicareAdditionalThresholdMarried
+    : US_FICA_RULES_2026.medicareAdditionalThresholdSingle;
   const annualMedicareTax = (annualGross * US_FICA_RULES_2026.medicareEmployeeRate)
     + (
-      Math.max(0, annualGross - US_FICA_RULES_2026.medicareAdditionalThresholdSingle)
+      Math.max(0, annualGross - annualMedicareSurtaxThreshold)
       * US_FICA_RULES_2026.medicareAdditionalRate
     );
   const medicareRate = annualGross > 0 ? (annualMedicareTax / annualGross) * 100 : 0;
@@ -141,7 +144,7 @@ export function estimateTaxSettings(input: TaxEstimationInput): TaxEstimationRes
       `Federal estimate uses IRS ${US_FEDERAL_TAX_RULES_2026.taxYear} progressive brackets and standard deduction for ${filingStatus}.`,
       'State tax is a blended estimate based on post pre-tax taxable income; edit if your jurisdiction differs.',
       'Social Security uses gross wages as the base, with wage-base capping behavior.',
-      'Medicare uses gross wages and includes the additional 0.9% surtax above the high-income threshold.',
+      'Medicare uses gross wages and includes the additional 0.9% surtax above the high-income threshold ($200k single / $250k married filing jointly).',
     ],
   };
 }

@@ -55,7 +55,10 @@ export function getTaxableIncomeForTaxLine(defaultTaxableIncome: number, line: T
   }
 
   if (isSocialSecurityTaxLine(normalizedLabel)) {
-    return roundToCent(Math.min(safeGrossPay, storedTaxableIncome > 0 ? storedTaxableIncome : safeGrossPay));
+    // When no explicit taxableIncome is stored (new plan / migration default), use gross wages
+    // rather than the pre-tax-deduction-adjusted default, since SS is a gross-wage tax.
+    const ssBase = line.taxableIncome != null ? storedTaxableIncome : safeGrossPay;
+    return roundToCent(Math.min(safeGrossPay, ssBase > 0 ? ssBase : safeGrossPay));
   }
 
   if (isMedicareTaxLine(normalizedLabel)) {

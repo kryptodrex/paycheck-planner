@@ -19,22 +19,7 @@ const CACHE_KEY = STORAGE_KEYS.currencyRates;
  * Falls back to Frankfurter API if not configured.
  */
 export function getCurrencyApiUrl(): string {
-  // In Electron + Vite context, check for import.meta.env first
-  try {
-    if (import.meta?.env?.VITE_CURRENCY_CONVERSION_URL) {
-      return import.meta.env.VITE_CURRENCY_CONVERSION_URL;
-    }
-  } catch {
-    // import.meta not available
-  }
-  
-  // Check window for client-side env (loaded from .env)
-  if (typeof window !== 'undefined' && (window as unknown as Record<string, string>).CURRENCY_CONVERSION_URL) {
-    return (window as unknown as Record<string, string>).CURRENCY_CONVERSION_URL;
-  }
-
-  // Default fallback
-  return 'https://api.frankfurter.app/latest';
+  return __CURRENCY_API_URL__;
 }
 
 /**
