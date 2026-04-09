@@ -28,9 +28,13 @@ const OTHER_INCOME_WITHHOLDING_PROFILES: ReadonlyArray<OtherIncomeWithholdingPro
 
 const DEFAULT_PROFILE_BY_INCOME_TYPE: Readonly<Record<OtherIncomeType, string>> = {
   bonus: 'supplemental-bonus',
+  commission: 'supplemental-bonus',
   'personal-business': 'self-employed-estimated',
   'rental-income': 'rental-income-estimated',
   'retirement-withdrawal': 'retirement-withdrawal-estimated',
+  disability: 'general-supplemental',
+  reimbursement: 'general-supplemental',
+  'investment-income': 'general-supplemental',
   other: 'general-supplemental',
 };
 

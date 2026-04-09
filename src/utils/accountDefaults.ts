@@ -6,17 +6,13 @@ export function getDefaultAccountColor(type: Account['type']): string {
   return ACCOUNT_TYPE_COLORS[type] ?? DEFAULT_ACCOUNT_COLOR;
 }
 
+const DEFAULT_ACCOUNT_ICONS: Record<Account['type'], string> = {
+  checking: 'CreditCard',
+  savings: 'PiggyBank',
+  investment: 'TrendingUp',
+  other: 'Wallet',
+};
+
 export function getDefaultAccountIcon(type: Account['type']): string {
-  switch (type) {
-    case 'checking':
-      return 'CreditCard';
-    case 'savings':
-      return 'PiggyBank';
-    case 'investment':
-      return 'TrendingUp';
-    case 'other':
-      return 'Wallet';
-    default:
-      return 'Wallet';
-  }
+  return DEFAULT_ACCOUNT_ICONS[type];
 }

@@ -5,8 +5,10 @@ import { calculatePaycheckBreakdown } from './budgetCalculations';
 import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../utils/frequency';
 import { roundToCent, roundUpToCent } from '../utils/money';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';
+import { REALLOCATION_SOURCE_TYPE_ORDER } from '../constants/reallocationSourceTypes';
+import type { ReallocationProposalSourceType } from '../constants/reallocationSourceTypes';
 
-export type ReallocationProposalSourceType = 'bill' | 'deduction' | 'custom-allocation' | 'savings' | 'investment' | 'retirement';
+export type { ReallocationProposalSourceType } from '../constants/reallocationSourceTypes';
 export type ReallocationProposalAction = 'reduce' | 'pause' | 'zero';
 
 export interface CustomAllocationReallocationItem {
@@ -321,14 +323,9 @@ export function createReallocationPlan(input: ReallocationPlannerInput): Realloc
 
   // Split into type-ordered groups.  Within each group the candidate order is
   // preserved (smallest-first for pause-only, largest-first for others).
-  const groups: ReallocationCandidate[][] = [
-    allCandidates.filter((c) => c.sourceType === 'bill'),
-    allCandidates.filter((c) => c.sourceType === 'deduction'),
-    allCandidates.filter((c) => c.sourceType === 'custom-allocation'),
-    allCandidates.filter((c) => c.sourceType === 'savings'),
-    allCandidates.filter((c) => c.sourceType === 'investment'),
-    allCandidates.filter((c) => c.sourceType === 'retirement'),
-  ];
+  const groups: ReallocationCandidate[][] = REALLOCATION_SOURCE_TYPE_ORDER.map(
+    (sourceType) => allCandidates.filter((c) => c.sourceType === sourceType),
+  );
 
   const proposals: ReallocationProposal[] = [];
   let remainingShortfall = shortfallPerPaycheck;

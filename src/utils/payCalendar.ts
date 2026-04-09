@@ -1,4 +1,6 @@
 import type { PayFrequency } from '../types/frequencies';
+import { FREQUENCIES } from '../constants/frequencies';
+import { assertNever } from './assertNever';
 
 export interface SemiMonthlyDays {
   first: number;
@@ -194,24 +196,24 @@ export function generatePaycheckDates(
   }
 
   switch (frequency) {
-    case 'bi-weekly':
+    case FREQUENCIES.biWeekly:
       return generateBiWeeklyDates(firstPaycheckDate, rangeStart, rangeEnd);
 
-    case 'weekly':
+    case FREQUENCIES.weekly:
       return generateWeeklyDates(firstPaycheckDate, rangeStart, rangeEnd);
 
-    case 'semi-monthly': {
+    case FREQUENCIES.semiMonthly: {
       const days = semiMonthlyDays ?? { first: 1, second: 15 };
       return generateSemiMonthlyDates(rangeStart, rangeEnd, days);
     }
 
-    case 'monthly':
-    case 'quarterly':
-    case 'yearly':
+    case FREQUENCIES.monthly:
+    case FREQUENCIES.quarterly:
+    case FREQUENCIES.yearly:
       return generateMonthlyDates(firstPaycheckDate, rangeStart, rangeEnd);
 
     default:
-      return [];
+      return assertNever(frequency);
   }
 }
 

@@ -5,7 +5,8 @@
 
 import type { PayFrequency } from '../types/frequencies';
 import type { PaySettings } from '../types/payroll';
-import type { ViewMode } from '../types/viewMode';
+import type { SelectableViewMode, ViewMode } from '../types/viewMode';
+import { FREQUENCIES, VIEW_MODES } from '../constants/frequencies';
 import { getPayFrequencyOccurrencesPerYear } from './frequency';
 
 /**
@@ -18,22 +19,15 @@ export function getPaychecksPerYear(frequency: PayFrequency | string): number {
 }
 
 export function getPayFrequencyViewMode(frequency: PayFrequency | string): ViewMode {
-  switch (String(frequency)) {
-    case 'weekly':
-      return 'weekly';
-    case 'bi-weekly':
-      return 'bi-weekly';
-    case 'semi-monthly':
-      return 'semi-monthly';
-    case 'monthly':
-      return 'monthly';
-    case 'quarterly':
-      return 'quarterly';
-    case 'yearly':
-      return 'yearly';
-    default:
-      return 'bi-weekly';
-  }
+  const PAY_FREQUENCY_TO_VIEW_MODE: Record<PayFrequency, ViewMode> = {
+    [FREQUENCIES.weekly]: VIEW_MODES.weekly,
+    [FREQUENCIES.biWeekly]: VIEW_MODES.biWeekly,
+    [FREQUENCIES.semiMonthly]: VIEW_MODES.semiMonthly,
+    [FREQUENCIES.monthly]: VIEW_MODES.monthly,
+    [FREQUENCIES.quarterly]: VIEW_MODES.quarterly,
+    [FREQUENCIES.yearly]: VIEW_MODES.yearly,
+  };
+  return PAY_FREQUENCY_TO_VIEW_MODE[frequency as PayFrequency] ?? VIEW_MODES.biWeekly;
 }
 
 /**
@@ -43,28 +37,21 @@ export function getPayFrequencyViewMode(frequency: PayFrequency | string): ViewM
  * @param displayMode - The display mode
  * @returns Converted amount in the requested display mode
  */
+const VIEW_MODE_OCCURRENCES_PER_YEAR: Record<SelectableViewMode, number> = {
+  [VIEW_MODES.weekly]: 52,
+  [VIEW_MODES.biWeekly]: 26,
+  [VIEW_MODES.semiMonthly]: 24,
+  [VIEW_MODES.monthly]: 12,
+  [VIEW_MODES.quarterly]: 4,
+  [VIEW_MODES.yearly]: 1,
+};
+
 export function getDisplayModeOccurrencesPerYear(
   displayMode: ViewMode,
   paychecksPerYear: number,
 ): number {
-  switch (displayMode) {
-    case 'paycheck':
-      return paychecksPerYear;
-    case 'weekly':
-      return 52;
-    case 'bi-weekly':
-      return 26;
-    case 'semi-monthly':
-      return 24;
-    case 'monthly':
-      return 12;
-    case 'quarterly':
-      return 4;
-    case 'yearly':
-      return 1;
-    default:
-      return paychecksPerYear;
-  }
+  if (displayMode === VIEW_MODES.paycheck) return paychecksPerYear;
+  return VIEW_MODE_OCCURRENCES_PER_YEAR[displayMode as SelectableViewMode] ?? paychecksPerYear;
 }
 
 export function convertToDisplayMode(
@@ -102,47 +89,34 @@ export function convertFromDisplayMode(
  * @param displayMode - The display mode
  * @returns Human-readable label
  */
+const VIEW_MODE_LABELS: Record<ViewMode, string> = {
+  [VIEW_MODES.paycheck]: 'Per Paycheck',
+  [VIEW_MODES.weekly]: 'Weekly',
+  [VIEW_MODES.biWeekly]: 'Bi-weekly',
+  [VIEW_MODES.semiMonthly]: 'Semi-monthly',
+  [VIEW_MODES.monthly]: 'Monthly',
+  [VIEW_MODES.quarterly]: 'Quarterly',
+  [VIEW_MODES.yearly]: 'Yearly',
+};
+
 export function getDisplayModeLabel(displayMode: ViewMode): string {
-  switch (displayMode) {
-    case 'paycheck':
-      return 'Per Paycheck';
-    case 'weekly':
-      return 'Weekly';
-    case 'bi-weekly':
-      return 'Bi-weekly';
-    case 'semi-monthly':
-      return 'Semi-monthly';
-    case 'monthly':
-      return 'Monthly';
-    case 'quarterly':
-      return 'Quarterly';
-    case 'yearly':
-      return 'Yearly';
-    default:
-      return 'Per Paycheck';
-  }
+  return VIEW_MODE_LABELS[displayMode] ?? 'Per Paycheck';
 }
 
 /**
  * Get a user-friendly pay frequency label
  */
+const PAY_FREQUENCY_LABELS: Record<PayFrequency, string> = {
+  [FREQUENCIES.weekly]: 'Weekly',
+  [FREQUENCIES.biWeekly]: 'Bi-weekly',
+  [FREQUENCIES.semiMonthly]: 'Semi-monthly',
+  [FREQUENCIES.monthly]: 'Monthly',
+  [FREQUENCIES.quarterly]: 'Quarterly',
+  [FREQUENCIES.yearly]: 'Yearly',
+};
+
 export function formatPayFrequencyLabel(frequency: PayFrequency | string): string {
-  switch (String(frequency)) {
-    case 'weekly':
-      return 'Weekly';
-    case 'bi-weekly':
-      return 'Bi-weekly';
-    case 'semi-monthly':
-      return 'Semi-monthly';
-    case 'monthly':
-      return 'Monthly';
-    case 'quarterly':
-      return 'Quarterly';
-    case 'yearly':
-      return 'Yearly';
-    default:
-      return 'Bi-weekly';
-  }
+  return PAY_FREQUENCY_LABELS[frequency as PayFrequency] ?? 'Bi-weekly';
 }
 
 /**

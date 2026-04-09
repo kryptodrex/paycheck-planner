@@ -5,6 +5,7 @@ import type { BudgetData } from '../../../types/budget';
 import type { PayFrequency } from '../../../types/frequencies';
 import type { PaySettings } from '../../../types/payroll';
 import type { AuditHistoryTarget } from '../../../types/audit';
+import type { PaySettingsFieldErrors } from '../../../types/fieldErrors';
 import { convertBudgetAmounts } from '../../../services/budgetCurrencyConversion';
 import { getExchangeRate, getLastUpdatedTimestamp } from '../../../services/currencyRateFetcher';
 import { CURRENCIES, getCurrencySymbol } from '../../../utils/currency';
@@ -23,13 +24,6 @@ interface PaySettingsModalProps {
   searchFieldHighlight?: string;
   onViewHistory?: (target: AuditHistoryTarget) => void;
 }
-
-type PaySettingsFieldErrors = {
-  annualSalary?: string;
-  hourlyRate?: string;
-  hoursPerWeek?: string;
-  minLeftover?: string;
-};
 
 const SEARCH_FOCUS_INITIAL_DELAY_MS = 80;
 const SEARCH_FOCUS_RETRY_DELAY_MS = 120;

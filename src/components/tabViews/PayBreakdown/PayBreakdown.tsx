@@ -23,6 +23,8 @@ import type { Bill, Loan, SavingsContribution } from '../../../types/obligations
 import type { Benefit, RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import type { AuditHistoryTarget } from '../../../types/audit';
+import type { AllocationCategory, AllocationAccount, AccountFunding } from '../../../types/payBreakdown';
+import type { AccountAllocationCategory } from '../../../types/accounts';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { buildPreTaxLineItems, buildPostTaxLineItems } from '../../../utils/deductionLineItems';
 import { applyReallocationPlan, createReallocationPlan, type ReallocationPlan, type ReallocationProposal } from '../../../services/reallocationPlanner';
@@ -32,32 +34,6 @@ import ReallocationSummaryModal, { type ReallocationSummaryItem } from '../../mo
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import '../tabViews.shared.css';
 import './PayBreakdown.css';
-
-type AllocationCategory = {
-  id: string;
-  name: string;
-  amount: number;
-  isBill?: boolean;        // If true, this is an auto-calculated sum of bills for this account
-  billCount?: number;      // Number of bills in this category (if isBill is true)
-  isBenefit?: boolean;     // If true, this is an auto-calculated sum of account-sourced benefits
-  benefitCount?: number;   // Number of benefits in this category (if isBenefit is true)
-  isRetirement?: boolean;  // If true, this is an auto-calculated sum of account-sourced retirement
-  retirementCount?: number; // Number of retirement contributions in this category (if isRetirement is true)
-  isLoan?: boolean;        // If true, this is an auto-calculated sum of loans for this account
-  loanCount?: number;      // Number of loans in this category (if isLoan is true)
-  isSavings?: boolean;     // If true, this is an auto-calculated sum of savings/investments for this account
-  savingsCount?: number;   // Number of savings/investment items in this category (if isSavings is true)
-};
-
-type AllocationAccount = Account & {
-  allocationCategories: AllocationCategory[];
-};
-
-type AccountFunding = {
-  account: AllocationAccount;
-  totalAmount: number;
-  categories: AllocationCategory[];
-};
 
 type ValidationMessage = {
   type: 'error' | 'warning';
@@ -78,16 +54,10 @@ type ReallocationSummaryMeta = {
 };
 
 
-const isAutoCategory = (category: AllocationCategory): boolean => {
-  return Boolean(category.isBill || category.isBenefit || category.isRetirement || category.isLoan || category.isSavings);
-};
+const isAutoCategory = (category: AllocationCategory): boolean => category.kind !== 'custom';
 
 const getCategoryItemCount = (category: AllocationCategory): number | null => {
-  if (category.isBill && category.billCount && category.billCount > 0) return category.billCount;
-  if (category.isBenefit && category.benefitCount && category.benefitCount > 0) return category.benefitCount;
-  if (category.isRetirement && category.retirementCount && category.retirementCount > 0) return category.retirementCount;
-  if (category.isLoan && category.loanCount && category.loanCount > 0) return category.loanCount;
-  if (category.isSavings && category.savingsCount && category.savingsCount > 0) return category.savingsCount;
+  if (category.kind !== 'custom' && category.itemCount > 0) return category.itemCount;
   return null;
 };
 
@@ -619,9 +589,16 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
 
     const updatedAccounts = budgetData.accounts.map((account) => {
       if (account.id !== accountId) return account;
+      const storedCategories: AccountAllocationCategory[] = cleanedCategories.map((cat) => {
+        if (cat.kind === 'custom') return { id: cat.id, name: cat.name, amount: cat.amount };
+        if (cat.kind === 'bill') return { id: cat.id, name: cat.name, amount: cat.amount, isBill: true, billCount: cat.itemCount };
+        if (cat.kind === 'retirement') return { id: cat.id, name: cat.name, amount: cat.amount, isRetirement: true, retirementCount: cat.itemCount };
+        if (cat.kind === 'loan') return { id: cat.id, name: cat.name, amount: cat.amount, isLoan: true, loanCount: cat.itemCount };
+        return { id: cat.id, name: cat.name, amount: cat.amount, isSavings: true, savingsCount: cat.itemCount };
+      });
       return {
         ...account,
-        allocationCategories: cleanedCategories,
+        allocationCategories: storedCategories,
       };
     });
 
@@ -642,6 +619,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
             id: crypto.randomUUID(),
             name: '',
             amount: 0,
+            kind: 'custom' as const,
           },
         ],
       });
@@ -649,7 +627,7 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     });
   };
 
-  const updateCategory = (accountId: string, categoryId: string, updates: Partial<AllocationCategory>) => {
+  const updateCategory = (accountId: string, categoryId: string, updates: { name?: string; amount?: number }) => {
     setDraftAccounts((prev) => {
       const account = prev.get(accountId);
       if (!account) return prev;
@@ -686,23 +664,21 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
   };
 
   const navigateToCategorySource = (category: AllocationCategory, accountId: string) => {
-    if (category.isBill || category.isBenefit) {
-      onNavigateToBills?.(accountId);
-      return;
-    }
-
-    if (category.isRetirement) {
-      onNavigateToRetirement?.(accountId);
-      return;
-    }
-
-    if (category.isLoan) {
-      onNavigateToLoans?.(accountId);
-      return;
-    }
-
-    if (category.isSavings) {
-      onNavigateToSavings?.(accountId);
+    switch (category.kind) {
+      case 'bill':
+        onNavigateToBills?.(accountId);
+        break;
+      case 'retirement':
+        onNavigateToRetirement?.(accountId);
+        break;
+      case 'loan':
+        onNavigateToLoans?.(accountId);
+        break;
+      case 'savings':
+        onNavigateToSavings?.(accountId);
+        break;
+      default:
+        break;
     }
   };
 
@@ -1022,7 +998,12 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
                                   type="text"
                                   value={category.name}
                                   onChange={(e) => updateCategory(displayAccount.id, category.id, { name: e.target.value })}
-                                  placeholder={category.isBill ? 'Bills category name' : (category.isBenefit ? 'Deductions category name' : (category.isRetirement ? 'Retirement category name' : (category.isLoan ? 'Loan Payments category name' : 'Savings category name')))}
+                                  placeholder={
+                                    category.kind === 'bill' ? 'Bills & Deductions category name' :
+                                    category.kind === 'retirement' ? 'Retirement category name' :
+                                    category.kind === 'loan' ? 'Loan Payments category name' :
+                                    'Savings category name'
+                                  }
                                   className="category-name-input"
                                 />
                                 <div className="bill-amount-display">
@@ -1322,14 +1303,11 @@ function normalizeAccounts(
     // Get user-defined categories
     const userCategories = (account.allocationCategories || [])
       .filter(cat => !cat.id.startsWith('__bills_') && !cat.id.startsWith('__benefits_') && !cat.id.startsWith('__retirement_') && !cat.id.startsWith('__loans_') && !cat.id.startsWith('__savings_'))
-      .map((category) => ({
+      .map((category): AllocationCategory => ({
         id: category.id,
         name: category.name,
         amount: category.amount,
-        isBill: false,
-        isBenefit: false,
-        isRetirement: false,
-        isSavings: false,
+        kind: 'custom',
       }));
 
     // Get bills for this account and calculate total
@@ -1378,8 +1356,8 @@ function normalizeAccounts(
         id: `__bills_${account.id}`,
         name: existingBillCategory?.name || existingBenefitCategory?.name || defaultBillsName,
         amount: roundUpToCent(billTotal + deductionsTotal),
-        isBill: true,
-        billCount: accountBills.length + accountBenefits.length,
+        kind: 'bill',
+        itemCount: accountBills.length + accountBenefits.length,
       });
     }
 
@@ -1395,8 +1373,8 @@ function normalizeAccounts(
         id: `__retirement_${account.id}`,
         name: existingRetirementCategory?.name || 'Retirement Plans',
         amount: roundUpToCent(retirementTotal),
-        isRetirement: true,
-        retirementCount: accountRetirement.length,
+        kind: 'retirement',
+        itemCount: accountRetirement.length,
       });
     }
 
@@ -1424,8 +1402,8 @@ function normalizeAccounts(
         id: `__savings_${account.id}`,
         name: existingSavingsCategory?.name || defaultSavingsName + ' Contributions',
         amount: roundUpToCent(savingsTotal),
-        isSavings: true,
-        savingsCount: accountSavings.length,
+        kind: 'savings',
+        itemCount: accountSavings.length,
       });
     }
 
@@ -1446,8 +1424,8 @@ function normalizeAccounts(
         id: `__loans_${account.id}`,
         name: existingLoanCategory?.name || 'Loan Payments',
         amount: roundUpToCent(loanTotal),
-        isLoan: true,
-        loanCount: accountLoans.length,
+        kind: 'loan',
+        itemCount: accountLoans.length,
       });
     }
 
@@ -1462,19 +1440,8 @@ function normalizeAccounts(
 function calculateAllocationPlan(accounts: AllocationAccount[], netPay: number): { accountFunding: AccountFunding[]; remaining: number } {
   const accountFunding: AccountFunding[] = accounts.map((account) => {
     const categories = account.allocationCategories.map((category) => ({
-      id: category.id,
-      name: category.name,
+      ...category,
       amount: Math.max(0, category.amount || 0),
-      isBill: category.isBill,
-      billCount: category.billCount,
-      isBenefit: category.isBenefit,
-      benefitCount: category.benefitCount,
-      isRetirement: category.isRetirement,
-      retirementCount: category.retirementCount,
-      isLoan: category.isLoan,
-      loanCount: category.loanCount,
-      isSavings: category.isSavings,
-      savingsCount: category.savingsCount,
     }));
 
     const totalAmount = categories.reduce((sum, cat) => sum + cat.amount, 0);

@@ -40,6 +40,7 @@ import type { AccountAllocationCategory } from '../../types/accounts';
 import './PlanDashboard.css';
 
 import type { TabId } from '../../utils/tabManagement';
+import { TAB_IDS } from '../../constants/tabIds';
 
 type TabScrollPosition = 'top' | 'bottom';
 
@@ -60,7 +61,7 @@ interface PlanDashboardProps {
   onUndoRedoSuccess?: (action: 'undo' | 'redo') => void;
 }
 
-const VALID_TABS: TabId[] = ['metrics', 'breakdown', 'other-income', 'bills', 'loans', 'taxes', 'savings'];
+const VALID_TABS: TabId[] = Object.values(TAB_IDS);
 
 /** Timing constants for the search-result scroll + highlight behaviour */
 const SEARCH_SCROLL_INITIAL_DELAY_MS = 80;
@@ -158,7 +159,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
       return normalizedSavedTab;
     }
 
-    return 'metrics' as TabId;
+    return TAB_IDS.metrics;
   };
 
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
@@ -1049,7 +1050,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
     
     // If hiding the active tab, switch to metrics
     if (!visible && activeTab === tabId) {
-      setActiveTab('metrics');
+      setActiveTab(TAB_IDS.metrics);
     }
   }, [activeTab, budgetData, openErrorDialog, tabConfigs, updateBudgetSettings]);
 
@@ -1867,7 +1868,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           </div>
         )}
         <div
-          className={`tab-panel ${activeTab === 'metrics' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.metrics ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.metrics = element;
           }}
@@ -1875,24 +1876,24 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           <KeyMetrics
             onOpenPayDetails={openPayDetailsModal}
             onNavigateToTaxes={() => {
-              openTabFromLink('taxes');
+              openTabFromLink(TAB_IDS.taxes);
             }}
             onNavigateToNetPay={() => {
-              openTabFromLink('breakdown');
+              openTabFromLink(TAB_IDS.breakdown);
             }}
             onNavigateToSavings={() => {
-              openTabFromLink('savings', { scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.savings, { scrollToRetirement: false });
             }}
             onNavigateToBills={() => {
-              openTabFromLink('bills', { scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.bills, { scrollToRetirement: false });
             }}
             onNavigateToRemaining={() => {
-              openTabFromLink('breakdown', { scrollPosition: 'bottom', scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.breakdown, { scrollPosition: 'bottom', scrollToRetirement: false });
             }}
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'breakdown' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.breakdown ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.breakdown = element;
           }}
@@ -1904,22 +1905,22 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
             viewModeControl={viewModeControl}
             onOpenPayDetails={openPayDetailsModal}
             onNavigateToBills={(accountId) => {
-              openTabFromLink('bills', { scrollToAccountId: accountId, scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.bills, { scrollToAccountId: accountId, scrollToRetirement: false });
             }}
             onNavigateToSavings={() => {
-              openTabFromLink('savings', { scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.savings, { scrollToRetirement: false });
             }}
             onNavigateToRetirement={() => {
-              openTabFromLink('savings', { scrollToRetirement: true });
+              openTabFromLink(TAB_IDS.savings, { scrollToRetirement: true });
             }}
             onNavigateToLoans={(accountId) => {
-              openTabFromLink('loans', { scrollToAccountId: accountId, scrollToRetirement: false });
+              openTabFromLink(TAB_IDS.loans, { scrollToAccountId: accountId, scrollToRetirement: false });
             }} 
             onViewHistory={handleOpenObjectHistory}
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'other-income' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.otherIncome ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current['other-income'] = element;
           }}
@@ -1934,7 +1935,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'bills' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.bills ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.bills = element;
           }}
@@ -1950,7 +1951,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'loans' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.loans ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.loans = element;
           }}
@@ -1966,7 +1967,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'taxes' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.taxes ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.taxes = element;
           }}
@@ -1979,7 +1980,7 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
           />
         </div>
         <div
-          className={`tab-panel ${activeTab === 'savings' ? 'active' : ''}`}
+          className={`tab-panel ${activeTab === TAB_IDS.savings ? 'active' : ''}`}
           ref={(element) => {
             tabPanelRefs.current.savings = element;
           }}

@@ -13,28 +13,12 @@ import { formatWithSymbol } from '../../../utils/currency';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
 import { getDisplayModeLabel } from '../../../utils/payPeriod';
 import { Alert, Button, Modal, PillBadge, ProgressBar, Slider, Toggle } from '../../_shared';
+import {
+  REALLOCATION_ADJUSTABLE_TYPES,
+  REALLOCATION_PAUSE_ONLY_TYPES,
+  REALLOCATION_SECTION_ORDER,
+} from '../../../constants/reallocationSourceTypes';
 import './ReallocationReviewModal.css';
-
-const PAUSE_ONLY_TYPES: ReadonlySet<ReallocationProposalSourceType> = new Set(['bill', 'deduction']);
-const ADJUSTABLE_TYPES: ReadonlySet<ReallocationProposalSourceType> = new Set([
-  'custom-allocation',
-  'savings',
-  'investment',
-  'retirement',
-]);
-
-const SECTION_ORDER: ReadonlyArray<{
-  type: ReallocationProposalSourceType;
-  label: string;
-  isPauseOnly: boolean;
-}> = [
-  { type: 'bill', label: 'Bills', isPauseOnly: true },
-  { type: 'deduction', label: 'Deductions', isPauseOnly: true },
-  { type: 'custom-allocation', label: 'Custom Allocations', isPauseOnly: false },
-  { type: 'savings', label: 'Savings', isPauseOnly: false },
-  { type: 'investment', label: 'Investments', isPauseOnly: false },
-  { type: 'retirement', label: 'Retirement', isPauseOnly: false },
-];
 
 function roundToCent(value: number): number {
   return Math.round(value * 100) / 100;
@@ -53,7 +37,7 @@ function applyAutoBalance(
   if (Math.abs(delta) < 0.005) return newOverrides;
 
   const adjustable = proposals.filter(
-    (p) => p.sourceId !== changedSourceId && ADJUSTABLE_TYPES.has(p.sourceType),
+    (p) => p.sourceId !== changedSourceId && REALLOCATION_ADJUSTABLE_TYPES.has(p.sourceType),
   );
 
   if (adjustable.length === 0) return newOverrides;
@@ -376,7 +360,7 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
         </div>
 
         <div className="reallocation-proposal-list">
-          {SECTION_ORDER.map(({ type, label, isPauseOnly }) => {
+          {REALLOCATION_SECTION_ORDER.map(({ id: type, label, isPauseOnly }) => {
             const sectionProposals = proposalsByType.get(type);
             if (!sectionProposals || sectionProposals.length === 0) return null;
 
@@ -438,7 +422,7 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
                     // check would always fire, locking the slider in place.
                     const snapPoint = (() => {
                       if (autoBalance) return undefined;
-                      if (PAUSE_ONLY_TYPES.has(proposal.sourceType)) return undefined;
+                      if (REALLOCATION_PAUSE_ONLY_TYPES.has(proposal.sourceType)) return undefined;
                       const otherFreed = roundToCent(totalFreed - overrideFreed);
                       const snapFreed = roundToCent(plan.shortfallPerPaycheck - otherFreed);
                       const snapRetained = roundToCent(proposal.currentPerPaycheckAmount - snapFreed);
@@ -465,7 +449,7 @@ const ReallocationReviewModal: React.FC<ReallocationReviewModalProps> = ({
                         </div>
 
                         <div className="reallocation-row-control">
-                          {PAUSE_ONLY_TYPES.has(proposal.sourceType) ? (
+                          {REALLOCATION_PAUSE_ONLY_TYPES.has(proposal.sourceType) ? (
                             <Toggle
                               checked={isActive}
                               onChange={(checked) =>

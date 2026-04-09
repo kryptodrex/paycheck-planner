@@ -7,6 +7,7 @@ import type { Bill } from '../../../types/obligations';
 import type { Benefit } from '../../../types/payroll';
 import type { BillFrequency } from '../../../types/frequencies';
 import type { ViewMode } from '../../../types/viewMode';
+import type { BillFieldErrors, BenefitFieldErrors } from '../../../types/fieldErrors';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent, roundUpToCent } from '../../../utils/money';
 import { calculateGrossPayPerPaycheck, getDisplayModeLabel, getPaychecksPerYear } from '../../../utils/payPeriod';
@@ -36,18 +37,6 @@ interface BillsManagerProps {
   viewModeControl?: React.ReactNode;
   onViewHistory?: (target: AuditHistoryTarget) => void;
 }
-
-type BillFieldErrors = {
-  name?: string;
-  amount?: string;
-  accountId?: string;
-};
-
-type BenefitFieldErrors = {
-  name?: string;
-  amount?: string;
-  sourceAccountId?: string;
-};
 
 const MAX_AMOUNT_DECIMALS = 3;
 

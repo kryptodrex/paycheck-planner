@@ -6,6 +6,7 @@ import type { AuditHistoryTarget } from '../../../types/audit';
 import type { SavingsContribution } from '../../../types/obligations';
 import type { RetirementElection } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
+import type { SavingsFieldErrors, RetirementFieldErrors } from '../../../types/fieldErrors';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { getPaychecksPerYear, getDisplayModeLabel, calculateGrossPayPerPaycheck } from '../../../utils/payPeriod';
 import { getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
@@ -37,19 +38,6 @@ interface SavingsManagerProps {
   viewModeControl?: React.ReactNode;
   onViewHistory?: (target: AuditHistoryTarget) => void;
 }
-
-type SavingsFieldErrors = {
-  name?: string;
-  amount?: string;
-  accountId?: string;
-};
-
-type RetirementFieldErrors = {
-  employeeAmount?: string;
-  sourceAccountId?: string;
-  yearlyLimit?: string;
-  customLabel?: string;
-};
 
 const SavingsManager: React.FC<SavingsManagerProps> = ({
   shouldScrollToRetirement,

@@ -5,6 +5,7 @@ import { convertBillToYearly } from '../billFrequency';
 import { getPaychecksPerYear } from '../payPeriod';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { formatSearchCurrency } from './moduleUtils';
 
 function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
@@ -36,7 +37,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: Banknote,
       action: {
         type: 'navigate-tab',
-        tabId: 'breakdown',
+        tabId: TAB_IDS.breakdown,
         elementId: 'pay-breakdown-gross-pay',
       },
     },
@@ -48,7 +49,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: Scale,
       action: {
         type: 'navigate-tab',
-        tabId: 'breakdown',
+        tabId: TAB_IDS.breakdown,
         elementId: 'pay-breakdown-total-taxes',
       },
     },
@@ -60,7 +61,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: Calculator,
       action: {
         type: 'navigate-tab',
-        tabId: 'breakdown',
+        tabId: TAB_IDS.breakdown,
         elementId: 'pay-breakdown-taxable-income',
       },
     },
@@ -74,7 +75,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
             categoryIcon: TrendingDown,
             action: {
               type: 'navigate-tab' as const,
-              tabId: 'breakdown' as const,
+              tabId: TAB_IDS.breakdown,
               elementId: 'pay-breakdown-pre-tax-deductions',
             },
           },
@@ -90,7 +91,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
             categoryIcon: Pin,
             action: {
               type: 'navigate-tab' as const,
-              tabId: 'breakdown' as const,
+              tabId: TAB_IDS.breakdown,
               elementId: 'pay-breakdown-post-tax-deductions',
             },
           },
@@ -104,7 +105,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: HandCoins,
       action: {
         type: 'navigate-tab',
-        tabId: 'breakdown',
+        tabId: TAB_IDS.breakdown,
         elementId: 'pay-breakdown-net-pay',
       },
     },
@@ -116,7 +117,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
       categoryIcon: Wallet,
       action: {
         type: 'navigate-tab',
-        tabId: 'breakdown',
+        tabId: TAB_IDS.breakdown,
         elementId: 'pay-breakdown-remaining-for-spending',
       },
     },
@@ -130,7 +131,7 @@ function buildPayBreakdownResults(budgetData: BudgetData): SearchResult[] {
             categoryIcon: ReceiptText,
             action: {
               type: 'navigate-tab' as const,
-              tabId: 'breakdown' as const,
+              tabId: TAB_IDS.breakdown,
               elementId: 'pay-breakdown-after-tax-allocations',
             },
           },

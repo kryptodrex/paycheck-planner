@@ -1,4 +1,5 @@
 import type { CoreFrequency, PayFrequency } from './frequencies';
+import type { RetirementPlanType } from '../constants/retirementTypes';
 
 export type PayType = 'salary' | 'hourly';
 
@@ -54,7 +55,7 @@ export interface Benefit {
 
 export interface RetirementElection {
   id: string;
-  type: '401k' | '403b' | 'roth-ira' | 'traditional-ira' | 'pension' | 'other';
+  type: RetirementPlanType;
   customLabel?: string;
   employeeContribution: number;
   employeeContributionIsPercentage: boolean;

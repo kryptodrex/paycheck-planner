@@ -3,6 +3,7 @@ import type { BudgetData } from './budget';
 import type { Bill, Loan, SavingsContribution } from './obligations';
 import type { Benefit, Deduction, OtherIncome, PaySettings, PaycheckBreakdown, RetirementElection, TaxSettings } from './payroll';
 import type { BudgetSettings } from './settings';
+import type { ErrorDialogOptions } from '../hooks/useAppDialogs';
 
 export interface BudgetContextType {
   budgetData: BudgetData | null;
@@ -55,4 +56,6 @@ export interface BudgetContextType {
   deleteRetirementElection: (id: string) => void;
   calculatePaycheckBreakdown: () => PaycheckBreakdown;
   calculateRetirementContributions: (election: RetirementElection) => { employeeAmount: number; employerAmount: number };
+  errorDialog: ErrorDialogOptions | null;
+  closeErrorDialog: () => void;
 }

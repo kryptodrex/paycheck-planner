@@ -2,6 +2,7 @@ import { PiggyBank, Umbrella } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { OpenSavingsAction, SearchResult } from '../planSearch';
 import type { SearchActionContext, SearchModule } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { createTypedActionHandler, formatSearchCurrency, incrementRequestKey } from './moduleUtils';
 
 function buildSavingsResults(budgetData: BudgetData): SearchResult[] {
@@ -43,7 +44,7 @@ function buildSavingsResults(budgetData: BudgetData): SearchResult[] {
       searchKeywords: ['savings', 'contribution', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
-        tabId: 'savings',
+        tabId: TAB_IDS.savings,
         elementId: `savings-${contribution.id}`,
       },
     });
@@ -84,7 +85,7 @@ function buildSavingsResults(budgetData: BudgetData): SearchResult[] {
       searchKeywords: ['retirement', 'plan', 'pause', 'resume', 'edit', 'delete'],
       action: {
         type: 'navigate-tab',
-        tabId: 'savings',
+        tabId: TAB_IDS.savings,
         elementId: `retirement-${election.id}`,
       },
     });

@@ -3,6 +3,8 @@ import type { AuditEntityType } from '../../../types/audit';
 import SectionItemCard from '../../_shared/layout/SectionItemCard';
 import AmountBreakdown from '../../_shared/layout/AmountBreakdown';
 import PillBadge from '../../_shared/controls/PillBadge';
+import { LOAN_TYPE_LABELS, type LoanType } from '../../../constants/loanTypes';
+import { RETIREMENT_PLAN_LABELS } from '../../../constants/retirementTypes';
 
 const NOOP = () => {};
 
@@ -15,24 +17,6 @@ const FREQ_LABELS: Record<string, string> = {
   'semi-annual': 'Twice yearly',
   yearly: 'Yearly',
   custom: 'Custom',
-};
-
-const LOAN_TYPE_LABELS: Record<string, string> = {
-  mortgage: 'Mortgage',
-  auto: 'Auto Loan',
-  student: 'Student Loan',
-  personal: 'Personal Loan',
-  'credit-card': 'Credit Card',
-  other: 'Other',
-};
-
-const RETIREMENT_TYPE_LABELS: Record<string, string> = {
-  '401k': '401(k)',
-  '403b': '403(b)',
-  'roth-ira': 'Roth IRA',
-  'traditional-ira': 'Traditional IRA',
-  pension: 'Pension',
-  other: 'Other',
 };
 
 const fmt = (amount: number) => `$${amount.toFixed(2)}`;
@@ -97,7 +81,7 @@ const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
 
   'loan': (s) => {
     const monthlyPayment = Number(s.monthlyPayment ?? 0);
-    const loanType = String(s.type ?? 'other');
+    const loanType = String(s.type ?? 'other') as LoanType;
     const paymentLines = parsePaymentLines(s.paymentBreakdown);
     return {
       title: String(s.name ?? '(unnamed)'),
@@ -155,7 +139,7 @@ const SNAPSHOT_MAPPERS: Partial<Record<AuditEntityType, SnapshotMapper>> = {
     const hasMatch = s.hasEmployerMatch === true;
     const contribDisplay = isPercent ? `${contrib}%` : fmt(contrib);
     return {
-      title: (s.customLabel as string | undefined) || RETIREMENT_TYPE_LABELS[type] || type,
+      title: (s.customLabel as string | undefined) || RETIREMENT_PLAN_LABELS[type as keyof typeof RETIREMENT_PLAN_LABELS] || type,
       subtitle: `${contribDisplay} contribution per paycheck`,
       amount: contribDisplay,
       amountLabel: 'Per paycheck',

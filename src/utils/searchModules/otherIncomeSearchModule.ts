@@ -2,6 +2,7 @@ import { HandCoins } from 'lucide-react';
 import type { BudgetData } from '../../types/budget';
 import type { OpenOtherIncomeAction, SearchResult } from '../planSearch';
 import type { SearchActionContext, SearchModule } from '../searchRegistry';
+import { TAB_IDS } from '../../constants/tabIds';
 import { calculateOtherIncomePerPaycheckAmount } from '../otherIncome';
 import { getOtherIncomePayTreatmentLabel, getOtherIncomeTypeLabel } from '../otherIncomeLabels';
 import { calculateGrossPayPerPaycheck, getPaychecksPerYear } from '../payPeriod';
@@ -53,7 +54,7 @@ function buildOtherIncomeResults(budgetData: BudgetData): SearchResult[] {
       ],
       action: {
         type: 'navigate-tab',
-        tabId: 'other-income',
+        tabId: TAB_IDS.otherIncome,
         elementId: `other-income-${entry.id}`,
       },
     };

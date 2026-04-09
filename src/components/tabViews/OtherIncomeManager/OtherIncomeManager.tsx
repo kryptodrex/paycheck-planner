@@ -5,6 +5,8 @@ import { useAppDialogs, useFieldErrors, useModalEntityEditor } from '../../../ho
 import type { AuditHistoryTarget } from '../../../types/audit';
 import type { OtherIncome } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
+import type { OtherIncomeFieldErrors } from '../../../types/fieldErrors';
+import { OTHER_INCOME_FREQUENCY_OPTIONS } from '../../../constants/frequencies';
 import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
 import { roundToCent } from '../../../utils/money';
 import { calculateOtherIncomeAnnualAmount, calculateOtherIncomePerPaycheckAmount } from '../../../utils/otherIncome';
@@ -40,19 +42,6 @@ interface OtherIncomeManagerProps {
     viewModeControl?: React.ReactNode;
     onViewHistory?: (target: AuditHistoryTarget) => void;
 }
-
-type OtherIncomeFieldErrors = {
-    name?: string;
-    amount?: string;
-    percentOfGross?: string;
-};
-
-const FREQUENCY_OPTIONS: Array<{ value: OtherIncome['frequency']; label: string }> = [
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'bi-weekly', label: 'Bi-weekly' },
-    { value: 'semi-monthly', label: 'Semi-monthly' },
-    { value: 'monthly', label: 'Monthly' },
-];
 
 const PLANNING_INCOME_TYPE_OPTIONS = OTHER_INCOME_TYPE_OPTIONS.filter((option) => option.value !== 'bonus');
 
@@ -296,7 +285,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
     };
 
     const formatFrequencyLabel = (value: OtherIncome['frequency']): string => {
-        return FREQUENCY_OPTIONS.find((option) => option.value === value)?.label ?? value;
+        return OTHER_INCOME_FREQUENCY_OPTIONS.find((option) => option.value === value)?.label ?? value;
     };
 
     const getTreatmentHelperText = (value: OtherIncome['payTreatment']): string => {
@@ -537,7 +526,7 @@ const OtherIncomeManager: React.FC<OtherIncomeManagerProps> = ({
                 <div className="form-row">
                     <FormGroup label="Frequency" required>
                         <Dropdown value={frequency} onChange={(event) => setFrequency(event.target.value as OtherIncome['frequency'])}>
-                            {FREQUENCY_OPTIONS.map((option) => (
+                            {OTHER_INCOME_FREQUENCY_OPTIONS.map((option) => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                             ))}
                         </Dropdown>
