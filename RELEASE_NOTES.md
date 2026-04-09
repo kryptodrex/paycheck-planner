@@ -34,4 +34,4 @@
 
 ### Bug Fixes
 
-- 
+- Minor fixes across the app
