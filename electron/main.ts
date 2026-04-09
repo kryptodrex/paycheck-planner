@@ -2,7 +2,7 @@
 // It creates the app window and handles file system operations
 // Think of this as the "backend" of your desktop app
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
-import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Menu, screen, shell, safeStorage, systemPreferences } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
@@ -125,23 +125,58 @@ console.info = (...args: unknown[]) => {
   originalConsoleInfo(...args);
 };
 
-// Load keytar dynamically to avoid bundling issues with native modules
-let keytar: any = null;
-let keytarLoadError: string | null = null;
+// safeStorage-backed key store helpers
+// Keys are stored as AES-blob values inside a JSON file in userData.
+// The file path is resolved lazily (after app is ready) so app.getPath is safe to call.
+let _keysFilePath: string | null = null;
+const getKeysFilePath = (): string => {
+  if (!_keysFilePath) {
+    _keysFilePath = path.join(app.getPath('userData'), 'keys.json');
+  }
+  return _keysFilePath;
+};
 
-const loadKeytar = () => {
-  if (!keytar && !keytarLoadError) {
+const readKeysStore = async (): Promise<Record<string, string>> => {
+  try {
+    const data = await fs.readFile(getKeysFilePath(), 'utf-8');
+    return JSON.parse(data) as Record<string, string>;
+  } catch {
+    return {};
+  }
+};
+
+const writeKeysStore = async (store: Record<string, string>): Promise<void> => {
+  await fs.writeFile(getKeysFilePath(), JSON.stringify(store), { encoding: 'utf-8', mode: 0o600 });
+};
+
+// Returns true if Touch ID is enrolled and can be prompted on this machine (macOS only).
+const isTouchIdAvailable = (): boolean => {
+  if (process.platform !== 'darwin') return false;
+  try {
+    return systemPreferences.canPromptTouchID();
+  } catch {
+    return false;
+  }
+};
+
+// Keys verified via Touch ID this session. Once a key has been authenticated once,
+// subsequent retrievals (e.g. during saves) skip the prompt.
+const biometricVerifiedKeys = new Set<string>();
+
+// Legacy keytar — loaded only for one-time migration of existing stored keys.
+// Can be removed once all users have migrated (future release).
+let _keytarLegacy: any = null;
+let _keytarLoadAttempted = false;
+const loadKeytarLegacy = (): any => {
+  if (!_keytarLoadAttempted) {
+    _keytarLoadAttempted = true;
     try {
-      keytar = require('keytar');
-      console.log('Keytar module loaded successfully');
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      keytarLoadError = `Failed to load keytar: ${errorMsg}`;
-      console.error(keytarLoadError);
-      console.error('Keychain storage will not be available. Encryption keys must be entered manually each time.');
+      _keytarLegacy = require('keytar');
+    } catch {
+      // Keytar not available — no migration needed for this install.
     }
   }
-  return keytar;
+  return _keytarLegacy;
 };
 
 // ES modules don't have __dirname, so we need to create it
@@ -1902,98 +1937,119 @@ ipcMain.handle('budget-loaded', async (event, windowSize?: { width: number; heig
 });
 
 /**
- * Save an encryption key to the system keychain
+ * Save an encryption key using safeStorage (OS-protected, no password prompt).
  */
-ipcMain.handle('save-keychain-key', async (event, service: string, account: string, password: string) => {
+ipcMain.handle('save-keychain-key', async (_event, service: string, account: string, password: string) => {
   try {
     if (!service || !account || !password) {
       throw new Error('Service, account, and password are required');
     }
-    debug(`[MAIN] Saving keychain key for ${service}:${account}`);
-    const kt = loadKeytar();
-    if (!kt) {
-      const error = keytarLoadError || 'Keytar module could not be loaded';
-      debug(`[MAIN] Cannot save to keychain: ${error}`);
-      return { success: false, error };
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('safeStorage encryption is not available on this system');
     }
-    await kt.setPassword(service, account, password);
-    debug(`[MAIN] Successfully saved keychain key for ${service}:${account}`);
+    const storeKey = `${service}:${account}`;
+    const encrypted = safeStorage.encryptString(password);
+    const store = await readKeysStore();
+    store[storeKey] = encrypted.toString('base64');
+    await writeKeysStore(store);
+    debug(`[MAIN] Saved safeStorage key for ${storeKey}`);
     return { success: true };
   } catch (error) {
-    // Get detailed error information
-    let errorMsg = 'Unknown error';
-    if (error instanceof Error) {
-      errorMsg = error.message;
-      // Include stack trace for debugging
-      debug(`[MAIN] Full error details:`, error);
-    } else {
-      errorMsg = String(error);
-    }
-    debug(`[MAIN] Failed to save keychain key: ${errorMsg}`);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    debug(`[MAIN] Failed to save key: ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
 });
 
 /**
- * Retrieve an encryption key from the system keychain
+ * Retrieve an encryption key from safeStorage.
+ * Falls back to keytar for legacy installs and migrates the key automatically.
  */
-ipcMain.handle('get-keychain-key', async (event, service: string, account: string) => {
+ipcMain.handle('get-keychain-key', async (_event, service: string, account: string) => {
   try {
     if (!service || !account) {
       throw new Error('Service and account are required');
     }
-    debug(`[MAIN] Retrieving keychain key for ${service}:${account}`);
-    const kt = loadKeytar();
-    if (!kt) {
-      const error = keytarLoadError || 'Keytar module could not be loaded';
-      debug(`[MAIN] Cannot retrieve from keychain: ${error}`);
-      return { success: false, error };
-    }
-    const password = await kt.getPassword(service, account);
-    if (password) {
-      debug(`[MAIN] Successfully retrieved keychain key for ${service}:${account}`);
-      return { success: true, key: password };
-    } else {
-      debug(`[MAIN] Keychain key not found for ${service}:${account}`);
-      return { success: true, key: null };
-    }
-  } catch (error) {
-    // Get detailed error information
-    let errorMsg = 'Unknown error';
-    if (error instanceof Error) {
-      errorMsg = error.message;
-      debug(`[MAIN] Full error details:`, error);
-    } else {
-      errorMsg = String(error);
-    }
-    debug(`[MAIN] Failed to retrieve keychain key: ${errorMsg}`);
-    return { success: false, error: errorMsg };
-  }
-});
+    const storeKey = `${service}:${account}`;
 
-/**
- * Delete an encryption key from the system keychain
- */
-ipcMain.handle('delete-keychain-key', async (event, service: string, account: string) => {
-  try {
-    if (!service || !account) {
-      throw new Error('Service and account are required');
+    // Primary path: safeStorage-backed JSON store.
+    if (safeStorage.isEncryptionAvailable()) {
+      const store = await readKeysStore();
+      if (store[storeKey]) {
+        // Gate key retrieval behind biometric auth when Touch ID is enrolled,
+        // but only once per plan per app session. Saves and other repeated reads
+        // within the same session bypass the prompt.
+        if (isTouchIdAvailable() && !biometricVerifiedKeys.has(storeKey)) {
+          try {
+            await systemPreferences.promptTouchID('verify your identity to open your encrypted plan');
+            biometricVerifiedKeys.add(storeKey);
+          } catch {
+            return {
+              success: false,
+              error: 'Biometric authentication was cancelled. Encrypted plan not opened.',
+              biometricFailed: true,
+            };
+          }
+        }
+        const decrypted = safeStorage.decryptString(Buffer.from(store[storeKey], 'base64'));
+        debug(`[MAIN] Retrieved safeStorage key for ${storeKey}`);
+        return { success: true, key: decrypted };
+      }
     }
-    debug(`Deleting keychain key for ${service}:${account}`);
-    const kt = loadKeytar();
-    if (!kt) {
-      throw new Error('Keytar module could not be loaded');
+
+    // Legacy migration path: try keytar once, then migrate into safeStorage.
+    const kt = loadKeytarLegacy();
+    if (kt) {
+      const legacyKey = await kt.getPassword(service, account).catch(() => null);
+      if (legacyKey) {
+        debug(`[MAIN] Migrating legacy keytar key to safeStorage for ${storeKey}`);
+        if (safeStorage.isEncryptionAvailable()) {
+          const encrypted = safeStorage.encryptString(legacyKey);
+          const store = await readKeysStore();
+          store[storeKey] = encrypted.toString('base64');
+          await writeKeysStore(store);
+          kt.deletePassword(service, account).catch(() => {/* best effort */});
+        }
+        return { success: true, key: legacyKey };
+      }
     }
-    const success = await kt.deletePassword(service, account);
-    if (success) {
-      return { success: true };
-    } else {
-      debug(`Keychain key not found for deletion: ${service}:${account}`);
-      return { success: true }; // Still return success - key doesn't exist
-    }
+
+    return { success: true, key: null };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    debug(`Failed to delete keychain key: ${errorMsg}`);
+    debug(`[MAIN] Failed to retrieve key: ${errorMsg}`);
+    return { success: false, error: errorMsg };
+  }
+});
+
+/**
+ * Delete an encryption key from safeStorage (and legacy keytar if present).
+ */
+ipcMain.handle('delete-keychain-key', async (_event, service: string, account: string) => {
+  try {
+    if (!service || !account) {
+      throw new Error('Service and account are required');
+    }
+    const storeKey = `${service}:${account}`;
+
+    if (safeStorage.isEncryptionAvailable()) {
+      const store = await readKeysStore();
+      if (storeKey in store) {
+        delete store[storeKey];
+        await writeKeysStore(store);
+      }
+    }
+
+    // Best-effort cleanup of any legacy keytar entry.
+    const kt = loadKeytarLegacy();
+    if (kt) {
+      kt.deletePassword(service, account).catch(() => {/* best effort */});
+    }
+
+    return { success: true };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    debug(`[MAIN] Failed to delete key: ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
 });
