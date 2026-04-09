@@ -578,3 +578,129 @@ Start with MVP: custom tabs as named notes with icon/color, editable markdown or
 
 ### **Open Product Decision (Still Needed)**
 - Clarify whether "all" includes full effective-dated behavior for accounts/bills/loans as well, or only payroll-related financial settings (pay/tax/deductions/benefits/retirement).
+
+---
+
+## Mobile Builds (iOS & Android) — Future Platform Expansion
+
+### **Status**
+Deferred until mobile responsiveness is complete. Document kept here for planning purposes.
+
+### **Recommended Approach: Capacitor**
+
+Capacitor wraps the existing Vite/React output in a native iOS (WKWebView) or Android (WebView) shell, producing real Xcode and Android Studio projects. No rewrite is needed and it coexists with the Electron build using the same source.
+
+```
+npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android
+npx cap init
+npx cap add ios
+npx cap add android
+```
+
+Build flow after setup:
+
+```
+npm run build    # Vite bundles the web app into dist/
+npx cap sync     # Copies dist/ into ios/ and android/ and syncs plugins
+npx cap open ios      # Opens Xcode
+npx cap open android  # Opens Android Studio
+```
+
+### **The Core Challenge: Electron IPC Boundary**
+
+The renderer already calls `window.electronAPI.*` for file I/O, `safeStorage`, Touch ID, and the updater. On mobile there is no Electron, so every IPC call needs a mobile equivalent or a graceful fallback.
+
+The correct architecture is a platform abstraction layer in the renderer:
+
+```ts
+// src/services/platform.ts
+export const platform = window.electronAPI
+  ? electronPlatform   // existing Electron path
+  : capacitorPlatform; // new Capacitor path
+```
+
+Capacitor community plugins cover the common needs:
+
+| Capability | Electron (current) | Capacitor plugin |
+|---|---|---|
+| File open/save | `dialog`, `fs` via IPC | `@capacitor/filesystem` |
+| Secure key storage | `safeStorage` + `keys.json` | `capacitor-secure-storage-plugin` |
+| Biometrics (Touch ID / Face ID) | `systemPreferences.promptTouchID()` | `@capawesome/capacitor-face-id` |
+| Auto-update | `electron-updater` | App Store / Play Store update flow |
+
+A read-only or localStorage-only mobile build (no file picker, no encryption) could ship first, with the platform abstraction layer filled in progressively.
+
+### **iOS Distribution via TestFlight**
+
+**Requirements:**
+- Apple Developer account ($99/year)
+- Xcode on macOS
+
+**Steps:**
+1. Run `npx cap open ios` to open the project in Xcode.
+2. Set the bundle identifier and signing team in project settings.
+3. **Product → Archive** to produce a distributable build.
+4. Upload to App Store Connect via Xcode Organizer (**Window → Organizer → Distribute App**).
+5. In App Store Connect, go to **TestFlight → Add Testers** (internal group: invite by Apple ID; external group: up to 10,000 testers, requires a brief Apple review, usually 1–2 days).
+6. Testers install the **TestFlight** app on their device and accept the invite — no App Store listing required.
+
+### **Android Distribution via Direct APK**
+
+**Requirements:**
+- Android Studio
+- A keystore file (generated once, kept permanently safe — losing it means you cannot update an app signed by it)
+
+**Steps:**
+1. In Android Studio: **Build → Generate Signed Bundle/APK → APK → Release**.
+2. Sign with your keystore. Store the keystore and its passwords securely (e.g. 1Password).
+3. Build outputs to `android/app/release/app-release.apk`.
+4. Host the APK — GitHub Releases is the simplest option:
+   ```
+   gh release upload v0.5.0 app-release.apk
+   ```
+5. Share the direct download link. Testers enable **Install from unknown sources** (or **Install unknown apps**) in Android settings once.
+
+No Play Store or review process is required for direct APK distribution.
+
+### **CI / Build Pipeline**
+
+Mobile builds would sit alongside the existing Electron jobs in the GitHub Actions workflow. Rough shape:
+
+```yaml
+jobs:
+  build-electron:     # existing — electron-builder
+  build-ios:          # new — xcodebuild archive + xcrun altool upload
+  build-android:      # new — ./gradlew assembleRelease
+```
+
+iOS CI signing requires storing the Distribution Certificate and Provisioning Profile as GitHub Actions secrets (or using `fastlane match` for team certificate management).
+
+### **Suggested Phased Rollout**
+
+1. **Phase A — Responsiveness**
+   - Finish mobile CSS so the app is usable at phone/tablet widths.
+
+2. **Phase B — Capacitor Shell**
+   - Add Capacitor, get the app loading on iOS Simulator and an Android emulator with localStorage-only persistence (no file picker, no encryption).
+
+3. **Phase C — Platform Abstraction**
+   - Introduce `src/services/platform.ts`.
+   - Implement `@capacitor/filesystem` as the mobile file layer.
+   - Implement `capacitor-secure-storage-plugin` as the mobile key store.
+   - Implement biometrics plugin.
+
+4. **Phase D — Distribution**
+   - Set up Xcode signing and TestFlight pipeline.
+   - Sign the Android APK and upload to GitHub Releases.
+   - Add CI jobs for both platforms.
+
+### **Estimated Effort**
+
+| Phase | Estimate |
+|---|---|
+| Responsiveness (Phase A) | In progress |
+| Capacitor shell + simulator smoke test | 1–2 days |
+| Platform abstraction layer (file + secure storage + biometrics) | 3–5 days |
+| CI pipeline (iOS + Android) | 1–2 days |
+| TestFlight + APK distribution setup | 0.5–1 day |
+| **Total (excluding Phase A)** | **~1–2 weeks** |
