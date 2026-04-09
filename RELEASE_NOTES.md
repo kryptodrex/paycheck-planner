@@ -9,7 +9,7 @@
 - Added Other Income support so you can track bonus, commission, rental, retirement withdrawal, reimbursement, investment income, and custom sources with fixed or percent-of-gross rules, choose whether each entry affects gross pay, taxable income, or net pay, and see the impact in paycheck breakdowns and PDF exports.
 - Added live currency conversion powered by Frankfurter.app so exchange rates are fetched automatically when you change currency, with a visible "Last updated" timestamp and a manual refresh button. Falls back to cached rates offline and to manual entry when no cache exists.
 - Added smarter tax estimation with a one-click "Auto-estimate rates" action in Pay Details that uses progressive federal brackets, Social Security wage-base capping, and Medicare surtax behavior. Setup Wizard tax starter estimates now use the same engine. All tax data is shipped locally from IRS-backed rules — no network required.
-- Added a customizable font system: choose from system fonts or set any locally installed font from App Settings. Includes accessibility-focused options such as a dyslexia-friendly font.
+- Added a new font system: choose from several preset system fonts, including accessibility-focused options such as a dyslexia-friendly font.
 - Added a Frequently Asked Questions modal accessible from the Help menu with searchable, categorized how-tos and expandable question/answer drawers.
 - Added ability to set up Theme, Preset, and visible tabs when going through the initial Setup Wizard
 
