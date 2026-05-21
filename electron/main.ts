@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import { MENU_EVENTS, menuChannel, type MenuEventName } from '../src/constants/events';
 import { FEEDBACK_FORM_ENTRY_IDS, FEEDBACK_FORM_URL, LATEST_RELEASE_URL } from './constants';
+import { registerAgentIpcHandlers } from './agentIpc';
 
 // Create require function for ES modules
 const require = createRequire(import.meta.url);
@@ -2053,3 +2054,6 @@ ipcMain.handle('delete-keychain-key', async (_event, service: string, account: s
     return { success: false, error: errorMsg };
   }
 });
+
+// ── AI Agent (Ollama) IPC handlers ───────────────────────────────────────────
+registerAgentIpcHandlers(() => mainWindow ?? welcomeWindow ?? BrowserWindow.getAllWindows()[0] ?? null);

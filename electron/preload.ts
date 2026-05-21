@@ -169,6 +169,64 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Delete an encryption key from the system keychain
   deleteKeychainKey: (service: string, account: string) =>
     ipcRenderer.invoke('delete-keychain-key', service, account),
+
+  // ── AI Agent (Ollama) ──────────────────────────────────────────────────────
+
+  // Check whether the Ollama server is running and list pulled models
+  agentCheckStatus: () => ipcRenderer.invoke('agent:check-status'),
+
+  // Start the Ollama server via `ollama serve`
+  agentStartServer: () => ipcRenderer.invoke('agent:start-server'),
+
+  // Run the platform install script (curl/PowerShell)
+  agentInstall: () => ipcRenderer.invoke('agent:install'),
+
+  // List locally pulled models
+  agentListModels: () => ipcRenderer.invoke('agent:list-models'),
+
+  // Pull a model with progress streaming
+  agentPullModel: (model: string) => ipcRenderer.invoke('agent:pull-model', model),
+
+  // Send a chat request with streaming response
+  agentQuery: (payload: {
+    model: string;
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+  }) => ipcRenderer.invoke('agent:query', payload),
+
+  // Subscribe to installer output text chunks
+  onAgentInstallOutput: (callback: (text: string) => void) => {
+    const listener = (_event: IpcRendererEvent, text: string) => callback(text);
+    ipcRenderer.on('agent:install-output', listener);
+    return () => ipcRenderer.removeListener('agent:install-output', listener);
+  },
+
+  // Subscribe to model-pull progress events
+  onAgentPullProgress: (callback: (progress: { status: string; completed?: number; total?: number }) => void) => {
+    const listener = (_event: IpcRendererEvent, progress: { status: string; completed?: number; total?: number }) => callback(progress);
+    ipcRenderer.on('agent:pull-progress', listener);
+    return () => ipcRenderer.removeListener('agent:pull-progress', listener);
+  },
+
+  // Subscribe to streamed chat response tokens
+  onAgentQueryChunk: (callback: (token: string) => void) => {
+    const listener = (_event: IpcRendererEvent, token: string) => callback(token);
+    ipcRenderer.on('agent:query-chunk', listener);
+    return () => ipcRenderer.removeListener('agent:query-chunk', listener);
+  },
+
+  // Subscribe to the chat-done signal
+  onAgentQueryDone: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('agent:query-done', listener);
+    return () => ipcRenderer.removeListener('agent:query-done', listener);
+  },
+
+  // Subscribe to chat error events
+  onAgentQueryError: (callback: (error: string) => void) => {
+    const listener = (_event: IpcRendererEvent, error: string) => callback(error);
+    ipcRenderer.on('agent:query-error', listener);
+    return () => ipcRenderer.removeListener('agent:query-error', listener);
+  },
 });
 
 console.log('[PRELOAD] ElectronAPI exposed to renderer');
