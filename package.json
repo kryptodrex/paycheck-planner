@@ -1,7 +1,7 @@
 {
   "name": "paycheck-planner",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Desktop paycheck planning and budget management application.",
   "author": {
     "name": "Paycheck Planner",
@@ -96,7 +96,8 @@
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/atkinson-hyperlegible": "^5.2.8",
     "@fontsource/opendyslexic": "^5.2.5",
-    "keytar": "^7.9.0"
+    "keytar": "^7.9.0",
+    "ollama": "^0.6.3"
   },
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
