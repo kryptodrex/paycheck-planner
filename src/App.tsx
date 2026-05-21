@@ -15,6 +15,7 @@ const AboutModal = lazy(() => import('./components/modals/AboutModal'))
 const AppFaqModal = lazy(() => import('./components/modals/AppFaqModal'))
 const GlossaryModal = lazy(() => import('./components/modals/GlossaryModal'))
 const KeyboardShortcutsModal = lazy(() => import('./components/modals/KeyboardShortcutsModal'))
+const AgentModal = lazy(() => import('./components/modals/AgentModal'))
 
 function App() {
   if (import.meta.env.DEV) console.debug('[APP] App component rendering...');
@@ -45,6 +46,7 @@ function App() {
   const [showAppFaq, setShowAppFaq] = useState(false)
   const [showGlossary, setShowGlossary] = useState(false)
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
+  const [showAgent, setShowAgent] = useState(false)
   const [zoomIndicatorMessage, setZoomIndicatorMessage] = useState<string | null>(null)
   const [zoomIndicatorAtLimit, setZoomIndicatorAtLimit] = useState(false)
   const [currentZoomFactor, setCurrentZoomFactor] = useState(1)
@@ -160,6 +162,17 @@ function App() {
 
     const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openAbout, () => {
       setShowAbout(true)
+    })
+
+    return unsubscribe
+  }, [])
+
+  // Listen for AI assistant menu event from Electron menu
+  useEffect(() => {
+    if (!window.electronAPI?.onMenuEvent) return
+
+    const unsubscribe = window.electronAPI.onMenuEvent(MENU_EVENTS.openAgent, () => {
+      setShowAgent(true)
     })
 
     return unsubscribe
@@ -306,6 +319,7 @@ function App() {
           onResetSetup={handleResetSetup}
           onUndoRedoSuccess={handleUndoRedoSuccess}
           viewMode={viewMode}
+          onOpenAgent={() => setShowAgent(true)}
         />
       ) : (
         <>
@@ -340,6 +354,12 @@ function App() {
         <KeyboardShortcutsModal
           isOpen={showKeyboardShortcuts}
           onClose={() => setShowKeyboardShortcuts(false)}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AgentModal
+          isOpen={showAgent}
+          onClose={() => setShowAgent(false)}
         />
       </Suspense>
       <TransientStatusIndicator
