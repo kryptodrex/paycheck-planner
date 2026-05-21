@@ -6,7 +6,7 @@ interface StatusToastState {
 }
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
-import { Sheet, Copy, Eye, Lock, LockOpen, FolderOpen, MessageSquareText, Settings, Edit } from 'lucide-react';
+import { Sheet, Copy, Eye, Lock, LockOpen, FolderOpen, MessageSquareText, Settings, Edit, Bot } from 'lucide-react';
 import { APP_CUSTOM_EVENTS, MENU_EVENTS } from '../../constants/events';
 import { APP_VERSION } from '../../constants/appMeta';
 import { useBudget } from '../../contexts/BudgetContext';
@@ -59,6 +59,7 @@ interface PlanDashboardProps {
   onResetSetup?: () => void;
   viewMode?: string | null; // If set, this is a view-only window
   onUndoRedoSuccess?: (action: 'undo' | 'redo') => void;
+  onOpenAgent?: () => void;
 }
 
 const VALID_TABS: TabId[] = Object.values(TAB_IDS);
@@ -131,7 +132,7 @@ const areAuditEntriesEquivalent = (a: AuditEntry, b: AuditEntry): boolean => {
   );
 };
 
-const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, onUndoRedoSuccess }) => {
+const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, onUndoRedoSuccess, onOpenAgent }) => {
 
   const {
     budgetData,
@@ -1790,6 +1791,18 @@ const PlanDashboard: React.FC<PlanDashboardProps> = ({ onResetSetup, viewMode, o
         </div>
         <div className="header-actions">
           <div className="header-btn-group">
+            {onOpenAgent && (
+              <Button
+                variant="secondary"
+                size="small"
+                className="header-btn-secondary"
+                onClick={onOpenAgent}
+                title="Open AI financial assistant"
+              >
+                <Bot className="ui-icon" aria-hidden="true" />
+                AI Assistant
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="small"
