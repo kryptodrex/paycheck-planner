@@ -40,4 +40,5 @@ export interface AppSettings {
   fontScale?: number;
   fontPreference?: FontPreference;
   glossaryTermsEnabled?: boolean;
+  agentModel?: string;
 }

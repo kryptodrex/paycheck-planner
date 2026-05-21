@@ -118,6 +118,51 @@ export interface ElectronAPI {
   // Delete an encryption key from the system keychain
   // Returns whether it succeeded and any error message
   deleteKeychainKey: (service: string, account: string) => Promise<{ success: boolean; error?: string }>;
+
+  // ── AI Agent (Ollama) ────────────────────────────────────────────────────────
+
+  /** Check whether the Ollama server is running and list pulled models. */
+  agentCheckStatus: () => Promise<{
+    serverRunning: boolean;
+    models: Array<{ name: string; size: number }>;
+  }>;
+
+  /** Start the Ollama server via `ollama serve`. */
+  agentStartServer: () => Promise<{ success: boolean; error?: string }>;
+
+  /** Run the platform-specific Ollama installer. Streams output via onAgentInstallOutput. */
+  agentInstall: () => Promise<{ success: boolean; error?: string }>;
+
+  /** List locally pulled models. */
+  agentListModels: () => Promise<{
+    success: boolean;
+    models: Array<{ name: string; size: number }>;
+    error?: string;
+  }>;
+
+  /** Pull a model. Streams progress via onAgentPullProgress. */
+  agentPullModel: (model: string) => Promise<{ success: boolean; error?: string }>;
+
+  /** Send a chat request. Streams tokens via onAgentQueryChunk / onAgentQueryDone / onAgentQueryError. */
+  agentQuery: (payload: {
+    model: string;
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+  }) => Promise<{ success: boolean; error?: string }>;
+
+  /** Subscribe to installer output lines. Returns an unsubscribe function. */
+  onAgentInstallOutput: (callback: (text: string) => void) => () => void;
+
+  /** Subscribe to model-pull progress events. Returns an unsubscribe function. */
+  onAgentPullProgress: (callback: (progress: { status: string; completed?: number; total?: number }) => void) => () => void;
+
+  /** Subscribe to streamed chat response tokens. Returns an unsubscribe function. */
+  onAgentQueryChunk: (callback: (token: string) => void) => () => void;
+
+  /** Subscribe to the chat-done event. Returns an unsubscribe function. */
+  onAgentQueryDone: (callback: () => void) => () => void;
+
+  /** Subscribe to chat error events. Returns an unsubscribe function. */
+  onAgentQueryError: (callback: (error: string) => void) => () => void;
 }
 
 /**
