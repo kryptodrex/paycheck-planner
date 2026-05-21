@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Bot, ChevronRight, Download, Loader2, RefreshCw, Send, Sparkles, Terminal, Trash2 } from 'lucide-react';
+import { Bot, ChevronRight, Download, Loader2, RefreshCw, Send, Sparkles, Terminal, Trash2, X } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAgentService } from '../../../hooks/useAgentService';
 import type { AgentModel, PullProgress } from '../../../hooks/useAgentService';
 import { FileStorageService } from '../../../services/fileStorage';
 import { buildAgentContext, buildSystemPrompt } from '../../../services/agentContextService';
-import { Button, Modal } from '../../_shared';
+import { Button } from '../../_shared';
 import './AgentModal.css';
 
 // ── Curated model list ────────────────────────────────────────────────────────
@@ -77,13 +77,12 @@ function getInstallPlatformNote(): string {
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface AgentModalProps {
-  isOpen: boolean;
   onClose: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-const AgentModal: React.FC<AgentModalProps> = ({ isOpen, onClose }) => {
+const AgentModal: React.FC<AgentModalProps> = ({ onClose }) => {
   const { budgetData, calculatePaycheckBreakdown } = useBudget();
   const agent = useAgentService();
 
@@ -118,16 +117,8 @@ const AgentModal: React.FC<AgentModalProps> = ({ isOpen, onClose }) => {
     }
   }, [installOutput]);
 
-  // ── Status check on open ──────────────────────────────────────────────────────
+  // ── Status check on mount (component only renders when panel is open) ─────────
   useEffect(() => {
-    if (!isOpen) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- Resetting modal state on open before async check begins.
-    setStep('checking');
-    setInstallOutput('');
-    setInstallError('');
-    setPullError('');
-    setStartError('');
-
     const savedModel = FileStorageService.getAppSettings().agentModel;
 
     agent.checkStatus().then((status) => {
@@ -147,7 +138,7 @@ const AgentModal: React.FC<AgentModalProps> = ({ isOpen, onClose }) => {
 
       setStep('select-model');
     });
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
 
@@ -556,18 +547,26 @@ const AgentModal: React.FC<AgentModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const modalTitle = step === 'chat' ? 'AI Financial Assistant' : 'Set Up AI Assistant';
-
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      header={modalTitle}
-      headerIcon={<Bot size={20} className="ui-icon" aria-hidden="true" />}
-      contentClassName={`agent-modal-content${step === 'chat' ? ' agent-modal-content--chat' : ''}`}
-    >
-      {renderStep()}
-    </Modal>
+    <aside className="agent-panel" role="complementary" aria-label="AI Financial Assistant">
+      <div className="agent-panel-header">
+        <div className="agent-panel-header-title">
+          <Bot size={16} className="ui-icon" aria-hidden="true" />
+          <span>{step === 'chat' ? 'AI Financial Assistant' : 'Set Up AI Assistant'}</span>
+        </div>
+        <button
+          className="agent-panel-close"
+          onClick={onClose}
+          aria-label="Close AI assistant"
+          type="button"
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
+      </div>
+      <div className="agent-panel-body">
+        {renderStep()}
+      </div>
+    </aside>
   );
 };
 

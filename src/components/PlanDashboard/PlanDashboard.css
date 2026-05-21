@@ -1,6 +1,7 @@
 .plan-dashboard {
-  height: 100vh;
-  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-width: 0;
   background: var(--bg-secondary);
   display: flex;
   flex-direction: column;

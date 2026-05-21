@@ -314,19 +314,26 @@ function App() {
   return (
     <>
       <div className="drag-bar" />
-      {budgetData ? (
-        <PlanDashboard
-          onResetSetup={handleResetSetup}
-          onUndoRedoSuccess={handleUndoRedoSuccess}
-          viewMode={viewMode}
-          onOpenAgent={() => setShowAgent(true)}
-        />
-      ) : (
-        <>
-          <WelcomeScreen />
-          <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
-        </>
-      )}
+      <div className="app-main-row">
+        {budgetData ? (
+          <PlanDashboard
+            onResetSetup={handleResetSetup}
+            onUndoRedoSuccess={handleUndoRedoSuccess}
+            viewMode={viewMode}
+            onOpenAgent={() => setShowAgent(true)}
+          />
+        ) : (
+          <>
+            <WelcomeScreen />
+            <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+          </>
+        )}
+        {budgetData && showAgent && (
+          <Suspense fallback={null}>
+            <AgentModal onClose={() => setShowAgent(false)} />
+          </Suspense>
+        )}
+      </div>
       <Suspense fallback={null}>
         <AboutModal isOpen={showAbout} onClose={() => setShowAbout(false)} />
       </Suspense>
@@ -354,12 +361,6 @@ function App() {
         <KeyboardShortcutsModal
           isOpen={showKeyboardShortcuts}
           onClose={() => setShowKeyboardShortcuts(false)}
-        />
-      </Suspense>
-      <Suspense fallback={null}>
-        <AgentModal
-          isOpen={showAgent}
-          onClose={() => setShowAgent(false)}
         />
       </Suspense>
       <TransientStatusIndicator

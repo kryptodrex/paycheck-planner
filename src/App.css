@@ -68,6 +68,15 @@ html, body {
   color: var(--text-tertiary);
 }
 
+/* Main content row: dashboard + optional agent panel side by side */
+.app-main-row {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* Draggable region for macOS titlebar area */
 .drag-bar {
   height: 28px;

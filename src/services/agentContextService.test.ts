@@ -271,9 +271,9 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('Paycheck Planner');
   });
 
-  it('includes the do-not-invent-figures guideline', () => {
+  it('includes the baseline-calculation guideline', () => {
     const prompt = buildSystemPrompt('');
-    expect(prompt).toContain('Do not invent figures');
+    expect(prompt).toContain('Use the plan numbers as the baseline for all calculations');
   });
 
   it('returns a non-empty string even when context is empty', () => {
