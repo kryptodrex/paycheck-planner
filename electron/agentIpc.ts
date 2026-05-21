@@ -6,6 +6,8 @@ import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { spawn } from 'child_process';
 import { Ollama } from 'ollama';
+import type { Message } from 'ollama';
+import { AGENT_TOOLS, executeTool } from './agentTools';
 
 const OLLAMA_HOST = 'http://127.0.0.1:11434';
 
@@ -161,23 +163,89 @@ export function registerAgentIpcHandlers(getMainWindow: () => BrowserWindow | nu
   });
 
   // ── Query ─────────────────────────────────────────────────────────────────────
-  // Sends a chat request to Ollama and streams response tokens back via
-  // `agent:query-chunk`. The caller must listen for `agent:query-chunk` events
-  // and `agent:query-done` / `agent:query-error` to know when it completes.
+  // Runs an agentic loop: the model may call tools (look_up_term, search_app_faq,
+  // get_us_tax_reference, get_exchange_rate) for up to MAX_TOOL_ROUNDS non-streaming
+  // turns. Once no more tool calls are requested the final answer is streamed back
+  // token-by-token via `agent:query-chunk`, then `agent:query-done`.
   ipcMain.handle(
     'agent:query',
     async (
       event,
       payload: {
         model: string;
-        messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+        messages: Array<{ role: string; content: string }>;
       },
     ) => {
       try {
         const client = createOllamaClient();
-        const stream = await client.chat({ model: payload.model, messages: payload.messages, stream: true });
+        const messages: Message[] = payload.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+        const MAX_TOOL_ROUNDS = 5;
 
-        for await (const chunk of stream) {
+        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+          // Non-streaming call so we can inspect tool_calls before sending any tokens.
+          const response = await client.chat({
+            model: payload.model,
+            messages,
+            tools: AGENT_TOOLS,
+            stream: false,
+          });
+
+          const assistantMsg = response.message;
+
+          if (!assistantMsg.tool_calls?.length) {
+            if (round === 0) {
+              // No tools needed — stream the response directly for live UX.
+              // We already have the content; re-issue as a streaming call so
+              // the renderer sees token-by-token output.
+              const finalMessages: Message[] = [...messages];
+              const stream = await client.chat({
+                model: payload.model,
+                messages: finalMessages,
+                stream: true,
+              });
+              for await (const chunk of stream) {
+                const token = chunk.message?.content;
+                if (token) {
+                  const win = getMainWindow();
+                  if (win && !win.isDestroyed()) {
+                    event.sender.send('agent:query-chunk', token);
+                  }
+                }
+              }
+            } else {
+              // Tool rounds were used and the model has now composed its answer.
+              // Send the complete content as one chunk (already fast after tools).
+              const content = assistantMsg.content ?? '';
+              if (content) {
+                const win = getMainWindow();
+                if (win && !win.isDestroyed()) {
+                  event.sender.send('agent:query-chunk', content);
+                }
+              }
+            }
+
+            event.sender.send('agent:query-done');
+            return { success: true };
+          }
+
+          // The model wants to call tools — execute each and feed results back.
+          messages.push(assistantMsg);
+          for (const tc of assistantMsg.tool_calls) {
+            const result = await executeTool(tc);
+            messages.push({ role: 'tool', content: result, tool_name: tc.function.name });
+          }
+        }
+
+        // Fallback: exceeded MAX_TOOL_ROUNDS — get a final answer without tools.
+        const fallbackStream = await client.chat({
+          model: payload.model,
+          messages,
+          stream: true,
+        });
+        for await (const chunk of fallbackStream) {
           const token = chunk.message?.content;
           if (token) {
             const win = getMainWindow();
@@ -186,7 +254,6 @@ export function registerAgentIpcHandlers(getMainWindow: () => BrowserWindow | nu
             }
           }
         }
-
         event.sender.send('agent:query-done');
         return { success: true };
       } catch (err) {

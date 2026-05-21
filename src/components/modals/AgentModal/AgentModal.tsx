@@ -552,7 +552,7 @@ const AgentModal: React.FC<AgentModalProps> = ({ onClose }) => {
       <div className="agent-panel-header">
         <div className="agent-panel-header-title">
           <Bot size={16} className="ui-icon" aria-hidden="true" />
-          <span>{step === 'chat' ? 'AI Financial Assistant' : 'Set Up AI Assistant'}</span>
+          <span>{step === 'chat' ? 'Your Plan Assistant' : 'Set Up Your Assistant'}</span>
         </div>
         <button
           className="agent-panel-close"

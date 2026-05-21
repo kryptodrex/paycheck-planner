@@ -192,6 +192,12 @@ You have access to the user's current financial plan (provided below). Use it to
 ${agentContext}
 --- END PLAN ---
 
+AVAILABLE TOOLS — call these proactively rather than guessing:
+- look_up_term(term): Look up the exact definition of any financial or app-specific term (e.g. "net pay", "amortization", "residual amount"). Use this whenever a precise definition would improve the answer.
+- search_app_faq(query): Search the Paycheck Planner FAQ for how-to questions about app features (e.g. "how do I import a plan?", "where is the starting buffer setting?").
+- get_us_tax_reference(filing_status): Retrieve 2026 US federal tax brackets, standard deduction, and FICA rates. Use this for any US tax-related question or estimation.
+- get_exchange_rate(from, to): Fetch the live exchange rate between two currencies. Use this any time the user asks to convert an amount or see it in another currency.
+
 Guidelines:
 - Use the plan numbers as the baseline for all calculations.
 - For hypothetical questions (e.g. "what if my rent went up to $X"), do the arithmetic: adjust the specific line item, recalculate affected totals, and show the updated figures clearly.
