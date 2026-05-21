@@ -21,6 +21,7 @@ export const MENU_EVENTS = {
   historyHome: 'history-home',
   zoomStatus: 'zoom-status',
   openSearch: 'open-search',
+  openAgent: 'open-agent',
 } as const;
 
 export type MenuEventName = (typeof MENU_EVENTS)[keyof typeof MENU_EVENTS];
