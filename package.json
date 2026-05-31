@@ -1,138 +1,41 @@
 {
-  "name": "paycheck-planner",
+  "name": "paycheck-planner-workspace",
   "private": true,
   "version": "0.5.0",
-  "description": "Desktop paycheck planning and budget management application.",
-  "author": {
-    "name": "Paycheck Planner",
-    "email": "paycheckplannersupport@gmail.com"
-  },
-  "license": "MIT",
+  "description": "Monorepo workspace for Paycheck Planner apps and packages.",
   "type": "module",
-  "main": "dist-electron/main.js",
+  "packageManager": "pnpm@10.13.1",
   "scripts": {
-    "postinstall": "electron-rebuild || true",
-    "sync-version": "node scripts/sync-version.js",
-    "generate-icons": "node scripts/generate-icons.js",
-    "start": "open ./release/mac-arm64/Paycheck\\ Planner.app",
-    "dev": "npm run sync-version && vite",
-    "dev:inspector": "npm run sync-version && OPEN_DEVTOOLS=true vite",
-    "build": "npx vite build && npm run sync-version",
-    "release-checks": "npm run lint && npx tsc -b && npm run test:run && npm run build",
-    "build:dir": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --dir",
-    "build:mac": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac",
-    "build:win": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --win",
-    "build:linux": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --linux",
-    "build:all": "npm run sync-version && node scripts/generate-icons.js --if-present && tsc -b && vite build && electron-builder --mac --win --linux",
-    "rebuild-native": "electron-rebuild",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "build": {
-    "appId": "com.paycheckplanner.app",
-    "productName": "Paycheck Planner",
-    "afterSign": "scripts/notarize.mjs",
-    "icon": "build/icon.png",
-    "fileAssociations": [
-      {
-        "ext": "budget",
-        "name": "Paycheck Planner Budget",
-        "description": "Paycheck Planner budget file",
-        "role": "Editor",
-        "icon": "build/budget-file-icon"
-      }
-    ],
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "mac": {
-      "icon": "build/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "category": "public.app-category.finance",
-      "darkModeSupport": true,
-      "hardenedRuntime": true,
-      "entitlements": "build/entitlements.mac.plist",
-      "gatekeeperAssess": true
-    },
-    "win": {
-      "icon": "build/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    },
-    "linux": {
-      "icon": "build/icon.png",
-      "maintainer": "Paycheck Planner <paycheckplannersupport@gmail.com>",
-      "target": [
-        "AppImage",
-        "deb"
-      ]
-    }
-  },
-  "dependencies": {
-    "@fontsource-variable/inter": "^5.2.8",
-    "@fontsource/atkinson-hyperlegible": "^5.2.8",
-    "@fontsource/opendyslexic": "^5.2.5",
-    "keytar": "^7.9.0"
+    "dev": "npx turbo run dev --filter=@paycheck-planner/desktop",
+    "dev:inspector": "npx turbo run dev:inspector --filter=@paycheck-planner/desktop",
+    "build": "npx turbo run build --filter=@paycheck-planner/desktop",
+    "build:dir": "npx turbo run build:dir --filter=@paycheck-planner/desktop",
+    "build:mac": "npx turbo run build:mac --filter=@paycheck-planner/desktop",
+    "build:win": "npx turbo run build:win --filter=@paycheck-planner/desktop",
+    "build:linux": "npx turbo run build:linux --filter=@paycheck-planner/desktop",
+    "build:all": "npx turbo run build:all --filter=@paycheck-planner/desktop",
+    "lint": "npx turbo run lint --filter=@paycheck-planner/desktop",
+    "typecheck": "npx turbo run typecheck --filter=@paycheck-planner/desktop",
+    "test": "npx turbo run test --filter=@paycheck-planner/desktop",
+    "test:run": "npx turbo run test:run --filter=@paycheck-planner/desktop",
+    "preview": "npx turbo run preview --filter=@paycheck-planner/desktop",
+    "start": "npx turbo run start --filter=@paycheck-planner/desktop",
+    "sync-version": "npx turbo run sync-version --filter=@paycheck-planner/desktop",
+    "generate-icons": "npx turbo run generate-icons --filter=@paycheck-planner/desktop",
+    "release-checks": "npx turbo run release-checks --filter=@paycheck-planner/desktop",
+    "ws:dev": "npx turbo run dev",
+    "ws:build": "npx turbo run build",
+    "ws:lint": "npx turbo run lint",
+    "ws:typecheck": "npx turbo run typecheck",
+    "ws:test:run": "npx turbo run test:run",
+    "ws:release-checks": "npx turbo run release-checks",
+    "dev:desktop": "npx turbo run dev --filter=@paycheck-planner/desktop",
+    "build:desktop": "npx turbo run build --filter=@paycheck-planner/desktop",
+    "lint:desktop": "npx turbo run lint --filter=@paycheck-planner/desktop",
+    "typecheck:desktop": "npx turbo run typecheck --filter=@paycheck-planner/desktop",
+    "test:run:desktop": "npx turbo run test:run --filter=@paycheck-planner/desktop"
   },
   "devDependencies": {
-    "@electron/notarize": "^3.1.1",
-    "@electron/rebuild": "^4.0.3",
-    "@eslint/js": "^9.39.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/crypto-js": "^4.2.2",
-    "@types/jest-axe": "^3.5.9",
-    "@types/node": "^24.10.1",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "concurrently": "^9.2.1",
-    "crypto-js": "^4.2.0",
-    "electron": "^41.0.2",
-    "electron-builder": "^26.8.1",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "jest-axe": "^10.0.0",
-    "jsdom": "^29.0.0",
-    "jspdf": "^4.2.0",
-    "jspdf-autotable": "^5.0.7",
-    "lucide-react": "^0.577.0",
-    "png2icons": "^2.0.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1",
-    "vite-plugin-electron": "^0.29.0",
-    "vite-plugin-electron-renderer": "^0.14.6",
-    "vitest": "^4.1.0",
-    "wait-on": "^9.0.4"
+    "turbo": "^2.5.0"
   }
 }

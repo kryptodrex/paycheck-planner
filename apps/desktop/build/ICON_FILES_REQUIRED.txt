@@ -1,0 +1,35 @@
+Icon generation workflow:
+
+1) Put a single source PNG in this folder named:
+	- icon-source.png  (square image, recommended 1024x1024)
+	- icon-source-win.png  (optional Windows-only ICO source; square, recommended 256x256 or 1024x1024)
+	- budget-icon-source.png  (optional, used for `.budget` file icon only; must be square)
+	- budget-icon-source-win.png  (optional Windows-only `.budget` ICO source; use a simpler design for sharper small sizes)
+
+	Important: non-square sources (for example 479x624) can generate corrupted-looking
+	.ico/.icns outputs. Keep both source files square and avoid tiny text/details that
+	must survive very small icon sizes. For Windows `.ico` files, a dedicated simplified
+	`*-win.png` source usually looks better than reusing document artwork with text.
+
+	If `budget-icon-source.png` is missing, `.budget` files reuse the app icon.
+
+2) Generate platform icon files:
+	- npm run generate-icons
+
+	(Optional) You can skip this step: all build scripts now auto-run
+	icon generation in safe mode and only generate icons when
+	icon-source.png exists.
+
+This creates:
+- icon.icns  (macOS)
+- icon.ico   (Windows)
+- icon.png   (Linux/base icon)
+- budget-file-icon.icns  (macOS `.budget` file association)
+- budget-file-icon.ico   (Windows `.budget` file association)
+- budget-file-icon.png   (Linux/base `.budget` file icon)
+
+3) Build app packages:
+- npm run build:mac
+- npm run build:win
+- npm run build:linux
+(or npm run build / npm run build:all)

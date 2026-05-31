@@ -1,0 +1,68 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**", "release/**"]
+    },
+    "build:dir": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**", "release/**"]
+    },
+    "build:mac": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**", "release/**"]
+    },
+    "build:win": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**", "release/**"]
+    },
+    "build:linux": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**", "release/**"]
+    },
+    "build:all": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "dist-electron/**", "release/**"]
+    },
+    "lint": {
+      "outputs": []
+    },
+    "typecheck": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test:run": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "preview": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "start": {
+      "cache": false
+    },
+    "sync-version": {
+      "outputs": []
+    },
+    "generate-icons": {
+      "outputs": ["build/icon.png", "build/icon.icns", "build/icon.ico", "build/budget-file-icon.png", "build/budget-file-icon.icns", "build/budget-file-icon.ico"]
+    },
+    "dev:inspector": {
+      "cache": false,
+      "persistent": true
+    },
+    "release-checks": {
+      "dependsOn": ["lint", "typecheck", "test:run", "build"],
+      "outputs": []
+    }
+  }
+}
