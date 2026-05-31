@@ -16,7 +16,7 @@ const CACHE_KEY = STORAGE_KEYS.currencyRates;
 
 /**
  * Get the API URL from environment variables.
- * Falls back to Frankfurter API if not configured.
+ * Falls back to the local API proxy if not configured.
  */
 export function getCurrencyApiUrl(): string {
   return __CURRENCY_API_URL__;
@@ -32,10 +32,10 @@ export async function fetchExchangeRate(base: string, quote: string): Promise<nu
   try {
     const apiUrl = getCurrencyApiUrl();
     const url = new URL(apiUrl);
-    
-    // frankfurter.app API format: /latest?base=USD&quote=EUR
-    url.searchParams.set('base', base);
-    url.searchParams.set('quote', quote);
+
+    // API proxy format: /currency-conversion?from=USD&to=EUR
+    url.searchParams.set('from', base);
+    url.searchParams.set('to', quote);
 
     const response = await fetch(url.toString(), {
       method: 'GET',

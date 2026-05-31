@@ -43,20 +43,20 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
           
-          # Check if version file is in the changed files
-          if echo "$CHANGED_FILES" | grep -q "^version$"; then
+          # Check if desktop version file is in the changed files
+          if echo "$CHANGED_FILES" | grep -q "^apps/desktop/version$"; then
             echo "version_changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Version file has been modified"
+            echo "✅ Desktop version file has been modified"
           else
             echo "version_changed=false" >> $GITHUB_OUTPUT
-            echo "❌ Version file has NOT been modified"
+            echo "❌ Desktop version file has NOT been modified"
           fi
 
       - name: Read current version
         if: steps.check_version.outputs.version_changed == 'true'
         id: current_version
         run: |
-          VERSION=$(cat version | tr -d ' \n')
+          VERSION=$(cat apps/desktop/version | tr -d ' \n')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $VERSION"
 
@@ -77,24 +77,24 @@ jobs:
         if: steps.check_version.outputs.version_changed == 'true'
         id: check_base_version
         run: |
-          if git cat-file -e origin/${{ github.base_ref }}:version 2>/dev/null; then
+          if git cat-file -e origin/${{ github.base_ref }}:apps/desktop/version 2>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Version file exists in base branch"
+            echo "✅ Desktop version file exists in base branch"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "⚠️  Version file does not exist in base branch - skipping version comparison"
+            echo "⚠️  Desktop version file does not exist in base branch - skipping version comparison"
           fi
 
       - name: Read base branch version
         if: steps.check_version.outputs.version_changed == 'true' && steps.check_base_version.outputs.exists == 'true'
         id: base_version
         run: |
-          git checkout origin/${{ github.base_ref }} -- version
-          BASE_VERSION=$(cat version | tr -d ' \n')
+          git checkout origin/${{ github.base_ref }} -- apps/desktop/version
+          BASE_VERSION=$(cat apps/desktop/version | tr -d ' \n')
           echo "version=$BASE_VERSION" >> $GITHUB_OUTPUT
           echo "Base branch version: $BASE_VERSION"
           # Restore the PR version
-          git checkout HEAD -- version
+          git checkout HEAD -- apps/desktop/version
 
       - name: Compare versions
         if: steps.check_version.outputs.version_changed == 'true' && steps.check_base_version.outputs.exists == 'true'
@@ -169,7 +169,7 @@ jobs:
             
             // Handle case where version file was not modified
             if (versionChanged === 'false') {
-              message = `❌ **Version File Not Updated**\n\nThe version file was not modified in this PR. Please update the \`version\` file in the root directory with the new version number.`;
+              message = `❌ **Version File Not Updated**\n\nThe desktop version file was not modified in this PR. Please update the \`apps/desktop/version\` file with the new version number.`;
             }
             // Handle case where release tag already exists
             else if (tagExists === 'true') {
@@ -177,7 +177,7 @@ jobs:
             }
             // Handle case where version file doesn't exist in base branch (new file)
             else if (baseExists === 'false') {
-              message = `⚠️ **New Version File Added**\n\nVersion file does not exist in base branch. Creating new version file with version \`${currentVersion}\``;
+              message = `⚠️ **New Version File Added**\n\nDesktop version file does not exist in base branch. Creating new version file with version \`${currentVersion}\``;
             }
             // Handle case where version was properly increased
             else if (compareResult === 'increased') {
@@ -185,7 +185,7 @@ jobs:
             }
             // Handle case where version file changed but version number stayed the same
             else if (compareResult === 'unchanged') {
-              message = `❌ **Version File Modified but Unchanged**\n\nThe version file was modified but the version number remains \`${currentVersion}\`. Please update the version number.`;
+              message = `❌ **Version File Modified but Unchanged**\n\nThe desktop version file was modified but the version number remains \`${currentVersion}\`. Please update the version number.`;
             }
             // Handle case where version decreased
             else if (compareResult === 'decreased') {
@@ -217,5 +217,5 @@ jobs:
         if: steps.check_version.outputs.version_changed == 'false'
         run: |
           echo "::error::Version file must be updated in this PR"
-          echo "Please update the 'version' file in the root directory with the new version number."
+          echo "Please update the 'apps/desktop/version' file with the new version number."
           exit 1

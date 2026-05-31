@@ -1,0 +1,22 @@
+# fly.toml — Paycheck Planner API (production)
+# Deploy: fly deploy (from repo root — build context is the full monorepo)
+# First time: fly apps create paycheck-planner-api
+
+app = "paycheck-planner-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+[env]
+  PORT = "8080"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

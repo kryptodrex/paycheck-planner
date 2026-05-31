@@ -33,6 +33,10 @@ describe('KeychainService', () => {
         fileExists: vi.fn(async () => true),
         selectDirectory: vi.fn(async () => null),
       },
+      lifecycle: {
+        getWindowBounds: vi.fn(async () => ({ width: 1200, height: 800, x: 0, y: 0 })),
+        budgetLoaded: vi.fn(async () => undefined),
+      },
     });
 
     Object.defineProperty(globalThis, 'window', {

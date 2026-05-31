@@ -403,7 +403,7 @@ paycheck-planner/
 ├── build/ (icon assets)
 ├── scripts/
 │   ├── generate-icons.js (icon generation)
-│   └── sync-version.js (version sync)
+│   └── ../../scripts/sync-version.mjs (version sync)
 ├── app_updates/
 │   ├── APP_MVP.md
 │   ├── APP_UPDATES.md

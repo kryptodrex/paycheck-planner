@@ -80,8 +80,8 @@ describe('currencyRateFetcher', () => {
 
       await fetchExchangeRate('USD', 'EUR');
       const callUrl = ((globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] || [])[0];
-      expect(callUrl).toContain('base=USD');
-      expect(callUrl).toContain('quote=EUR');
+      expect(callUrl).toContain('from=USD');
+      expect(callUrl).toContain('to=EUR');
     });
   });
 
@@ -198,7 +198,7 @@ describe('currencyRateFetcher', () => {
     it('should return configured API URL or fallback', () => {
       const url = getCurrencyApiUrl();
       expect(url).toBeTruthy();
-      expect(url).toContain('frankfurter');
+      expect(url).toContain('/currency-conversion');
     });
   });
 

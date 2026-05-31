@@ -1,8 +1,10 @@
 import {
+  type AppLifecycleRepository,
   type PlanFileSystemRepository,
   type SecureKeyRepository,
 } from '@paycheck-planner/storage';
 import {
+  ElectronAppLifecycleRepository,
   ElectronKeychainRepository,
   ElectronPlanFileRepository,
 } from '@paycheck-planner/platform-electron';
@@ -13,6 +15,7 @@ const ACCOUNT_NAME = 'encryption-key';
 export interface StorageComposition {
   keychain: SecureKeyRepository;
   planFiles: PlanFileSystemRepository;
+  lifecycle: AppLifecycleRepository;
 }
 
 let testComposition: StorageComposition | null = null;
@@ -29,6 +32,7 @@ function createDefaultStorageComposition(): StorageComposition {
       bridge: window.electronAPI,
     }),
     planFiles: new ElectronPlanFileRepository(window.electronAPI),
+    lifecycle: new ElectronAppLifecycleRepository(window.electronAPI),
   };
 }
 

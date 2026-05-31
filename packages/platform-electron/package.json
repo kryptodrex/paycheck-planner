@@ -14,7 +14,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "test": "vitest --config vitest.config.ts",
-    "test:run": "vitest run --config vitest.config.ts"
+    "test:run": "vitest run --config vitest.config.ts",
+    "sync-version": "node ../../scripts/sync-version.mjs"
   },
   "dependencies": {
     "@paycheck-planner/storage": "workspace:*"

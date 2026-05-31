@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __APP_VERSION__: JSON.stringify('test'),
-    __CURRENCY_API_URL__: JSON.stringify('https://api.frankfurter.app/latest'),
+    __CURRENCY_API_URL__: JSON.stringify('http://localhost:3000/currency-conversion'),
   },
   resolve: {
     alias: {

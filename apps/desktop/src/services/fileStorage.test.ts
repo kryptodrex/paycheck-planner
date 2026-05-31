@@ -448,6 +448,25 @@ describe('FileStorageService', () => {
     expect(FileStorageService.getKnownPlanIdForFile('/tmp/moved-plan.budget')).toBe('plan-1');
   });
 
+  it('prompts to save as when the current file path no longer exists', async () => {
+    const budget = FileStorageService.createEmptyBudget(2026, 'USD');
+    budget.settings.filePath = '/tmp/missing-plan.budget';
+    budget.settings.encryptionEnabled = false;
+
+    Object.assign(window.electronAPI, {
+      fileExists: vi.fn(async () => false),
+      saveFileDialog: vi.fn(async () => '/tmp/relocated-plan.budget'),
+      saveBudget: vi.fn(async () => ({ success: true })),
+    });
+
+    const savedPath = await FileStorageService.saveBudget(budget, budget.settings.filePath);
+
+    expect(savedPath).toBe('/tmp/relocated-plan.budget');
+    expect(window.electronAPI.fileExists).toHaveBeenCalledWith('/tmp/missing-plan.budget');
+    expect(window.electronAPI.saveFileDialog).toHaveBeenCalledTimes(1);
+    expect(window.electronAPI.saveBudget).toHaveBeenCalledWith('/tmp/relocated-plan.budget', expect.any(String));
+  });
+
   describe('migrateBudgetData — legacy plan file migration', () => {
     // Minimal object that passes isBudgetData() but may be missing newer fields.
     // Intentionally does NOT include metadata so we can test that migration adds it.

@@ -5,10 +5,12 @@
  * undo/redo operations restore prior state across representative entity types.
  */
 import { renderHook, act } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BudgetProvider, useBudget } from './BudgetContext';
 import type { Bill } from '../types/obligations';
 import type { ReactNode } from 'react';
+import { setStorageCompositionForTests } from '../services/storageComposition';
+import { FileStorageService } from '../services/fileStorage';
 
 // Minimal electronAPI mock — only the methods BudgetContext calls synchronously
 // or in the operations exercised by these tests.
@@ -26,6 +28,10 @@ beforeEach(() => {
     writable: true,
     configurable: true,
   });
+});
+
+afterEach(() => {
+  setStorageCompositionForTests(null);
 });
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -235,5 +241,87 @@ describe('BudgetContext — audit history', () => {
 
     const endingCount = result.current.budgetData?.metadata?.auditHistory?.length || 0;
     expect(endingCount).toBe(startingCount);
+  });
+});
+
+describe('BudgetContext — storage composition wiring', () => {
+  it('saveBudget uses injected lifecycle and plan-file adapters', async () => {
+    const composition = {
+      keychain: {
+        saveKey: vi.fn(async () => undefined),
+        getKey: vi.fn(async () => null),
+        deleteKey: vi.fn(async () => undefined),
+        keyExists: vi.fn(async () => false),
+        getOrCreateKey: vi.fn(async () => 'generated-key'),
+      },
+      planFiles: {
+        loadBudget: vi.fn(async () => ({ success: true, data: '{}' })),
+        openFileDialog: vi.fn(async () => '/tmp/opened.budget'),
+        saveFileDialog: vi.fn(async () => '/tmp/saved-plan.budget'),
+        saveBudget: vi.fn(async () => ({ success: true })),
+        fileExists: vi.fn(async () => true),
+        selectDirectory: vi.fn(async () => '/tmp'),
+      },
+      lifecycle: {
+        getWindowBounds: vi.fn(async () => ({ width: 1400, height: 900, x: 10, y: 20 })),
+        budgetLoaded: vi.fn(async () => undefined),
+      },
+    };
+
+    setStorageCompositionForTests(composition);
+    const { result } = renderHook(() => useBudget(), { wrapper });
+
+    act(() => result.current.createNewBudget(2026));
+
+    let saveResult = false;
+    await act(async () => {
+      saveResult = await result.current.saveBudget('overview');
+    });
+
+    expect(saveResult).toBe(true);
+    expect(composition.lifecycle.getWindowBounds).toHaveBeenCalledTimes(1);
+    expect(composition.planFiles.saveFileDialog).toHaveBeenCalledTimes(1);
+    expect(composition.planFiles.saveBudget).toHaveBeenCalledTimes(1);
+    expect(result.current.budgetData?.settings.filePath).toBe('/tmp/saved-plan.budget');
+  });
+
+  it('loadBudget uses injected adapters and notifies lifecycle with restored window size', async () => {
+    const loadedBudget = FileStorageService.createEmptyBudget(2026);
+    loadedBudget.settings.filePath = '/tmp/loaded-plan.budget';
+    loadedBudget.settings.windowSize = { width: 1111, height: 777, x: 42, y: 11 };
+
+    const composition = {
+      keychain: {
+        saveKey: vi.fn(async () => undefined),
+        getKey: vi.fn(async () => null),
+        deleteKey: vi.fn(async () => undefined),
+        keyExists: vi.fn(async () => false),
+        getOrCreateKey: vi.fn(async () => 'generated-key'),
+      },
+      planFiles: {
+        loadBudget: vi.fn(async () => ({ success: true, data: JSON.stringify(loadedBudget) })),
+        openFileDialog: vi.fn(async () => '/tmp/loaded-plan.budget'),
+        saveFileDialog: vi.fn(async () => '/tmp/save.budget'),
+        saveBudget: vi.fn(async () => ({ success: true })),
+        fileExists: vi.fn(async () => true),
+        selectDirectory: vi.fn(async () => '/tmp'),
+      },
+      lifecycle: {
+        getWindowBounds: vi.fn(async () => ({ width: 1400, height: 900, x: 10, y: 20 })),
+        budgetLoaded: vi.fn(async () => undefined),
+      },
+    };
+
+    setStorageCompositionForTests(composition);
+    const { result } = renderHook(() => useBudget(), { wrapper });
+
+    await act(async () => {
+      await result.current.loadBudget();
+    });
+
+    expect(composition.planFiles.openFileDialog).toHaveBeenCalledTimes(1);
+    expect(composition.planFiles.loadBudget).toHaveBeenCalledWith('/tmp/loaded-plan.budget');
+    expect(composition.lifecycle.budgetLoaded).toHaveBeenCalledWith({ width: 1111, height: 777, x: 42, y: 11 });
+    expect(result.current.budgetData?.settings.filePath).toBe('/tmp/loaded-plan.budget');
   });
 });

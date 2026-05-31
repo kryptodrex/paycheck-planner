@@ -38,3 +38,8 @@ export interface PlanFileSystemRepository {
   fileExists(filePath: string): Promise<boolean>;
   selectDirectory(): Promise<string | null>;
 }
+
+export interface AppLifecycleRepository {
+  getWindowBounds(): Promise<{ width: number; height: number; x: number; y: number }>;
+  budgetLoaded(windowSize?: { width: number; height: number; x: number; y: number }): Promise<void>;
+}

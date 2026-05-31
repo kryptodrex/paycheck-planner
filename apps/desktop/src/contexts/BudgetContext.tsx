@@ -38,6 +38,7 @@ import { getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
 import { HistoryEngine } from '@paycheck-planner/core/history-engine';
 import { buildAuditEntries } from '../utils/auditHistory';
+import { resolveStorageComposition } from '../services/storageComposition';
 
 // Create the context - this is the "container" for our global state
 // Initially undefined, we'll provide the actual value in the Provider
@@ -99,6 +100,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   });
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const storageComposition = resolveStorageComposition();
 
   const syncHistoryAvailability = useCallback(() => {
     setCanUndo(historyEngineRef.current.canUndo());
@@ -323,7 +325,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       // Get current window bounds to save with the plan
       let windowSize: { width: number; height: number; x: number; y: number } | undefined;
       try {
-        const bounds = await window.electronAPI.getWindowBounds();
+        const bounds = await storageComposition.lifecycle.getWindowBounds();
         windowSize = { width: bounds.width, height: bounds.height, x: bounds.x, y: bounds.y };
       } catch (error) {
         console.warn('Could not get window bounds:', error);
@@ -362,9 +364,9 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
 
       // If the stored path no longer exists (for example, renamed in Finder/Explorer),
       // force Save As so we don't silently recreate an outdated duplicate path.
-      if (targetFilePath && window.electronAPI?.fileExists) {
+      if (targetFilePath) {
         try {
-          const exists = await window.electronAPI.fileExists(targetFilePath);
+          const exists = await storageComposition.planFiles.fileExists(targetFilePath);
           if (!exists) {
             targetFilePath = undefined;
           }
@@ -552,9 +554,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
       
       // Notify main process that a budget is loaded (transitions welcome to plan window)
       // Pass window size if available so main process can restore it
-      if (window.electronAPI) {
-        await window.electronAPI.budgetLoaded(data.settings?.windowSize);
-      }
+      await storageComposition.lifecycle.budgetLoaded(data.settings?.windowSize);
     } catch (error) {
       console.error('Error loading budget:', error);
       openErrorDialog({
@@ -577,9 +577,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     clearHistory();
     
     // Notify main process that a budget is loaded (transitions welcome to plan window)
-    if (window.electronAPI) {
-      window.electronAPI.budgetLoaded();
-    }
+    void storageComposition.lifecycle.budgetLoaded();
   }, [clearHistory]);
 
   /**
@@ -593,9 +591,7 @@ export const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
     clearHistory();
     
     // Notify main process that a budget is loaded (transitions welcome to plan window)
-    if (window.electronAPI) {
-      window.electronAPI.budgetLoaded();
-    }
+    void storageComposition.lifecycle.budgetLoaded();
   }, [clearHistory]);
 
   /**

@@ -113,7 +113,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(cat apps/desktop/version)" >> $GITHUB_OUTPUT
         
       - name: Create prerelease metadata
         id: beta_meta

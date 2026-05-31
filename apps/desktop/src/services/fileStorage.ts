@@ -990,11 +990,6 @@ export class FileStorageService {
    * @returns The file path where the data was saved
    */
   static async saveBudget(budgetData: BudgetData, filePath?: string): Promise<string | null> {
-    // Check if Electron API is available (we're running in Electron)
-    if (!window.electronAPI) {
-      throw new Error('Electron API not available');
-    }
-
     let targetPath = filePath;
 
     // If no file path provided, open save dialog for user to choose location
@@ -1005,6 +1000,17 @@ export class FileStorageService {
         return null;
       }
       targetPath = selectedPath;
+    }
+
+    if (targetPath) {
+      const targetExists = await this.fileExistsSafe(targetPath);
+      if (!targetExists) {
+        const replacementPath = await this.savePlanFileDialogSafe(budgetData.name);
+        if (!replacementPath) {
+          return null;
+        }
+        targetPath = replacementPath;
+      }
     }
 
     // Create a copy of budget data without the encryption key (we store it in keychain)

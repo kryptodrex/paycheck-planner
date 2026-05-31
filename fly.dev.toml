@@ -1,0 +1,23 @@
+# fly.toml app configuration file generated for paycheck-planner-api-dev
+#
+# See https://fly.io/docs/reference/configuration/ for information about this file.
+#
+
+app = 'paycheck-planner-api-dev'
+primary_region = 'iad'
+
+[build]
+  dockerfile = 'apps/api/Dockerfile'
+
+[env]
+  PORT = '8080'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  min_machines_running = 0
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'

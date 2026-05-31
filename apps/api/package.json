@@ -1,0 +1,28 @@
+{
+  "name": "@paycheck-planner/api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --out-dir dist",
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "sync-version": "node ../../scripts/sync-version.mjs"
+  },
+  "dependencies": {
+    "@paycheck-planner/core": "workspace:*",
+    "@hono/node-server": "1.14.4",
+    "hono": "4.7.11"
+  },
+  "devDependencies": {
+    "tsup": "8.0.0",
+    "tsx": "4.19.3",
+    "typescript": "5.9.3",
+    "vitest": "4.1.7",
+    "@types/node": "24.10.1"
+  }
+}

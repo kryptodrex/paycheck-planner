@@ -12,7 +12,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "postinstall": "electron-rebuild || true",
-    "sync-version": "node scripts/sync-version.js",
+    "sync-version": "node ../../scripts/sync-version.mjs",
     "generate-icons": "node scripts/generate-icons.js",
     "typecheck": "tsc -b",
     "start": "open ../../release/mac-arm64/Paycheck\\ Planner.app",

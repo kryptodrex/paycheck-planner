@@ -34,7 +34,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "VERSION=$(cat version)" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(cat apps/desktop/version)" >> $GITHUB_OUTPUT
 
       - name: Build release notes
         id: changelog
