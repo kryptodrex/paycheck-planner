@@ -69,7 +69,7 @@ describe('payPeriod utilities', () => {
         payType: 'salary',
         annualSalary: 52000,
         payFrequency: 'bi-weekly',
-      })
+      }),
     ).toBe(2000);
 
     expect(
@@ -78,7 +78,7 @@ describe('payPeriod utilities', () => {
         hourlyRate: 25,
         hoursPerPayPeriod: 80,
         payFrequency: 'bi-weekly',
-      })
+      }),
     ).toBe(2000);
   });
 

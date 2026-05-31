@@ -4,7 +4,7 @@ import type { Bill, Loan, SavingsContribution } from '../types/obligations';
 import type { Benefit, RetirementElection } from '../types/payroll';
 import type { TaxFilingStatus } from '../types/payroll';
 import type { PayFrequency } from '../types/frequencies';
-import { getPaychecksPerYear } from './payPeriod';
+import { getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import { getDefaultAccountColor, getDefaultAccountIcon } from './accountDefaults';
 import { estimateTaxSettings } from '../services/taxEstimationService';
 

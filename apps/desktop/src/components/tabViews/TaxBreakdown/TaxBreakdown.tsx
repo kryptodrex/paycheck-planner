@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { History, Pencil, Scale } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
-import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '../../../utils/payPeriod';
+import { formatWithSymbol, getCurrencySymbol } from '@paycheck-planner/core/currency';
+import { getPaychecksPerYear, convertToDisplayMode, getDisplayModeLabel } from '@paycheck-planner/core/pay-period';
 import { ActionMenuButton, Button, InputWithPrefix, Modal, FormGroup, PageHeader, TaxLinesEditor, InfoBox, Dropdown } from '../../_shared';
 import { GlossaryTerm } from '../../modals/GlossaryModal';
 import type { TaxLine, TaxFilingStatus } from '../../../types/payroll';
@@ -16,7 +16,7 @@ import {
     toStoredTaxLine,
     validateEditableTaxLineValues,
     syncEditableTaxLineValues,
-} from '../../../utils/taxLines';
+} from '@paycheck-planner/core/tax-lines';
 import { estimateTaxSettings } from '../../../services/taxEstimationService';
 import '../tabViews.shared.css';
 import './TaxBreakdown.css';

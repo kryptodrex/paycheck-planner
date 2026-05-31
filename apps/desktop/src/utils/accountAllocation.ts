@@ -1,4 +1,4 @@
-import { roundToCent } from './money';
+import { roundToCent } from '@paycheck-planner/core/money';
 
 /**
  * Returns the fixed per-paycheck amount to transfer into an account so that

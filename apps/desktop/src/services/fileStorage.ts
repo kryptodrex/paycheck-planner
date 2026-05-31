@@ -21,6 +21,7 @@ import type {
   OtherIncomeWithholdingMode,
 } from '../types/payroll';
 import { KeychainService } from './keychainService';
+import { resolveStorageComposition } from './storageComposition';
 import { getBaseFileName, getPlanNameFromPath } from '../utils/filePath';
 import {
   normalizeAppearanceMode,
@@ -290,6 +291,50 @@ function migrateBudgetData(budgetData: BudgetData): BudgetData {
 }
 
 export class FileStorageService {
+  private static getPlanFileRepository() {
+    return resolveStorageComposition().planFiles;
+  }
+
+  private static async openPlanFileDialogSafe(): Promise<string | null> {
+    try {
+      return await this.getPlanFileRepository().openFileDialog();
+    } catch {
+      throw new Error('Unable to open file picker dialog.');
+    }
+  }
+
+  private static async savePlanFileDialogSafe(budgetName?: string): Promise<string | null> {
+    try {
+      return await this.getPlanFileRepository().saveFileDialog(budgetName);
+    } catch {
+      throw new Error('Unable to open save dialog.');
+    }
+  }
+
+  private static async loadBudgetFileSafe(filePath: string): Promise<{ success: boolean; data?: string; error?: string }> {
+    try {
+      return await this.getPlanFileRepository().loadBudget(filePath);
+    } catch {
+      return { success: false, error: 'Unable to read selected file.' };
+    }
+  }
+
+  private static async saveBudgetFileSafe(filePath: string, payload: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await this.getPlanFileRepository().saveBudget(filePath, payload);
+    } catch {
+      return { success: false, error: 'Unable to save budget file.' };
+    }
+  }
+
+  private static async fileExistsSafe(filePath: string): Promise<boolean> {
+    try {
+      return await this.getPlanFileRepository().fileExists(filePath);
+    } catch {
+      return true;
+    }
+  }
+
   private static derivePlanNameFromFilePath(filePath: string): string {
     return getPlanNameFromPath(filePath) || 'plan';
   }
@@ -297,11 +342,13 @@ export class FileStorageService {
   private static async inspectBudgetFile(
     filePath: string
   ): Promise<{ isBudgetFile: boolean; planId: string | null; invalidReason?: string }> {
-    if (!window.electronAPI) {
+    let result: { success: boolean; data?: string; error?: string };
+
+    try {
+      result = await this.loadBudgetFileSafe(filePath);
+    } catch {
       return { isBudgetFile: false, planId: null, invalidReason: 'Unable to read selected file.' };
     }
-
-    const result = await window.electronAPI.loadBudget(filePath);
     if (!result.success || !result.data) {
       return { isBudgetFile: false, planId: null };
     }
@@ -343,11 +390,7 @@ export class FileStorageService {
     missingFilePath: string,
     expectedPlanId?: string
   ): Promise<RelinkMovedBudgetFileResult> {
-    if (!window.electronAPI) {
-      throw new Error('Electron API not available');
-    }
-
-    const selectedPath = await window.electronAPI.openFileDialog();
+    const selectedPath = await this.openPlanFileDialogSafe();
     if (!selectedPath) {
       return { status: 'cancelled' };
     }
@@ -956,7 +999,7 @@ export class FileStorageService {
 
     // If no file path provided, open save dialog for user to choose location
     if (!targetPath) {
-      const selectedPath = await window.electronAPI.saveFileDialog(budgetData.name);
+      const selectedPath = await this.savePlanFileDialogSafe(budgetData.name);
       if (!selectedPath) {
         // User canceled - return null without error
         return null;
@@ -1037,7 +1080,7 @@ export class FileStorageService {
     }
 
     // Send to Electron's main process to actually write the file
-    const result = await window.electronAPI.saveBudget(targetPath, dataToSave);
+    const result = await this.saveBudgetFileSafe(targetPath, dataToSave);
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to save budget');
@@ -1066,7 +1109,7 @@ export class FileStorageService {
 
     // If no file path provided, open file dialog for user to choose file
     if (!targetPath) {
-      const selectedPath = await window.electronAPI.openFileDialog();
+      const selectedPath = await this.openPlanFileDialogSafe();
       if (!selectedPath) {
         // User canceled - return null without error
         return null;
@@ -1074,8 +1117,8 @@ export class FileStorageService {
       targetPath = selectedPath;
     }
 
-    if (targetPath && window.electronAPI?.fileExists) {
-      const exists = await window.electronAPI.fileExists(targetPath);
+    if (targetPath) {
+      const exists = await this.fileExistsSafe(targetPath);
       if (!exists) {
         const expectedPlanId = this.getPlanIdForFile(targetPath) || undefined;
         const relinked = await this.relinkMovedBudgetFile(targetPath, expectedPlanId);
@@ -1087,7 +1130,7 @@ export class FileStorageService {
     }
 
     // Request Electron's main process to read the file
-    const result = await window.electronAPI.loadBudget(targetPath);
+    const result = await this.loadBudgetFileSafe(targetPath);
 
     if (!result.success || !result.data) {
       throw new Error(result.error || 'Failed to load budget');
@@ -1338,10 +1381,6 @@ export class FileStorageService {
    * @returns The selected directory path, or null if cancelled
    */
   static async selectDirectory(): Promise<string | null> {
-    if (!window.electronAPI) {
-      throw new Error('Electron API not available');
-    }
-
-    return await window.electronAPI.selectDirectory();
+    return await this.getPlanFileRepository().selectDirectory();
   }
 }

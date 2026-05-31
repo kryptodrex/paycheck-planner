@@ -10,7 +10,7 @@ describe('frequency utilities', () => {
   it('normalizes case, spacing, and dash variants', () => {
     expect(normalizeFrequencyToken(' Bi Weekly ')).toBe('bi-weekly');
     expect(normalizeFrequencyToken('SEMI_MONTHLY')).toBe('semi-monthly');
-    expect(normalizeFrequencyToken('bi\u2011weekly')).toBe('bi-weekly'); // non-breaking hyphen
+    expect(normalizeFrequencyToken('bi\u2011weekly')).toBe('bi-weekly');
   });
 
   it('returns pay frequency occurrences including aliases', () => {

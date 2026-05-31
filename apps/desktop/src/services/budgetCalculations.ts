@@ -1,11 +1,11 @@
 import type { BudgetData } from '../types/budget';
 import type { OtherIncomeWithholdingAmount, PaycheckBreakdown, TaxLineAmount } from '../types/payroll';
 import type { ViewMode } from '../types/viewMode';
-import { roundToCent, roundUpToCent } from '../utils/money';
-import { getDisplayModeOccurrencesPerYear, getPaychecksPerYear } from '../utils/payPeriod';
+import { roundToCent, roundUpToCent } from '@paycheck-planner/core/money';
+import { getDisplayModeOccurrencesPerYear, getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import { calculateOtherIncomePerPaycheckAmount, calculateOtherIncomePerPaycheckTotals } from '../utils/otherIncome';
 import { calculateOtherIncomeAutoWithholdingDetail } from '../utils/otherIncomeWithholding';
-import { calculateTaxLineAmount } from '../utils/taxLines';
+import { calculateTaxLineAmount } from '@paycheck-planner/core/tax-lines';
 
 type BudgetCalculationInput = Pick<
   BudgetData,

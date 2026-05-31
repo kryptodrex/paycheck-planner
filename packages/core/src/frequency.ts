@@ -1,4 +1,14 @@
-import type { BillFrequency, CoreFrequency, PayFrequency, SavingsFrequency } from '../types/frequencies';
+export type PayFrequency =
+  | 'weekly'
+  | 'bi-weekly'
+  | 'semi-monthly'
+  | 'monthly'
+  | 'quarterly'
+  | 'yearly';
+
+export type CoreFrequency = PayFrequency;
+export type BillFrequency = CoreFrequency | 'semi-annual' | 'custom';
+export type SavingsFrequency = Exclude<BillFrequency, 'custom'>;
 
 export function normalizeFrequencyToken(value: string): string {
   return value
@@ -64,7 +74,7 @@ const SAVINGS_FREQUENCY_OCCURRENCES: Partial<Record<FrequencyToken, number>> = {
 function resolveOccurrences(
   frequency: string,
   occurrencesMap: Partial<Record<FrequencyToken, number>>,
-  defaultOccurrences: number
+  defaultOccurrences: number,
 ): number {
   const normalized = normalizeFrequencyToken(frequency) as FrequencyToken;
   return occurrencesMap[normalized] ?? defaultOccurrences;

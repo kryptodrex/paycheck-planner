@@ -32,11 +32,11 @@ import type {
 import { FileStorageService } from '../services/fileStorage';
 import { calculatePaycheckBreakdown as calculateBudgetPaycheckBreakdown, getEmptyPaycheckBreakdown } from '../services/budgetCalculations';
 import { KeychainService } from '../services/keychainService';
-import { roundToCent } from '../utils/money';
+import { roundToCent } from '@paycheck-planner/core/money';
 import { getPlanNameFromPath } from '../utils/filePath';
-import { getPaychecksPerYear } from '../utils/payPeriod';
+import { getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import { generateDemoBudgetData } from '../utils/demoDataGenerator';
-import { HistoryEngine } from '../utils/historyEngine';
+import { HistoryEngine } from '@paycheck-planner/core/history-engine';
 import { buildAuditEntries } from '../utils/auditHistory';
 
 // Create the context - this is the "container" for our global state

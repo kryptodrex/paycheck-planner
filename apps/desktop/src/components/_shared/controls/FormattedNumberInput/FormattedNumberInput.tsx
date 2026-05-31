@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { formatNumberDisplay, parseFormattedNumber } from '../../../../utils/money';
+import { formatNumberDisplay, parseFormattedNumber } from '@paycheck-planner/core/money';
 import './FormattedNumberInput.css';
 
 interface FormattedNumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {

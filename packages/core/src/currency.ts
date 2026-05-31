@@ -101,4 +101,3 @@ export function calculateInverseRate(exchangeRate: number, precision = 8): strin
   const formatted = inverse.toFixed(precision).replace(/\.?0+$/, '');
   return formatted;
 }
-

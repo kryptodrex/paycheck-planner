@@ -7,8 +7,8 @@ import type { OtherIncome } from '../../../types/payroll';
 import type { ViewMode } from '../../../types/viewMode';
 import type { OtherIncomeFieldErrors } from '../../../types/fieldErrors';
 import { OTHER_INCOME_FREQUENCY_OPTIONS } from '../../../constants/frequencies';
-import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { roundToCent } from '../../../utils/money';
+import { formatWithSymbol, getCurrencySymbol } from '@paycheck-planner/core/currency';
+import { roundToCent } from '@paycheck-planner/core/money';
 import { calculateOtherIncomeAnnualAmount, calculateOtherIncomePerPaycheckAmount } from '../../../utils/otherIncome';
 import {
     calculateOtherIncomeAutoWithholdingDetail,
@@ -29,7 +29,7 @@ import {
     getDisplayModeLabel,
     getDisplayModeOccurrencesPerYear,
     getPaychecksPerYear,
-} from '../../../utils/payPeriod';
+} from '@paycheck-planner/core/pay-period';
 import { Button, Banner, ConfirmDialog, Dropdown, FormGroup, InputWithPrefix, Modal, PageHeader, PillBadge, SectionItemCard } from '../../_shared';
 import '../tabViews.shared.css';
 import './OtherIncomeManager.css';

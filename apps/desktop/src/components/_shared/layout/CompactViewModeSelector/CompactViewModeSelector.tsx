@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect, useLayoutEffect } from 'react
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import type { SelectableViewMode, ViewMode } from '../../../../types/viewMode';
 import { SELECTABLE_VIEW_MODES } from '../../../../utils/viewModePreferences';
-import { getDisplayModeLabel } from '../../../../utils/payPeriod';
+import { getDisplayModeLabel } from '@paycheck-planner/core/pay-period';
 import './CompactViewModeSelector.css';
 
 export interface CompactSelectorOption<T extends string = string> {

@@ -1,5 +1,15 @@
-import type { TaxLine, TaxLineCalculationType } from '../types/payroll';
 import { roundToCent, roundUpToCent } from './money';
+
+export type TaxLineCalculationType = 'percentage' | 'fixed';
+
+export interface TaxLine {
+  id: string;
+  label: string;
+  rate: number;
+  amount?: number;
+  taxableIncome?: number;
+  calculationType?: TaxLineCalculationType;
+}
 
 export interface EditableTaxLineValues {
   id: string;
@@ -55,8 +65,6 @@ export function getTaxableIncomeForTaxLine(defaultTaxableIncome: number, line: T
   }
 
   if (isSocialSecurityTaxLine(normalizedLabel)) {
-    // When no explicit taxableIncome is stored (new plan / migration default), use gross wages
-    // rather than the pre-tax-deduction-adjusted default, since SS is a gross-wage tax.
     const ssBase = line.taxableIncome != null ? storedTaxableIncome : safeGrossPay;
     return roundToCent(Math.min(safeGrossPay, ssBase > 0 ? ssBase : safeGrossPay));
   }

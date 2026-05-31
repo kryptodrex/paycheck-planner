@@ -1,5 +1,5 @@
 import type { OtherIncome, OtherIncomeType } from '../types/payroll';
-import { roundUpToCent } from './money';
+import { roundUpToCent } from '@paycheck-planner/core/money';
 
 export interface OtherIncomeWithholdingProfile {
   id: string;

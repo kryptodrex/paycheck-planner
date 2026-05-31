@@ -3,8 +3,8 @@ import { Wallet, Info, Plus, X, Banknote } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
 import { calculateAnnualizedPayBreakdown, calculateCalendarPeriodBreakdown, calculateDisplayPayBreakdown } from '../../../services/budgetCalculations';
-import { formatWithSymbol, getCurrencySymbol } from '../../../utils/currency';
-import { roundToCent, roundUpToCent } from '../../../utils/money';
+import { formatWithSymbol, getCurrencySymbol } from '@paycheck-planner/core/currency';
+import { roundToCent, roundUpToCent } from '@paycheck-planner/core/money';
 import { calculateRecommendedBuffer } from '../../../utils/accountAllocation';
 import { getPaychecksPerMonthInYear } from '../../../utils/payCalendar';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
@@ -13,10 +13,10 @@ import {
   getDisplayModeLabel,
   getDisplayModeOccurrencesPerYear,
   getPaychecksPerYear,
-} from '../../../utils/payPeriod';
+} from '@paycheck-planner/core/pay-period';
 import { calculateOtherIncomeAnnualAmount } from '../../../utils/otherIncome';
 import { fromAllocationDisplayAmount, normalizeStoredAllocationAmount, toAllocationDisplayAmount } from '../../../utils/allocationEditor';
-import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '../../../utils/frequency';
+import { getBillFrequencyOccurrencesPerYear, getSavingsFrequencyOccurrencesPerYear } from '@paycheck-planner/core/frequency';
 import { getDefaultAccountIcon, getIconComponent } from '../../../utils/accountDefaults';
 import type { Account } from '../../../types/accounts';
 import type { Bill, Loan, SavingsContribution } from '../../../types/obligations';

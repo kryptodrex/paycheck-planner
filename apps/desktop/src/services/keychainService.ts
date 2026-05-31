@@ -2,10 +2,28 @@
 // Keys are stored in the OS keychain (Keychain on macOS, Credential Manager on Windows, etc.)
 // This is much more secure than storing keys in localStorage
 
-const SERVICE_NAME = 'Paycheck Planner';
+import { StorageError } from '@paycheck-planner/storage';
+import { resolveStorageComposition } from './storageComposition';
+
 const ACCOUNT_NAME = 'encryption-key';
 
 export class KeychainService {
+  private static getRepository() {
+    return resolveStorageComposition().keychain;
+  }
+
+  private static toUserFacingError(error: unknown, fallbackMessage: string): Error {
+    if (error instanceof StorageError) {
+      return new Error(error.message || fallbackMessage);
+    }
+
+    if (error instanceof Error) {
+      return new Error(error.message || fallbackMessage);
+    }
+
+    return new Error(fallbackMessage);
+  }
+
   /**
    * Save an encryption key to the system keychain
    * @param planId - The ID of the plan to associate with this key
@@ -13,25 +31,15 @@ export class KeychainService {
    * @returns Promise that resolves when key is saved
    */
   static async saveKey(planId: string, key: string): Promise<void> {
-    if (!window.electronAPI) {
-      throw new Error('Electron API not available');
-    }
-
     const account = `${ACCOUNT_NAME}:${planId}`;
     if (import.meta.env.DEV) console.debug(`[KeychainService] Saving key for account: ${account}`);
-    
-    const result = await window.electronAPI.saveKeychainKey(
-      SERVICE_NAME,
-      account,
-      key
-    );
 
-    if (!result.success) {
-      const errorMsg = result.error || 'Failed to save encryption key to keychain';
-      console.error(`[KeychainService] Save failed: ${errorMsg}`);
-      throw new Error(errorMsg);
+    try {
+      await this.getRepository().saveKey(planId, key);
+    } catch (error) {
+      throw this.toUserFacingError(error, 'Failed to save encryption key to keychain');
     }
-    
+
     if (import.meta.env.DEV) console.debug(`[KeychainService] Successfully saved key for account: ${account}`);
   }
 
@@ -41,24 +49,16 @@ export class KeychainService {
    * @returns The encryption key, or null if not found
    */
   static async getKey(planId: string): Promise<string | null> {
-    if (!window.electronAPI) {
-      throw new Error('Electron API not available');
-    }
-
     const account = `${ACCOUNT_NAME}:${planId}`;
-    
-    const result = await window.electronAPI.getKeychainKey(
-      SERVICE_NAME,
-      account
-    );
 
-    if (!result.success) {
-      const errorMsg = result.error || 'Failed to retrieve encryption key from keychain';
+    try {
+      return await this.getRepository().getKey(planId);
+    } catch (error) {
+      const normalized = this.toUserFacingError(error, 'Failed to retrieve encryption key from keychain');
+      const errorMsg = normalized.message;
       console.error(`[KeychainService] Get failed for ${account}: ${errorMsg}`);
-      throw new Error(errorMsg);
+      throw normalized;
     }
-
-    return result.key || null;
   }
 
   /**
@@ -67,17 +67,10 @@ export class KeychainService {
    * @returns Promise that resolves when key is deleted
    */
   static async deleteKey(planId: string): Promise<void> {
-    if (!window.electronAPI) {
-      throw new Error('Electron API not available');
-    }
-
-    const result = await window.electronAPI.deleteKeychainKey(
-      SERVICE_NAME,
-      `${ACCOUNT_NAME}:${planId}`
-    );
-
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to delete encryption key from keychain');
+    try {
+      await this.getRepository().deleteKey(planId);
+    } catch (error) {
+      throw this.toUserFacingError(error, 'Failed to delete encryption key from keychain');
     }
   }
 
@@ -102,25 +95,6 @@ export class KeychainService {
    * @returns The encryption key
    */
   static async getOrCreateKey(planId: string): Promise<string> {
-    const existingKey = await this.getKey(planId);
-    if (existingKey) {
-      return existingKey;
-    }
-
-    // Generate a new key if one doesn't exist
-    const newKey = this.generateEncryptionKey();
-    await this.saveKey(planId, newKey);
-    return newKey;
-  }
-
-  /**
-   * Generate a random encryption key
-   * @returns A secure random key as a hex string
-   */
-  private static generateEncryptionKey(): string {
-    // Generate 32 random bytes and convert to hex
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return this.getRepository().getOrCreateKey(planId);
   }
 }

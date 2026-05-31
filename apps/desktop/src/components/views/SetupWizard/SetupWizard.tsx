@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, ShieldCheck, Sun, Moon, Monitor, Palette } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs, useEncryptionSetupFlow } from '../../../hooks';
-import { getCurrencySymbol, CURRENCIES } from '../../../utils/currency';
+import { getCurrencySymbol, CURRENCIES } from '@paycheck-planner/core/currency';
 import { getDefaultAccountColor, getDefaultAccountIcon } from '../../../utils/accountDefaults';
-import { getPaychecksPerYear } from '../../../utils/payPeriod';
+import { getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import { formatSuggestedLeftover, getSuggestedLeftoverPerPaycheck } from '../../../utils/paySuggestions';
 import {
   type EditableTaxLineValues,
   syncEditableTaxLineValues,
   toStoredTaxLine,
   validateEditableTaxLineValues,
-} from '../../../utils/taxLines';
+} from '@paycheck-planner/core/tax-lines';
 import { estimateTaxSettings } from '../../../services/taxEstimationService';
 import { FileStorageService } from '../../../services/fileStorage';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { HistoryEngine } from './historyEngine';
 
 describe('HistoryEngine', () => {
@@ -6,10 +6,10 @@ describe('HistoryEngine', () => {
 
   it('should track state changes in undo stack', () => {
     const engine = new HistoryEngine<{ count: number }>(100);
-    
+
     engine.push(createTestState(1));
     engine.push(createTestState(2));
-    
+
     expect(engine.getUndoDepth()).toBe(2);
     expect(engine.canUndo()).toBe(true);
   });
@@ -23,7 +23,7 @@ describe('HistoryEngine', () => {
     engine.push(state2);
 
     const undoneTo = engine.undo(createTestState(3));
-    
+
     expect(undoneTo).toEqual(state2);
     expect(engine.canRedo()).toBe(true);
   });
@@ -39,14 +39,14 @@ describe('HistoryEngine', () => {
     engine.undo(state3);
 
     const redoneTo = engine.redo(state3);
-    
+
     expect(redoneTo).toEqual(state3);
     expect(engine.canRedo()).toBe(false);
   });
 
   it('should not undo when stack is empty', () => {
     const engine = new HistoryEngine<{ count: number }>(100);
-    
+
     expect(engine.canUndo()).toBe(false);
     const result = engine.undo(createTestState(1));
     expect(result).toBeNull();
@@ -54,7 +54,7 @@ describe('HistoryEngine', () => {
 
   it('should not redo when stack is empty', () => {
     const engine = new HistoryEngine<{ count: number }>(100);
-    
+
     expect(engine.canRedo()).toBe(false);
     const result = engine.redo(createTestState(1));
     expect(result).toBeNull();
@@ -73,7 +73,6 @@ describe('HistoryEngine', () => {
 
     expect(engine.canRedo()).toBe(true);
 
-    // New push should clear redo
     engine.push(state4);
 
     expect(engine.canRedo()).toBe(false);
@@ -87,7 +86,6 @@ describe('HistoryEngine', () => {
       engine.push(createTestState(i));
     }
 
-    // Should only have 3 entries (max depth)
     expect(engine.getUndoDepth()).toBe(3);
   });
 
@@ -123,14 +121,12 @@ describe('HistoryEngine', () => {
     engine.push(state2);
     engine.push(state3);
 
-    // Undo twice
     engine.undo(state4);
     engine.undo(state3);
 
     expect(engine.canUndo()).toBe(true);
     expect(engine.canRedo()).toBe(true);
 
-    // Redo once
     const redoState = engine.redo(state2);
     expect(redoState).toEqual(state3);
     expect(engine.canRedo()).toBe(true);
@@ -144,12 +140,11 @@ describe('HistoryEngine', () => {
       const stateC = createTestState(3);
 
       engine.beginBatch();
-      engine.push(stateA); // pre-batch state captured
-      engine.push(stateB); // suppressed
+      engine.push(stateA);
+      engine.push(stateB);
       engine.commitBatch('batch operation');
 
       expect(engine.getUndoDepth()).toBe(1);
-      // Undoing should restore stateA (the pre-batch snapshot)
       const undone = engine.undo(stateC);
       expect(undone).toEqual(stateA);
     });
@@ -187,7 +182,7 @@ describe('HistoryEngine', () => {
       engine.push(stateB);
       engine.commitBatch('batch');
 
-      engine.push(stateC); // normal push after batch
+      engine.push(stateC);
 
       expect(engine.getUndoDepth()).toBe(2);
       const undone1 = engine.undo(stateD);

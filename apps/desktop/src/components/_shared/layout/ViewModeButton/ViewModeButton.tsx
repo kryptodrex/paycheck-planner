@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { Check } from 'lucide-react';
 import type { SelectableViewMode, ViewMode } from '../../../../types/viewMode';
 import { SELECTABLE_VIEW_MODES } from '../../../../utils/viewModePreferences';
-import { getDisplayModeLabel } from '../../../../utils/payPeriod';
+import { getDisplayModeLabel } from '@paycheck-planner/core/pay-period';
 import './ViewModeButton.css';
 
 export interface ViewModeButtonOption<T extends string = string> {

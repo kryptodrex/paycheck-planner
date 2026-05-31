@@ -1,5 +1,5 @@
 import type { ViewMode } from '../types/viewMode';
-import { convertFromDisplayMode, convertToDisplayMode } from './payPeriod';
+import { convertFromDisplayMode, convertToDisplayMode } from '@paycheck-planner/core/pay-period';
 
 export function toDisplayAmount(
   perPaycheckAmount: number,

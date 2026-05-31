@@ -7,7 +7,7 @@ import {
   getOtherIncomeOccurrencesPerYear,
   getOtherIncomeScheduledOccurrencesPerYear,
 } from './otherIncome';
-import { roundToCent } from './money';
+import { roundToCent } from '@paycheck-planner/core/money';
 
 describe('otherIncome', () => {
   it('resolves supported other income frequencies to annual occurrences', () => {

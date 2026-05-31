@@ -5,7 +5,7 @@ import type { SearchActionContext, SearchModule } from '../searchRegistry';
 import { TAB_IDS } from '../../constants/tabIds';
 import { calculateOtherIncomePerPaycheckAmount } from '../otherIncome';
 import { getOtherIncomePayTreatmentLabel, getOtherIncomeTypeLabel } from '../otherIncomeLabels';
-import { calculateGrossPayPerPaycheck, getPaychecksPerYear } from '../payPeriod';
+import { calculateGrossPayPerPaycheck, getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import { createTypedActionHandler, formatSearchCurrency, incrementRequestKey } from './moduleUtils';
 
 function buildOtherIncomeResults(budgetData: BudgetData): SearchResult[] {

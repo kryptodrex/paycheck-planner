@@ -1,6 +1,6 @@
 import React from 'react';
-import { getCurrencySymbol } from '../../../../utils/currency';
-import type { EditableTaxLineValues } from '../../../../utils/taxLines';
+import { getCurrencySymbol } from '@paycheck-planner/core/currency';
+import type { EditableTaxLineValues } from '@paycheck-planner/core/tax-lines';
 import { Button, Dropdown, FormGroup, InputWithPrefix } from '../../';
 import './TaxLinesEditor.css';
 

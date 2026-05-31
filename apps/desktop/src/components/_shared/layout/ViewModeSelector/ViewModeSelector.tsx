@@ -1,6 +1,6 @@
 import type { ViewMode } from '../../../../types/viewMode';
 import { SELECTABLE_VIEW_MODES } from '../../../../utils/viewModePreferences';
-import { getDisplayModeLabel } from '../../../../utils/payPeriod';
+import { getDisplayModeLabel } from '@paycheck-planner/core/pay-period';
 import './ViewModeSelector.css';
 
 export interface ViewModeOption<T extends string = string> {

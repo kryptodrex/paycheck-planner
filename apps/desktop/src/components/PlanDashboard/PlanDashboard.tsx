@@ -27,7 +27,7 @@ import { PlanTabs, TabManagementModal } from './PlanTabs';
 import { Toast, Modal, Button, ConfirmDialog, ErrorDialog, FileRelinkModal, FormGroup, EncryptionConfigPanel, Dropdown, ViewModeButton } from '../_shared';
 import type { Period } from '../_shared';
 import { initializeTabConfigs, getVisibleTabs, getHiddenTabs, toggleTabVisibility, reorderTabs, normalizeLegacyTabId } from '../../utils/tabManagement';
-import { getPayFrequencyViewMode } from '../../utils/payPeriod';
+import { getPayFrequencyViewMode } from '@paycheck-planner/core/pay-period';
 import { getPaychecksInMonth, getPaychecksInQuarter } from '../../utils/payCalendar';
 import type { PayFrequency } from '../../types/frequencies';
 import { useGlobalKeyboardShortcuts } from '../../hooks';

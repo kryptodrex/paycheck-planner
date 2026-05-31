@@ -2,7 +2,7 @@ import { Banknote, Calculator, HandCoins, Pin, ReceiptText, Scale, TrendingDown,
 import type { BudgetData } from '../../types/budget';
 import { calculateAnnualizedPaySummary, calculatePaycheckBreakdown } from '../../services/budgetCalculations';
 import { convertBillToYearly } from '../billFrequency';
-import { getPaychecksPerYear } from '../payPeriod';
+import { getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import type { SearchResult } from '../planSearch';
 import type { SearchModule } from '../searchRegistry';
 import { TAB_IDS } from '../../constants/tabIds';

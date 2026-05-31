@@ -1,5 +1,5 @@
 import type { OtherIncome } from '../types/payroll';
-import { getPayFrequencyOccurrencesPerYear } from './frequency';
+import { getPayFrequencyOccurrencesPerYear } from '@paycheck-planner/core/frequency';
 
 export interface OtherIncomePerPaycheckTotals {
   gross: number;

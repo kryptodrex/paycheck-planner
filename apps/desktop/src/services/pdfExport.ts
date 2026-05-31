@@ -3,10 +3,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { BudgetData } from '../types/budget';
 import { calculatePaycheckBreakdown } from './budgetCalculations';
-import { formatWithSymbol } from '../utils/currency';
-import { getPaychecksPerYear } from '../utils/payPeriod';
+import { formatWithSymbol } from '@paycheck-planner/core/currency';
+import { getPaychecksPerYear } from '@paycheck-planner/core/pay-period';
 import { getRetirementPlanDisplayLabel } from '../utils/retirement';
-import { getTaxLineCalculationType } from '../utils/taxLines';
+import { getTaxLineCalculationType } from '@paycheck-planner/core/tax-lines';
 import { calculateOtherIncomeAnnualAmount } from '../utils/otherIncome';
 import {
   getOtherIncomePayTreatmentLabel,

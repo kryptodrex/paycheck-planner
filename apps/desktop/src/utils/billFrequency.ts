@@ -1,7 +1,7 @@
 import type { BillFrequency } from '../types/frequencies';
 import { FREQUENCIES } from '../constants/frequencies';
-import { roundUpToCent } from './money';
-import { getBillFrequencyOccurrencesPerYear } from './frequency';
+import { roundUpToCent } from '@paycheck-planner/core/money';
+import { getBillFrequencyOccurrencesPerYear } from '@paycheck-planner/core/frequency';
 
 export function convertBillToYearly(amount: number, frequency: BillFrequency): number {
   // 'custom' bills represent a monthly amount entered by the user

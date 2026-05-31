@@ -9,9 +9,9 @@ import type {
 } from '../../../services/reallocationPlanner';
 import { buildOverriddenPlan } from '../../../services/reallocationPlanner';
 import type { ViewMode } from '../../../types/viewMode';
-import { formatWithSymbol } from '../../../utils/currency';
+import { formatWithSymbol } from '@paycheck-planner/core/currency';
 import { toDisplayAmount } from '../../../utils/displayAmounts';
-import { getDisplayModeLabel } from '../../../utils/payPeriod';
+import { getDisplayModeLabel } from '@paycheck-planner/core/pay-period';
 import { Alert, Button, Modal, PillBadge, ProgressBar, Slider, Toggle } from '../../_shared';
 import {
   REALLOCATION_ADJUSTABLE_TYPES,
