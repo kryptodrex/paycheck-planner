@@ -8,13 +8,19 @@ type FrankfurterResponse = {
 type CurrencyProxySuccess = FrankfurterResponse;
 
 type CurrencyProxyError = {
-    status: number;
+    status: 400 | 502 | 504;
     message: string;
 };
 
 export type CurrencyProxyResult = CurrencyProxySuccess | CurrencyProxyError;
 
-export async function proxyCurrencyConversion(amount: string, from: string, to: string): Promise<CurrencyProxyResult> {
+export async function proxyCurrencyConversion(
+    currencyApiUrl: string,
+    amount: string,
+    from: string,
+    to: string,
+    requestTimeoutMs: number = 8000,
+): Promise<CurrencyProxyResult> {
     const fromCurrency = from.trim().toUpperCase();
     const toCurrency = to.trim().toUpperCase();
 
@@ -25,7 +31,7 @@ export async function proxyCurrencyConversion(amount: string, from: string, to: 
         };
     }
 
-    const upstreamUrl = new URL(process.env.CURRENCY_API_URL ?? 'https://api.frankfurter.app/latest');
+    const upstreamUrl = new URL(currencyApiUrl);
     upstreamUrl.searchParams.set('from', fromCurrency);
     upstreamUrl.searchParams.set('to', toCurrency);
     if (amount) {
@@ -33,21 +39,36 @@ export async function proxyCurrencyConversion(amount: string, from: string, to: 
     }
 
     try {
-        const upstreamResponse = await fetch(upstreamUrl.toString(), {
-            method: 'GET',
-            headers: { Accept: 'application/json' },
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
 
-        if (!upstreamResponse.ok) {
+        try {
+            const upstreamResponse = await fetch(upstreamUrl.toString(), {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+                signal: controller.signal,
+            });
+
+            if (!upstreamResponse.ok) {
+                return {
+                    status: 502,
+                    message: `Currency service unavailable: upstream returned HTTP ${upstreamResponse.status}.`,
+                };
+            }
+
+            const data = await upstreamResponse.json() as FrankfurterResponse;
+            return data;
+        } finally {
+            clearTimeout(timeout);
+        }
+    } catch (error) {
+        if (error instanceof Error && /abort/i.test(error.message)) {
             return {
-                status: 502,
-                message: `Currency service unavailable: upstream returned HTTP ${upstreamResponse.status}.`,
+                status: 504,
+                message: `Currency service unavailable: request timed out after ${requestTimeoutMs}ms.`,
             };
         }
 
-        const data = await upstreamResponse.json() as FrankfurterResponse;
-        return data;
-    } catch (error) {
         return {
             status: 502,
             message: `Currency service unavailable: ${error instanceof Error ? error.message : String(error)}`,

@@ -15,11 +15,20 @@ export default defineConfig(({ mode }) => {
   // where vars are injected directly into the environment by GitHub Actions.
   const fileEnv = loadEnv(mode, process.cwd(), '')
   const getEnv = (key: string): string => fileEnv[key] ?? process.env[key] ?? ''
+  const apiBaseUrl = getEnv('API_BASE_URL') || 'http://localhost:3000'
+  const currencyApiUrl = (() => {
+    try {
+      return new URL('/currency-conversion', apiBaseUrl).toString()
+    } catch {
+      return 'http://localhost:3000/currency-conversion'
+    }
+  })()
 
   return {
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),
-      __CURRENCY_API_URL__: JSON.stringify(getEnv('CURRENCY_CONVERSION_URL') || 'http://localhost:3000/currency-conversion'),
+      __CURRENCY_API_URL__: JSON.stringify(currencyApiUrl),
+      __API_BASE_URL__: JSON.stringify(apiBaseUrl),
     },
     plugins: [
       react(),
@@ -34,7 +43,7 @@ export default defineConfig(({ mode }) => {
               'process.env.FEEDBACK_FORM_ENTRY_SUBJECT': JSON.stringify(getEnv('FEEDBACK_FORM_ENTRY_SUBJECT')),
               'process.env.FEEDBACK_FORM_ENTRY_DETAILS': JSON.stringify(getEnv('FEEDBACK_FORM_ENTRY_DETAILS')),
               'process.env.LATEST_RELEASE_URL': JSON.stringify(getEnv('LATEST_RELEASE_URL')),
-              'process.env.CURRENCY_CONVERSION_URL': JSON.stringify(getEnv('CURRENCY_CONVERSION_URL')),
+              'process.env.CURRENCY_CONVERSION_URL': JSON.stringify(currencyApiUrl),
             },
           },
         },

@@ -27,9 +27,6 @@ importers:
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
-      eslint:
-        specifier: 9.39.1
-        version: 9.39.1(jiti@2.7.0)
       tsup:
         specifier: 8.0.0
         version: 8.0.0(postcss@8.5.15)(typescript@5.9.3)

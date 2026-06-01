@@ -4,6 +4,7 @@ import { APP_CUSTOM_EVENTS, MENU_EVENTS } from './constants/events'
 import { useBudget } from './contexts/BudgetContext'
 import { useGlobalKeyboardShortcuts } from './hooks'
 import { initializeSearchModules } from './utils/searchModules'
+import { primeReferenceDataCache } from './services/referenceDataFetcher'
 import EncryptionSetup from './components/views/EncryptionSetup'
 import WelcomeScreen from './components/views/WelcomeScreen'
 import PlanDashboard from './components/PlanDashboard'
@@ -22,6 +23,7 @@ function App() {
   // Initialize search modules once on app startup
   useEffect(() => {
     initializeSearchModules();
+    primeReferenceDataCache();
   }, []);
   
   // Get the current budget data and actions from our context

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Button, PillBadge } from '../../_shared';
+import { type GlossaryCategory } from '../../../types/referenceData';
 import {
-  glossaryCategoryLabels,
-  glossaryTerms,
-  type GlossaryCategory,
-} from '../../../data/glossary';
+  getCachedGlossaryCategoryLabels,
+  getCachedGlossaryTerms,
+} from '../../../services/referenceDataFetcher';
 import './GlossaryModal.css';
 import { BookOpen } from 'lucide-react';
 
@@ -17,9 +17,16 @@ interface GlossaryModalProps {
 type CategoryFilter = 'all' | GlossaryCategory;
 
 const GlossaryModal: React.FC<GlossaryModalProps> = ({ isOpen, onClose, initialTermId }) => {
+  const [glossaryTerms, setGlossaryTerms] = useState(() => getCachedGlossaryTerms());
+  const glossaryCategoryLabels = useMemo(() => getCachedGlossaryCategoryLabels(), [glossaryTerms]);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<CategoryFilter>('all');
   const searchRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setGlossaryTerms(getCachedGlossaryTerms());
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

@@ -1,7 +1,8 @@
 import React, { startTransition, useEffect, useMemo, useRef, useState } from 'react';
 import { HelpCircle, ChevronDown } from 'lucide-react';
 import { Button, Modal } from '../../_shared';
-import { appFaqSections, type AppFaqSection } from '../../../data/appFaqs';
+import { type AppFaqSection } from '../../../types/referenceData';
+import { getCachedAppFaqSections } from '../../../services/referenceDataFetcher';
 import './AppFaqModal.css';
 
 interface AppFaqModalProps {
@@ -11,10 +12,20 @@ interface AppFaqModalProps {
 }
 
 const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose, initialItemId }) => {
+  const [appFaqSections, setAppFaqSections] = useState<AppFaqSection[]>(() => getCachedAppFaqSections());
   const [query, setQuery] = useState('');
-  const [activeSectionId, setActiveSectionId] = useState<string>(appFaqSections[0].id);
+  const [activeSectionId, setActiveSectionId] = useState<string>(() => getCachedAppFaqSections()[0]?.id ?? '');
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const sections = getCachedAppFaqSections();
+    setAppFaqSections(sections);
+    if (sections.length > 0 && !sections.some((section) => section.id === activeSectionId)) {
+      setActiveSectionId(sections[0].id);
+    }
+  }, [activeSectionId, isOpen]);
 
   const searchTokens = useMemo(
     () => query.trim().toLowerCase().split(/\s+/).filter(Boolean),
@@ -85,7 +96,7 @@ const AppFaqModal: React.FC<AppFaqModalProps> = ({ isOpen, onClose, initialItemI
 
     startTransition(() => {
       setQuery('');
-      setActiveSectionId(appFaqSections[0].id);
+      setActiveSectionId(appFaqSections[0]?.id ?? '');
       setExpandedIds([]);
     });
   }, [isOpen]);

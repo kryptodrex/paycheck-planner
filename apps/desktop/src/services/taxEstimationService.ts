@@ -1,11 +1,7 @@
 import type { TaxLine, TaxSettings } from '../types/payroll';
 import type { TaxFilingStatus } from '../types/payroll';
-import {
-  type FederalTaxBracket,
-  US_FEDERAL_TAX_RULES_2026,
-  US_FICA_RULES_2026,
-  US_STATE_HEURISTIC_RULES_2026,
-} from '../data/usTaxData';
+import type { FederalTaxBracket } from '../types/referenceData';
+import { getCachedUsTaxData } from './referenceDataFetcher';
 
 export interface TaxEstimationInput {
   currency: string;
@@ -48,7 +44,8 @@ function calculateProgressiveTax(taxableIncome: number, brackets: FederalTaxBrac
 }
 
 function estimateStateTaxRate(annualTaxableIncome: number): number {
-  for (const band of US_STATE_HEURISTIC_RULES_2026.bands) {
+  const rules = getCachedUsTaxData();
+  for (const band of rules.stateHeuristic.bands) {
     if (annualTaxableIncome <= band.upTo) {
       return band.rate;
     }
@@ -84,6 +81,7 @@ function createNeutralTaxSettings(paycheckTaxableIncome: number): TaxSettings {
 }
 
 export function estimateTaxSettings(input: TaxEstimationInput): TaxEstimationResult {
+  const rules = getCachedUsTaxData();
   const safePaychecks = Number.isFinite(input.paychecksPerYear) && input.paychecksPerYear > 0
     ? input.paychecksPerYear
     : 26;
@@ -104,28 +102,28 @@ export function estimateTaxSettings(input: TaxEstimationInput): TaxEstimationRes
     };
   }
 
-  const annualFederalTaxable = Math.max(0, annualTaxable - US_FEDERAL_TAX_RULES_2026.standardDeduction[filingStatus]);
+  const annualFederalTaxable = Math.max(0, annualTaxable - rules.federal.standardDeduction[filingStatus]);
   const annualFederalTax = calculateProgressiveTax(
     annualFederalTaxable,
-    US_FEDERAL_TAX_RULES_2026.brackets[filingStatus],
+    rules.federal.brackets[filingStatus],
   );
   const federalRate = annualTaxable > 0 ? (annualFederalTax / annualTaxable) * 100 : 0;
 
   const stateRate = estimateStateTaxRate(annualTaxable);
 
-  const socialSecurityRate = US_FICA_RULES_2026.socialSecurityEmployeeRate * 100;
+  const socialSecurityRate = rules.fica.socialSecurityEmployeeRate * 100;
   const socialSecurityPaycheckTaxableIncome = Math.min(
     paycheckGrossIncome,
-    US_FICA_RULES_2026.socialSecurityWageBase / safePaychecks,
+    rules.fica.socialSecurityWageBase / safePaychecks,
   );
 
   const annualMedicareSurtaxThreshold = filingStatus === 'married_filing_jointly'
-    ? US_FICA_RULES_2026.medicareAdditionalThresholdMarried
-    : US_FICA_RULES_2026.medicareAdditionalThresholdSingle;
-  const annualMedicareTax = (annualGross * US_FICA_RULES_2026.medicareEmployeeRate)
+    ? rules.fica.medicareAdditionalThresholdMarried
+    : rules.fica.medicareAdditionalThresholdSingle;
+  const annualMedicareTax = (annualGross * rules.fica.medicareEmployeeRate)
     + (
       Math.max(0, annualGross - annualMedicareSurtaxThreshold)
-      * US_FICA_RULES_2026.medicareAdditionalRate
+      * rules.fica.medicareAdditionalRate
     );
   const medicareRate = annualGross > 0 ? (annualMedicareTax / annualGross) * 100 : 0;
 
@@ -141,7 +139,7 @@ export function estimateTaxSettings(input: TaxEstimationInput): TaxEstimationRes
       filingStatus,
     },
     assumptions: [
-      `Federal estimate uses IRS ${US_FEDERAL_TAX_RULES_2026.taxYear} progressive brackets and standard deduction for ${filingStatus}.`,
+      `Federal estimate uses IRS ${rules.federal.taxYear} progressive brackets and standard deduction for ${filingStatus}.`,
       'State tax is a blended estimate based on post pre-tax taxable income; edit if your jurisdiction differs.',
       'Social Security uses gross wages as the base, with wage-base capping behavior.',
       'Medicare uses gross wages and includes the additional 0.9% surtax above the high-income threshold ($200k single / $250k married filing jointly).',

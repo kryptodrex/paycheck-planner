@@ -16,6 +16,15 @@ primary_region = "iad"
 
 [env]
   PORT = "8080"
+  NODE_ENV = "production"
+  CURRENCY_API_URL = "https://api.frankfurter.app/latest"
+  CURRENCY_REQUEST_TIMEOUT_MS = "8000"
+  API_AUTH_MODE = "none"
+  API_REQUIRE_AUTH = "false"
+  API_RATE_LIMIT_WINDOW_MS = "60000"
+  API_RATE_LIMIT_MAX_REQUESTS = "120"
+  API_STORAGE_BACKEND = "memory"
+# Set API_SHARED_SECRET with `fly secrets set API_SHARED_SECRET=...` when using shared-secret mode.
 
 [[vm]]
   size = "shared-cpu-1x"

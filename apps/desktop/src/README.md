@@ -42,6 +42,7 @@ Built with Electron, React, TypeScript, and Vite.
   - Session/window state handling (size, position, active tab persistence)
   - Settings panel (theme, glossary tooltips)
   - Glossary with searchable terms and inline tooltips
+  - API-backed reference data (US tax rules, glossary, and FAQ) hydrated and cached on app launch
   - About dialog with version/license info
   - Theme support (light/dark/system with CSS variables)
 
@@ -63,6 +64,9 @@ Run in development (Vite + Electron plugin workflow):
 ```bash
 npm run dev
 ```
+
+`npm run dev` from the workspace root runs desktop and API in parallel.
+The desktop app expects `API_BASE_URL` (see `apps/desktop/.env.example`) to point at the API host for `/currency-conversion` and `/reference-data/*`.
 
 Lint:
 
@@ -236,6 +240,7 @@ Services
   ├─ budgetCalculations.ts (gross-to-net calculations, paycheck math, deduction totals)
   ├─ budgetCurrencyConversion.ts (currency conversion and formatting for budget values)
   ├─ currencyRateFetcher.ts (live exchange rates via Frankfurter API, 24h cache, offline fallback)
+  ├─ referenceDataFetcher.ts (startup hydration + cached API reference data via /reference-data/*)
   ├─ taxEstimationService.ts (progressive federal brackets, FICA/Medicare, state-rate heuristics)
   ├─ reallocationPlanner.ts (automated reallocation proposals and application)
   └─ pdfExport.ts (jsPDF generation with password protection)
@@ -341,6 +346,7 @@ paycheck-planner/
 │   │   ├── budgetCalculations.ts (gross-to-net + deduction math)
 │   │   ├── budgetCurrencyConversion.ts (currency conversion for budget values)
 │   │   ├── currencyRateFetcher.ts (live exchange rates + caching)
+│   │   ├── referenceDataFetcher.ts (startup API reference-data hydration + cache)
 │   │   ├── taxEstimationService.ts (smart tax auto-estimation)
 │   │   ├── reallocationPlanner.ts (automated reallocation proposals)
 │   │   └── pdfExport.ts (PDF generation)
@@ -357,6 +363,7 @@ paycheck-planner/
 │   │   ├── settings.ts (app settings types)
 │   │   ├── tabs.ts (tab types)
 │   │   ├── viewMode.ts (ViewMode, SelectableViewMode)
+│   │   ├── referenceData.ts (shared API reference-data contracts)
 │   │   └── electron.d.ts (Electron API types)
 │   ├── utils/
 │   │   ├── payPeriod.ts
@@ -392,10 +399,6 @@ paycheck-planner/
 │   │   ├── appearancePresets.ts (theme presets)
 │   │   ├── storage.ts (localStorage keys)
 │   │   └── events.ts (custom app events)
-│   ├── data/
-│   │   ├── glossary.ts (financial terms glossary)
-│   │   ├── appFaqs.ts (FAQ content)
-│   │   └── usTaxData.ts (IRS-backed US tax rules)
 │   ├── App.tsx (main app component)
 │   ├── App.css
 │   ├── main.tsx (React entry point)
@@ -420,6 +423,12 @@ paycheck-planner/
 ### "Electron API not available"
 
 This app must run in Electron mode (not plain browser mode). Use `npm run dev` from project root.
+
+### Glossary/FAQ or tax reference data appears empty
+
+- Confirm API is running (`npm run dev` from workspace root starts both apps).
+- Confirm `apps/desktop/.env` has `API_BASE_URL` pointing to the API host (for local dev: `http://localhost:3000`).
+- Restart desktop dev after changing env vars so Vite define values are rebuilt.
 
 ### Can’t open an encrypted plan
 

@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import { createPortal } from 'react-dom';
 import { APP_CUSTOM_EVENTS } from '../../../constants/events';
 import { FileStorageService } from '../../../services/fileStorage';
-import { glossaryTerms } from '../../../data/glossary';
+import { getCachedGlossaryTerms } from '../../../services/referenceDataFetcher';
 import './GlossaryTerm.css';
 
 interface GlossaryTermProps {
@@ -19,7 +19,7 @@ const GlossaryTerm: React.FC<GlossaryTermProps> = ({ termId, children, className
   });
   const anchorRef = useRef<HTMLSpanElement | null>(null);
 
-  const term = useMemo(() => glossaryTerms.find((item) => item.id === termId), [termId]);
+  const term = useMemo(() => getCachedGlossaryTerms().find((item) => item.id === termId), [termId]);
 
   useEffect(() => {
     const handleChange = (event: Event) => {

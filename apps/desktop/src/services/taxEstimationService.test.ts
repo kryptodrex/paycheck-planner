@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
 import { estimateTaxSettings } from './taxEstimationService';
-import { US_FEDERAL_TAX_RULES_2026, US_FICA_RULES_2026 } from '../data/usTaxData';
+import { getCachedUsTaxData } from './referenceDataFetcher';
 
 describe('taxEstimationService', () => {
-  it('uses IRS-backed local rule data constants', () => {
-    expect(US_FEDERAL_TAX_RULES_2026.taxYear).toBe(2026);
-    expect(US_FEDERAL_TAX_RULES_2026.standardDeduction.single).toBe(16100);
-    expect(US_FEDERAL_TAX_RULES_2026.standardDeduction.married_filing_jointly).toBe(32200);
-    expect(US_FEDERAL_TAX_RULES_2026.brackets.single[0].upTo).toBe(12400);
-    expect(US_FEDERAL_TAX_RULES_2026.brackets.single[0].rate).toBe(0.1);
+  it('uses cached reference-data tax rules', () => {
+    const rules = getCachedUsTaxData();
 
-    expect(US_FICA_RULES_2026.socialSecurityEmployeeRate).toBe(0.062);
-    expect(US_FICA_RULES_2026.medicareEmployeeRate).toBe(0.0145);
-    expect(US_FICA_RULES_2026.medicareAdditionalRate).toBe(0.009);
+    expect(rules.federal.taxYear).toBe(2026);
+    expect(rules.federal.standardDeduction.single).toBe(16100);
+    expect(rules.federal.standardDeduction.married_filing_jointly).toBe(32200);
+    expect(rules.federal.brackets.single[0].upTo).toBe(12400);
+    expect(rules.federal.brackets.single[0].rate).toBe(0.1);
+
+    expect(rules.fica.socialSecurityEmployeeRate).toBe(0.062);
+    expect(rules.fica.medicareEmployeeRate).toBe(0.0145);
+    expect(rules.fica.medicareAdditionalRate).toBe(0.009);
   });
 
   it('returns neutral template for non-USD currency', () => {

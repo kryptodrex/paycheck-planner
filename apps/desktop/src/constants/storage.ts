@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   theme: 'paycheck-planner-theme',
   accounts: 'paycheck-planner-accounts',
   currencyRates: 'paycheck-planner-currency-rates',
+  referenceData: 'paycheck-planner-reference-data',
 } as const;
 
 export const APP_STORAGE_PREFIX = 'paycheck-planner-';
@@ -16,6 +17,7 @@ export const APP_STORAGE_KEYS = [
   STORAGE_KEYS.theme,
   STORAGE_KEYS.accounts,
   STORAGE_KEYS.currencyRates,
+  STORAGE_KEYS.referenceData,
 ] as const;
 
 export const SETTINGS_PLAN_SPECIFIC_FIELDS = ['encryptionEnabled', 'encryptionKey'] as const;
