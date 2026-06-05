@@ -1,0 +1,26 @@
+import type { BillFrequency } from './frequency';
+import { getBillFrequencyOccurrencesPerYear } from './frequency';
+import { roundUpToCent } from './money';
+
+export function convertBillToYearly(amount: number, frequency: BillFrequency): number {
+  // 'custom' bills represent a monthly amount entered by the user
+  if (frequency === 'custom') return amount * 12;
+  return amount * getBillFrequencyOccurrencesPerYear(frequency);
+}
+
+export function convertBillToMonthly(amount: number, frequency: BillFrequency): number {
+  if (frequency === 'monthly' || frequency === 'custom') {
+    return amount;
+  }
+
+  return roundUpToCent(convertBillToYearly(amount, frequency) / 12);
+}
+
+const BILL_FREQUENCY_DISPLAY_LABELS: Partial<Record<BillFrequency, string>> = {
+  'bi-weekly': 'Bi-weekly',
+  'semi-annual': 'Semi-annual',
+};
+
+export function formatBillFrequency(frequency: BillFrequency): string {
+  return BILL_FREQUENCY_DISPLAY_LABELS[frequency] ?? (frequency.charAt(0).toUpperCase() + frequency.slice(1));
+}

@@ -35,6 +35,94 @@
     "./types": {
       "types": "./src/types.ts",
       "import": "./src/types.ts"
+    },
+    "./assert-never": {
+      "types": "./src/assertNever.ts",
+      "import": "./src/assertNever.ts"
+    },
+    "./audit": {
+      "types": "./src/audit.ts",
+      "import": "./src/audit.ts"
+    },
+    "./accounts": {
+      "types": "./src/accounts.ts",
+      "import": "./src/accounts.ts"
+    },
+    "./loan-types": {
+      "types": "./src/loanTypes.ts",
+      "import": "./src/loanTypes.ts"
+    },
+    "./retirement-types": {
+      "types": "./src/retirementTypes.ts",
+      "import": "./src/retirementTypes.ts"
+    },
+    "./obligations": {
+      "types": "./src/obligations.ts",
+      "import": "./src/obligations.ts"
+    },
+    "./payroll": {
+      "types": "./src/payroll.ts",
+      "import": "./src/payroll.ts"
+    },
+    "./budget": {
+      "types": "./src/budget.ts",
+      "import": "./src/budget.ts"
+    },
+    "./other-income": {
+      "types": "./src/otherIncome.ts",
+      "import": "./src/otherIncome.ts"
+    },
+    "./other-income-withholding": {
+      "types": "./src/otherIncomeWithholding.ts",
+      "import": "./src/otherIncomeWithholding.ts"
+    },
+    "./bill-frequency": {
+      "types": "./src/billFrequency.ts",
+      "import": "./src/billFrequency.ts"
+    },
+    "./pay-calendar": {
+      "types": "./src/payCalendar.ts",
+      "import": "./src/payCalendar.ts"
+    },
+    "./account-allocation": {
+      "types": "./src/accountAllocation.ts",
+      "import": "./src/accountAllocation.ts"
+    },
+    "./account-grouping": {
+      "types": "./src/accountGrouping.ts",
+      "import": "./src/accountGrouping.ts"
+    },
+    "./retirement": {
+      "types": "./src/retirement.ts",
+      "import": "./src/retirement.ts"
+    },
+    "./deduction-line-items": {
+      "types": "./src/deductionLineItems.ts",
+      "import": "./src/deductionLineItems.ts"
+    },
+    "./budget-calculations": {
+      "types": "./src/budgetCalculations.ts",
+      "import": "./src/budgetCalculations.ts"
+    },
+    "./budget-currency-conversion": {
+      "types": "./src/budgetCurrencyConversion.ts",
+      "import": "./src/budgetCurrencyConversion.ts"
+    },
+    "./display-amounts": {
+      "types": "./src/displayAmounts.ts",
+      "import": "./src/displayAmounts.ts"
+    },
+    "./key-metrics-segments": {
+      "types": "./src/keyMetricsSegments.ts",
+      "import": "./src/keyMetricsSegments.ts"
+    },
+    "./account-defaults": {
+      "types": "./src/accountDefaults.ts",
+      "import": "./src/accountDefaults.ts"
+    },
+    "./demo-data": {
+      "types": "./src/demoData.ts",
+      "import": "./src/demoData.ts"
     }
   },
   "scripts": {
