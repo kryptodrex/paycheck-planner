@@ -1,0 +1,50 @@
+{
+  "name": "@paycheck-planner/mobile",
+  "private": true,
+  "version": "1.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "build": "expo export",
+    "build:android": "eas build --platform android",
+    "build:ios": "eas build --platform ios",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "sync-version": "node ../../scripts/sync-version.mjs"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^14.0.4",
+    "@paycheck-planner/core": "workspace:*",
+    "@react-native-async-storage/async-storage": "2.1.0",
+    "@react-navigation/native": "^7.1.14",
+    "crypto-js": "^4.2.0",
+    "expo": "~53.0.0",
+    "expo-constants": "~17.1.3",
+    "expo-document-picker": "~13.1.0",
+    "expo-file-system": "~18.1.7",
+    "expo-font": "~13.3.1",
+    "expo-linking": "~8.0.0",
+    "expo-local-authentication": "~16.0.0",
+    "expo-router": "~5.1.0",
+    "expo-secure-store": "~15.0.0",
+    "expo-splash-screen": "~0.30.0",
+    "expo-status-bar": "~3.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.2",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-reanimated": "~3.17.4",
+    "react-native-safe-area-context": "5.4.0",
+    "react-native-screens": "~4.10.0"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "@types/react": "~19.0.10",
+    "eslint": "^9.39.1",
+    "jsdom": "^29.0.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

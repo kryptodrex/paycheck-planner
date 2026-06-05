@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Paycheck Planner",
+    "slug": "paycheck-planner",
+    "version": "1.0.0",
+    "scheme": "paycheckplanner",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.paycheckplanner.mobile",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Paycheck Planner uses Face ID to protect access to your encrypted budget plans.",
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "Paycheck Planner Budget",
+            "LSHandlerRank": "Owner",
+            "LSItemContentTypes": ["com.paycheckplanner.budget"]
+          }
+        ],
+        "UTExportedTypeDeclarations": [
+          {
+            "UTTypeDescription": "Paycheck Planner Budget",
+            "UTTypeIdentifier": "com.paycheckplanner.budget",
+            "UTTypeConformsTo": ["public.data", "public.content"],
+            "UTTypeTagSpecification": {
+              "public.filename-extension": ["budget"]
+            }
+          }
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#667eea"
+      },
+      "package": "com.paycheckplanner.mobile",
+      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Paycheck Planner uses Face ID to protect access to your encrypted budget plans."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true
+    }
+  }
+}
