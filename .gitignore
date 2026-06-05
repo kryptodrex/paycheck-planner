@@ -46,3 +46,4 @@ build/icon.icns
 build/icon.ico
 build/icon.png
 /.turbo
+/memory
