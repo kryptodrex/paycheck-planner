@@ -10,13 +10,11 @@ const config = getDefaultConfig(projectRoot);
 config.watchFolders = [monorepoRoot];
 
 // Resolve packages in priority order: app-local first, then workspace root.
-// disableHierarchicalLookup prevents Metro from walking up the directory tree
-// past these entries — critical in pnpm monorepos to avoid loading a mismatched
-// @expo/metro-runtime (or similar) from a stale parent node_modules.
+// Do NOT set disableHierarchicalLookup — pnpm needs hierarchical resolution to
+// locate packages inside its virtual store (node_modules/.pnpm/).
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(monorepoRoot, 'node_modules'),
 ];
-config.resolver.disableHierarchicalLookup = true;
 
 module.exports = config;
