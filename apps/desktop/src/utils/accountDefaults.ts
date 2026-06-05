@@ -1,12 +1,9 @@
-import type { Account } from '../types/accounts';
-import { ACCOUNT_TYPE_COLORS, DEFAULT_ACCOUNT_COLOR } from '../constants/accountPalette';
 export { getIconComponent } from './iconNameToComponent';
+export { getDefaultAccountColor } from '@paycheck-planner/core/account-defaults';
 
-export function getDefaultAccountColor(type: Account['type']): string {
-  return ACCOUNT_TYPE_COLORS[type] ?? DEFAULT_ACCOUNT_COLOR;
-}
+import type { Account } from '../types/accounts';
 
-const DEFAULT_ACCOUNT_ICONS: Record<Account['type'], string> = {
+const DESKTOP_ACCOUNT_ICONS: Record<Account['type'], string> = {
   checking: 'CreditCard',
   savings: 'PiggyBank',
   investment: 'TrendingUp',
@@ -14,5 +11,5 @@ const DEFAULT_ACCOUNT_ICONS: Record<Account['type'], string> = {
 };
 
 export function getDefaultAccountIcon(type: Account['type']): string {
-  return DEFAULT_ACCOUNT_ICONS[type];
+  return DESKTOP_ACCOUNT_ICONS[type];
 }

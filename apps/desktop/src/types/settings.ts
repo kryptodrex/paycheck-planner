@@ -1,12 +1,11 @@
+import type { BudgetSettings as CoreBudgetSettings } from '@paycheck-planner/core/budget';
 import type { TabConfig, TabDisplayMode, TabPosition } from './tabs';
 import type { AppearanceMode, AppearancePreset, ColorVisionMode, CustomAppearanceSettings, FontPreference, StateCueMode, ThemeMode } from './appearance';
 import type { ViewMode } from './viewMode';
 
 export type KeyMetricsBreakdownView = 'flow' | 'stacked' | 'pie';
 
-export interface BudgetSettings {
-  currency: string;
-  locale: string;
+export interface BudgetSettings extends CoreBudgetSettings {
   filePath?: string;
   lastSavedAt?: string;
   encryptionEnabled?: boolean;
@@ -23,7 +22,6 @@ export interface BudgetSettings {
     y: number;
   };
   activeTab?: string;
-  keyMetricsBreakdownView?: KeyMetricsBreakdownView;
 }
 
 export interface AppSettings {
