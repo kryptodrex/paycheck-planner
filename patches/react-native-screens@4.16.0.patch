@@ -1,0 +1,13 @@
+diff --git a/src/components/ScreenStackHeaderConfig.tsx b/src/components/ScreenStackHeaderConfig.tsx
+--- a/src/components/ScreenStackHeaderConfig.tsx
++++ b/src/components/ScreenStackHeaderConfig.tsx
+@@ -27,8 +27,7 @@ export const ScreenStackHeaderConfig = React.forwardRef<
+   <ScreenStackHeaderConfigNativeComponent
+     {...props}
+     ref={ref}
+     topInsetEnabled={EDGE_TO_EDGE ? true : props.topInsetEnabled}
+-    style={styles.headerConfig}
+-    pointerEvents="box-none"
++    style={[styles.headerConfig, { pointerEvents: 'box-none' }]}
+   />
+ ));
