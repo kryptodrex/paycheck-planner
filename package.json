@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "pnpm --config.verifyDepsBeforeRun=false --config.minimumReleaseAge=0 turbo run dev --filter=@paycheck-planner/desktop --filter @paycheck-planner/mobile --filter=@paycheck-planner/api",
     "dev:mobile": "pnpm turbo run dev --filter @paycheck-planner/mobile --filter=@paycheck-planner/api",
-    "dev:desktop": "pnpm turbo run dev --config.verifyDepsBeforeRun=false --config.minimumReleaseAge=0 --filter=@paycheck-planner/api --filter @paycheck-planner/desktop run dev",
+    "dev:desktop": "pnpm turbo run dev --filter=@paycheck-planner/api --filter=@paycheck-planner/desktop",
     "dev:api": "cd apps/api && npm run dev",
     "dev:inspector": "pnpm --config.verifyDepsBeforeRun=false --config.minimumReleaseAge=0 --filter @paycheck-planner/desktop run dev:inspector",
     "build": "pnpm --config.minimumReleaseAge=0 turbo run build --filter=@paycheck-planner/desktop",
