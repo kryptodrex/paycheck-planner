@@ -1,0 +1,16 @@
+diff --git a/lib/module/components/ScreenStackHeaderConfig.js b/lib/module/components/ScreenStackHeaderConfig.js
+index 71cd007a9b5654e027924587bd0f19a004264bf6..500e7aade2b529098363a82cf47e4503686d6757 100644
+--- a/lib/module/components/ScreenStackHeaderConfig.js
++++ b/lib/module/components/ScreenStackHeaderConfig.js
+@@ -65,8 +65,9 @@ export const ScreenStackHeaderConfig = /*#__PURE__*/React.forwardRef((props, ref
+     onPressHeaderBarButtonItem: onPressHeaderBarButtonItem,
+     onPressHeaderBarButtonMenuItem: onPressHeaderBarButtonMenuItem,
+     ref: ref,
+-    style: styles.headerConfig,
+-    pointerEvents: "box-none",
++    style: [styles.headerConfig, {
++      pointerEvents: 'box-none'
++    }],
+     synchronousShadowStateUpdatesEnabled: featureFlags.experiment.synchronousHeaderConfigUpdatesEnabled
+   }));
+ });

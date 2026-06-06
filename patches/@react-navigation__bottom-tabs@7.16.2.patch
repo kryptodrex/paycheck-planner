@@ -1,0 +1,43 @@
+diff --git a/lib/module/views/BottomTabBar.js b/lib/module/views/BottomTabBar.js
+index b4c78afee4ab7749bf30cd3a33d5e62ce797c8d4..aa12a716774badc32ed812e05c8e14ba3dea15b6 100644
+--- a/lib/module/views/BottomTabBar.js
++++ b/lib/module/views/BottomTabBar.js
+@@ -252,12 +252,14 @@ export function BottomTabBar({
+       paddingBottom: tabBarPosition === 'bottom' ? insets.bottom : 0,
+       paddingTop: tabBarPosition === 'top' ? insets.top : 0,
+       paddingHorizontal: Math.max(insets.left, insets.right)
+-    }], tabBarStyle],
+-    pointerEvents: isTabBarHidden ? 'none' : 'auto',
++    }], tabBarStyle, {
++      pointerEvents: isTabBarHidden ? 'none' : 'auto'
++    }],
+     onLayout: sidebar ? undefined : handleLayout,
+     children: [/*#__PURE__*/_jsx(View, {
+-      pointerEvents: "none",
+-      style: StyleSheet.absoluteFill,
++      style: [StyleSheet.absoluteFill, {
++        pointerEvents: 'none'
++      }],
+       children: tabBarBackgroundElement
+     }), /*#__PURE__*/_jsx(View, {
+       role: "tablist",
+diff --git a/lib/module/views/BottomTabView.js b/lib/module/views/BottomTabView.js
+index 7f3b7bd5b2a998221fbcc6e12e34e01a075ad6b9..9854f277e0e8237a9acb44c215d968d002b84e09 100644
+--- a/lib/module/views/BottomTabView.js
++++ b/lib/module/views/BottomTabView.js
+@@ -216,13 +216,13 @@ export function BottomTabView(props) {
+         }) : STATE_INACTIVE;
+         return /*#__PURE__*/_jsx(MaybeScreen, {
+           style: [StyleSheet.absoluteFill, {
+-            zIndex: isFocused ? 0 : -1
++            zIndex: isFocused ? 0 : -1,
++            pointerEvents: isFocused ? 'box-none' : 'none'
+           }],
+           active: activityState,
+           enabled: detachInactiveScreens,
+           freezeOnBlur: freezeOnBlur,
+           shouldFreeze: activityState === STATE_INACTIVE && !isPreloaded,
+-          pointerEvents: isFocused ? 'box-none' : 'none',
+           children: /*#__PURE__*/_jsx(BottomTabBarHeightContext.Provider, {
+             value: tabBarPosition === 'bottom' ? tabBarHeight : 0,
+             children: /*#__PURE__*/_jsx(Screen, {
