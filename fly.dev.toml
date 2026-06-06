@@ -1,6 +1,6 @@
-# fly.toml app configuration file generated for paycheck-planner-api-dev
+# fly.toml app configuration file generated for paycheck-planner-api-dev on 2026-06-06T15:06:56Z
 #
-# See https://fly.io/docs/reference/configuration/ for information about this file.
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'paycheck-planner-api-dev'
@@ -10,16 +10,15 @@ primary_region = 'iad'
   dockerfile = 'apps/api/Dockerfile'
 
 [env]
-  PORT = '8080'
-  NODE_ENV = 'development'
+  API_AUTH_MODE = 'none'
+  API_RATE_LIMIT_MAX_REQUESTS = '120'
+  API_RATE_LIMIT_WINDOW_MS = '60000'
+  API_REQUIRE_AUTH = 'false'
+  API_STORAGE_BACKEND = 'memory'
   CURRENCY_API_URL = 'https://api.frankfurter.app/latest'
   CURRENCY_REQUEST_TIMEOUT_MS = '8000'
-  API_AUTH_MODE = 'none'
-  API_REQUIRE_AUTH = 'false'
-  API_RATE_LIMIT_WINDOW_MS = '60000'
-  API_RATE_LIMIT_MAX_REQUESTS = '120'
-  API_STORAGE_BACKEND = 'memory'
-# Set API_SHARED_SECRET with `fly secrets set API_SHARED_SECRET=... -a paycheck-planner-api-dev` when using shared-secret mode.
+  NODE_ENV = 'development'
+  PORT = '8080'
 
 [http_service]
   internal_port = 8080
