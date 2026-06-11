@@ -40,6 +40,10 @@
       "types": "./src/assertNever.ts",
       "import": "./src/assertNever.ts"
     },
+    "./id": {
+      "types": "./src/id.ts",
+      "import": "./src/id.ts"
+    },
     "./audit": {
       "types": "./src/audit.ts",
       "import": "./src/audit.ts"

@@ -5,6 +5,7 @@ import type { Benefit, RetirementElection, TaxFilingStatus, TaxSettings } from '
 import type { PayFrequency } from './frequency';
 import { getPaychecksPerYear } from './payPeriod';
 import { getDefaultAccountColor } from './accountDefaults';
+import { generateId } from './id';
 
 function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;
@@ -138,7 +139,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
     annualGrossPay = annualSalary * randomBetween(0.88, 1.12);
   }
 
-  const checkingId = crypto.randomUUID();
+  const checkingId = generateId();
   const accounts: Account[] = [
     { id: checkingId, name: 'Example Bank', type: 'checking', color: getDefaultAccountColor('checking') },
   ];
@@ -150,7 +151,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
     const names = { savings: 'Emergency Fund', investment: 'Investment Account' };
     for (let i = 0; i < numExtra; i++) {
       const type = shuffled[i];
-      accounts.push({ id: crypto.randomUUID(), name: names[type], type, color: getDefaultAccountColor(type) });
+      accounts.push({ id: generateId(), name: names[type], type, color: getDefaultAccountColor(type) });
     }
   }
 
@@ -160,7 +161,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
   if (Math.random() > 0.12) {
     const pct = randomBetween(4.5, 7.5) / 100;
     benefits.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: 'Health Insurance',
       amount: roundToCents(Math.max(45, grossPerPaycheck * pct)),
       isTaxable: false,
@@ -170,7 +171,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
 
   if (Math.random() > 0.65) {
     benefits.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: 'Dental & Vision',
       amount: roundToCents(Math.max(10, grossPerPaycheck * randomBetween(0.7, 1.6) / 100)),
       isTaxable: false,
@@ -181,7 +182,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
   const retirement: RetirementElection[] = [];
   if (annualGrossPay >= 42000 && (payType === 'salary' ? Math.random() > 0.25 : Math.random() > 0.7)) {
     retirement.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       type: '401k',
       employeeContribution: roundToCents(annualGrossPay >= 70000 ? randomBetween(4, 6) : randomBetween(3, 5)),
       employeeContributionIsPercentage: true,
@@ -215,7 +216,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
     const amount = t.basePct === 0
       ? roundToCents(t.baseAmt * v)
       : roundToCents(monthlyGross * t.basePct * v);
-    return { id: crypto.randomUUID(), name: t.name, amount, frequency: 'monthly', accountId: checkingId };
+    return { id: generateId(), name: t.name, amount, frequency: 'monthly', accountId: checkingId };
   });
 
   const maxAnnualBills = estimatedAnnualNet * 0.78;
@@ -233,7 +234,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
 
   if (savingsAccount && Math.random() > 0.25) {
     savingsContributions.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: 'Emergency Fund Transfer',
       amount: roundToCents(Math.max(25, grossPerPaycheck * randomBetween(0.03, 0.08))),
       frequency: 'bi-weekly',
@@ -245,7 +246,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
 
   if (investmentAccount && Math.random() > 0.35) {
     savingsContributions.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: 'Brokerage Auto-Invest',
       amount: roundToCents(Math.max(30, grossPerPaycheck * randomBetween(0.03, 0.07))),
       frequency: 'monthly',
@@ -265,7 +266,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
     const propertyValue = roundToCents(principal * randomBetween(1.05, 1.35));
     const elapsed = Math.floor(Math.random() * 120);
     loans.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: 'Home Mortgage',
       type: 'mortgage',
       principal,
@@ -289,7 +290,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
     const principal = roundToCents(calculatePrincipal(mp, rate, term));
     const elapsed = Math.floor(Math.random() * (term * 0.7));
     loans.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: 'Car Loan',
       type: 'auto',
       principal,
@@ -311,7 +312,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
     const principal = roundToCents(calculatePrincipal(mp, rate, term));
     const elapsed = Math.floor(Math.random() * 84);
     loans.push({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: 'Student Loans',
       type: 'student',
       principal,
@@ -339,7 +340,7 @@ export function generateDemoBudgetData(year: number, currency = 'USD'): BudgetDa
   }
 
   return {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name: `${year} Demo Plan`,
     year,
     paySettings: {
