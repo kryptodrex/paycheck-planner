@@ -47,6 +47,144 @@ export const darkColors: typeof lightColors = {
   segmentShortfall: '#fbbf24',
 };
 
+// Appearance presets mirror the desktop's [data-theme-preset] CSS overrides
+// (apps/desktop/src/index.css + constants/appearancePresets.ts).
+export type AppearancePreset =
+  | 'default'
+  | 'ocean'
+  | 'forest'
+  | 'sunset'
+  | 'pink'
+  | 'spreadsheet-core';
+
+export interface AppearancePresetMeta {
+  value: AppearancePreset;
+  label: string;
+  description: string;
+}
+
+export const APPEARANCE_PRESET_OPTIONS: AppearancePresetMeta[] = [
+  {
+    value: 'default',
+    label: 'Paycheck Planner Purple',
+    description: 'Indigo and violet with the original Paycheck Planner look.',
+  },
+  {
+    value: 'ocean',
+    label: 'Ocean',
+    description: 'Deep teal and blue accents with a crisp, cool header.',
+  },
+  {
+    value: 'forest',
+    label: 'Forest',
+    description: 'Evergreen surfaces with a restrained botanical accent.',
+  },
+  {
+    value: 'sunset',
+    label: 'Sunset',
+    description: 'Burnt orange and rose tones with warmer emphasis states.',
+  },
+  {
+    value: 'pink',
+    label: 'Pretty in Pink',
+    description: 'Bold rose and blush accents with a brighter, editorial feel.',
+  },
+  {
+    value: 'spreadsheet-core',
+    label: 'Spreadsheet Core',
+    description: 'Neutral grays with a plain, low-distraction look.',
+  },
+];
+
+type PresetOverride = Partial<typeof lightColors>;
+
+const LIGHT_PRESET_OVERRIDES: Record<AppearancePreset, PresetOverride> = {
+  default: {},
+  ocean: {
+    accentPrimary: '#0f766e',
+    accentSecondary: '#0369a1',
+    textAccent: '#0f766e',
+    segmentRemaining: '#0f766e',
+  },
+  forest: {
+    accentPrimary: '#2f6f4f',
+    accentSecondary: '#5f7f2f',
+    textAccent: '#2f6f4f',
+    segmentRemaining: '#2f6f4f',
+  },
+  sunset: {
+    accentPrimary: '#b45309',
+    accentSecondary: '#be185d',
+    textAccent: '#b45309',
+    segmentRemaining: '#b45309',
+  },
+  pink: {
+    accentPrimary: '#be185d',
+    accentSecondary: '#db2777',
+    textAccent: '#be185d',
+    segmentRemaining: '#be185d',
+  },
+  'spreadsheet-core': {
+    bgPrimary: '#f7f7f8',
+    bgSecondary: '#efeff1',
+    bgInput: '#e7e7ea',
+    textPrimary: '#1f2328',
+    textAccent: '#374151',
+    border: '#d1d5db',
+    accentPrimary: '#9aa1aa',
+    accentSecondary: '#b3bac4',
+    segmentRemaining: '#64748b',
+  },
+};
+
+const DARK_PRESET_OVERRIDES: Record<AppearancePreset, PresetOverride> = {
+  default: {},
+  ocean: {
+    accentPrimary: '#0284c7',
+    accentSecondary: '#67e8f9',
+    textAccent: '#67e8f9',
+    segmentRemaining: '#0284c7',
+  },
+  forest: {
+    accentPrimary: '#2f855a',
+    accentSecondary: '#bef264',
+    textAccent: '#bef264',
+    segmentRemaining: '#2f855a',
+  },
+  sunset: {
+    accentPrimary: '#c2410c',
+    accentSecondary: '#f9a8d4',
+    textAccent: '#f9a8d4',
+    segmentRemaining: '#c2410c',
+  },
+  pink: {
+    accentPrimary: '#db2777',
+    accentSecondary: '#f9a8d4',
+    textAccent: '#f9a8d4',
+    segmentRemaining: '#db2777',
+  },
+  'spreadsheet-core': {
+    bgPrimary: '#232428',
+    bgSecondary: '#2d2f34',
+    bgElevated: '#2d2f34',
+    bgInput: '#363940',
+    textPrimary: '#f5f5f7',
+    textSecondary: '#d4d4d8',
+    textTertiary: '#a1a1aa',
+    textAccent: '#cbd5e1',
+    border: '#3f3f46',
+    accentPrimary: '#64748b',
+    accentSecondary: '#cbd5e1',
+    segmentRemaining: '#94a3b8',
+  },
+};
+
+export function resolveColors(isDark: boolean, preset: AppearancePreset): ColorTokens {
+  const base = isDark ? darkColors : lightColors;
+  const overrides = (isDark ? DARK_PRESET_OVERRIDES : LIGHT_PRESET_OVERRIDES)[preset] ?? {};
+  return { ...base, ...overrides };
+}
+
 export const spacing = {
   xs: 4,
   sm: 8,

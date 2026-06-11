@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { generateDemoBudgetData } from '@paycheck-planner/core';
+import { generateDemoBudgetData, type BudgetData } from '@paycheck-planner/core';
 import { usePlanFile } from '../src/hooks/usePlanFile';
 import { usePlan } from '../src/contexts/PlanContext';
 import { getRecentFiles, removeRecentFile, type RecentFile } from '../src/storage/recentFilesStore';
@@ -28,13 +28,12 @@ export default function WelcomeScreen() {
   const { setPlan } = usePlan();
 
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-  const [keyModalVisible, setKeyModalVisible] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [keyError, setKeyError] = useState<string | null>(null);
 
   const onPlanLoaded = useCallback(
-    (plan: ReturnType<typeof generateDemoBudgetData>, uri: string) => {
-      setPlan(plan as any, uri);
+    (plan: BudgetData, uri: string, encryptionKey: string | null) => {
+      setPlan(plan, uri, { encryptionKey });
       router.replace('/(tabs)/summary');
     },
     [setPlan],
@@ -43,26 +42,24 @@ export default function WelcomeScreen() {
   const { status, error, pending, pickAndLoad, submitKey, clearPending } =
     usePlanFile(onPlanLoaded);
 
+  // Modal visibility is derived from the load status rather than mirrored in state.
+  const keyModalVisible = status === 'needs-key';
+
   useFocusEffect(
     useCallback(() => {
       getRecentFiles().then(setRecentFiles);
     }, []),
   );
 
-  // If key prompt needed, show modal
-  useEffect(() => {
-    if (status === 'needs-key') {
-      setKeyInput('');
-      setKeyError(null);
-      setKeyModalVisible(true);
-    } else {
-      setKeyModalVisible(false);
-    }
-  }, [status]);
+  async function handlePickAndLoad() {
+    setKeyInput('');
+    setKeyError(null);
+    await pickAndLoad();
+  }
 
   async function openDemoMode() {
     const plan = generateDemoBudgetData(new Date().getFullYear());
-    setPlan(plan as any, null);
+    setPlan(plan, null);
     router.replace('/(tabs)/summary');
   }
 
@@ -71,7 +68,7 @@ export default function WelcomeScreen() {
     if (parsed.status === 'invalid') return;
 
     if (parsed.status === 'ok') {
-      setPlan(parsed.data as any, file.uri);
+      setPlan(parsed.data, file.uri);
       router.replace('/(tabs)/summary');
       return;
     }
@@ -81,14 +78,14 @@ export default function WelcomeScreen() {
     if (storedKey) {
       const plan = decryptPlan(parsed.payload, storedKey);
       if (plan) {
-        setPlan(plan as any, file.uri);
+        setPlan(plan, file.uri, { encryptionKey: storedKey });
         router.replace('/(tabs)/summary');
         return;
       }
     }
 
     // Key not found — trigger the full pick-and-load flow instead
-    await pickAndLoad();
+    await handlePickAndLoad();
   }
 
   async function handleSubmitKey() {
@@ -105,7 +102,6 @@ export default function WelcomeScreen() {
 
   function handleCancelKey() {
     clearPending();
-    setKeyModalVisible(false);
     setKeyInput('');
     setKeyError(null);
   }
@@ -153,7 +149,7 @@ export default function WelcomeScreen() {
               minHeight: 52,
             },
           ]}
-          onPress={pickAndLoad}
+          onPress={handlePickAndLoad}
           disabled={isLoading}
           activeOpacity={0.85}
         >

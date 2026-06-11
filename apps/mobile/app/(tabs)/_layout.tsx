@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function TabLayout() {
@@ -21,44 +21,44 @@ export default function TabLayout() {
         headerStyle: { backgroundColor: colors.bgPrimary },
         headerTintColor: colors.textPrimary,
         headerTitleStyle: { fontWeight: '600' },
+        sceneStyle: { backgroundColor: colors.bgPrimary },
       }}
     >
       <Tabs.Screen
         name="summary"
         options={{
           title: 'Summary',
-          tabBarIcon: ({ color }) => <TabIcon name="bar-chart" color={color} />,
+          tabBarIcon: ({ color, size }) => <Feather name="bar-chart-2" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="breakdown"
         options={{
-          title: 'Pay Breakdown',
-          tabBarIcon: ({ color }) => <TabIcon name="list" color={color} />,
+          title: 'Breakdown',
+          tabBarIcon: ({ color, size }) => <Feather name="list" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="money"
+        options={{
+          title: 'Money',
+          tabBarIcon: ({ color, size }) => <Feather name="dollar-sign" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="accounts"
         options={{
           title: 'Accounts',
-          tabBarIcon: ({ color }) => <TabIcon name="credit-card" color={color} />,
+          tabBarIcon: ({ color, size }) => <Feather name="credit-card" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <Feather name="settings" size={size} color={color} />,
         }}
       />
     </Tabs>
-  );
-}
-
-function TabIcon({ name, color }: { name: string; color: string }) {
-  // Simple unicode fallback icons — avoids requiring a separate icon package dependency
-  const ICONS: Record<string, string> = {
-    'bar-chart': '▦',
-    list: '☰',
-    'credit-card': '▭',
-  };
-  const { fontSize } = useTheme();
-  return (
-    <Text style={{ color, fontSize: fontSize.lg, lineHeight: fontSize.lg + 4 }}>
-      {ICONS[name] ?? '•'}
-    </Text>
   );
 }

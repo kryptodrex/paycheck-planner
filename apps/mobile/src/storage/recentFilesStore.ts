@@ -29,7 +29,9 @@ export async function addRecentFile(file: RecentFile): Promise<void> {
     const deduped = existing.filter((f) => f.uri !== file.uri && f.planId !== file.planId);
     const updated = [file, ...deduped].slice(0, MAX_RECENT);
     await AsyncStorage.setItem(RECENT_FILES_KEY, JSON.stringify(updated));
-  } catch {}
+  } catch {
+    // Recents are best-effort; ignore storage failures.
+  }
 }
 
 export async function removeRecentFile(uri: string): Promise<void> {
@@ -37,7 +39,9 @@ export async function removeRecentFile(uri: string): Promise<void> {
     const existing = await getRecentFiles();
     const updated = existing.filter((f) => f.uri !== uri);
     await AsyncStorage.setItem(RECENT_FILES_KEY, JSON.stringify(updated));
-  } catch {}
+  } catch {
+    // Recents are best-effort; ignore storage failures.
+  }
 }
 
 export async function clearRecentFiles(): Promise<void> {

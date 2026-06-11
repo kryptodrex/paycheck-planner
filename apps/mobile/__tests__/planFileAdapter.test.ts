@@ -2,13 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CryptoJS from 'crypto-js';
 
 // Mock expo-file-system — not available in Node test environment
-vi.mock('expo-file-system', () => ({
+vi.mock('expo-file-system/legacy', () => ({
   readAsStringAsync: vi.fn(),
+  writeAsStringAsync: vi.fn(),
+  copyAsync: vi.fn(),
+  getInfoAsync: vi.fn(),
+  makeDirectoryAsync: vi.fn(),
+  documentDirectory: 'file:///documents/',
   EncodingType: { UTF8: 'utf8' },
 }));
 
-import * as FileSystem from 'expo-file-system';
-import { readPlanFile, decryptPlan } from '../src/storage/planFileAdapter';
+import * as FileSystem from 'expo-file-system/legacy';
+import { readPlanFile, decryptPlan, serializePlan, writePlanFile } from '../src/storage/planFileAdapter';
 
 const MOCK_PLAN = {
   id: 'test-plan-001',
@@ -108,5 +113,49 @@ describe('decryptPlan', () => {
 
   it('returns null for a completely invalid payload string', () => {
     expect(decryptPlan('not-a-valid-ciphertext', KEY)).toBeNull();
+  });
+});
+
+describe('serializePlan', () => {
+  it('produces plain JSON without a key', () => {
+    const serialized = serializePlan(MOCK_PLAN as never);
+    const parsed = JSON.parse(serialized);
+    expect(parsed.id).toBe('test-plan-001');
+    expect(parsed.format).toBeUndefined();
+  });
+
+  it('produces an encrypted envelope that round-trips with decryptPlan', () => {
+    const serialized = serializePlan(MOCK_PLAN as never, 'round-trip-key');
+    const envelope = JSON.parse(serialized);
+    expect(envelope.format).toBe('paycheck-planner-encrypted-v1');
+    expect(envelope.planId).toBe('test-plan-001');
+
+    const decrypted = decryptPlan(envelope.payload, 'round-trip-key');
+    expect(decrypted?.id).toBe('test-plan-001');
+    expect(decrypted?.name).toBe('Test Plan');
+  });
+
+  it('round-trips through readPlanFile for both formats', async () => {
+    vi.mocked(FileSystem.readAsStringAsync).mockResolvedValue(serializePlan(MOCK_PLAN as never));
+    const plain = await readPlanFile('file:///plain.budget');
+    expect(plain.status).toBe('ok');
+
+    vi.mocked(FileSystem.readAsStringAsync).mockResolvedValue(
+      serializePlan(MOCK_PLAN as never, 'a-key'),
+    );
+    const encrypted = await readPlanFile('file:///encrypted.budget');
+    expect(encrypted.status).toBe('encrypted');
+  });
+});
+
+describe('writePlanFile', () => {
+  it('writes serialized plan content to the given uri', async () => {
+    vi.mocked(FileSystem.writeAsStringAsync).mockResolvedValue();
+    await writePlanFile('file:///out.budget', MOCK_PLAN as never);
+    expect(FileSystem.writeAsStringAsync).toHaveBeenCalledWith(
+      'file:///out.budget',
+      serializePlan(MOCK_PLAN as never),
+      { encoding: 'utf8' },
+    );
   });
 });

@@ -1,14 +1,20 @@
-import { useEffect } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
-import { router, Stack } from 'expo-router';
-import { convertBillToYearly, formatCurrency } from '@paycheck-planner/core';
-import type { Account } from '@paycheck-planner/core';
-import { usePlan } from '../../src/contexts/PlanContext';
+import { useState } from 'react';
+import { ScrollView, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Stack } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import {
+  convertBillToYearly,
+  type Account,
+} from '@paycheck-planner/core';
+import { usePlanScreen } from '../../src/hooks/usePlanScreen';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { ThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { MetricRow } from '../../src/components/MetricRow';
 import { SectionCard } from '../../src/components/SectionCard';
+import { Button } from '../../src/components/Button';
+import { AccountFormSheet } from '../../src/features/accounts/AccountFormSheet';
+import { upsertById, removeById } from '../../src/utils/planMutations';
 
 const ACCOUNT_TYPE_ORDER: Account['type'][] = ['checking', 'savings', 'investment', 'other'];
 
@@ -20,21 +26,15 @@ const TYPE_LABELS: Record<Account['type'], string> = {
 };
 
 export default function AccountsScreen() {
-  const { plan } = usePlan();
+  const helpers = usePlanScreen();
   const { colors, spacing, radius } = useTheme();
+  const [editing, setEditing] = useState<Account | null>(null);
+  const [sheetVisible, setSheetVisible] = useState(false);
 
-  useEffect(() => {
-    if (!plan) {
-      router.replace('/');
-    }
-  }, [plan]);
+  if (!helpers) return null;
 
-  if (!plan) return null;
+  const { plan, updatePlan, fmt } = helpers;
 
-  const { currency, locale } = plan.settings;
-  const fmt = (n: number) => formatCurrency(n, currency, locale);
-
-  // Group accounts by type
   const grouped = ACCOUNT_TYPE_ORDER.reduce<Record<Account['type'], Account[]>>(
     (acc, type) => {
       acc[type] = plan.accounts.filter((a) => a.type === type);
@@ -43,7 +43,6 @@ export default function AccountsScreen() {
     { checking: [], savings: [], investment: [], other: [] },
   );
 
-  // Bills per account
   const billsByAccount = plan.bills
     .filter((b) => b.enabled !== false)
     .reduce<Record<string, typeof plan.bills>>((acc, bill) => {
@@ -52,8 +51,7 @@ export default function AccountsScreen() {
       return acc;
     }, {});
 
-  // Loans per account
-  const loansByAccount = plan.loans
+  const loansByAccount = (plan.loans ?? [])
     .filter((l) => l.enabled !== false)
     .reduce<Record<string, typeof plan.loans>>((acc, loan) => {
       acc[loan.accountId] = acc[loan.accountId] ?? [];
@@ -61,13 +59,36 @@ export default function AccountsScreen() {
       return acc;
     }, {});
 
+  const savingsByAccount = (plan.savingsContributions ?? [])
+    .filter((s) => s.enabled !== false)
+    .reduce<Record<string, NonNullable<typeof plan.savingsContributions>>>((acc, item) => {
+      acc[item.accountId] = acc[item.accountId] ?? [];
+      acc[item.accountId].push(item);
+      return acc;
+    }, {});
+
   const totalBills = plan.bills
     .filter((b) => b.enabled !== false)
     .reduce((sum, b) => sum + convertBillToYearly(b.amount, b.frequency), 0);
 
-  const totalLoans = plan.loans
+  const totalLoans = (plan.loans ?? [])
     .filter((l) => l.enabled !== false)
-    .reduce((sum, l) => sum + convertBillToYearly(l.monthlyPayment, l.paymentFrequency ?? 'monthly'), 0);
+    .reduce((sum, l) => sum + l.monthlyPayment * 12, 0);
+
+  function accountHasLinks(accountId: string): boolean {
+    return (
+      plan.bills.some((b) => b.accountId === accountId) ||
+      (plan.loans ?? []).some((l) => l.accountId === accountId) ||
+      (plan.savingsContributions ?? []).some((s) => s.accountId === accountId) ||
+      plan.benefits.some((b) => b.sourceAccountId === accountId) ||
+      plan.retirement.some((r) => r.sourceAccountId === accountId)
+    );
+  }
+
+  function openEditor(account: Account | null) {
+    setEditing(account);
+    setSheetVisible(true);
+  }
 
   return (
     <ThemedView style={styles.screen}>
@@ -77,18 +98,19 @@ export default function AccountsScreen() {
         contentContainerStyle={{ padding: spacing.md, paddingBottom: 48 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Obligations overview */}
         <SectionCard title="Annual Obligations">
           {totalBills > 0 && <MetricRow label="Total Bills" value={fmt(totalBills)} />}
           {totalLoans > 0 && <MetricRow label="Total Loans" value={fmt(totalLoans)} />}
-          <MetricRow
-            label="Total"
-            value={fmt(totalBills + totalLoans)}
-            isTotal
-          />
+          <MetricRow label="Total" value={fmt(totalBills + totalLoans)} isTotal />
         </SectionCard>
 
-        {/* Accounts by type */}
+        <Button
+          title="Add Account"
+          variant="secondary"
+          onPress={() => openEditor(null)}
+          style={{ marginBottom: spacing.md }}
+        />
+
         {ACCOUNT_TYPE_ORDER.map((type) => {
           const accounts = grouped[type];
           if (accounts.length === 0) return null;
@@ -106,7 +128,8 @@ export default function AccountsScreen() {
               {accounts.map((account) => {
                 const bills = billsByAccount[account.id] ?? [];
                 const loans = loansByAccount[account.id] ?? [];
-                const hasBills = bills.length > 0 || loans.length > 0;
+                const savings = savingsByAccount[account.id] ?? [];
+                const hasItems = bills.length > 0 || loans.length > 0 || savings.length > 0;
 
                 return (
                   <View
@@ -122,13 +145,14 @@ export default function AccountsScreen() {
                       },
                     ]}
                   >
-                    {/* Account header */}
-                    <View
+                    <TouchableOpacity
                       style={[
                         styles.accountHeader,
                         { padding: spacing.md, borderBottomColor: colors.border },
-                        hasBills && { borderBottomWidth: StyleSheet.hairlineWidth },
+                        hasItems && { borderBottomWidth: StyleSheet.hairlineWidth },
                       ]}
+                      onPress={() => openEditor(account)}
+                      activeOpacity={0.75}
                     >
                       <View
                         style={[
@@ -156,10 +180,10 @@ export default function AccountsScreen() {
                           {fmt(account.allocation)}/mo
                         </ThemedText>
                       )}
-                    </View>
+                      <Feather name="chevron-right" size={16} color={colors.textTertiary} />
+                    </TouchableOpacity>
 
-                    {/* Bills for this account */}
-                    {hasBills && (
+                    {hasItems && (
                       <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.sm }}>
                         {bills.map((bill) => (
                           <MetricRow
@@ -175,6 +199,13 @@ export default function AccountsScreen() {
                             value={fmt(loan.monthlyPayment) + '/mo'}
                           />
                         ))}
+                        {savings.map((item) => (
+                          <MetricRow
+                            key={item.id}
+                            label={item.name}
+                            value={fmt(convertBillToYearly(item.amount, item.frequency) / 12) + '/mo'}
+                          />
+                        ))}
                       </View>
                     )}
                   </View>
@@ -186,12 +217,26 @@ export default function AccountsScreen() {
 
         {plan.accounts.length === 0 && (
           <SectionCard>
-            <ThemedText variant="secondary" size="sm" style={{ textAlign: 'center', paddingVertical: spacing.md }}>
+            <ThemedText
+              variant="secondary"
+              size="sm"
+              style={{ textAlign: 'center', paddingVertical: spacing.md }}
+            >
               No accounts configured
             </ThemedText>
           </SectionCard>
         )}
       </ScrollView>
+
+      {sheetVisible && (
+        <AccountFormSheet
+          account={editing}
+          canDelete={editing ? !accountHasLinks(editing.id) : false}
+          onSave={(account) => updatePlan((p) => ({ ...p, accounts: upsertById(p.accounts, account) }))}
+          onDelete={(id) => updatePlan((p) => ({ ...p, accounts: removeById(p.accounts, id) }))}
+          onClose={() => setSheetVisible(false)}
+        />
+      )}
     </ThemedView>
   );
 }
