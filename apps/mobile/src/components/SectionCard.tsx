@@ -9,10 +9,11 @@ interface Props {
   title?: string;
   children: ReactNode;
   actionLabel?: string;
+  actionIcon?: keyof typeof Feather.glyphMap;
   onAction?: () => void;
 }
 
-export function SectionCard({ title, children, actionLabel, onAction }: Props) {
+export function SectionCard({ title, children, actionLabel, actionIcon = 'plus', onAction }: Props) {
   const { spacing, radius, colors } = useTheme();
 
   return (
@@ -53,7 +54,7 @@ export function SectionCard({ title, children, actionLabel, onAction }: Props) {
               accessibilityRole="button"
               accessibilityLabel={actionLabel ?? 'Add'}
             >
-              <Feather name="plus" size={14} color={colors.textAccent} />
+              <Feather name={actionIcon} size={14} color={colors.textAccent} />
               <ThemedText variant="accent" size="xs" weight="semibold">
                 {actionLabel ?? 'Add'}
               </ThemedText>

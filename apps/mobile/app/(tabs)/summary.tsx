@@ -116,7 +116,12 @@ export default function SummaryScreen() {
         </SectionCard>
 
         {/* Income */}
-        <SectionCard title={`Income · ${modeLabel}`}>
+        <SectionCard
+          title={`Income · ${modeLabel}`}
+          actionLabel="Edit"
+          actionIcon="edit-2"
+          onAction={() => router.push('/pay-settings')}
+        >
           <MetricRow label="Gross Pay" value={fmt(display(metrics.breakdown.grossPay))} />
           {(metrics.breakdown.otherIncomeGross ?? 0) > 0 && (
             <MetricRow

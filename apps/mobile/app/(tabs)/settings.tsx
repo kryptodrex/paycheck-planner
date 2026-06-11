@@ -163,6 +163,12 @@ export default function SettingsScreen() {
               {saveLabel}
             </ThemedText>
 
+            <Button
+              title="Edit Pay Settings"
+              variant="secondary"
+              onPress={() => router.push('/pay-settings')}
+              style={{ marginBottom: spacing.sm }}
+            />
             {sourcePath && (
               <Button
                 title="Share Plan File"

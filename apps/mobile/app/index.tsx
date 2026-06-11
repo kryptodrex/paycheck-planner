@@ -162,6 +162,25 @@ export default function WelcomeScreen() {
           )}
         </TouchableOpacity>
 
+        {/* Create new plan */}
+        <TouchableOpacity
+          style={[
+            styles.secondaryButton,
+            {
+              borderColor: colors.border,
+              borderRadius: radius.lg,
+              marginBottom: spacing.md,
+              minHeight: 52,
+            },
+          ]}
+          onPress={() => router.push('/new-plan')}
+          activeOpacity={0.75}
+        >
+          <ThemedText size="md" weight="medium" variant="secondary">
+            Create New Plan
+          </ThemedText>
+        </TouchableOpacity>
+
         {/* Demo mode */}
         <TouchableOpacity
           style={[

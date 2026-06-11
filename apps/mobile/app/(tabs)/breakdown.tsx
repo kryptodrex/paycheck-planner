@@ -56,7 +56,12 @@ export default function BreakdownScreen() {
         </View>
 
         {/* Gross to taxable */}
-        <SectionCard title={`Earnings · ${modeLabel}`}>
+        <SectionCard
+          title={`Earnings · ${modeLabel}`}
+          actionLabel="Edit"
+          actionIcon="edit-2"
+          onAction={() => router.push('/pay-settings')}
+        >
           <MetricRow label="Gross Pay" value={fmt(display(grossPay))} />
 
           {plan.preTaxDeductions.map((d) => (

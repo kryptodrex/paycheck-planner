@@ -103,21 +103,36 @@ export async function writePlanFile(
 
 const PLAN_LIBRARY_DIR = 'plans/';
 
+async function ensurePlanLibraryDir(): Promise<string> {
+  const dir = FileSystem.documentDirectory + PLAN_LIBRARY_DIR;
+  const dirInfo = await FileSystem.getInfoAsync(dir);
+  if (!dirInfo.exists) {
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+  }
+  return dir;
+}
+
 /**
  * Copy an opened plan file into the app's documents directory so edits persist
  * even after the document-picker cache copy is evicted. Returns the durable
  * library URI for the plan.
  */
 export async function copyPlanIntoLibrary(sourceUri: string, planId: string): Promise<string> {
-  const dir = FileSystem.documentDirectory + PLAN_LIBRARY_DIR;
-  const dirInfo = await FileSystem.getInfoAsync(dir);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-  }
-
+  const dir = await ensurePlanLibraryDir();
   const targetUri = dir + `${planId}.budget`;
   if (sourceUri !== targetUri) {
     await FileSystem.copyAsync({ from: sourceUri, to: targetUri });
   }
   return targetUri;
+}
+
+/** Write a brand-new plan into the documents-directory library and return its URI. */
+export async function createPlanFileInLibrary(
+  plan: BudgetData,
+  encryptionKey?: string | null,
+): Promise<string> {
+  const dir = await ensurePlanLibraryDir();
+  const uri = dir + `${plan.id}.budget`;
+  await writePlanFile(uri, plan, encryptionKey);
+  return uri;
 }
