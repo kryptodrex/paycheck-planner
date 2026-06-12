@@ -7,13 +7,20 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
-import type { BudgetData } from '@paycheck-planner/core';
+import { buildAuditEntries, type BudgetData } from '@paycheck-planner/core';
 import { writePlanFile } from '../storage/planFileAdapter';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 interface SetPlanOptions {
   encryptionKey?: string | null;
+}
+
+export interface UpdatePlanOptions {
+  /** Human-readable change description recorded in the plan's audit history. */
+  description?: string;
+  /** Set false for ephemeral changes (e.g. view mode) that shouldn't create audit noise. */
+  trackAudit?: boolean;
 }
 
 interface PlanContextValue {
@@ -23,7 +30,7 @@ interface PlanContextValue {
   saveState: SaveState;
   saveError: string | null;
   setPlan: (plan: BudgetData | null, path: string | null, options?: SetPlanOptions) => void;
-  updatePlan: (updater: (plan: BudgetData) => BudgetData) => void;
+  updatePlan: (updater: (plan: BudgetData) => BudgetData, options?: UpdatePlanOptions) => void;
   closePlan: () => void;
 }
 
@@ -91,10 +98,32 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   );
 
   const updatePlan = useCallback(
-    (updater: (current: BudgetData) => BudgetData) => {
+    (updater: (current: BudgetData) => BudgetData, options?: UpdatePlanOptions) => {
       setPlanState((current) => {
         if (!current) return current;
-        const updated = { ...updater(current), updatedAt: new Date().toISOString() };
+        const next = { ...updater(current), updatedAt: new Date().toISOString() };
+
+        // Record audit entries the same way desktop does, so the change
+        // history travels with the plan file across platforms.
+        const auditEntries =
+          options?.trackAudit === false
+            ? []
+            : buildAuditEntries({
+                prev: current,
+                next,
+                sourceAction: options?.description ?? 'Update plan data',
+              });
+
+        const updated =
+          auditEntries.length > 0
+            ? {
+                ...next,
+                metadata: {
+                  auditHistory: [...(next.metadata?.auditHistory ?? []), ...auditEntries],
+                },
+              }
+            : next;
+
         latest.current = { ...latest.current, plan: updated };
         return updated;
       });

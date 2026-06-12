@@ -94,7 +94,9 @@ export default function MoneyScreen() {
                     amountCaption={formatBillFrequency(bill.frequency)}
                     enabled={bill.enabled !== false}
                     onToggle={(enabled) =>
-                      updatePlan((p) => ({ ...p, bills: setEnabledById(p.bills, bill.id, enabled) }))
+                      updatePlan((p) => ({ ...p, bills: setEnabledById(p.bills, bill.id, enabled) }), {
+                        description: enabled ? 'Enable bill' : 'Pause bill',
+                      })
                     }
                     onPress={() => setSheet({ kind: 'bill', item: bill })}
                   />
@@ -119,7 +121,9 @@ export default function MoneyScreen() {
                     amountCaption={benefit.isPercentage ? 'of gross' : 'per check'}
                     enabled={benefit.enabled !== false}
                     onToggle={(enabled) =>
-                      updatePlan((p) => ({ ...p, benefits: setEnabledById(p.benefits, benefit.id, enabled) }))
+                      updatePlan((p) => ({ ...p, benefits: setEnabledById(p.benefits, benefit.id, enabled) }), {
+                        description: enabled ? 'Enable deduction' : 'Pause deduction',
+                      })
                     }
                     onPress={() => setSheet({ kind: 'benefit', item: benefit })}
                   />
@@ -147,7 +151,9 @@ export default function MoneyScreen() {
                   amountCaption="per month"
                   enabled={loan.enabled !== false}
                   onToggle={(enabled) =>
-                    updatePlan((p) => ({ ...p, loans: setEnabledById(p.loans, loan.id, enabled) }))
+                    updatePlan((p) => ({ ...p, loans: setEnabledById(p.loans, loan.id, enabled) }), {
+                      description: enabled ? 'Enable loan' : 'Pause loan',
+                    })
                   }
                   onPress={() => setSheet({ kind: 'loan', item: loan })}
                 />
@@ -176,10 +182,13 @@ export default function MoneyScreen() {
                     badge={item.reallocationProtected ? 'Protected' : undefined}
                     enabled={item.enabled !== false}
                     onToggle={(enabled) =>
-                      updatePlan((p) => ({
-                        ...p,
-                        savingsContributions: setEnabledById(p.savingsContributions, item.id, enabled),
-                      }))
+                      updatePlan(
+                        (p) => ({
+                          ...p,
+                          savingsContributions: setEnabledById(p.savingsContributions, item.id, enabled),
+                        }),
+                        { description: enabled ? 'Enable savings contribution' : 'Pause savings contribution' },
+                      )
                     }
                     onPress={() => setSheet({ kind: 'savings', item })}
                   />
@@ -209,7 +218,9 @@ export default function MoneyScreen() {
                     badge={election.reallocationProtected ? 'Protected' : undefined}
                     enabled={election.enabled !== false}
                     onToggle={(enabled) =>
-                      updatePlan((p) => ({ ...p, retirement: setEnabledById(p.retirement, election.id, enabled) }))
+                      updatePlan((p) => ({ ...p, retirement: setEnabledById(p.retirement, election.id, enabled) }), {
+                        description: enabled ? 'Enable retirement election' : 'Pause retirement election',
+                      })
                     }
                     onPress={() => setSheet({ kind: 'retirement', item: election })}
                   />
@@ -241,7 +252,9 @@ export default function MoneyScreen() {
                   amountCaption={income.amountMode === 'percent-of-gross' ? 'of gross' : formatBillFrequency(income.frequency)}
                   enabled={income.enabled !== false}
                   onToggle={(enabled) =>
-                    updatePlan((p) => ({ ...p, otherIncome: setEnabledById(p.otherIncome, income.id, enabled) }))
+                    updatePlan((p) => ({ ...p, otherIncome: setEnabledById(p.otherIncome, income.id, enabled) }), {
+                      description: enabled ? 'Enable other income' : 'Pause other income',
+                    })
                   }
                   onPress={() => setSheet({ kind: 'other-income', item: income })}
                 />
@@ -256,8 +269,14 @@ export default function MoneyScreen() {
         <BillFormSheet
           bill={sheet.item}
           accounts={accounts}
-          onSave={(bill) => updatePlan((p) => ({ ...p, bills: upsertById(p.bills, bill) }))}
-          onDelete={(id) => updatePlan((p) => ({ ...p, bills: removeById(p.bills, id) }))}
+          onSave={(bill) =>
+            updatePlan((p) => ({ ...p, bills: upsertById(p.bills, bill) }), {
+              description: sheet.item ? 'Edit bill' : 'Add bill',
+            })
+          }
+          onDelete={(id) =>
+            updatePlan((p) => ({ ...p, bills: removeById(p.bills, id) }), { description: 'Delete bill' })
+          }
           onClose={() => setSheet(null)}
         />
       )}
@@ -265,8 +284,14 @@ export default function MoneyScreen() {
         <BenefitFormSheet
           benefit={sheet.item}
           accounts={accounts}
-          onSave={(benefit) => updatePlan((p) => ({ ...p, benefits: upsertById(p.benefits, benefit) }))}
-          onDelete={(id) => updatePlan((p) => ({ ...p, benefits: removeById(p.benefits, id) }))}
+          onSave={(benefit) =>
+            updatePlan((p) => ({ ...p, benefits: upsertById(p.benefits, benefit) }), {
+              description: sheet.item ? 'Edit deduction' : 'Add deduction',
+            })
+          }
+          onDelete={(id) =>
+            updatePlan((p) => ({ ...p, benefits: removeById(p.benefits, id) }), { description: 'Delete deduction' })
+          }
           onClose={() => setSheet(null)}
         />
       )}
@@ -274,8 +299,14 @@ export default function MoneyScreen() {
         <LoanFormSheet
           loan={sheet.item}
           accounts={accounts}
-          onSave={(loan) => updatePlan((p) => ({ ...p, loans: upsertById(p.loans, loan) }))}
-          onDelete={(id) => updatePlan((p) => ({ ...p, loans: removeById(p.loans, id) }))}
+          onSave={(loan) =>
+            updatePlan((p) => ({ ...p, loans: upsertById(p.loans, loan) }), {
+              description: sheet.item ? 'Edit loan' : 'Add loan',
+            })
+          }
+          onDelete={(id) =>
+            updatePlan((p) => ({ ...p, loans: removeById(p.loans, id) }), { description: 'Delete loan' })
+          }
           onClose={() => setSheet(null)}
         />
       )}
@@ -284,10 +315,16 @@ export default function MoneyScreen() {
           contribution={sheet.item}
           accounts={accounts}
           onSave={(item) =>
-            updatePlan((p) => ({ ...p, savingsContributions: upsertById(p.savingsContributions, item) }))
+            updatePlan(
+              (p) => ({ ...p, savingsContributions: upsertById(p.savingsContributions, item) }),
+              { description: sheet.item ? 'Edit savings contribution' : 'Add savings contribution' },
+            )
           }
           onDelete={(id) =>
-            updatePlan((p) => ({ ...p, savingsContributions: removeById(p.savingsContributions, id) }))
+            updatePlan(
+              (p) => ({ ...p, savingsContributions: removeById(p.savingsContributions, id) }),
+              { description: 'Delete savings contribution' },
+            )
           }
           onClose={() => setSheet(null)}
         />
@@ -296,16 +333,32 @@ export default function MoneyScreen() {
         <RetirementFormSheet
           election={sheet.item}
           accounts={accounts}
-          onSave={(election) => updatePlan((p) => ({ ...p, retirement: upsertById(p.retirement, election) }))}
-          onDelete={(id) => updatePlan((p) => ({ ...p, retirement: removeById(p.retirement, id) }))}
+          onSave={(election) =>
+            updatePlan((p) => ({ ...p, retirement: upsertById(p.retirement, election) }), {
+              description: sheet.item ? 'Edit retirement election' : 'Add retirement election',
+            })
+          }
+          onDelete={(id) =>
+            updatePlan((p) => ({ ...p, retirement: removeById(p.retirement, id) }), {
+              description: 'Delete retirement election',
+            })
+          }
           onClose={() => setSheet(null)}
         />
       )}
       {sheet?.kind === 'other-income' && (
         <OtherIncomeFormSheet
           income={sheet.item}
-          onSave={(income) => updatePlan((p) => ({ ...p, otherIncome: upsertById(p.otherIncome, income) }))}
-          onDelete={(id) => updatePlan((p) => ({ ...p, otherIncome: removeById(p.otherIncome, id) }))}
+          onSave={(income) =>
+            updatePlan((p) => ({ ...p, otherIncome: upsertById(p.otherIncome, income) }), {
+              description: sheet.item ? 'Edit other income' : 'Add other income',
+            })
+          }
+          onDelete={(id) =>
+            updatePlan((p) => ({ ...p, otherIncome: removeById(p.otherIncome, id) }), {
+              description: 'Delete other income',
+            })
+          }
           onClose={() => setSheet(null)}
         />
       )}

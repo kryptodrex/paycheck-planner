@@ -7,11 +7,11 @@ import {
   type BudgetData,
   type ViewMode,
 } from '@paycheck-planner/core';
-import { usePlan } from '../contexts/PlanContext';
+import { usePlan, type UpdatePlanOptions } from '../contexts/PlanContext';
 
 export interface PlanScreenHelpers {
   plan: BudgetData;
-  updatePlan: (updater: (plan: BudgetData) => BudgetData) => void;
+  updatePlan: (updater: (plan: BudgetData) => BudgetData, options?: UpdatePlanOptions) => void;
   fmt: (amount: number) => string;
   displayMode: ViewMode;
   setDisplayMode: (mode: ViewMode) => void;
@@ -37,10 +37,14 @@ export function usePlanScreen(): PlanScreenHelpers | null {
 
   const setDisplayMode = useCallback(
     (mode: ViewMode) => {
-      updatePlan((current) => ({
-        ...current,
-        settings: { ...current.settings, displayMode: mode },
-      }));
+      updatePlan(
+        (current) => ({
+          ...current,
+          settings: { ...current.settings, displayMode: mode },
+        }),
+        // View-mode flips are ephemeral display state — keep them out of the audit log.
+        { trackAudit: false },
+      );
     },
     [updatePlan],
   );
