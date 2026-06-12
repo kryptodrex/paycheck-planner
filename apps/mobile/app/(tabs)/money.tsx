@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import {
   convertBillToMonthly,
   formatBillFrequency,
@@ -49,11 +49,27 @@ type ActiveSheet =
   | { kind: 'other-income'; item: OtherIncome | null }
   | null;
 
+const isMoneySection = (value: unknown): value is MoneySection =>
+  SECTION_OPTIONS.some((option) => option.value === value);
+
 export default function MoneyScreen() {
   const helpers = usePlanScreen();
   const { spacing } = useTheme();
-  const [section, setSection] = useState<MoneySection>('bills');
+  const params = useLocalSearchParams<{ section?: string }>();
+  const [section, setSection] = useState<MoneySection>(
+    isMoneySection(params.section) ? params.section : 'bills',
+  );
   const [sheet, setSheet] = useState<ActiveSheet>(null);
+
+  // Honor section deep-links (e.g. from search) when the param changes after
+  // mount — state is adjusted during render instead of in an effect.
+  const [appliedSectionParam, setAppliedSectionParam] = useState(params.section);
+  if (params.section !== appliedSectionParam) {
+    setAppliedSectionParam(params.section);
+    if (isMoneySection(params.section)) {
+      setSection(params.section);
+    }
+  }
 
   if (!helpers) return null;
 

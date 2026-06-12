@@ -169,6 +169,12 @@ export default function SettingsScreen() {
               onPress={() => router.push('/pay-settings')}
               style={{ marginBottom: spacing.sm }}
             />
+            <Button
+              title="View Change History"
+              variant="secondary"
+              onPress={() => router.push('/history')}
+              style={{ marginBottom: spacing.sm }}
+            />
             {sourcePath && (
               <Button
                 title="Share Plan File"

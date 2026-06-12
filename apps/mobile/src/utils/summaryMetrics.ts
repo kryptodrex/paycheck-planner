@@ -10,6 +10,7 @@ import {
   roundToCent,
   roundUpToCent,
   type BudgetData,
+  type CustomAllocationReallocationItem,
   type KeyMetricsSegment,
   type KeyMetricsSummaryRow,
   type PaycheckBreakdown,
@@ -21,8 +22,24 @@ import {
 
 const AUTO_ALLOCATION_PREFIXES = ['__bills_', '__benefits_', '__retirement_', '__loans_', '__savings_'];
 
-const isAutoAllocationCategoryId = (categoryId: string): boolean =>
+export const isAutoAllocationCategoryId = (categoryId: string): boolean =>
   AUTO_ALLOCATION_PREFIXES.some((prefix) => categoryId.startsWith(prefix));
+
+/** Flatten user-created allocation categories into reallocation planner inputs. */
+export function buildCustomAllocationItems(
+  accounts: BudgetData['accounts'],
+): CustomAllocationReallocationItem[] {
+  return accounts.flatMap((account) =>
+    (account.allocationCategories || [])
+      .filter((category) => !isAutoAllocationCategoryId(category.id) && (category.amount || 0) > 0)
+      .map((category) => ({
+        accountId: account.id,
+        categoryId: category.id,
+        name: category.name,
+        amount: category.amount,
+      })),
+  );
+}
 
 const calculateBillPerPaycheck = (
   amount: number,

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { router, Stack } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { getDisplayModeLabel } from '@paycheck-planner/core';
 import { usePlan } from '../../src/contexts/PlanContext';
 import { usePlanScreen } from '../../src/hooks/usePlanScreen';
@@ -32,6 +33,10 @@ export default function SummaryScreen() {
   const heroNet = display(metrics.breakdown.netPay);
   const remainingDisplay = display(metrics.remainingPerPaycheck);
   const isShortfall = metrics.remainingPerPaycheck < 0;
+  const targetLeftover = plan.paySettings.minLeftover || 0;
+  // Offer reallocation whenever remaining falls below the target leftover
+  // (or below zero when no target is set) — mirrors the desktop trigger.
+  const needsReallocation = metrics.remainingPerPaycheck < targetLeftover || isShortfall;
 
   return (
     <ThemedView style={styles.screen}>
@@ -39,18 +44,27 @@ export default function SummaryScreen() {
         options={{
           title: plan.name,
           headerRight: () => (
-            <TouchableOpacity
-              onPress={() => {
-                closePlan();
-                router.replace('/');
-              }}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 4 }}
-              style={{ marginRight: 4 }}
-            >
-              <ThemedText variant="accent" size="sm" weight="medium">
-                Close
-              </ThemedText>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={() => router.push('/search')}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                accessibilityLabel="Search plan"
+              >
+                <Feather name="search" size={18} color={colors.textAccent} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  closePlan();
+                  router.replace('/');
+                }}
+                hitSlop={{ top: 12, bottom: 12, left: 8, right: 4 }}
+                style={{ marginRight: 4 }}
+              >
+                <ThemedText variant="accent" size="sm" weight="medium">
+                  Close
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -86,8 +100,8 @@ export default function SummaryScreen() {
           </ThemedText>
         </GradientCard>
 
-        {/* Shortfall warning */}
-        {isShortfall && (
+        {/* Shortfall warning + reallocation entry */}
+        {needsReallocation && (
           <View
             style={[
               styles.warningBox,
@@ -101,12 +115,25 @@ export default function SummaryScreen() {
             ]}
           >
             <ThemedText size="sm" weight="semibold" style={{ color: colors.warning }}>
-              Allocations exceed net pay
+              {isShortfall ? 'Allocations exceed net pay' : 'Leftover below target'}
             </ThemedText>
             <ThemedText variant="secondary" size="xs" style={{ marginTop: 2 }}>
-              You are short {fmt(Math.abs(remainingDisplay))} {modeLabel.toLowerCase()}. Review
-              your bills, savings, and allocations.
+              {isShortfall
+                ? `You are short ${fmt(Math.abs(remainingDisplay))} ${modeLabel.toLowerCase()}.`
+                : `Remaining for spending is below your ${fmt(targetLeftover)} per-paycheck target.`}
             </ThemedText>
+            <TouchableOpacity
+              style={[
+                styles.warningAction,
+                { borderColor: colors.warning, borderRadius: radius.sm, marginTop: spacing.sm },
+              ]}
+              onPress={() => router.push('/reallocation')}
+              activeOpacity={0.75}
+            >
+              <ThemedText size="xs" weight="semibold" style={{ color: colors.warning }}>
+                Review Reallocation Options
+              </ThemedText>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -181,5 +208,12 @@ export default function SummaryScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   warningBox: { borderWidth: 1 },
+  warningAction: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
 });
