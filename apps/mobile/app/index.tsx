@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { generateDemoBudgetData } from '@paycheck-planner/core';
+import { generateDemoBudgetData, type BudgetData } from '@paycheck-planner/core';
 import { usePlanFile } from '../src/hooks/usePlanFile';
 import { usePlan } from '../src/contexts/PlanContext';
 import { getRecentFiles, removeRecentFile, type RecentFile } from '../src/storage/recentFilesStore';
@@ -28,13 +28,12 @@ export default function WelcomeScreen() {
   const { setPlan } = usePlan();
 
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-  const [keyModalVisible, setKeyModalVisible] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [keyError, setKeyError] = useState<string | null>(null);
 
   const onPlanLoaded = useCallback(
-    (plan: ReturnType<typeof generateDemoBudgetData>, uri: string) => {
-      setPlan(plan as any, uri);
+    (plan: BudgetData, uri: string, encryptionKey: string | null) => {
+      setPlan(plan, uri, { encryptionKey });
       router.replace('/(tabs)/summary');
     },
     [setPlan],
@@ -43,26 +42,24 @@ export default function WelcomeScreen() {
   const { status, error, pending, pickAndLoad, submitKey, clearPending } =
     usePlanFile(onPlanLoaded);
 
+  // Modal visibility is derived from the load status rather than mirrored in state.
+  const keyModalVisible = status === 'needs-key';
+
   useFocusEffect(
     useCallback(() => {
       getRecentFiles().then(setRecentFiles);
     }, []),
   );
 
-  // If key prompt needed, show modal
-  useEffect(() => {
-    if (status === 'needs-key') {
-      setKeyInput('');
-      setKeyError(null);
-      setKeyModalVisible(true);
-    } else {
-      setKeyModalVisible(false);
-    }
-  }, [status]);
+  async function handlePickAndLoad() {
+    setKeyInput('');
+    setKeyError(null);
+    await pickAndLoad();
+  }
 
   async function openDemoMode() {
     const plan = generateDemoBudgetData(new Date().getFullYear());
-    setPlan(plan as any, null);
+    setPlan(plan, null);
     router.replace('/(tabs)/summary');
   }
 
@@ -71,7 +68,7 @@ export default function WelcomeScreen() {
     if (parsed.status === 'invalid') return;
 
     if (parsed.status === 'ok') {
-      setPlan(parsed.data as any, file.uri);
+      setPlan(parsed.data, file.uri);
       router.replace('/(tabs)/summary');
       return;
     }
@@ -81,14 +78,14 @@ export default function WelcomeScreen() {
     if (storedKey) {
       const plan = decryptPlan(parsed.payload, storedKey);
       if (plan) {
-        setPlan(plan as any, file.uri);
+        setPlan(plan, file.uri, { encryptionKey: storedKey });
         router.replace('/(tabs)/summary');
         return;
       }
     }
 
     // Key not found — trigger the full pick-and-load flow instead
-    await pickAndLoad();
+    await handlePickAndLoad();
   }
 
   async function handleSubmitKey() {
@@ -105,7 +102,6 @@ export default function WelcomeScreen() {
 
   function handleCancelKey() {
     clearPending();
-    setKeyModalVisible(false);
     setKeyInput('');
     setKeyError(null);
   }
@@ -153,7 +149,7 @@ export default function WelcomeScreen() {
               minHeight: 52,
             },
           ]}
-          onPress={pickAndLoad}
+          onPress={handlePickAndLoad}
           disabled={isLoading}
           activeOpacity={0.85}
         >
@@ -164,6 +160,25 @@ export default function WelcomeScreen() {
               Open Budget File
             </ThemedText>
           )}
+        </TouchableOpacity>
+
+        {/* Create new plan */}
+        <TouchableOpacity
+          style={[
+            styles.secondaryButton,
+            {
+              borderColor: colors.border,
+              borderRadius: radius.lg,
+              marginBottom: spacing.md,
+              minHeight: 52,
+            },
+          ]}
+          onPress={() => router.push('/new-plan')}
+          activeOpacity={0.75}
+        >
+          <ThemedText size="md" weight="medium" variant="secondary">
+            Create New Plan
+          </ThemedText>
         </TouchableOpacity>
 
         {/* Demo mode */}
@@ -229,10 +244,13 @@ export default function WelcomeScreen() {
                   </ThemedText>
                 </View>
                 <TouchableOpacity
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 4 }}
+                  style={styles.recentRemove}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}
                   onPress={() => removeRecentFile(file.uri).then(() => setRecentFiles((prev) => prev.filter((f) => f.uri !== file.uri)))}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${file.planName ?? file.name} from recents`}
                 >
-                  <ThemedText variant="tertiary" size="lg">
+                  <ThemedText variant="tertiary" size="xl">
                     ×
                   </ThemedText>
                 </TouchableOpacity>
@@ -385,6 +403,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: { letterSpacing: 0.6 },
   recentRow: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
+  recentRemove: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   errorBox: { borderWidth: StyleSheet.hairlineWidth },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end' },
   modalSheet: { width: '100%' },

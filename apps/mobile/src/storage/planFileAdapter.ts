@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import CryptoJS from 'crypto-js';
 import type { BudgetData } from '@paycheck-planner/core';
 
@@ -73,4 +73,88 @@ export function decryptPlan(payload: string, key: string): BudgetData | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Serialize a plan to the on-disk format shared with desktop: plain JSON, or
+ * the AES envelope (`paycheck-planner-encrypted-v1`) when a key is provided.
+ */
+export function serializePlan(plan: BudgetData, encryptionKey?: string | null): string {
+  const jsonData = JSON.stringify(plan, null, 2);
+  if (!encryptionKey) return jsonData;
+
+  const envelope: EncryptedEnvelope = {
+    format: 'paycheck-planner-encrypted-v1',
+    planId: plan.id,
+    payload: CryptoJS.AES.encrypt(jsonData, encryptionKey).toString(),
+  };
+  return JSON.stringify(envelope, null, 2);
+}
+
+export async function writePlanFile(
+  uri: string,
+  plan: BudgetData,
+  encryptionKey?: string | null,
+): Promise<void> {
+  await FileSystem.writeAsStringAsync(uri, serializePlan(plan, encryptionKey), {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+}
+
+const PLAN_LIBRARY_DIR = 'plans/';
+
+async function ensurePlanLibraryDir(): Promise<string> {
+  const dir = FileSystem.documentDirectory + PLAN_LIBRARY_DIR;
+  const dirInfo = await FileSystem.getInfoAsync(dir);
+  if (!dirInfo.exists) {
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+  }
+  return dir;
+}
+
+/**
+ * Copy an opened plan file into the app's documents directory so edits persist
+ * even after the document-picker cache copy is evicted. Returns the durable
+ * library URI for the plan.
+ */
+export async function copyPlanIntoLibrary(sourceUri: string, planId: string): Promise<string> {
+  const dir = await ensurePlanLibraryDir();
+  const targetUri = dir + `${planId}.budget`;
+  if (sourceUri !== targetUri) {
+    await FileSystem.copyAsync({ from: sourceUri, to: targetUri });
+  }
+  return targetUri;
+}
+
+/** Write a brand-new plan into the documents-directory library and return its URI. */
+export async function createPlanFileInLibrary(
+  plan: BudgetData,
+  encryptionKey?: string | null,
+): Promise<string> {
+  const dir = await ensurePlanLibraryDir();
+  const uri = dir + `${plan.id}.budget`;
+  await writePlanFile(uri, plan, encryptionKey);
+  return uri;
+}
+
+function safeFileName(name: string): string {
+  const cleaned = name.replace(/[^a-z0-9 _-]/gi, '').replace(/\s+/g, ' ').trim();
+  return cleaned || 'budget-plan';
+}
+
+/**
+ * Make a temporary, human-readably named copy of the plan file for sharing, so
+ * the export carries the plan's title (e.g. "2026 Plan.budget") instead of the
+ * internal UUID filename — matching how the desktop app names saved files.
+ * Returns the temp URI to hand to the share sheet.
+ */
+export async function createShareableCopy(sourceUri: string, plan: BudgetData): Promise<string> {
+  const targetUri = `${FileSystem.cacheDirectory}${safeFileName(plan.name)}.budget`;
+  try {
+    await FileSystem.deleteAsync(targetUri, { idempotent: true });
+  } catch {
+    // Ignore — target may not exist yet.
+  }
+  await FileSystem.copyAsync({ from: sourceUri, to: targetUri });
+  return targetUri;
 }

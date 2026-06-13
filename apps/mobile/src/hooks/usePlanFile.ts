@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import * as DocumentPicker from 'expo-document-picker';
 import type { BudgetData } from '@paycheck-planner/core';
-import { readPlanFile, decryptPlan } from '../storage/planFileAdapter';
+import { readPlanFile, decryptPlan, copyPlanIntoLibrary } from '../storage/planFileAdapter';
 import { getStoredPlanKey, storePlanKey } from '../storage/keychainAdapter';
 import { addRecentFile } from '../storage/recentFilesStore';
 
@@ -24,23 +24,32 @@ export interface UsePlanFileResult {
 }
 
 export function usePlanFile(
-  onSuccess: (plan: BudgetData, uri: string) => void,
+  onSuccess: (plan: BudgetData, uri: string, encryptionKey: string | null) => void,
 ): UsePlanFileResult {
   const [status, setStatus] = useState<PlanLoadStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingDecrypt | null>(null);
 
   const finalize = useCallback(
-    async (plan: BudgetData, uri: string, name: string) => {
+    async (plan: BudgetData, uri: string, name: string, encryptionKey: string | null) => {
+      // Keep a durable copy in the app's documents directory; picker copies
+      // land in the cache directory and can be evicted at any time.
+      let workingUri = uri;
+      try {
+        workingUri = await copyPlanIntoLibrary(uri, plan.id);
+      } catch {
+        // Fall back to the original uri — read-only access still works.
+      }
+
       await addRecentFile({
-        uri,
+        uri: workingUri,
         name,
         lastOpenedAt: new Date().toISOString(),
         planId: plan.id,
         planName: plan.name,
         planYear: plan.year,
       });
-      onSuccess(plan, uri);
+      onSuccess(plan, workingUri, encryptionKey);
       setStatus('idle');
       setError(null);
     },
@@ -75,7 +84,7 @@ export function usePlanFile(
     }
 
     if (parsed.status === 'ok') {
-      await finalize(parsed.data, uri, name);
+      await finalize(parsed.data, uri, name, null);
       return;
     }
 
@@ -84,7 +93,7 @@ export function usePlanFile(
     if (storedKey) {
       const plan = decryptPlan(parsed.payload, storedKey);
       if (plan) {
-        await finalize(plan, uri, name);
+        await finalize(plan, uri, name, storedKey);
         return;
       }
       // Stored key is stale — fall through to ask user
@@ -100,15 +109,16 @@ export function usePlanFile(
     async (key: string): Promise<boolean> => {
       if (!pending) return false;
 
-      const plan = decryptPlan(pending.payload, key.trim());
+      const trimmed = key.trim();
+      const plan = decryptPlan(pending.payload, trimmed);
       if (!plan) {
         setError('Incorrect key — the plan could not be decrypted. Please check and try again.');
         return false;
       }
 
       // Store key with biometric protection for future opens
-      await storePlanKey(pending.planId, key.trim());
-      await finalize(plan, pending.uri, pending.name);
+      await storePlanKey(pending.planId, trimmed);
+      await finalize(plan, pending.uri, pending.name, trimmed);
       setPending(null);
       return true;
     },

@@ -20,15 +20,49 @@ export async function getStoredPlanKey(planId: string, planName?: string): Promi
   }
 }
 
+async function hasUsableBiometrics(): Promise<boolean> {
+  try {
+    const [hasHardware, isEnrolled] = await Promise.all([
+      LocalAuthentication.hasHardwareAsync(),
+      LocalAuthentication.isEnrolledAsync(),
+    ]);
+    return hasHardware && isEnrolled;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Stores an AES key for the plan, protected by biometric / device passcode.
- * After storing, every retrieval will require biometric auth automatically.
+ * Stores an AES key for the plan. When biometrics are available the key is
+ * protected with `requireAuthentication` so future reads prompt Face ID /
+ * fingerprint. This is strictly best-effort: biometric storage throws when the
+ * binary lacks `NSFaceIDUsageDescription` (e.g. Expo Go) or no biometrics are
+ * enrolled, so we fall back to plain secure storage and never reject — caching
+ * the key must never block opening an already-decrypted plan.
+ *
+ * @returns whether the key was persisted at all.
  */
-export async function storePlanKey(planId: string, key: string): Promise<void> {
-  await SecureStore.setItemAsync(KEY_PREFIX + planId, key, {
-    requireAuthentication: true,
-    authenticationPrompt: 'Authenticate to save your encryption key securely',
-  });
+export async function storePlanKey(planId: string, key: string): Promise<boolean> {
+  const storeKey = KEY_PREFIX + planId;
+
+  if (await hasUsableBiometrics()) {
+    try {
+      await SecureStore.setItemAsync(storeKey, key, {
+        requireAuthentication: true,
+        authenticationPrompt: 'Authenticate to save your encryption key securely',
+      });
+      return true;
+    } catch {
+      // Biometric-protected storage unavailable — fall back below.
+    }
+  }
+
+  try {
+    await SecureStore.setItemAsync(storeKey, key);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function deletePlanKey(planId: string): Promise<void> {

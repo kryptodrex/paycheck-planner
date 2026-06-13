@@ -16,7 +16,7 @@ export function MetricRow({ label, value, isTotal, isNegative, indented }: Props
     <View
       style={[
         styles.row,
-        { paddingVertical: spacing.sm, minHeight: 44 },
+        { paddingVertical: spacing.sm, minHeight: 48 },
         isTotal && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, marginTop: 4, paddingTop: spacing.sm + 4 },
         indented && { paddingLeft: spacing.md },
       ]}
@@ -24,15 +24,15 @@ export function MetricRow({ label, value, isTotal, isNegative, indented }: Props
       <ThemedText
         variant={isTotal ? 'primary' : 'secondary'}
         size="sm"
-        weight={isTotal ? 'semibold' : 'normal'}
-        style={{ flex: 1 }}
+        weight={isTotal ? 'bold' : 'medium'}
+        style={{ flex: 1, paddingRight: spacing.sm }}
       >
         {label}
       </ThemedText>
       <ThemedText
-        variant={isNegative ? 'tertiary' : isTotal ? 'primary' : 'secondary'}
+        variant={isNegative ? 'secondary' : isTotal ? 'primary' : 'primary'}
         size="sm"
-        weight={isTotal ? 'semibold' : 'normal'}
+        weight={isTotal ? 'bold' : 'semibold'}
       >
         {value}
       </ThemedText>

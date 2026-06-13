@@ -5,6 +5,7 @@ import {
   getPaychecksPerYear,
   formatCurrency,
   convertBillToYearly,
+  type BillFrequency,
 } from '@paycheck-planner/core';
 
 describe('core consumption from mobile', () => {
@@ -88,7 +89,7 @@ describe('core consumption from mobile', () => {
       ['bi-weekly', 200, 5200],
       ['annually', 500, 500],
     ])('converts %s $%i → $%i annually', (freq, amount, expected) => {
-      expect(convertBillToYearly(amount, freq as any)).toBe(expected);
+      expect(convertBillToYearly(amount, freq as BillFrequency)).toBe(expected);
     });
   });
 });

@@ -1,61 +1,72 @@
-import { useEffect } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { useMemo } from 'react';
+import { ScrollView, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import {
   calculatePaycheckBreakdown,
-  getPaychecksPerYear,
-  formatCurrency,
+  getDisplayModeLabel,
+  getRetirementLabel,
 } from '@paycheck-planner/core';
-import { usePlan } from '../../src/contexts/PlanContext';
+import { usePlanScreen } from '../../src/hooks/usePlanScreen';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { ThemedView } from '../../src/components/ThemedView';
+import { ThemedText } from '../../src/components/ThemedText';
 import { MetricRow } from '../../src/components/MetricRow';
 import { SectionCard } from '../../src/components/SectionCard';
+import { ViewModeSelector } from '../../src/components/ViewModeSelector';
+import { PlanTabScreen } from '../../src/components/PlanTabScreen';
 
 export default function BreakdownScreen() {
-  const { plan } = usePlan();
-  const { spacing } = useTheme();
+  const helpers = usePlanScreen();
+  const { colors, spacing, radius } = useTheme();
 
-  useEffect(() => {
-    if (!plan) {
-      router.replace('/');
-    }
-  }, [plan]);
+  const breakdown = useMemo(
+    () => (helpers ? calculatePaycheckBreakdown(helpers.plan) : null),
+    [helpers],
+  );
 
-  if (!plan) return null;
+  if (!helpers || !breakdown) return null;
 
-  const { currency, locale } = plan.settings;
-  const fmt = (n: number) => formatCurrency(n, currency, locale);
+  const { plan, fmt, displayMode, setDisplayMode, display, paychecksPerYear } = helpers;
+  const modeLabel = getDisplayModeLabel(displayMode);
+  const grossPay = breakdown.grossPay;
 
-  const breakdown = calculatePaycheckBreakdown(plan);
-  const paychecksPerYear = getPaychecksPerYear(plan.paySettings.payFrequency);
+  const fixedOrPct = (amount: number, isPercentage?: boolean) =>
+    isPercentage ? (grossPay * amount) / 100 : amount;
 
-  const annualize = (n: number) => n * paychecksPerYear;
+  const postTaxBenefits = plan.benefits.filter(
+    (b) => b.enabled !== false && b.isTaxable && (b.deductionSource ?? 'paycheck') === 'paycheck',
+  );
+  const postTaxRetirement = plan.retirement.filter(
+    (r) =>
+      r.enabled !== false &&
+      r.isPreTax === false &&
+      (r.deductionSource ?? 'paycheck') === 'paycheck',
+  );
 
   return (
-    <ThemedView style={styles.screen}>
-      <Stack.Screen options={{ title: 'Pay Breakdown' }} />
-
+    <PlanTabScreen title="Breakdown" subtitle={plan.name}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 48 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Per paycheck */}
-        <SectionCard title="Per Paycheck">
-          <MetricRow label="Gross Pay" value={fmt(breakdown.grossPay)} />
+        <View style={{ marginBottom: spacing.md }}>
+          <ViewModeSelector value={displayMode} onChange={setDisplayMode} />
+        </View>
 
-          {/* Pre-tax deductions detail */}
+        {/* Gross to taxable */}
+        <SectionCard title={`Earnings · ${modeLabel}`}>
+          <MetricRow label="Gross Pay" value={fmt(display(grossPay))} />
+
           {plan.preTaxDeductions.map((d) => (
             <MetricRow
               key={d.id}
               label={d.name}
-              value={`−${fmt(d.isPercentage ? (breakdown.grossPay * d.amount) / 100 : d.amount)}`}
+              value={`−${fmt(display(fixedOrPct(d.amount, d.isPercentage)))}`}
               isNegative
               indented
             />
           ))}
 
-          {/* Benefits (pre-tax, paycheck-deducted) */}
           {plan.benefits
             .filter(
               (b) =>
@@ -67,13 +78,12 @@ export default function BreakdownScreen() {
               <MetricRow
                 key={b.id}
                 label={b.name}
-                value={`−${fmt(b.isPercentage ? (breakdown.grossPay * b.amount) / 100 : b.amount)}`}
+                value={`−${fmt(display(fixedOrPct(b.amount, b.isPercentage)))}`}
                 isNegative
                 indented
               />
             ))}
 
-          {/* Retirement (pre-tax) */}
           {plan.retirement
             .filter(
               (r) =>
@@ -84,61 +94,117 @@ export default function BreakdownScreen() {
             .map((r) => (
               <MetricRow
                 key={r.id}
-                label={r.customLabel ?? r.type}
-                value={`−${fmt(r.employeeContributionIsPercentage ? (breakdown.grossPay * r.employeeContribution) / 100 : r.employeeContribution)}`}
+                label={getRetirementLabel(r)}
+                value={`−${fmt(
+                  display(fixedOrPct(r.employeeContribution, r.employeeContributionIsPercentage)),
+                )}`}
                 isNegative
                 indented
               />
             ))}
 
-          <MetricRow
-            label="Taxable Income"
-            value={fmt(breakdown.taxableIncome)}
-            isTotal
-          />
+          <MetricRow label="Taxable Income" value={fmt(display(breakdown.taxableIncome))} isTotal />
         </SectionCard>
 
-        {/* Tax lines */}
-        <SectionCard title="Taxes (Per Paycheck)">
+        {/* Taxes */}
+        <SectionCard title={`Taxes · ${modeLabel}`}>
           {breakdown.taxLineAmounts.length === 0 ? (
             <MetricRow label="No tax lines configured" value="" />
           ) : (
             breakdown.taxLineAmounts.map((line) => (
-              <MetricRow key={line.id} label={line.label} value={`−${fmt(line.amount)}`} isNegative />
+              <MetricRow
+                key={line.id}
+                label={line.label}
+                value={`−${fmt(display(line.amount))}`}
+                isNegative
+              />
             ))
           )}
           {breakdown.additionalWithholding > 0 && (
             <MetricRow
               label="Additional Withholding"
-              value={`−${fmt(breakdown.additionalWithholding)}`}
+              value={`−${fmt(display(breakdown.additionalWithholding))}`}
               isNegative
             />
           )}
-          <MetricRow label="Total Taxes" value={`−${fmt(breakdown.totalTaxes)}`} isTotal isNegative />
+          {(breakdown.otherIncomeAutoWithholding ?? 0) > 0 && (
+            <MetricRow
+              label="Other Income Withholding"
+              value={`−${fmt(display(breakdown.otherIncomeAutoWithholding ?? 0))}`}
+              isNegative
+            />
+          )}
+          <MetricRow
+            label="Total Taxes"
+            value={`−${fmt(display(breakdown.totalTaxes))}`}
+            isTotal
+            isNegative
+          />
+
+          <TouchableOpacity
+            style={[
+              styles.editTaxes,
+              {
+                borderColor: colors.border,
+                borderRadius: radius.md,
+                marginTop: spacing.sm,
+              },
+            ]}
+            onPress={() => router.push('/taxes')}
+            activeOpacity={0.7}
+          >
+            <Feather name="edit-2" size={15} color={colors.textAccent} />
+            <ThemedText variant="accent" size="sm" weight="semibold">
+              Edit Tax Settings
+            </ThemedText>
+          </TouchableOpacity>
         </SectionCard>
+
+        {/* Post-tax deductions */}
+        {(postTaxBenefits.length > 0 || postTaxRetirement.length > 0) && (
+          <SectionCard title={`Post-Tax Deductions · ${modeLabel}`}>
+            {postTaxBenefits.map((b) => (
+              <MetricRow
+                key={b.id}
+                label={b.name}
+                value={`−${fmt(display(fixedOrPct(b.amount, b.isPercentage)))}`}
+                isNegative
+              />
+            ))}
+            {postTaxRetirement.map((r) => (
+              <MetricRow
+                key={r.id}
+                label={getRetirementLabel(r)}
+                value={`−${fmt(
+                  display(fixedOrPct(r.employeeContribution, r.employeeContributionIsPercentage)),
+                )}`}
+                isNegative
+              />
+            ))}
+          </SectionCard>
+        )}
 
         {/* Net */}
         <SectionCard title="Take-Home">
-          <MetricRow label="Net Pay (per check)" value={fmt(breakdown.netPay)} />
+          <MetricRow label={`Net Pay · ${modeLabel}`} value={fmt(display(breakdown.netPay))} />
           <MetricRow
-            label={`Net Pay (annual · ${paychecksPerYear}×)`}
-            value={fmt(annualize(breakdown.netPay))}
+            label={`Net Pay · Yearly (${paychecksPerYear} checks)`}
+            value={fmt(breakdown.netPay * paychecksPerYear)}
             isTotal
           />
         </SectionCard>
-
-        {/* Annual summary */}
-        <SectionCard title="Annual Totals">
-          <MetricRow label="Gross" value={fmt(annualize(breakdown.grossPay))} />
-          <MetricRow label="Pre-Tax Deductions" value={`−${fmt(annualize(breakdown.preTaxDeductions))}`} isNegative />
-          <MetricRow label="Taxes" value={`−${fmt(annualize(breakdown.totalTaxes))}`} isNegative />
-          <MetricRow label="Net" value={fmt(annualize(breakdown.netPay))} isTotal />
-        </SectionCard>
       </ScrollView>
-    </ThemedView>
+    </PlanTabScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
+  editTaxes: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 46,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
 });
