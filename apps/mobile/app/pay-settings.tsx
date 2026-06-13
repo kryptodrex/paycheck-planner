@@ -5,7 +5,6 @@ import {
   calculateGrossPayPerPaycheck,
   calculateGrossPayPerYear,
   formatPayFrequencyLabel,
-  type Deduction,
   type PayFrequency,
   type PayType,
 } from '@paycheck-planner/core';
@@ -19,15 +18,7 @@ import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
 import { FormError } from '../src/components/FormError';
 import { OptionPicker } from '../src/components/OptionPicker';
-import { ItemCard } from '../src/components/ItemCard';
-import { EmptyState } from '../src/components/EmptyState';
-import { DeductionFormSheet } from '../src/features/pay/DeductionFormSheet';
-import {
-  upsertById,
-  removeById,
-  parseAmount,
-  amountToInput,
-} from '../src/utils/planMutations';
+import { parseAmount, amountToInput } from '../src/utils/planMutations';
 
 const PAY_FREQUENCIES: PayFrequency[] = ['weekly', 'bi-weekly', 'semi-monthly', 'monthly'];
 
@@ -35,8 +26,6 @@ const FREQUENCY_OPTIONS = PAY_FREQUENCIES.map((frequency) => ({
   value: frequency,
   label: formatPayFrequencyLabel(frequency),
 }));
-
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function PaySettingsScreen() {
   const helpers = usePlanScreen();
@@ -52,11 +41,12 @@ export default function PaySettingsScreen() {
   const [payFrequency, setPayFrequency] = useState<PayFrequency>(
     paySettings?.payFrequency ?? 'bi-weekly',
   );
-  const [firstPaycheckDate, setFirstPaycheckDate] = useState(paySettings?.firstPaycheckDate ?? '');
   const [minLeftover, setMinLeftover] = useState(amountToInput(paySettings?.minLeftover));
   const [error, setError] = useState<string | null>(null);
-  const [editingDeduction, setEditingDeduction] = useState<Deduction | null>(null);
-  const [deductionSheetVisible, setDeductionSheetVisible] = useState(false);
+
+  // First-paycheck date is unused in desktop for now, so it's hidden here;
+  // we preserve any existing value rather than clearing it on save.
+  const firstPaycheckDate = paySettings?.firstPaycheckDate;
 
   if (!helpers) return null;
 
@@ -87,26 +77,26 @@ export default function PaySettingsScreen() {
     if (payType === 'hourly' && (parsedHours === null || parsedHours <= 0)) {
       return setError('Please enter valid hours per pay period.');
     }
-    if (firstPaycheckDate.trim() && !DATE_PATTERN.test(firstPaycheckDate.trim())) {
-      return setError('First paycheck date must use the YYYY-MM-DD format.');
-    }
     if (parsedLeftover === null) {
       return setError('Please enter a valid minimum leftover amount.');
     }
 
-    updatePlan((p) => ({
-      ...p,
-      paySettings: {
-        ...p.paySettings,
-        payType,
-        annualSalary: payType === 'salary' ? (parsedSalary ?? undefined) : undefined,
-        hourlyRate: payType === 'hourly' ? (parsedRate ?? undefined) : undefined,
-        hoursPerPayPeriod: payType === 'hourly' ? (parsedHours ?? undefined) : undefined,
-        payFrequency,
-        firstPaycheckDate: firstPaycheckDate.trim() || undefined,
-        minLeftover: parsedLeftover || undefined,
-      },
-    }));
+    updatePlan(
+      (p) => ({
+        ...p,
+        paySettings: {
+          ...p.paySettings,
+          payType,
+          annualSalary: payType === 'salary' ? (parsedSalary ?? undefined) : undefined,
+          hourlyRate: payType === 'hourly' ? (parsedRate ?? undefined) : undefined,
+          hoursPerPayPeriod: payType === 'hourly' ? (parsedHours ?? undefined) : undefined,
+          payFrequency,
+          firstPaycheckDate,
+          minLeftover: parsedLeftover || undefined,
+        },
+      }),
+      { description: 'Edit pay settings' },
+    );
     router.back();
   }
 
@@ -176,18 +166,6 @@ export default function PaySettingsScreen() {
           />
 
           <FormField
-            label="First Paycheck Date"
-            value={firstPaycheckDate}
-            onChangeText={(text) => {
-              setFirstPaycheckDate(text);
-              setError(null);
-            }}
-            placeholder="YYYY-MM-DD"
-            autoCapitalize="none"
-            hint="Optional — anchors the pay calendar"
-          />
-
-          <FormField
             label="Minimum Leftover per Paycheck"
             value={minLeftover}
             onChangeText={(text) => {
@@ -205,62 +183,17 @@ export default function PaySettingsScreen() {
           <MetricRow label="Gross per Year" value={fmt(previewGrossPerYear)} isTotal />
         </SectionCard>
 
-        <SectionCard
-          title="Pre-Tax Deductions"
-          actionLabel="Add"
-          onAction={() => {
-            setEditingDeduction(null);
-            setDeductionSheetVisible(true);
-          }}
-        >
-          {plan.preTaxDeductions.length === 0 ? (
-            <EmptyState
-              icon="minus-circle"
-              title="No pre-tax deductions"
-              message="Deductions here reduce taxable income before tax lines apply."
-            />
-          ) : (
-            plan.preTaxDeductions.map((deduction) => (
-              <ItemCard
-                key={deduction.id}
-                title={deduction.name}
-                amount={deduction.isPercentage ? `${deduction.amount}%` : fmt(deduction.amount)}
-                amountCaption={deduction.isPercentage ? 'of gross' : 'per check'}
-                onPress={() => {
-                  setEditingDeduction(deduction);
-                  setDeductionSheetVisible(true);
-                }}
-              />
-            ))
-          )}
-        </SectionCard>
-
         <View style={{ gap: spacing.sm }}>
           <Button title="Save Pay Settings" onPress={handleSave} />
           <Button title="Cancel" variant="secondary" onPress={() => router.back()} />
         </View>
 
         <ThemedText variant="tertiary" size="xs" style={{ marginTop: spacing.md }}>
-          Currency ({plan.settings.currency}) can be changed on desktop, which also converts
-          existing amounts using live exchange rates.
+          Manage pre-tax and post-tax deductions in Money → Deductions. Currency (
+          {plan.settings.currency}) can be changed on desktop, which also converts existing amounts
+          using live exchange rates.
         </ThemedText>
       </ScrollView>
-
-      {deductionSheetVisible && (
-        <DeductionFormSheet
-          deduction={editingDeduction}
-          onSave={(deduction) =>
-            updatePlan((p) => ({
-              ...p,
-              preTaxDeductions: upsertById(p.preTaxDeductions, deduction),
-            }))
-          }
-          onDelete={(id) =>
-            updatePlan((p) => ({ ...p, preTaxDeductions: removeById(p.preTaxDeductions, id) }))
-          }
-          onClose={() => setDeductionSheetVisible(false)}
-        />
-      )}
     </ThemedView>
   );
 }

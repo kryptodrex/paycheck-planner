@@ -149,7 +149,7 @@ export default function AccountsScreen() {
   return (
     <PlanTabScreen title="Accounts" subtitle={plan.name}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 96 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
       >
         <SectionCard title="Annual Obligations">

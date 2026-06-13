@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Pressable,
   Platform,
+  Alert,
   StyleSheet,
 } from 'react-native';
 import { ThemedText } from './ThemedText';
@@ -80,7 +81,18 @@ export function FormSheet({
             {onSave && (
               <Button title={saveLabel} onPress={onSave} disabled={saveDisabled} />
             )}
-            {onDelete && <Button title={deleteLabel} variant="danger" onPress={onDelete} />}
+            {onDelete && (
+              <Button
+                title={deleteLabel}
+                variant="danger"
+                onPress={() =>
+                  Alert.alert(deleteLabel, 'This removes it from your plan. You can undo it afterward.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Delete', style: 'destructive', onPress: onDelete },
+                  ])
+                }
+              />
+            )}
             <Button title="Cancel" variant="secondary" onPress={onClose} />
           </View>
         </View>

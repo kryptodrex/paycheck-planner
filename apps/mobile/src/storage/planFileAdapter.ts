@@ -136,3 +136,25 @@ export async function createPlanFileInLibrary(
   await writePlanFile(uri, plan, encryptionKey);
   return uri;
 }
+
+function safeFileName(name: string): string {
+  const cleaned = name.replace(/[^a-z0-9 _-]/gi, '').replace(/\s+/g, ' ').trim();
+  return cleaned || 'budget-plan';
+}
+
+/**
+ * Make a temporary, human-readably named copy of the plan file for sharing, so
+ * the export carries the plan's title (e.g. "2026 Plan.budget") instead of the
+ * internal UUID filename — matching how the desktop app names saved files.
+ * Returns the temp URI to hand to the share sheet.
+ */
+export async function createShareableCopy(sourceUri: string, plan: BudgetData): Promise<string> {
+  const targetUri = `${FileSystem.cacheDirectory}${safeFileName(plan.name)}.budget`;
+  try {
+    await FileSystem.deleteAsync(targetUri, { idempotent: true });
+  } catch {
+    // Ignore — target may not exist yet.
+  }
+  await FileSystem.copyAsync({ from: sourceUri, to: targetUri });
+  return targetUri;
+}

@@ -19,8 +19,14 @@ interface SetPlanOptions {
 export interface UpdatePlanOptions {
   /** Human-readable change description recorded in the plan's audit history. */
   description?: string;
-  /** Set false for ephemeral changes (e.g. view mode) that shouldn't create audit noise. */
+  /** Set false for ephemeral changes (e.g. view mode) that shouldn't create audit/undo noise. */
   trackAudit?: boolean;
+}
+
+export interface ChangeSignal {
+  label: string;
+  /** Monotonic id so listeners can react to each distinct change. */
+  seq: number;
 }
 
 interface PlanContextValue {
@@ -29,14 +35,20 @@ interface PlanContextValue {
   encryptionKey: string | null;
   saveState: SaveState;
   saveError: string | null;
+  canUndo: boolean;
+  canRedo: boolean;
+  lastChange: ChangeSignal | null;
   setPlan: (plan: BudgetData | null, path: string | null, options?: SetPlanOptions) => void;
   updatePlan: (updater: (plan: BudgetData) => BudgetData, options?: UpdatePlanOptions) => void;
+  undo: () => void;
+  redo: () => void;
   closePlan: () => void;
 }
 
 const PlanContext = createContext<PlanContextValue | null>(null);
 
 const SAVE_DEBOUNCE_MS = 600;
+const HISTORY_LIMIT = 50;
 
 export function PlanProvider({ children }: { children: ReactNode }) {
   const [plan, setPlanState] = useState<BudgetData | null>(null);
@@ -44,17 +56,17 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [past, setPast] = useState<BudgetData[]>([]);
+  const [future, setFuture] = useState<BudgetData[]>([]);
+  const [lastChange, setLastChange] = useState<ChangeSignal | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seqRef = useRef(0);
   const latest = useRef<{ plan: BudgetData | null; path: string | null; key: string | null }>({
     plan: null,
     path: null,
     key: null,
   });
-
-  useEffect(() => {
-    latest.current = { plan, path: sourcePath, key: encryptionKey };
-  }, [plan, sourcePath, encryptionKey]);
 
   useEffect(
     () => () => {
@@ -85,60 +97,102 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     }, SAVE_DEBOUNCE_MS);
   }, [flushSave]);
 
+  // Commits a new plan value, syncing the ref synchronously and persisting.
+  const applyPlan = useCallback(
+    (next: BudgetData) => {
+      latest.current = { ...latest.current, plan: next };
+      setPlanState(next);
+      scheduleSave();
+    },
+    [scheduleSave],
+  );
+
   const setPlan = useCallback(
     (newPlan: BudgetData | null, path: string | null, options?: SetPlanOptions) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
+      latest.current = { plan: newPlan, path, key: options?.encryptionKey ?? null };
       setPlanState(newPlan);
       setSourcePath(path);
       setEncryptionKey(options?.encryptionKey ?? null);
       setSaveState('idle');
       setSaveError(null);
+      setPast([]);
+      setFuture([]);
+      setLastChange(null);
     },
     [],
   );
 
   const updatePlan = useCallback(
     (updater: (current: BudgetData) => BudgetData, options?: UpdatePlanOptions) => {
-      setPlanState((current) => {
-        if (!current) return current;
-        const next = { ...updater(current), updatedAt: new Date().toISOString() };
+      const current = latest.current.plan;
+      if (!current) return;
 
-        // Record audit entries the same way desktop does, so the change
-        // history travels with the plan file across platforms.
-        const auditEntries =
-          options?.trackAudit === false
-            ? []
-            : buildAuditEntries({
-                prev: current,
-                next,
-                sourceAction: options?.description ?? 'Update plan data',
-              });
+      const base = { ...updater(current), updatedAt: new Date().toISOString() };
+      if (base === current) return;
 
-        const updated =
-          auditEntries.length > 0
-            ? {
-                ...next,
-                metadata: {
-                  auditHistory: [...(next.metadata?.auditHistory ?? []), ...auditEntries],
-                },
-              }
-            : next;
+      const tracked = options?.trackAudit !== false;
+      const auditEntries = tracked
+        ? buildAuditEntries({
+            prev: current,
+            next: base,
+            sourceAction: options?.description ?? 'Update plan data',
+          })
+        : [];
 
-        latest.current = { ...latest.current, plan: updated };
-        return updated;
-      });
-      scheduleSave();
+      const updated =
+        auditEntries.length > 0
+          ? {
+              ...base,
+              metadata: {
+                auditHistory: [...(base.metadata?.auditHistory ?? []), ...auditEntries],
+              },
+            }
+          : base;
+
+      // Only record undo history for meaningful (audited) changes — not
+      // ephemeral display state like the view-mode toggle.
+      if (tracked) {
+        setPast((p) => [...p, current].slice(-HISTORY_LIMIT));
+        setFuture([]);
+        seqRef.current += 1;
+        setLastChange({ label: options?.description ?? 'Change', seq: seqRef.current });
+      }
+
+      applyPlan(updated);
     },
-    [scheduleSave],
+    [applyPlan],
   );
+
+  const undo = useCallback(() => {
+    const current = latest.current.plan;
+    if (!current || past.length === 0) return;
+    const previous = past[past.length - 1];
+    setPast((p) => p.slice(0, -1));
+    setFuture((f) => [...f, current].slice(-HISTORY_LIMIT));
+    applyPlan(previous);
+  }, [past, applyPlan]);
+
+  const redo = useCallback(() => {
+    const current = latest.current.plan;
+    if (!current || future.length === 0) return;
+    const next = future[future.length - 1];
+    setFuture((f) => f.slice(0, -1));
+    setPast((p) => [...p, current].slice(-HISTORY_LIMIT));
+    applyPlan(next);
+  }, [future, applyPlan]);
 
   const closePlan = useCallback(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    latest.current = { plan: null, path: null, key: null };
     setPlanState(null);
     setSourcePath(null);
     setEncryptionKey(null);
     setSaveState('idle');
     setSaveError(null);
+    setPast([]);
+    setFuture([]);
+    setLastChange(null);
   }, []);
 
   return (
@@ -149,8 +203,13 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         encryptionKey,
         saveState,
         saveError,
+        canUndo: past.length > 0,
+        canRedo: future.length > 0,
+        lastChange,
         setPlan,
         updatePlan,
+        undo,
+        redo,
         closePlan,
       }}
     >

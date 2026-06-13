@@ -173,8 +173,8 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         id: `pretax-${deduction.id}`,
         title: deduction.name,
         subtitle: 'Pre-tax deduction',
-        typeLabel: 'Pre-Tax Deduction',
-        target: { kind: 'screen', pathname: '/pay-settings' },
+        typeLabel: 'Deduction',
+        target: { kind: 'tab', pathname: '/(tabs)/money', section: 'bills', highlight: deduction.id },
       });
     }
   }

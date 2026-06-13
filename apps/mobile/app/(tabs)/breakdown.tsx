@@ -46,7 +46,7 @@ export default function BreakdownScreen() {
   return (
     <PlanTabScreen title="Breakdown" subtitle={plan.name}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 96 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ marginBottom: spacing.md }}>
@@ -54,12 +54,7 @@ export default function BreakdownScreen() {
         </View>
 
         {/* Gross to taxable */}
-        <SectionCard
-          title={`Earnings · ${modeLabel}`}
-          actionLabel="Edit"
-          actionIcon="edit-2"
-          onAction={() => router.push('/pay-settings')}
-        >
+        <SectionCard title={`Earnings · ${modeLabel}`}>
           <MetricRow label="Gross Pay" value={fmt(display(grossPay))} />
 
           {plan.preTaxDeductions.map((d) => (

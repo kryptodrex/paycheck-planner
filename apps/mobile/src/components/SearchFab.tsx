@@ -24,7 +24,9 @@ export function SearchFab() {
         {
           backgroundColor: colors.accentPrimary,
           shadowColor: '#000',
-          bottom: insets.bottom + 16,
+          // Clear the native tab bar, which floats above the home-indicator
+          // inset and isn't reflected in insets.bottom.
+          bottom: insets.bottom + 84,
         },
       ]}
     >

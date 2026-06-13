@@ -10,6 +10,7 @@ import {
   LOAN_TYPE_LABELS,
   type Benefit,
   type Bill,
+  type Deduction,
   type Loan,
   type OtherIncome,
   type RetirementElection,
@@ -25,6 +26,7 @@ import { ItemCard } from '../../src/components/ItemCard';
 import { EmptyState } from '../../src/components/EmptyState';
 import { BillFormSheet } from '../../src/features/money/BillFormSheet';
 import { BenefitFormSheet } from '../../src/features/money/BenefitFormSheet';
+import { DeductionFormSheet } from '../../src/features/pay/DeductionFormSheet';
 import { LoanFormSheet } from '../../src/features/money/LoanFormSheet';
 import { SavingsFormSheet } from '../../src/features/money/SavingsFormSheet';
 import { RetirementFormSheet } from '../../src/features/money/RetirementFormSheet';
@@ -44,6 +46,7 @@ const SECTION_OPTIONS: { value: MoneySection; label: string }[] = [
 type ActiveSheet =
   | { kind: 'bill'; item: Bill | null }
   | { kind: 'benefit'; item: Benefit | null }
+  | { kind: 'pretax-deduction'; item: Deduction | null }
   | { kind: 'loan'; item: Loan | null }
   | { kind: 'savings'; item: SavingsContribution | null }
   | { kind: 'retirement'; item: RetirementElection | null }
@@ -96,11 +99,57 @@ export default function MoneyScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 96 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
       >
         {section === 'bills' && (
           <>
+            {/* Deductions (pre-tax + post-tax) — above Bills, mirroring desktop */}
+            <SectionCard
+              title="Deductions"
+              actionLabel="Add"
+              onAction={() => setSheet({ kind: 'benefit', item: null })}
+            >
+              {plan.preTaxDeductions.length === 0 && plan.benefits.length === 0 ? (
+                <EmptyState
+                  icon="minus-circle"
+                  title="No deductions"
+                  message="Track pre-tax (401k, HSA, insurance) and post-tax deductions taken from your pay."
+                />
+              ) : (
+                <>
+                  {plan.preTaxDeductions.map((deduction) => (
+                    <ItemCard
+                      key={deduction.id}
+                      highlighted={highlightId === deduction.id}
+                      title={deduction.name}
+                      subtitle="Pre-tax"
+                      amount={deduction.isPercentage ? `${deduction.amount}%` : fmt(deduction.amount)}
+                      amountCaption={deduction.isPercentage ? 'of gross' : 'per check'}
+                      onPress={() => setSheet({ kind: 'pretax-deduction', item: deduction })}
+                    />
+                  ))}
+                  {plan.benefits.map((benefit) => (
+                    <ItemCard
+                      key={benefit.id}
+                      highlighted={highlightId === benefit.id}
+                      title={benefit.name}
+                      subtitle={benefit.isTaxable ? 'Post-tax' : 'Pre-tax'}
+                      amount={benefit.isPercentage ? `${benefit.amount}%` : fmt(benefit.amount)}
+                      amountCaption={benefit.isPercentage ? 'of gross' : 'per check'}
+                      enabled={benefit.enabled !== false}
+                      onToggle={(enabled) =>
+                        updatePlan((p) => ({ ...p, benefits: setEnabledById(p.benefits, benefit.id, enabled) }), {
+                          description: enabled ? 'Enable deduction' : 'Pause deduction',
+                        })
+                      }
+                      onPress={() => setSheet({ kind: 'benefit', item: benefit })}
+                    />
+                  ))}
+                </>
+              )}
+            </SectionCard>
+
             <SectionCard
               title="Bills"
               actionLabel="Add"
@@ -124,34 +173,6 @@ export default function MoneyScreen() {
                       })
                     }
                     onPress={() => setSheet({ kind: 'bill', item: bill })}
-                  />
-                ))
-              )}
-            </SectionCard>
-
-            <SectionCard
-              title="Benefits & Deductions"
-              actionLabel="Add"
-              onAction={() => setSheet({ kind: 'benefit', item: null })}
-            >
-              {plan.benefits.length === 0 ? (
-                <EmptyState icon="shield" title="No deductions" message="Track health insurance and other paycheck deductions." />
-              ) : (
-                plan.benefits.map((benefit) => (
-                  <ItemCard
-                    key={benefit.id}
-                    highlighted={highlightId === benefit.id}
-                    title={benefit.name}
-                    subtitle={benefit.isTaxable ? 'Post-tax' : 'Pre-tax'}
-                    amount={benefit.isPercentage ? `${benefit.amount}%` : fmt(benefit.amount)}
-                    amountCaption={benefit.isPercentage ? 'of gross' : 'per check'}
-                    enabled={benefit.enabled !== false}
-                    onToggle={(enabled) =>
-                      updatePlan((p) => ({ ...p, benefits: setEnabledById(p.benefits, benefit.id, enabled) }), {
-                        description: enabled ? 'Enable deduction' : 'Pause deduction',
-                      })
-                    }
-                    onPress={() => setSheet({ kind: 'benefit', item: benefit })}
                   />
                 ))
               )}
@@ -321,6 +342,22 @@ export default function MoneyScreen() {
           }
           onDelete={(id) =>
             updatePlan((p) => ({ ...p, benefits: removeById(p.benefits, id) }), { description: 'Delete deduction' })
+          }
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {sheet?.kind === 'pretax-deduction' && (
+        <DeductionFormSheet
+          deduction={sheet.item}
+          onSave={(deduction) =>
+            updatePlan((p) => ({ ...p, preTaxDeductions: upsertById(p.preTaxDeductions, deduction) }), {
+              description: sheet.item ? 'Edit deduction' : 'Add deduction',
+            })
+          }
+          onDelete={(id) =>
+            updatePlan((p) => ({ ...p, preTaxDeductions: removeById(p.preTaxDeductions, id) }), {
+              description: 'Delete deduction',
+            })
           }
           onClose={() => setSheet(null)}
         />

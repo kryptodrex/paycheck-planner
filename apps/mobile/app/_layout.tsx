@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import { PlanProvider } from '../src/contexts/PlanContext';
+import { ShakeUndoHandler } from '../src/components/ShakeUndoHandler';
 
 function RootStack() {
   const { colors } = useTheme();
@@ -20,7 +21,9 @@ function RootStack() {
           contentStyle: { backgroundColor: colors.bgPrimary },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        {/* animationTypeForReplace: 'pop' so returning to the welcome screen
+            (when closing a plan via replace) slides in from the left. */}
+        <Stack.Screen name="index" options={{ headerShown: false, animationTypeForReplace: 'pop' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="search" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
@@ -35,6 +38,7 @@ export default function RootLayout() {
       <ThemeProvider>
         <PlanProvider>
           <RootStack />
+          <ShakeUndoHandler />
         </PlanProvider>
       </ThemeProvider>
     </SafeAreaProvider>

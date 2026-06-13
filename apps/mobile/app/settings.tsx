@@ -8,6 +8,7 @@ import { usePlan } from '../src/contexts/PlanContext';
 import { useTheme, type ThemeMode } from '../src/contexts/ThemeContext';
 import { APPEARANCE_PRESET_OPTIONS, resolveColors } from '../src/theme/tokens';
 import { deletePlanKey } from '../src/storage/keychainAdapter';
+import { createShareableCopy } from '../src/storage/planFileAdapter';
 import { ThemedView } from '../src/components/ThemedView';
 import { ThemedText } from '../src/components/ThemedText';
 import { MetricRow } from '../src/components/MetricRow';
@@ -22,16 +23,20 @@ const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { plan, sourcePath, encryptionKey, saveState, saveError, closePlan } = usePlan();
+  const { plan, sourcePath, encryptionKey, saveState, saveError, canUndo, canRedo, undo, redo } =
+    usePlan();
   const { colors, spacing, radius, isDark, mode, preset, setMode, setPreset } = useTheme();
   const [sharing, setSharing] = useState(false);
 
   async function sharePlanFile() {
-    if (!sourcePath) return;
+    if (!sourcePath || !plan) return;
     setSharing(true);
     try {
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(sourcePath, {
+        // Share a copy named after the plan (e.g. "2026 Plan.budget") rather
+        // than the internal UUID file, matching the desktop's saved filenames.
+        const shareUri = await createShareableCopy(sourcePath, plan);
+        await Sharing.shareAsync(shareUri, {
           mimeType: 'application/json',
           dialogTitle: 'Export or back up budget plan',
           UTI: 'public.json',
@@ -164,12 +169,26 @@ export default function SettingsScreen() {
               {saveLabel}
             </ThemedText>
 
-            <Button
-              title="Edit Pay Settings"
-              variant="secondary"
-              onPress={() => router.push('/pay-settings')}
-              style={{ marginBottom: spacing.sm }}
-            />
+            <View style={[styles.undoRow, { marginBottom: spacing.sm }]}>
+              <Button
+                title="Undo"
+                variant="secondary"
+                onPress={undo}
+                disabled={!canUndo}
+                style={styles.undoButton}
+              />
+              <Button
+                title="Redo"
+                variant="secondary"
+                onPress={redo}
+                disabled={!canRedo}
+                style={styles.undoButton}
+              />
+            </View>
+            <ThemedText variant="tertiary" size="xs" style={{ marginBottom: spacing.md }}>
+              Tip: shake your device to undo or redo the last change.
+            </ThemedText>
+
             <Button
               title="View Change History"
               variant="secondary"
@@ -203,14 +222,10 @@ export default function SettingsScreen() {
                 style={{ marginBottom: spacing.sm }}
               />
             )}
-            <Button
-              title="Close Plan"
-              variant="danger"
-              onPress={() => {
-                closePlan();
-                router.replace('/');
-              }}
-            />
+            <ThemedText variant="tertiary" size="xs">
+              Close this plan with the “‹ Close” button in the top-left to return to the welcome
+              screen.
+            </ThemedText>
           </SectionCard>
         )}
 
@@ -233,4 +248,6 @@ const styles = StyleSheet.create({
   presetRow: { flexDirection: 'row', alignItems: 'center' },
   presetSwatches: { flexDirection: 'row', alignItems: 'center' },
   presetSwatch: { width: 26, height: 26, borderRadius: 13 },
+  undoRow: { flexDirection: 'row', gap: 8 },
+  undoButton: { flex: 1 },
 });

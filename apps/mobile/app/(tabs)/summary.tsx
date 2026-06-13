@@ -38,7 +38,7 @@ export default function SummaryScreen() {
   return (
     <PlanTabScreen title={plan.name} subtitle={`${plan.year} Plan`}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 96 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 150 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ marginBottom: spacing.md }}>

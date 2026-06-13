@@ -41,12 +41,15 @@ export function AppHeader({ title, subtitle }: Props) {
     >
       <TouchableOpacity
         onPress={handleClose}
-        style={styles.sideButton}
+        style={styles.closeButton}
         hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel="Close plan and return to welcome screen"
       >
-        <Feather name="chevron-left" size={28} color={colors.accentPrimary} />
+        <Feather name="chevron-left" size={26} color={colors.accentPrimary} />
+        <ThemedText variant="accent" size="md" weight="semibold">
+          Close
+        </ThemedText>
       </TouchableOpacity>
 
       <View style={styles.titleWrap}>
@@ -90,6 +93,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  closeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    paddingRight: 6,
   },
   titleWrap: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
 });
