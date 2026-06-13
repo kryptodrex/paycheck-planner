@@ -1,0 +1,157 @@
+diff --git a/lib/module/Header/Header.js b/lib/module/Header/Header.js
+index db271704fb3a3a6bdf6f431fcc246c80866d1870..81057fdfd0164100c09b24aa12f1a69a336146ca 100644
+--- a/lib/module/Header/Header.js
++++ b/lib/module/Header/Header.js
+@@ -244,17 +244,18 @@ export function Header(props) {
+     ...props
+   }) : customTitle;
+   return /*#__PURE__*/_jsxs(Animated.View, {
+-    pointerEvents: "box-none",
+     style: [{
+       height,
+       minHeight,
+       maxHeight,
+       opacity,
+-      transform
++      transform,
++      pointerEvents: 'box-none'
+     }],
+     children: [/*#__PURE__*/_jsx(Animated.View, {
+-      pointerEvents: "box-none",
+-      style: [StyleSheet.absoluteFill, backgroundContainerStyle],
++      style: [StyleSheet.absoluteFill, backgroundContainerStyle, {
++        pointerEvents: 'box-none'
++      }],
+       children: headerBackground ? headerBackground({
+         style: backgroundStyle
+       }) : /*#__PURE__*/_jsx(HeaderBackground, {
+@@ -264,22 +265,22 @@ export function Header(props) {
+         style: backgroundStyle
+       })
+     }), /*#__PURE__*/_jsx(View, {
+-      pointerEvents: "none",
+       style: {
+-        height: headerStatusBarHeight
++        height: headerStatusBarHeight,
++        pointerEvents: 'none'
+       }
+     }), /*#__PURE__*/_jsxs(View, {
+-      pointerEvents: "box-none",
+-      style: [styles.content, Platform.OS === 'ios' && frame.width >= IPAD_MINI_MEDIUM_WIDTH ? styles.large : null],
++      style: [styles.content, Platform.OS === 'ios' && frame.width >= IPAD_MINI_MEDIUM_WIDTH ? styles.large : null, {
++        pointerEvents: 'box-none'
++      }],
+       children: [/*#__PURE__*/_jsx(Animated.View, {
+-        pointerEvents: "box-none",
+         style: [styles.start, !searchBarVisible && headerTitleAlign === 'center' && styles.expand, {
+-          marginStart: insets.left
++          marginStart: insets.left,
++          pointerEvents: 'box-none'
+         }, leftContainerStyle],
+         children: leftButton
+       }), Platform.OS === 'ios' || !searchBarVisible ? /*#__PURE__*/_jsxs(_Fragment, {
+         children: [/*#__PURE__*/_jsx(Animated.View, {
+-          pointerEvents: "box-none",
+           style: [styles.title, {
+             // Avoid the title from going offscreen or overlapping buttons
+             maxWidth: headerTitleAlign === 'center' ? layout.width - ((leftButton ? headerBackButtonDisplayMode !== 'minimal' ? 80 : 32 : 16) + (rightButton || headerSearchBarOptions ? 16 : 0) + Math.max(insets.left, insets.right)) * 2 : layout.width - ((leftButton ? 52 : 16) + (rightButton || headerSearchBarOptions ? 52 : 16) + insets.left - insets.right)
+@@ -287,7 +288,9 @@ export function Header(props) {
+             marginStart: 4
+           } : {
+             marginHorizontal: 16
+-          }, titleContainerStyle],
++          }, titleContainerStyle, {
++            pointerEvents: 'box-none'
++          }],
+           children: headerTitle({
+             children: title,
+             allowFontScaling: titleAllowFontScaling,
+@@ -296,9 +299,9 @@ export function Header(props) {
+             style: titleStyle
+           })
+         }), /*#__PURE__*/_jsxs(Animated.View, {
+-          pointerEvents: "box-none",
+           style: [styles.end, styles.expand, {
+-            marginEnd: insets.right
++            marginEnd: insets.right,
++            pointerEvents: 'box-none'
+           }, rightContainerStyle],
+           children: [rightButton, headerSearchBarOptions ? /*#__PURE__*/_jsx(HeaderButton, {
+             tintColor: iconTintColor,
+diff --git a/lib/module/Header/HeaderBackground.js b/lib/module/Header/HeaderBackground.js
+index 8d5aa8689df4720f5f03189f21d5d4fe2e241a24..09c8a49b14226e7e6514aa1276f885b74602dc50 100644
+--- a/lib/module/Header/HeaderBackground.js
++++ b/lib/module/Header/HeaderBackground.js
+@@ -6,6 +6,7 @@ import { Animated, Platform, StyleSheet } from 'react-native';
+ import { jsx as _jsx } from "react/jsx-runtime";
+ export function HeaderBackground({
+   style,
++  pointerEvents,
+   ...rest
+ }) {
+   const {
+@@ -19,7 +20,9 @@ export function HeaderBackground({
+       ...(Platform.OS === 'ios' && {
+         shadowColor: dark ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 1)'
+       })
+-    }, style],
++    }, style, pointerEvents != null ? {
++      pointerEvents
++    } : null],
+     ...rest
+   });
+ }
+diff --git a/lib/module/ResourceSavingView.js b/lib/module/ResourceSavingView.js
+index eb063aba2c7e55e0fa276ec4a95bdcd1ebd5ce03..e54af40c06cb9b672819e19d5504a188a1164bf8 100644
+--- a/lib/module/ResourceSavingView.js
++++ b/lib/module/ResourceSavingView.js
+@@ -18,25 +18,26 @@ export function ResourceSavingView({
+       hidden: !visible,
+       style: [{
+         display: visible ? 'flex' : 'none'
+-      }, styles.container, style],
+-      pointerEvents: visible ? 'auto' : 'none',
++      }, styles.container, style, {
++        pointerEvents: visible ? 'auto' : 'none'
++      }],
+       ...rest,
+       children: children
+     });
+   }
+   return /*#__PURE__*/_jsx(View, {
+-    style: [styles.container, style]
+-    // box-none doesn't seem to work properly on Android
+-    ,
+-    pointerEvents: visible ? 'auto' : 'none',
++    style: [styles.container, style, {
++      pointerEvents: visible ? 'auto' : 'none'
++    }],
+     children: /*#__PURE__*/_jsx(View, {
+       collapsable: false,
+       removeClippedSubviews:
+       // On iOS & macOS, set removeClippedSubviews to true only when not focused
+       // This is an workaround for a bug where the clipped view never re-appears
+       Platform.OS === 'ios' || Platform.OS === 'macos' ? !visible : true,
+-      pointerEvents: visible ? 'auto' : 'none',
+-      style: visible ? styles.attached : styles.detached,
++      style: [visible ? styles.attached : styles.detached, {
++        pointerEvents: visible ? 'auto' : 'none'
++      }],
+       children: children
+     })
+   });
+diff --git a/lib/module/Screen.js b/lib/module/Screen.js
+index e4ff1748799cfd5e6f52ec7a593d522be0164916..fd2ac2888da1cd0ae022342e2950294dd30511b7 100644
+--- a/lib/module/Screen.js
++++ b/lib/module/Screen.js
+@@ -52,7 +52,9 @@ export function Screen(props) {
+         }] : null],
+         children: /*#__PURE__*/_jsx(View, {
+           ref: headerRef,
+-          pointerEvents: "box-none",
++          style: {
++            pointerEvents: 'box-none'
++          },
+           onLayout: e => {
+             const {
+               height

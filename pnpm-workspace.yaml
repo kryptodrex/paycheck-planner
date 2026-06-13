@@ -2,9 +2,14 @@ packages:
   - .
   - apps/*
   - packages/*
+nodeLinker: hoisted
 allowBuilds:
   core-js: true
   electron: true
   electron-winstaller: true
   esbuild: true
   keytar: true
+patchedDependencies:
+  '@react-navigation/bottom-tabs@7.16.2': patches/@react-navigation__bottom-tabs@7.16.2.patch
+  '@react-navigation/elements@2.9.19': patches/@react-navigation__elements@2.9.19.patch
+  react-native-screens@4.16.0: patches/react-native-screens@4.16.0.patch

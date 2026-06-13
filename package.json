@@ -4,13 +4,15 @@
   "version": "0.5.0",
   "description": "Monorepo workspace for Paycheck Planner apps and packages.",
   "type": "module",
-  "packageManager": "pnpm@11.5.2",
+  "packageManager": "pnpm@11.6.0",
   "engines": {
     "node": ">=22 <26",
     "pnpm": ">=10 <12"
   },
   "scripts": {
     "dev": "pnpm --config.verifyDepsBeforeRun=false --config.minimumReleaseAge=0 turbo run dev --filter=@paycheck-planner/desktop --filter @paycheck-planner/mobile --filter=@paycheck-planner/api",
+    "dev:mobile": "pnpm turbo run dev --filter @paycheck-planner/mobile --filter=@paycheck-planner/api",
+    "dev:desktop": "pnpm turbo run dev --filter=@paycheck-planner/api --filter=@paycheck-planner/desktop",
     "dev:api": "cd apps/api && npm run dev",
     "dev:inspector": "pnpm --config.verifyDepsBeforeRun=false --config.minimumReleaseAge=0 --filter @paycheck-planner/desktop run dev:inspector",
     "build": "pnpm --config.minimumReleaseAge=0 turbo run build --filter=@paycheck-planner/desktop",
@@ -39,8 +41,6 @@
     "ws:typecheck": "pnpm --config.minimumReleaseAge=0 turbo run typecheck",
     "ws:test:run": "pnpm --config.minimumReleaseAge=0 turbo run test:run",
     "ws:release-checks": "pnpm --config.minimumReleaseAge=0 turbo run release-checks",
-    "dev:mobile": "pnpm turbo run dev --filter @paycheck-planner/mobile --filter=@paycheck-planner/api",
-    "dev:desktop": "pnpm --config.verifyDepsBeforeRun=false --config.minimumReleaseAge=0 --filter @paycheck-planner/desktop run dev",
     "build:desktop": "pnpm --config.minimumReleaseAge=0 turbo run build --filter=@paycheck-planner/desktop",
     "lint:desktop": "pnpm --config.minimumReleaseAge=0 turbo run lint --filter=@paycheck-planner/desktop",
     "typecheck:desktop": "pnpm --config.minimumReleaseAge=0 turbo run typecheck --filter=@paycheck-planner/desktop",

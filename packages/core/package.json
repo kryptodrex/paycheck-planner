@@ -40,6 +40,10 @@
       "types": "./src/assertNever.ts",
       "import": "./src/assertNever.ts"
     },
+    "./id": {
+      "types": "./src/id.ts",
+      "import": "./src/id.ts"
+    },
     "./audit": {
       "types": "./src/audit.ts",
       "import": "./src/audit.ts"
@@ -123,6 +127,18 @@
     "./demo-data": {
       "types": "./src/demoData.ts",
       "import": "./src/demoData.ts"
+    },
+    "./reallocation-source-types": {
+      "types": "./src/reallocationSourceTypes.ts",
+      "import": "./src/reallocationSourceTypes.ts"
+    },
+    "./reallocation-planner": {
+      "types": "./src/reallocationPlanner.ts",
+      "import": "./src/reallocationPlanner.ts"
+    },
+    "./audit-history": {
+      "types": "./src/auditHistory.ts",
+      "import": "./src/auditHistory.ts"
     }
   },
   "scripts": {
