@@ -1,0 +1,75 @@
+name: API
+
+# Build/validate pipeline for apps/api. Runs lint/typecheck/tests via Turbo and
+# validates the production Docker image builds against the full monorepo context
+# (matching fly.toml's build context). Deploy is intentionally NOT wired here —
+# add the flyctl step once FLY_API_TOKEN is configured (see commented block).
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/core/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'fly.toml'
+      - 'fly.dev.toml'
+      - '.github/workflows/api.yml'
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/core/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'fly.toml'
+      - 'fly.dev.toml'
+      - '.github/workflows/api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint, typecheck, test, build (api + deps)
+        run: pnpm turbo run lint typecheck test:run build --filter=@paycheck-planner/api
+
+      - name: Validate production Docker image builds
+        run: docker build -f apps/api/Dockerfile -t paycheck-planner-api:ci .
+
+      # Deploy step (disabled until FLY_API_TOKEN is configured):
+      #
+      # - name: Setup flyctl
+      #   uses: superfly/flyctl-actions/setup-flyctl@master
+      # - name: Deploy to Fly.io
+      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   run: flyctl deploy --remote-only
+      #   env:
+      #     FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

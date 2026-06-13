@@ -1,0 +1,106 @@
+name: Mobile
+
+# Mobile pipeline for apps/mobile.
+# - PRs/pushes: quality gate (lint/typecheck/tests) via Turbo — no account needed.
+# - Manual dispatch: EAS Build for real iOS/Android binaries on Expo's servers.
+#
+# One-time setup required before EAS builds work:
+#   1. `cd apps/mobile && eas init`  (sets expo.owner + extra.eas.projectId in app.json)
+#   2. Add an EXPO_TOKEN repo secret (Expo account → Access Tokens).
+# See https://docs.expo.dev/build/setup/ and expo/expo-github-action.
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/core/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/mobile.yml'
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/core/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build
+        type: choice
+        default: all
+        options: [all, ios, android]
+      profile:
+        description: EAS build profile
+        type: choice
+        default: preview
+        options: [preview, production, development]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint, typecheck, test (mobile + deps)
+        run: pnpm turbo run lint typecheck test:run --filter=@paycheck-planner/mobile
+
+  eas-build:
+    # Only runs on manual dispatch; requires EXPO_TOKEN secret + `eas init`.
+    if: github.event_name == 'workflow_dispatch'
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build on EAS
+        working-directory: apps/mobile
+        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait

@@ -1,0 +1,77 @@
+name: CI
+
+# Monorepo CI. Runs lint, typecheck, tests, and build via Turborepo.
+# - On PRs: only affected projects (changed packages/apps + their dependents).
+# - On push to develop/main: full-workspace validation (release-branch fallback).
+# The core package's eslint config enforces import boundaries (no React/Electron/
+# browser globals), so the lint task doubles as the cross-package boundary check.
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      # Local Turbo filesystem cache, persisted across runs via actions/cache.
+      TURBO_CACHE_DIR: .turbo/cache
+      # Base for `turbo --affected` change detection on pull requests.
+      TURBO_SCM_BASE: origin/${{ github.base_ref }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so Turbo can diff against the base branch for --affected.
+          fetch-depth: 0
+
+      - name: Fetch base branch (for affected detection)
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags origin ${{ github.base_ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Select scope
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Running affected projects only (base: ${{ github.base_ref }})"
+            echo "args=--affected" >> "$GITHUB_OUTPUT"
+          else
+            echo "Running full-workspace validation (release branch)"
+            echo "args=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint, typecheck, test, build
+        run: pnpm turbo run lint typecheck test:run build ${{ steps.scope.outputs.args }}

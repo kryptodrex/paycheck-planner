@@ -5,19 +5,16 @@ on:
   push:
     branches:
       - develop
-    paths-ignore:
-      - '.github/workflows/**'
-      - '/*.md'
-      - '**/*.md'
-      - '*.md'
-      - '/*.MD'
-      - '**/*.MD'
-      - '.gitignore'
-      - 'release/**'
-      - 'dist/**'
-      - 'dist-electron/**'
-      - 'coverage/**'
-      - 'app_updates/**'
+    # Only the desktop installer's own surface area triggers a desktop prerelease,
+    # so API- or mobile-only changes don't block this release path.
+    paths:
+      - 'apps/desktop/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'patches/**'
+      - 'scripts/**'
+      - '.github/workflows/pre-release.yml'
 
 permissions:
   contents: write
@@ -40,17 +37,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version-file: .nvmrc
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Sync version from file
-        run: npm run sync-version
+        run: pnpm run sync-version
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -60,7 +60,7 @@ jobs:
 
       - name: Build Electron app for macOS (signed + notarized)
         if: matrix.os == 'macos-latest'
-        run: npm run build:${{ matrix.target }} -- --publish never
+        run: pnpm --filter @paycheck-planner/desktop run build:${{ matrix.target }} -- --publish never
         env:
           CSC_FOR_PULL_REQUEST: true
           CSC_IDENTITY_AUTO_DISCOVERY: true
@@ -79,7 +79,7 @@ jobs:
 
       - name: Build Electron app for ${{ matrix.target }}
         if: matrix.os != 'macos-latest'
-        run: npm run build:${{ matrix.target }} -- --publish never
+        run: pnpm --filter @paycheck-planner/desktop run build:${{ matrix.target }} -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           CURRENCY_CONVERSION_URL: ${{ vars.CURRENCY_CONVERSION_URL }}
