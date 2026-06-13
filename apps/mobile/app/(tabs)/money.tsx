@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { ScrollView, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import {
   convertBillToMonthly,
   formatBillFrequency,
@@ -16,8 +16,9 @@ import {
   type SavingsContribution,
 } from '@paycheck-planner/core';
 import { usePlanScreen } from '../../src/hooks/usePlanScreen';
+import { useHighlightParam } from '../../src/hooks/useHighlightParam';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { ThemedView } from '../../src/components/ThemedView';
+import { PlanTabScreen } from '../../src/components/PlanTabScreen';
 import { SegmentedControl } from '../../src/components/SegmentedControl';
 import { SectionCard } from '../../src/components/SectionCard';
 import { ItemCard } from '../../src/components/ItemCard';
@@ -52,23 +53,32 @@ type ActiveSheet =
 const isMoneySection = (value: unknown): value is MoneySection =>
   SECTION_OPTIONS.some((option) => option.value === value);
 
+const SECTION_ADD_SHEET: Record<MoneySection, ActiveSheet> = {
+  bills: { kind: 'bill', item: null },
+  loans: { kind: 'loan', item: null },
+  savings: { kind: 'savings', item: null },
+  income: { kind: 'other-income', item: null },
+};
+
 export default function MoneyScreen() {
   const helpers = usePlanScreen();
   const { spacing } = useTheme();
-  const params = useLocalSearchParams<{ section?: string }>();
+  const params = useLocalSearchParams<{ section?: string; highlight?: string; action?: string }>();
   const [section, setSection] = useState<MoneySection>(
     isMoneySection(params.section) ? params.section : 'bills',
   );
   const [sheet, setSheet] = useState<ActiveSheet>(null);
+  const highlightId = useHighlightParam(params.highlight);
 
-  // Honor section deep-links (e.g. from search) when the param changes after
+  // Honor section / "add" deep-links (e.g. from search) when params change after
   // mount — state is adjusted during render instead of in an effect.
-  const [appliedSectionParam, setAppliedSectionParam] = useState(params.section);
-  if (params.section !== appliedSectionParam) {
-    setAppliedSectionParam(params.section);
-    if (isMoneySection(params.section)) {
-      setSection(params.section);
-    }
+  const navKey = `${params.section ?? ''}|${params.action ?? ''}`;
+  const [appliedNavKey, setAppliedNavKey] = useState(navKey);
+  if (navKey !== appliedNavKey) {
+    setAppliedNavKey(navKey);
+    const nextSection = isMoneySection(params.section) ? params.section : section;
+    if (isMoneySection(params.section)) setSection(params.section);
+    if (params.action === 'add') setSheet(SECTION_ADD_SHEET[nextSection]);
   }
 
   if (!helpers) return null;
@@ -80,15 +90,13 @@ export default function MoneyScreen() {
     OTHER_INCOME_TYPE_OPTIONS.find((o) => o.value === income.incomeType)?.label ?? 'Other';
 
   return (
-    <ThemedView style={styles.screen}>
-      <Stack.Screen options={{ title: 'Money' }} />
-
+    <PlanTabScreen title="Money" subtitle={plan.name}>
       <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md }}>
         <SegmentedControl options={SECTION_OPTIONS} value={section} onChange={setSection} />
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 48 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 96 }}
         showsVerticalScrollIndicator={false}
       >
         {section === 'bills' && (
@@ -104,6 +112,7 @@ export default function MoneyScreen() {
                 plan.bills.map((bill) => (
                   <ItemCard
                     key={bill.id}
+                    highlighted={highlightId === bill.id}
                     title={bill.name}
                     subtitle={`${getAccountNameById(accounts, bill.accountId)}${bill.discretionary ? ' · Discretionary' : ''}`}
                     amount={fmt(bill.amount)}
@@ -131,6 +140,7 @@ export default function MoneyScreen() {
                 plan.benefits.map((benefit) => (
                   <ItemCard
                     key={benefit.id}
+                    highlighted={highlightId === benefit.id}
                     title={benefit.name}
                     subtitle={benefit.isTaxable ? 'Post-tax' : 'Pre-tax'}
                     amount={benefit.isPercentage ? `${benefit.amount}%` : fmt(benefit.amount)}
@@ -161,6 +171,7 @@ export default function MoneyScreen() {
               plan.loans.map((loan) => (
                 <ItemCard
                   key={loan.id}
+                  highlighted={highlightId === loan.id}
                   title={loan.name}
                   subtitle={`${LOAN_TYPE_LABELS[loan.type] ?? 'Loan'} · ${getAccountNameById(accounts, loan.accountId)}`}
                   amount={fmt(loan.monthlyPayment)}
@@ -191,6 +202,7 @@ export default function MoneyScreen() {
                 (plan.savingsContributions ?? []).map((item) => (
                   <ItemCard
                     key={item.id}
+                    highlighted={highlightId === item.id}
                     title={item.name}
                     subtitle={`${getAccountNameById(accounts, item.accountId)} · ${fmt(convertBillToMonthly(item.amount, item.frequency))}/mo`}
                     amount={fmt(item.amount)}
@@ -223,6 +235,7 @@ export default function MoneyScreen() {
                 plan.retirement.map((election) => (
                   <ItemCard
                     key={election.id}
+                    highlighted={highlightId === election.id}
                     title={getRetirementLabel(election)}
                     subtitle={`${election.isPreTax === false ? 'Post-tax' : 'Pre-tax'}${election.hasEmployerMatch ? ' · Employer match' : ''}`}
                     amount={
@@ -258,6 +271,7 @@ export default function MoneyScreen() {
               (plan.otherIncome ?? []).map((income) => (
                 <ItemCard
                   key={income.id}
+                  highlighted={highlightId === income.id}
                   title={income.name}
                   subtitle={`${incomeTypeLabel(income)} · ${getOtherIncomeOccurrencesPerYear(income.frequency)}× per year`}
                   amount={
@@ -378,10 +392,6 @@ export default function MoneyScreen() {
           onClose={() => setSheet(null)}
         />
       )}
-    </ThemedView>
+    </PlanTabScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-});

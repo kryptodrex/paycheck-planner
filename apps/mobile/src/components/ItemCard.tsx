@@ -11,6 +11,8 @@ interface Props {
   onToggle?: (enabled: boolean) => void;
   onPress?: () => void;
   badge?: string;
+  /** Emphasize the card briefly, e.g. when navigated to from search. */
+  highlighted?: boolean;
 }
 
 /**
@@ -26,6 +28,7 @@ export function ItemCard({
   onToggle,
   onPress,
   badge,
+  highlighted,
 }: Props) {
   const { colors, spacing, radius } = useTheme();
   const dimmed = enabled === false;
@@ -35,8 +38,9 @@ export function ItemCard({
       style={[
         styles.card,
         {
-          backgroundColor: colors.bgElevated,
-          borderColor: colors.border,
+          backgroundColor: highlighted ? colors.accentPrimary + '22' : colors.bgElevated,
+          borderColor: highlighted ? colors.accentPrimary : colors.border,
+          borderWidth: highlighted ? 1.5 : StyleSheet.hairlineWidth,
           borderRadius: radius.md,
           marginBottom: spacing.sm,
           padding: spacing.md,

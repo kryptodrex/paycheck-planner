@@ -5,19 +5,36 @@ import {
   LOAN_TYPE_LABELS,
   type BudgetData,
 } from '@paycheck-planner/core';
+// Type-only import: keeps the glyph-name type without pulling the native icon
+// module into non-RN contexts (e.g. the vitest/jsdom test runner).
+import type { Feather } from '@expo/vector-icons';
 
-export type SearchDestination =
-  | { route: '/(tabs)/money'; section: 'bills' | 'loans' | 'savings' | 'income' }
-  | { route: '/(tabs)/accounts' }
-  | { route: '/taxes' }
-  | { route: '/pay-settings' };
+export type MoneySection = 'bills' | 'loans' | 'savings' | 'income';
+
+/**
+ * Where a search result navigates. `tab` targets switch a bottom tab (and can
+ * highlight an item or trigger an add sheet); `screen` targets push a stack
+ * screen. Search itself is presented as a modal, so the consumer dismisses it
+ * appropriately per kind.
+ */
+export type SearchTarget =
+  | { kind: 'tab'; pathname: '/(tabs)/money'; section: MoneySection; highlight?: string; action?: 'add' }
+  | { kind: 'tab'; pathname: '/(tabs)/accounts'; highlight?: string; action?: 'add' }
+  | { kind: 'screen'; pathname: '/taxes' | '/pay-settings' | '/reallocation' | '/history' };
 
 export interface PlanSearchResult {
   id: string;
   title: string;
   subtitle: string;
   typeLabel: string;
-  destination: SearchDestination;
+  target: SearchTarget;
+}
+
+export interface QuickAction {
+  id: string;
+  title: string;
+  icon: keyof typeof Feather.glyphMap;
+  target: SearchTarget;
 }
 
 function matches(query: string, ...fields: (string | undefined)[]): boolean {
@@ -25,8 +42,26 @@ function matches(query: string, ...fields: (string | undefined)[]): boolean {
 }
 
 /**
- * Lightweight plan-wide search across every named entity, mirroring the scope
- * of the desktop's plan search overlay. Returns grouped, navigable results.
+ * Common actions surfaced in search before/while typing — the mobile take on
+ * the desktop quick-actions search module.
+ */
+export function getQuickActions(): QuickAction[] {
+  return [
+    { id: 'qa-add-bill', title: 'Add a bill', icon: 'file-text', target: { kind: 'tab', pathname: '/(tabs)/money', section: 'bills', action: 'add' } },
+    { id: 'qa-add-savings', title: 'Add savings', icon: 'trending-up', target: { kind: 'tab', pathname: '/(tabs)/money', section: 'savings', action: 'add' } },
+    { id: 'qa-add-loan', title: 'Add a loan', icon: 'home', target: { kind: 'tab', pathname: '/(tabs)/money', section: 'loans', action: 'add' } },
+    { id: 'qa-add-income', title: 'Add other income', icon: 'gift', target: { kind: 'tab', pathname: '/(tabs)/money', section: 'income', action: 'add' } },
+    { id: 'qa-add-account', title: 'Add an account', icon: 'credit-card', target: { kind: 'tab', pathname: '/(tabs)/accounts', action: 'add' } },
+    { id: 'qa-pay-settings', title: 'Edit pay settings', icon: 'briefcase', target: { kind: 'screen', pathname: '/pay-settings' } },
+    { id: 'qa-taxes', title: 'Edit tax settings', icon: 'percent', target: { kind: 'screen', pathname: '/taxes' } },
+    { id: 'qa-reallocation', title: 'Review reallocation', icon: 'sliders', target: { kind: 'screen', pathname: '/reallocation' } },
+    { id: 'qa-history', title: 'View change history', icon: 'clock', target: { kind: 'screen', pathname: '/history' } },
+  ];
+}
+
+/**
+ * Plan-wide search across every named entity, mirroring the scope of the
+ * desktop search overlay. Also surfaces matching quick actions inline.
  */
 export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult[] {
   const query = rawQuery.trim().toLowerCase();
@@ -42,7 +77,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: bill.name,
         subtitle: `${formatBillFrequency(bill.frequency)} · ${getAccountNameById(accounts, bill.accountId)}`,
         typeLabel: 'Bill',
-        destination: { route: '/(tabs)/money', section: 'bills' },
+        target: { kind: 'tab', pathname: '/(tabs)/money', section: 'bills', highlight: bill.id },
       });
     }
   }
@@ -54,7 +89,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: benefit.name,
         subtitle: benefit.isTaxable ? 'Post-tax deduction' : 'Pre-tax deduction',
         typeLabel: 'Deduction',
-        destination: { route: '/(tabs)/money', section: 'bills' },
+        target: { kind: 'tab', pathname: '/(tabs)/money', section: 'bills', highlight: benefit.id },
       });
     }
   }
@@ -66,7 +101,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: loan.name,
         subtitle: `${LOAN_TYPE_LABELS[loan.type] ?? 'Loan'} · ${getAccountNameById(accounts, loan.accountId)}`,
         typeLabel: 'Loan',
-        destination: { route: '/(tabs)/money', section: 'loans' },
+        target: { kind: 'tab', pathname: '/(tabs)/money', section: 'loans', highlight: loan.id },
       });
     }
   }
@@ -78,7 +113,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: item.name,
         subtitle: `${formatBillFrequency(item.frequency)} · ${getAccountNameById(accounts, item.accountId)}`,
         typeLabel: item.type === 'investment' ? 'Investment' : 'Savings',
-        destination: { route: '/(tabs)/money', section: 'savings' },
+        target: { kind: 'tab', pathname: '/(tabs)/money', section: 'savings', highlight: item.id },
       });
     }
   }
@@ -91,7 +126,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: label,
         subtitle: election.isPreTax === false ? 'Post-tax retirement' : 'Pre-tax retirement',
         typeLabel: 'Retirement',
-        destination: { route: '/(tabs)/money', section: 'savings' },
+        target: { kind: 'tab', pathname: '/(tabs)/money', section: 'savings', highlight: election.id },
       });
     }
   }
@@ -103,7 +138,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: income.name,
         subtitle: formatBillFrequency(income.frequency),
         typeLabel: 'Other Income',
-        destination: { route: '/(tabs)/money', section: 'income' },
+        target: { kind: 'tab', pathname: '/(tabs)/money', section: 'income', highlight: income.id },
       });
     }
   }
@@ -115,7 +150,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: account.name,
         subtitle: account.type.charAt(0).toUpperCase() + account.type.slice(1),
         typeLabel: 'Account',
-        destination: { route: '/(tabs)/accounts' },
+        target: { kind: 'tab', pathname: '/(tabs)/accounts', highlight: account.id },
       });
     }
   }
@@ -127,7 +162,7 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: line.label,
         subtitle: line.calculationType === 'fixed' ? 'Fixed per paycheck' : `${line.rate}% of taxable income`,
         typeLabel: 'Tax Line',
-        destination: { route: '/taxes' },
+        target: { kind: 'screen', pathname: '/taxes' },
       });
     }
   }
@@ -139,38 +174,21 @@ export function searchPlan(plan: BudgetData, rawQuery: string): PlanSearchResult
         title: deduction.name,
         subtitle: 'Pre-tax deduction',
         typeLabel: 'Pre-Tax Deduction',
-        destination: { route: '/pay-settings' },
+        target: { kind: 'screen', pathname: '/pay-settings' },
       });
     }
   }
 
-  // Quick actions, mirroring the desktop quick-actions search module.
-  const quickActions: { keywords: string[]; result: PlanSearchResult }[] = [
-    {
-      keywords: ['pay', 'salary', 'hourly', 'frequency', 'paycheck', 'settings'],
-      result: {
-        id: 'qa-pay-settings',
-        title: 'Pay Settings',
-        subtitle: 'Salary, frequency, and leftover target',
-        typeLabel: 'Quick Action',
-        destination: { route: '/pay-settings' },
-      },
-    },
-    {
-      keywords: ['tax', 'taxes', 'withholding', 'filing'],
-      result: {
-        id: 'qa-taxes',
-        title: 'Tax Settings',
-        subtitle: 'Tax lines, withholding, and filing status',
-        typeLabel: 'Quick Action',
-        destination: { route: '/taxes' },
-      },
-    },
-  ];
-
-  for (const action of quickActions) {
-    if (action.keywords.some((keyword) => keyword.startsWith(query) || query.startsWith(keyword))) {
-      results.push(action.result);
+  // Inline matching quick actions (e.g. typing "tax" surfaces "Edit tax settings").
+  for (const action of getQuickActions()) {
+    if (matches(query, action.title)) {
+      results.push({
+        id: action.id,
+        title: action.title,
+        subtitle: 'Quick action',
+        typeLabel: 'Action',
+        target: action.target,
+      });
     }
   }
 

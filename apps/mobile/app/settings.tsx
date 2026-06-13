@@ -4,16 +4,16 @@ import { router, Stack } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
 import { Feather } from '@expo/vector-icons';
-import { usePlan } from '../../src/contexts/PlanContext';
-import { useTheme, type ThemeMode } from '../../src/contexts/ThemeContext';
-import { APPEARANCE_PRESET_OPTIONS, resolveColors } from '../../src/theme/tokens';
-import { deletePlanKey } from '../../src/storage/keychainAdapter';
-import { ThemedView } from '../../src/components/ThemedView';
-import { ThemedText } from '../../src/components/ThemedText';
-import { MetricRow } from '../../src/components/MetricRow';
-import { SectionCard } from '../../src/components/SectionCard';
-import { SegmentedControl } from '../../src/components/SegmentedControl';
-import { Button } from '../../src/components/Button';
+import { usePlan } from '../src/contexts/PlanContext';
+import { useTheme, type ThemeMode } from '../src/contexts/ThemeContext';
+import { APPEARANCE_PRESET_OPTIONS, resolveColors } from '../src/theme/tokens';
+import { deletePlanKey } from '../src/storage/keychainAdapter';
+import { ThemedView } from '../src/components/ThemedView';
+import { ThemedText } from '../src/components/ThemedText';
+import { MetricRow } from '../src/components/MetricRow';
+import { SectionCard } from '../src/components/SectionCard';
+import { SegmentedControl } from '../src/components/SegmentedControl';
+import { Button } from '../src/components/Button';
 
 const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -33,7 +33,8 @@ export default function SettingsScreen() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(sourcePath, {
           mimeType: 'application/json',
-          dialogTitle: 'Share budget plan file',
+          dialogTitle: 'Export or back up budget plan',
+          UTI: 'public.json',
         });
       }
     } finally {
@@ -176,13 +177,23 @@ export default function SettingsScreen() {
               style={{ marginBottom: spacing.sm }}
             />
             {sourcePath && (
-              <Button
-                title="Share Plan File"
-                variant="secondary"
-                onPress={sharePlanFile}
-                loading={sharing}
-                style={{ marginBottom: spacing.sm }}
-              />
+              <>
+                <Button
+                  title="Export / Back Up Plan…"
+                  variant="secondary"
+                  onPress={sharePlanFile}
+                  loading={sharing}
+                  style={{ marginBottom: spacing.xs }}
+                />
+                <ThemedText
+                  variant="tertiary"
+                  size="xs"
+                  style={{ marginBottom: spacing.sm }}
+                >
+                  Saved on this device automatically. Export to save a copy to Files, iCloud, or
+                  the desktop app.
+                </ThemedText>
+              </>
             )}
             {encryptionKey && (
               <Button

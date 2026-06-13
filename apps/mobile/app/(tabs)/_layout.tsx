@@ -1,64 +1,36 @@
-import { Tabs } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '../../src/contexts/ThemeContext';
 
+/**
+ * Native bottom tabs — UITabBar on iOS (the system liquid-glass bar) and the
+ * native bottom navigation bar on Android. Settings is intentionally not a tab;
+ * it's reached from the gear in each screen's header.
+ */
 export default function TabLayout() {
   const { colors } = useTheme();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.accentPrimary,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarStyle: {
-          backgroundColor: colors.bgElevated,
-          borderTopColor: colors.border,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-        },
-        headerStyle: { backgroundColor: colors.bgPrimary },
-        headerTintColor: colors.textPrimary,
-        headerTitleStyle: { fontWeight: '600' },
-        sceneStyle: { backgroundColor: colors.bgPrimary },
-      }}
-    >
-      <Tabs.Screen
-        name="summary"
-        options={{
-          title: 'Summary',
-          tabBarIcon: ({ color, size }) => <Feather name="bar-chart-2" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="breakdown"
-        options={{
-          title: 'Breakdown',
-          tabBarIcon: ({ color, size }) => <Feather name="list" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="money"
-        options={{
-          title: 'Money',
-          tabBarIcon: ({ color, size }) => <Feather name="dollar-sign" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="accounts"
-        options={{
-          title: 'Accounts',
-          tabBarIcon: ({ color, size }) => <Feather name="credit-card" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Feather name="settings" size={size} color={color} />,
-        }}
-      />
-    </Tabs>
+    <NativeTabs tintColor={colors.accentPrimary} indicatorColor={colors.accentPrimary + '33'}>
+      <NativeTabs.Trigger name="summary">
+        <Label>Overview</Label>
+        <Icon sf="chart.bar.fill" androidSrc={<VectorIcon family={MaterialIcons} name="dashboard" />} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="breakdown">
+        <Label>Breakdown</Label>
+        <Icon sf="list.bullet.rectangle.fill" androidSrc={<VectorIcon family={MaterialIcons} name="list-alt" />} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="money">
+        <Label>Money</Label>
+        <Icon sf="dollarsign.circle.fill" androidSrc={<VectorIcon family={MaterialIcons} name="attach-money" />} />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="accounts">
+        <Label>Accounts</Label>
+        <Icon sf="creditcard.fill" androidSrc={<VectorIcon family={MaterialIcons} name="account-balance-wallet" />} />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

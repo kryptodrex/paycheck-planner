@@ -202,13 +202,13 @@ export const radius = {
 } as const;
 
 export const fontSize = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 17,
-  xl: 20,
-  xxl: 24,
-  xxxl: 32,
+  xs: 13,
+  sm: 15,
+  md: 17,
+  lg: 20,
+  xl: 23,
+  xxl: 28,
+  xxxl: 36,
 } as const;
 
 export type ColorTokens = typeof lightColors;

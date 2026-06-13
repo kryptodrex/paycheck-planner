@@ -49,13 +49,16 @@ export function SectionCard({ title, children, actionLabel, actionIcon = 'plus',
           {onAction && (
             <TouchableOpacity
               onPress={onAction}
-              style={styles.action}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={[
+                styles.action,
+                { backgroundColor: colors.accentPrimary + '1f', borderRadius: radius.md },
+              ]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel={actionLabel ?? 'Add'}
             >
-              <Feather name={actionIcon} size={14} color={colors.textAccent} />
-              <ThemedText variant="accent" size="xs" weight="semibold">
+              <Feather name={actionIcon} size={16} color={colors.textAccent} />
+              <ThemedText variant="accent" size="sm" weight="semibold">
                 {actionLabel ?? 'Add'}
               </ThemedText>
             </TouchableOpacity>
@@ -76,6 +79,13 @@ export function SectionCard({ title, children, actionLabel, actionIcon = 'plus',
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center' },
-  action: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
 });

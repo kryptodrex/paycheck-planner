@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import {
   calculatePaycheckBreakdown,
@@ -9,11 +9,11 @@ import {
 } from '@paycheck-planner/core';
 import { usePlanScreen } from '../../src/hooks/usePlanScreen';
 import { useTheme } from '../../src/contexts/ThemeContext';
-import { ThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { MetricRow } from '../../src/components/MetricRow';
 import { SectionCard } from '../../src/components/SectionCard';
 import { ViewModeSelector } from '../../src/components/ViewModeSelector';
+import { PlanTabScreen } from '../../src/components/PlanTabScreen';
 
 export default function BreakdownScreen() {
   const helpers = usePlanScreen();
@@ -44,11 +44,9 @@ export default function BreakdownScreen() {
   );
 
   return (
-    <ThemedView style={styles.screen}>
-      <Stack.Screen options={{ title: 'Pay Breakdown' }} />
-
+    <PlanTabScreen title="Breakdown" subtitle={plan.name}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 48 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 96 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ marginBottom: spacing.md }}>
@@ -155,14 +153,13 @@ export default function BreakdownScreen() {
                 borderColor: colors.border,
                 borderRadius: radius.md,
                 marginTop: spacing.sm,
-                paddingVertical: spacing.sm,
               },
             ]}
             onPress={() => router.push('/taxes')}
             activeOpacity={0.7}
           >
-            <Feather name="edit-2" size={13} color={colors.textAccent} />
-            <ThemedText variant="accent" size="sm" weight="medium">
+            <Feather name="edit-2" size={15} color={colors.textAccent} />
+            <ThemedText variant="accent" size="sm" weight="semibold">
               Edit Tax Settings
             </ThemedText>
           </TouchableOpacity>
@@ -202,17 +199,17 @@ export default function BreakdownScreen() {
           />
         </SectionCard>
       </ScrollView>
-    </ThemedView>
+    </PlanTabScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   editTaxes: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    minHeight: 46,
     borderWidth: StyleSheet.hairlineWidth,
   },
 });

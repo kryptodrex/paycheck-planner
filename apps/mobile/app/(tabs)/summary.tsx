@@ -1,22 +1,19 @@
 import { useMemo } from 'react';
 import { ScrollView, View, TouchableOpacity, StyleSheet } from 'react-native';
-import { router, Stack } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { getDisplayModeLabel } from '@paycheck-planner/core';
-import { usePlan } from '../../src/contexts/PlanContext';
 import { usePlanScreen } from '../../src/hooks/usePlanScreen';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { computeSummaryMetrics } from '../../src/utils/summaryMetrics';
-import { ThemedView } from '../../src/components/ThemedView';
 import { ThemedText } from '../../src/components/ThemedText';
 import { MetricRow } from '../../src/components/MetricRow';
 import { SectionCard } from '../../src/components/SectionCard';
 import { GradientCard } from '../../src/components/GradientCard';
 import { AllocationBar } from '../../src/components/AllocationBar';
 import { ViewModeSelector } from '../../src/components/ViewModeSelector';
+import { PlanTabScreen } from '../../src/components/PlanTabScreen';
 
 export default function SummaryScreen() {
-  const { closePlan } = usePlan();
   const helpers = usePlanScreen();
   const { colors, spacing, radius } = useTheme();
 
@@ -39,38 +36,9 @@ export default function SummaryScreen() {
   const needsReallocation = metrics.remainingPerPaycheck < targetLeftover || isShortfall;
 
   return (
-    <ThemedView style={styles.screen}>
-      <Stack.Screen
-        options={{
-          title: plan.name,
-          headerRight: () => (
-            <View style={styles.headerActions}>
-              <TouchableOpacity
-                onPress={() => router.push('/search')}
-                hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-                accessibilityLabel="Search plan"
-              >
-                <Feather name="search" size={18} color={colors.textAccent} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  closePlan();
-                  router.replace('/');
-                }}
-                hitSlop={{ top: 12, bottom: 12, left: 8, right: 4 }}
-                style={{ marginRight: 4 }}
-              >
-                <ThemedText variant="accent" size="sm" weight="medium">
-                  Close
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          ),
-        }}
-      />
-
+    <PlanTabScreen title={plan.name} subtitle={`${plan.year} Plan`}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.md, paddingBottom: 48 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 96 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ marginBottom: spacing.md }}>
@@ -202,18 +170,18 @@ export default function SummaryScreen() {
           </ThemedText>
         </SectionCard>
       </ScrollView>
-    </ThemedView>
+    </PlanTabScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   warningBox: { borderWidth: 1 },
   warningAction: {
     alignSelf: 'flex-start',
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
 });

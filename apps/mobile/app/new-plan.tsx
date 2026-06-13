@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
 import { router, Stack } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import {
   calculateGrossPayPerYear,
   CURRENCIES,
@@ -37,7 +38,7 @@ const CURRENCY_OPTIONS = CURRENCIES.map((currency) => ({
 
 export default function NewPlanScreen() {
   const { setPlan } = usePlan();
-  const { spacing } = useTheme();
+  const { colors, spacing, radius } = useTheme();
 
   const defaultYear = new Date().getFullYear();
   const [name, setName] = useState(`${defaultYear} Plan`);
@@ -213,11 +214,30 @@ export default function NewPlanScreen() {
           <Button title="Cancel" variant="secondary" onPress={() => router.back()} />
         </View>
 
-        <ThemedText variant="tertiary" size="xs" style={{ marginTop: spacing.md }}>
-          Your plan starts with a checking account and standard tax lines. Add accounts, bills,
-          savings, and taxes from the tabs — everything saves automatically to this device and can
-          be shared to the desktop app.
-        </ThemedText>
+        <View
+          style={[
+            styles.infoBox,
+            {
+              backgroundColor: colors.bgInput,
+              borderColor: colors.border,
+              borderRadius: radius.md,
+              padding: spacing.md,
+              marginTop: spacing.md,
+            },
+          ]}
+        >
+          <View style={styles.infoHeader}>
+            <Feather name="info" size={16} color={colors.textAccent} />
+            <ThemedText size="sm" weight="semibold">
+              Where it's saved
+            </ThemedText>
+          </View>
+          <ThemedText variant="secondary" size="xs" style={{ marginTop: spacing.xs, lineHeight: 18 }}>
+            Your plan is saved automatically on this device and edits keep saving as you go. To back
+            it up or move it elsewhere, use Settings → “Export / Back Up Plan”, which lets you save a
+            copy to Files, iCloud, or share it to the desktop app.
+          </ThemedText>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -225,4 +245,6 @@ export default function NewPlanScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  infoBox: { borderWidth: StyleSheet.hairlineWidth },
+  infoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

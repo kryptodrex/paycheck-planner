@@ -244,10 +244,13 @@ export default function WelcomeScreen() {
                   </ThemedText>
                 </View>
                 <TouchableOpacity
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 4 }}
+                  style={styles.recentRemove}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}
                   onPress={() => removeRecentFile(file.uri).then(() => setRecentFiles((prev) => prev.filter((f) => f.uri !== file.uri)))}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${file.planName ?? file.name} from recents`}
                 >
-                  <ThemedText variant="tertiary" size="lg">
+                  <ThemedText variant="tertiary" size="xl">
                     ×
                   </ThemedText>
                 </TouchableOpacity>
@@ -400,6 +403,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: { letterSpacing: 0.6 },
   recentRow: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
+  recentRemove: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   errorBox: { borderWidth: StyleSheet.hairlineWidth },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end' },
   modalSheet: { width: '100%' },

@@ -76,11 +76,27 @@ describe('searchPlan', () => {
     expect(results.some((result) => result.id === `bill-${bill.id}`)).toBe(true);
   });
 
-  it('finds accounts and routes them to the accounts tab', () => {
+  it('finds accounts and routes them to the accounts tab with a highlight id', () => {
     const account = plan.accounts[0];
     const results = searchPlan(plan, account.name.slice(0, 4).toLowerCase());
     const match = results.find((result) => result.id === `account-${account.id}`);
-    expect(match?.destination.route).toBe('/(tabs)/accounts');
+    expect(match?.target).toMatchObject({
+      kind: 'tab',
+      pathname: '/(tabs)/accounts',
+      highlight: account.id,
+    });
+  });
+
+  it('routes bill results to the money tab with the bill highlighted', () => {
+    const bill = plan.bills[0];
+    const results = searchPlan(plan, bill.name.slice(0, 4).toLowerCase());
+    const match = results.find((result) => result.id === `bill-${bill.id}`);
+    expect(match?.target).toMatchObject({
+      kind: 'tab',
+      pathname: '/(tabs)/money',
+      section: 'bills',
+      highlight: bill.id,
+    });
   });
 
   it('surfaces quick actions for tax queries', () => {
