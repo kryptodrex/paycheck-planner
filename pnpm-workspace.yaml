@@ -3,6 +3,12 @@ packages:
   - apps/*
   - packages/*
 nodeLinker: hoisted
+# Pin a single React across the workspace. Mobile (Expo SDK 54) requires exactly
+# 19.1.0; without this, desktop's range could resolve a second copy and break the
+# test runtime with a dual-React null dispatcher. Keep in sync with apps/mobile.
+overrides:
+  react: 19.1.0
+  react-dom: 19.1.0
 allowBuilds:
   core-js: true
   electron: true

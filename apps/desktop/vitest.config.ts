@@ -12,6 +12,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Safeguard against loading two physical React copies under vitest (which
+    // leaves react-dom with a null dispatcher: "Cannot read ... 'useState'").
+    // The workspace also pins react/react-dom to a single version via pnpm
+    // overrides (mobile's Expo SDK 54 requires exactly 19.1.0).
+    dedupe: ['react', 'react-dom'],
   },
   test: {
     globals: true,
