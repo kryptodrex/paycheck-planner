@@ -21,6 +21,15 @@ export default defineConfig([
       ...reactHooks.configs.flat.recommended.rules,
       ...reactRefresh.configs.vite.rules,
       'no-undef': 'off',
+      // eslint-plugin-react-hooks v7's `recommended` set bundles React Compiler
+      // rules. This project does not build with the React Compiler, so the
+      // compiler-only memoization check is not applicable and is turned off.
+      'react-hooks/preserve-manual-memoization': 'off',
+      // New, intentionally-advisory rule for this codebase: the existing
+      // derived-state-sync effects are deliberate. Keep it as a warning (visible,
+      // non-blocking) rather than forcing risky refactors; revisit if/when the
+      // React Compiler is adopted.
+      'react-hooks/set-state-in-effect': 'warn',
     },
     languageOptions: {
       parser: tsParser,

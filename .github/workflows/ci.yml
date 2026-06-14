@@ -54,6 +54,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check workspace dependency boundaries
+        # Architecture guardrail: enforces allowed dependency direction + no cycles.
+        # Always runs (cheap, global); source-level import leaks are caught by lint.
+        run: pnpm check:boundaries
+
       - name: Restore Turbo cache
         uses: actions/cache@v4
         with:

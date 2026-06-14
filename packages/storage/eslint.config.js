@@ -18,6 +18,13 @@ export default defineConfig([
       ...js.configs.recommended.rules,
       ...tsPlugin.configs.recommended.rules,
       'no-undef': 'off',
+      // Boundary: storage defines platform-agnostic contracts only — no runtime
+      // platform deps, no UI, and no other workspace packages (it is a leaf).
+      'no-restricted-imports': ['error', {
+        paths: ['electron', 'react', 'react-dom'],
+        patterns: ['**/apps/**', '@paycheck-planner/*'],
+      }],
+      'no-restricted-globals': ['error', 'window', 'document', 'navigator', 'localStorage', 'sessionStorage'],
     },
   },
 ])

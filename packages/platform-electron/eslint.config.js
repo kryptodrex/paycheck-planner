@@ -18,6 +18,17 @@ export default defineConfig([
       ...js.configs.recommended.rules,
       ...tsPlugin.configs.recommended.rules,
       'no-undef': 'off',
+      // Boundary: platform-electron is the Electron adapter layer — it may use
+      // electron + storage/core, but must never import UI or any app package.
+      'no-restricted-imports': ['error', {
+        paths: ['react', 'react-dom'],
+        patterns: [
+          '**/apps/**',
+          '@paycheck-planner/desktop',
+          '@paycheck-planner/mobile',
+          '@paycheck-planner/api',
+        ],
+      }],
     },
   },
 ])
