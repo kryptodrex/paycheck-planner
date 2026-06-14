@@ -12,6 +12,7 @@ import {
   getAvailableBiometricType,
   getBiometricPref,
   setBiometricUnlock,
+  storePlanKey,
   type BiometricType,
 } from '../src/storage/keychainAdapter';
 import { createShareableCopy } from '../src/storage/planFileAdapter';
@@ -22,6 +23,8 @@ import { SectionCard } from '../src/components/SectionCard';
 import { SegmentedControl } from '../src/components/SegmentedControl';
 import { ToggleRow } from '../src/components/ToggleRow';
 import { Button } from '../src/components/Button';
+import { FormSheet } from '../src/components/FormSheet';
+import { FormField } from '../src/components/FormField';
 
 const BIOMETRIC_LABELS: Record<BiometricType, string> = {
   face: 'Face ID',
@@ -37,13 +40,17 @@ const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { plan, sourcePath, encryptionKey, saveState, saveError, canUndo, canRedo, undo, redo, closePlan } =
+  const { plan, sourcePath, encryptionKey, saveState, saveError, canUndo, canRedo, undo, redo, closePlan, changeEncryptionKey } =
     usePlan();
   const { colors, spacing, radius, isDark, mode, preset, setMode, setPreset } = useTheme();
   const [sharing, setSharing] = useState(false);
   const [biometricType, setBiometricType] = useState<BiometricType>('none');
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
+  const [showEncryptSheet, setShowEncryptSheet] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [confirmInput, setConfirmInput] = useState('');
+  const [keyError, setKeyError] = useState<string | null>(null);
 
   // Load the device's biometric capability and this plan's saved preference.
   useEffect(() => {
@@ -84,6 +91,42 @@ export default function SettingsScreen() {
     } finally {
       setBiometricBusy(false);
     }
+  }
+
+  function openAddEncryption() {
+    setKeyInput('');
+    setConfirmInput('');
+    setKeyError(null);
+    setShowEncryptSheet(true);
+  }
+
+  async function submitAddEncryption() {
+    if (!plan) return;
+    const trimmed = keyInput.trim();
+    if (trimmed.length < 4) return setKeyError('Encryption key must be at least 4 characters.');
+    if (trimmed !== confirmInput.trim()) return setKeyError('Encryption keys do not match.');
+    changeEncryptionKey(trimmed);
+    await storePlanKey(plan.id, trimmed);
+    setShowEncryptSheet(false);
+  }
+
+  function removeEncryption() {
+    if (!plan) return;
+    Alert.alert(
+      'Remove Encryption',
+      'This plan file will be saved unencrypted (no key required to open it).',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            changeEncryptionKey(null);
+            void deletePlanKey(plan.id);
+          },
+        },
+      ],
+    );
   }
 
   async function sharePlanFile() {
@@ -290,6 +333,22 @@ export default function SettingsScreen() {
                 style={{ marginBottom: spacing.sm }}
               />
             )}
+            {sourcePath && !encryptionKey && (
+              <Button
+                title="Add Encryption"
+                variant="secondary"
+                onPress={openAddEncryption}
+                style={{ marginBottom: spacing.sm }}
+              />
+            )}
+            {sourcePath && encryptionKey && (
+              <Button
+                title="Remove Encryption"
+                variant="secondary"
+                onPress={removeEncryption}
+                style={{ marginBottom: spacing.sm }}
+              />
+            )}
             <Button
               title="Close Plan"
               variant="secondary"
@@ -323,6 +382,41 @@ export default function SettingsScreen() {
           </ThemedText>
         </SectionCard>
       </ScrollView>
+
+      {showEncryptSheet && (
+        <FormSheet
+          visible
+          title="Add Encryption"
+          onClose={() => setShowEncryptSheet(false)}
+          onSave={submitAddEncryption}
+          saveLabel="Encrypt Plan"
+        >
+          <FormField
+            label="Encryption Key"
+            value={keyInput}
+            onChangeText={(text) => {
+              setKeyInput(text);
+              setKeyError(null);
+            }}
+            placeholder="Choose a strong key"
+            autoCapitalize="none"
+            secureTextEntry
+            error={keyError}
+          />
+          <FormField
+            label="Confirm Key"
+            value={confirmInput}
+            onChangeText={(text) => {
+              setConfirmInput(text);
+              setKeyError(null);
+            }}
+            placeholder="Re-enter key"
+            autoCapitalize="none"
+            secureTextEntry
+            hint="Keep this safe — without it the plan can't be opened."
+          />
+        </FormSheet>
+      )}
     </ThemedView>
   );
 }

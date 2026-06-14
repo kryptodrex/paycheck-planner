@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from '../constants/storage';
 import {
+  type AppFaqPlatform,
   type AppFaqSection,
   type GlossaryCategory,
   type GlossaryTerm,
@@ -276,8 +277,31 @@ export function getCachedGlossaryCategoryLabels(): Record<GlossaryCategory, stri
   return getCachedReferenceData().glossary.categoryLabels;
 }
 
+const FAQ_PLATFORM: AppFaqPlatform = 'desktop';
+
+/**
+ * Keep only FAQ entries that apply to this platform, resolve each to its
+ * platform-specific answer when one is provided, and drop sections left empty.
+ */
+function filterFaqSectionsForPlatform(
+  sections: AppFaqSection[],
+  platform: AppFaqPlatform,
+): AppFaqSection[] {
+  return sections
+    .map((section) => {
+      const items = section.items
+        .filter((item) => !item.platforms || item.platforms.includes(platform))
+        .map((item) => ({
+          ...item,
+          answer: item.platformAnswers?.[platform] ?? item.answer,
+        }));
+      return items.length > 0 ? { ...section, items } : null;
+    })
+    .filter((section): section is AppFaqSection => section !== null);
+}
+
 export function getCachedAppFaqSections(): AppFaqSection[] {
-  return getCachedReferenceData().appFaqs.sections;
+  return filterFaqSectionsForPlatform(getCachedReferenceData().appFaqs.sections, FAQ_PLATFORM);
 }
 
 export async function loadReferenceData(forceRefresh = false): Promise<ReferenceDataPayload> {

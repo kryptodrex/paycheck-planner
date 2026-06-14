@@ -54,11 +54,17 @@ export interface GlossaryTerm {
   relatedTermIds?: string[];
 }
 
+export type AppFaqPlatform = 'desktop' | 'mobile';
+
 export interface AppFaqItem {
   id: string;
   question: string;
   answer: string;
   keywords: string[];
+  /** Platforms this FAQ applies to. Omit when relevant to every platform. */
+  platforms?: AppFaqPlatform[];
+  /** Optional per-platform answer override (falls back to `answer`). */
+  platformAnswers?: Partial<Record<AppFaqPlatform, string>>;
 }
 
 export interface AppFaqSection {

@@ -35,7 +35,7 @@ const FREQUENCY_OPTIONS = PAY_FREQUENCIES.map((frequency) => ({
 
 const CURRENCY_OPTIONS = CURRENCIES.map((currency) => ({
   value: currency.code,
-  label: `${currency.flag} ${currency.code}`,
+  label: `${currency.symbol} ${currency.code}`,
 }));
 
 export default function NewPlanScreen() {

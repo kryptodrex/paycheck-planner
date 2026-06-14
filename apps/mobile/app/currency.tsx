@@ -17,7 +17,7 @@ import { parseAmount } from '../src/utils/planMutations';
 
 const CURRENCY_OPTIONS = CURRENCIES.map((currency) => ({
   value: currency.code,
-  label: `${currency.flag} ${currency.code}`,
+  label: `${currency.symbol} ${currency.code}`,
 }));
 
 export default function CurrencyScreen() {
@@ -32,13 +32,14 @@ export default function CurrencyScreen() {
 
   const changed = target !== current;
 
-  // Fetch the live rate whenever the target currency changes.
+  // Fetch the live rate whenever the target currency changes. (The rate field is
+  // only shown when `changed`, so we don't need to clear it when target === current.)
   useEffect(() => {
-    if (target === current) {
-      setRate('');
-      return;
-    }
+    if (target === current) return;
     let active = true;
+    // Enter the loading state synchronously when the target currency changes; this
+    // effect synchronizes with an external system (the exchange-rate service).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFetching(true);
     setError(null);
     void (async () => {

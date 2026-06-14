@@ -11,8 +11,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export interface GlossaryTerm {
   id: string;
   term: string;
-  definition: string;
   category: string;
+  shortDefinition: string;
+  fullDefinition: string;
+  aliases?: string[];
+  tags?: string[];
+  relatedTermIds?: string[];
 }
 
 export interface GlossaryData {
@@ -20,11 +24,17 @@ export interface GlossaryData {
   categoryLabels: Record<string, string>;
 }
 
+export type AppFaqPlatform = 'desktop' | 'mobile';
+
 export interface AppFaqItem {
   id: string;
   question: string;
   answer: string;
   keywords: string[];
+  /** Platforms this FAQ applies to. Omit when relevant to every platform. */
+  platforms?: AppFaqPlatform[];
+  /** Optional per-platform answer override (falls back to `answer`). */
+  platformAnswers?: Partial<Record<AppFaqPlatform, string>>;
 }
 
 export interface AppFaqSection {
@@ -85,8 +95,27 @@ export function fetchGlossary(): Promise<GlossaryData | null> {
   return loadReference<GlossaryData>('/reference-data/glossary', 'glossary');
 }
 
-export function fetchAppFaqs(): Promise<AppFaqData | null> {
-  return loadReference<AppFaqData>('/reference-data/app-faqs', 'app-faqs');
+const FAQ_PLATFORM: AppFaqPlatform = 'mobile';
+
+/**
+ * Keep only FAQ entries that apply to this platform, resolve each to its
+ * platform-specific answer when one is provided, and drop sections left empty.
+ */
+function filterFaqSectionsForPlatform(sections: AppFaqSection[], platform: AppFaqPlatform): AppFaqSection[] {
+  return sections
+    .map((section) => {
+      const items = section.items
+        .filter((item) => !item.platforms || item.platforms.includes(platform))
+        .map((item) => ({ ...item, answer: item.platformAnswers?.[platform] ?? item.answer }));
+      return items.length > 0 ? { ...section, items } : null;
+    })
+    .filter((section): section is AppFaqSection => section !== null);
+}
+
+export async function fetchAppFaqs(): Promise<AppFaqData | null> {
+  const data = await loadReference<AppFaqData>('/reference-data/app-faqs', 'app-faqs');
+  if (!data) return null;
+  return { sections: filterFaqSectionsForPlatform(data.sections, FAQ_PLATFORM) };
 }
 
 type FrankfurterResponse = { rates?: Record<string, number> };

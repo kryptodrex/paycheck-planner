@@ -40,6 +40,8 @@ interface PlanContextValue {
   lastChange: ChangeSignal | null;
   setPlan: (plan: BudgetData | null, path: string | null, options?: SetPlanOptions) => void;
   updatePlan: (updater: (plan: BudgetData) => BudgetData, options?: UpdatePlanOptions) => void;
+  /** Change the file's encryption: pass a key to encrypt, or null to decrypt. Re-writes the file. */
+  changeEncryptionKey: (key: string | null) => void;
   undo: () => void;
   redo: () => void;
   closePlan: () => void;
@@ -182,6 +184,17 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     applyPlan(next);
   }, [future, applyPlan]);
 
+  const changeEncryptionKey = useCallback(
+    (key: string | null) => {
+      if (!latest.current.plan || !latest.current.path) return;
+      latest.current = { ...latest.current, key };
+      setEncryptionKey(key);
+      // Rewrite the file immediately in the new (encrypted/plaintext) format.
+      void flushSave();
+    },
+    [flushSave],
+  );
+
   const closePlan = useCallback(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     latest.current = { plan: null, path: null, key: null };
@@ -208,6 +221,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         lastChange,
         setPlan,
         updatePlan,
+        changeEncryptionKey,
         undo,
         redo,
         closePlan,

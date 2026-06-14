@@ -17,11 +17,15 @@ export const lightColors = {
   success: '#22c55e',
   warning: '#f59e0b',
   error: '#ef4444',
-  segmentBills: '#f093fb',
+  // Pay-breakdown segment palette — mirrors the desktop KeyMetrics chart
+  // (--metric-bills-color, --error-color, --cyan-color, --violet-color,
+  // --metric-shortfall-color). Fixed across appearance presets so the chart
+  // stays legible on every theme, matching desktop.
+  segmentBills: '#f97316',
   segmentTaxes: '#ef4444',
-  segmentSavings: '#4ade80',
-  segmentRemaining: '#667eea',
-  segmentShortfall: '#f59e0b',
+  segmentSavings: '#06b6d4',
+  segmentRemaining: '#8b5cf6',
+  segmentShortfall: '#991b1b',
 };
 
 export const darkColors: typeof lightColors = {
@@ -40,11 +44,12 @@ export const darkColors: typeof lightColors = {
   success: '#4ade80',
   warning: '#fbbf24',
   error: '#f87171',
-  segmentBills: '#d946ef',
-  segmentTaxes: '#f87171',
-  segmentSavings: '#4ade80',
-  segmentRemaining: '#818cf8',
-  segmentShortfall: '#fbbf24',
+  // Pay-breakdown segment palette — desktop dark KeyMetrics values.
+  segmentBills: '#fb923c',
+  segmentTaxes: '#ef4444',
+  segmentSavings: '#06b6d4',
+  segmentRemaining: '#a78bfa',
+  segmentShortfall: '#ef4444',
 };
 
 // Appearance presets mirror the desktop's [data-theme-preset] CSS overrides
@@ -104,25 +109,21 @@ const LIGHT_PRESET_OVERRIDES: Record<AppearancePreset, PresetOverride> = {
     accentPrimary: '#0f766e',
     accentSecondary: '#0369a1',
     textAccent: '#0f766e',
-    segmentRemaining: '#0f766e',
   },
   forest: {
     accentPrimary: '#2f6f4f',
     accentSecondary: '#5f7f2f',
     textAccent: '#2f6f4f',
-    segmentRemaining: '#2f6f4f',
   },
   sunset: {
     accentPrimary: '#b45309',
     accentSecondary: '#be185d',
     textAccent: '#b45309',
-    segmentRemaining: '#b45309',
   },
   pink: {
     accentPrimary: '#be185d',
     accentSecondary: '#db2777',
     textAccent: '#be185d',
-    segmentRemaining: '#be185d',
   },
   'spreadsheet-core': {
     bgPrimary: '#f7f7f8',
@@ -133,7 +134,6 @@ const LIGHT_PRESET_OVERRIDES: Record<AppearancePreset, PresetOverride> = {
     border: '#d1d5db',
     accentPrimary: '#9aa1aa',
     accentSecondary: '#b3bac4',
-    segmentRemaining: '#64748b',
   },
 };
 
@@ -143,25 +143,21 @@ const DARK_PRESET_OVERRIDES: Record<AppearancePreset, PresetOverride> = {
     accentPrimary: '#0284c7',
     accentSecondary: '#67e8f9',
     textAccent: '#67e8f9',
-    segmentRemaining: '#0284c7',
   },
   forest: {
     accentPrimary: '#2f855a',
     accentSecondary: '#bef264',
     textAccent: '#bef264',
-    segmentRemaining: '#2f855a',
   },
   sunset: {
     accentPrimary: '#c2410c',
     accentSecondary: '#f9a8d4',
     textAccent: '#f9a8d4',
-    segmentRemaining: '#c2410c',
   },
   pink: {
     accentPrimary: '#db2777',
     accentSecondary: '#f9a8d4',
     textAccent: '#f9a8d4',
-    segmentRemaining: '#db2777',
   },
   'spreadsheet-core': {
     bgPrimary: '#232428',
@@ -175,7 +171,6 @@ const DARK_PRESET_OVERRIDES: Record<AppearancePreset, PresetOverride> = {
     border: '#3f3f46',
     accentPrimary: '#64748b',
     accentSecondary: '#cbd5e1',
-    segmentRemaining: '#94a3b8',
   },
 };
 
