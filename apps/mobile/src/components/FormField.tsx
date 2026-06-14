@@ -12,6 +12,7 @@ interface Props {
   multiline?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   hint?: string;
+  secureTextEntry?: boolean;
 }
 
 export function FormField({
@@ -24,6 +25,7 @@ export function FormField({
   multiline,
   autoCapitalize = 'sentences',
   hint,
+  secureTextEntry,
 }: Props) {
   const { colors, spacing, radius, fontSize } = useTheme();
 
@@ -60,6 +62,7 @@ export function FormField({
         multiline={multiline}
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
+        secureTextEntry={secureTextEntry}
       />
       {error ? (
         <ThemedText size="xs" style={{ color: colors.error, marginTop: spacing.xs }}>

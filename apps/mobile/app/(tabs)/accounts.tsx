@@ -4,9 +4,11 @@ import { useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import {
   convertBillToYearly,
+  getDefaultAccountIconKey,
   type Account,
   type AccountAllocationCategory,
 } from '@paycheck-planner/core';
+import { AccountIcon } from '../../src/utils/accountIcon';
 import { usePlanScreen } from '../../src/hooks/usePlanScreen';
 import { useHighlightParam } from '../../src/hooks/useHighlightParam';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -208,10 +210,16 @@ export default function AccountsScreen() {
                     >
                       <View
                         style={[
-                          styles.colorDot,
-                          { backgroundColor: account.color ?? colors.accentPrimary },
+                          styles.iconBadge,
+                          { backgroundColor: (account.color ?? colors.accentPrimary) + '22' },
                         ]}
-                      />
+                      >
+                        <AccountIcon
+                          name={account.icon ?? getDefaultAccountIconKey(account.type)}
+                          color={account.color ?? colors.accentPrimary}
+                          size={18}
+                        />
+                      </View>
                       <ThemedText size="md" weight="semibold" style={{ flex: 1 }}>
                         {account.name}
                       </ThemedText>
@@ -369,7 +377,7 @@ export default function AccountsScreen() {
 const styles = StyleSheet.create({
   accountCard: { borderWidth: StyleSheet.hairlineWidth },
   accountHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  colorDot: { width: 12, height: 12, borderRadius: 6 },
+  iconBadge: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   badge: { paddingHorizontal: 8, paddingVertical: 3 },
   cardSection: {
     paddingHorizontal: 16,

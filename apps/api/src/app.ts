@@ -29,7 +29,9 @@ export function createApp(): Hono {
         rateLimitWindowMs: config.rateLimitWindowMs,
         rateLimitMaxRequests: config.rateLimitMaxRequests,
     }));
-    app.use('*', createAuthMiddleware(config));
+    // Reference data and currency conversion are public, read-only endpoints so
+    // desktop and mobile can consume them without shipping a shared secret.
+    app.use('*', createAuthMiddleware(config, ['/reference-data', '/currency-conversion']));
 
     app.route('/', healthRouter({ name: 'paycheck-planner-api', version: apiVersion }));
     app.route('/', currencyConversionRouter({

@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { generateId, getDefaultAccountColor, type Account } from '@paycheck-planner/core';
+import {
+  ACCOUNT_ICON_NAMES,
+  generateId,
+  getDefaultAccountColor,
+  getDefaultAccountIconKey,
+  type Account,
+} from '@paycheck-planner/core';
 import { FormSheet } from '../../components/FormSheet';
 import { FormField } from '../../components/FormField';
 import { FormError } from '../../components/FormError';
 import { OptionPicker } from '../../components/OptionPicker';
 import { ThemedText } from '../../components/ThemedText';
+import { AccountIcon } from '../../utils/accountIcon';
 import { useTheme } from '../../contexts/ThemeContext';
-import { parseAmount, amountToInput } from '../../utils/planMutations';
 
 const ACCOUNT_TYPE_OPTIONS: { value: Account['type']; label: string }[] = [
   { value: 'checking', label: 'Checking' },
@@ -46,22 +52,23 @@ export function AccountFormSheet({ account, canDelete, onSave, onDelete, onClose
   const [color, setColor] = useState(
     account?.color ?? getDefaultAccountColor(account?.type ?? 'checking'),
   );
-  const [allocation, setAllocation] = useState(amountToInput(account?.allocation));
+  const [icon, setIcon] = useState<string>(
+    account?.icon ?? getDefaultAccountIconKey(account?.type ?? 'checking'),
+  );
   const [error, setError] = useState<string | null>(null);
 
   function handleSave() {
     if (!name.trim()) return setError('Please enter a name.');
-    const parsedAllocation = allocation.trim() ? parseAmount(allocation) : undefined;
-    if (allocation.trim() && parsedAllocation === null) {
-      return setError('Please enter a valid allocation amount.');
-    }
 
     onSave({
       ...(account ?? { id: generateId() }),
       name: name.trim(),
       type,
       color,
-      allocation: parsedAllocation ?? undefined,
+      icon,
+      // Per-account allocation is managed via Custom Allocations, not here.
+      // Preserve any existing fixed allocation (e.g. set on desktop) untouched.
+      allocation: account?.allocation,
     });
     onClose();
   }
@@ -105,14 +112,38 @@ export function AccountFormSheet({ account, canDelete, onSave, onDelete, onClose
         ))}
       </View>
 
-      <FormField
-        label="Monthly Allocation"
-        value={allocation}
-        onChangeText={setAllocation}
-        placeholder="Optional"
-        keyboardType="decimal-pad"
-        hint="Fixed amount routed to this account each month"
-      />
+      <ThemedText
+        variant="secondary"
+        size="xs"
+        weight="semibold"
+        style={{ marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.4 }}
+      >
+        Icon
+      </ThemedText>
+      <View style={[styles.iconGrid, { gap: spacing.xs }]}>
+        {ACCOUNT_ICON_NAMES.map((iconName) => {
+          const selected = icon === iconName;
+          return (
+            <TouchableOpacity
+              key={iconName}
+              style={[
+                styles.iconCell,
+                {
+                  backgroundColor: selected ? colors.accentPrimary + '22' : colors.bgInput,
+                  borderColor: selected ? colors.accentPrimary : colors.border,
+                  borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth,
+                },
+              ]}
+              onPress={() => setIcon(iconName)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={`Icon ${iconName}`}
+            >
+              <AccountIcon name={iconName} color={selected ? color : colors.textSecondary} size={20} />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </FormSheet>
   );
 }
@@ -120,4 +151,6 @@ export function AccountFormSheet({ account, canDelete, onSave, onDelete, onClose
 const styles = StyleSheet.create({
   swatchRow: { flexDirection: 'row', flexWrap: 'wrap' },
   swatch: { width: 34, height: 34, borderRadius: 17 },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  iconCell: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 });

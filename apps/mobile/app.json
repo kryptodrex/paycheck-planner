@@ -59,6 +59,9 @@
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
+    },
+    "extra": {
+      "apiBaseUrl": "https://paycheck-planner-api.fly.dev"
     }
   }
 }

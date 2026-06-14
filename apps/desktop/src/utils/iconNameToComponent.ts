@@ -64,6 +64,7 @@ import {
   Wallet,
   KeyRound,
 } from 'lucide-react';
+import { ACCOUNT_ICON_NAMES as CORE_ACCOUNT_ICON_NAMES } from '@paycheck-planner/core/account-defaults';
 
 /** Map of icon names to Lucide icon components */
 export const ACCOUNT_ICON_MAP = {
@@ -151,5 +152,10 @@ export function getIconComponent(iconName: string): React.ComponentType<{ classN
   return null;
 }
 
-/** Array of all available account icon names in display order */
-export const ACCOUNT_ICON_NAMES = Object.keys(ACCOUNT_ICON_MAP) as AccountIconName[];
+/**
+ * Available account icon names in display order. The canonical list lives in
+ * core (shared with mobile); we keep only names this app can render.
+ */
+export const ACCOUNT_ICON_NAMES = CORE_ACCOUNT_ICON_NAMES.filter(
+  (name): name is AccountIconName => name in ACCOUNT_ICON_MAP,
+);

@@ -4,7 +4,6 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { useTheme } from '../contexts/ThemeContext';
-import { usePlan } from '../contexts/PlanContext';
 
 interface Props {
   title: string;
@@ -12,20 +11,13 @@ interface Props {
 }
 
 /**
- * Consistent in-app header for the main tab screens. Left is a back chevron
- * that closes the current plan and returns to the welcome screen (mirroring
- * how Numbers' back arrow returns to the document browser); right is a gear
- * that opens Settings. Native tabs don't render a header, so this provides one.
+ * Consistent in-app header for the main tab screens. A centered title with a
+ * gear on the right that opens Settings (where the plan can be closed). Native
+ * tabs don't render a header, so this provides one.
  */
 export function AppHeader({ title, subtitle }: Props) {
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
-  const { closePlan } = usePlan();
-
-  function handleClose() {
-    closePlan();
-    router.replace('/');
-  }
 
   return (
     <View
@@ -39,18 +31,8 @@ export function AppHeader({ title, subtitle }: Props) {
         },
       ]}
     >
-      <TouchableOpacity
-        onPress={handleClose}
-        style={styles.closeButton}
-        hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel="Close plan and return to welcome screen"
-      >
-        <Feather name="chevron-left" size={26} color={colors.accentPrimary} />
-        <ThemedText variant="accent" size="md" weight="semibold">
-          Close
-        </ThemedText>
-      </TouchableOpacity>
+      {/* Spacer balances the gear button so the title stays centered. */}
+      <View style={styles.sideButton} />
 
       <View style={styles.titleWrap}>
         <ThemedText size="lg" weight="bold" numberOfLines={1} style={{ textAlign: 'center' }}>
@@ -93,12 +75,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  closeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-    paddingRight: 6,
   },
   titleWrap: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
 });

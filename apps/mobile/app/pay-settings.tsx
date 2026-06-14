@@ -18,6 +18,7 @@ import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
 import { FormError } from '../src/components/FormError';
 import { OptionPicker } from '../src/components/OptionPicker';
+import { DateField } from '../src/components/DateField';
 import { parseAmount, amountToInput } from '../src/utils/planMutations';
 
 const PAY_FREQUENCIES: PayFrequency[] = ['weekly', 'bi-weekly', 'semi-monthly', 'monthly'];
@@ -42,11 +43,8 @@ export default function PaySettingsScreen() {
     paySettings?.payFrequency ?? 'bi-weekly',
   );
   const [minLeftover, setMinLeftover] = useState(amountToInput(paySettings?.minLeftover));
+  const [firstPaycheckDate, setFirstPaycheckDate] = useState(paySettings?.firstPaycheckDate);
   const [error, setError] = useState<string | null>(null);
-
-  // First-paycheck date is unused in desktop for now, so it's hidden here;
-  // we preserve any existing value rather than clearing it on save.
-  const firstPaycheckDate = paySettings?.firstPaycheckDate;
 
   if (!helpers) return null;
 
@@ -165,6 +163,16 @@ export default function PaySettingsScreen() {
             onChange={setPayFrequency}
           />
 
+          <DateField
+            label="First Paycheck Date"
+            value={firstPaycheckDate}
+            onChange={(iso) => {
+              setFirstPaycheckDate(iso);
+              setError(null);
+            }}
+            hint="Used to calculate weekly / bi-weekly paychecks per month accurately."
+          />
+
           <FormField
             label="Minimum Leftover per Paycheck"
             value={minLeftover}
@@ -188,10 +196,16 @@ export default function PaySettingsScreen() {
           <Button title="Cancel" variant="secondary" onPress={() => router.back()} />
         </View>
 
+        <SectionCard title="Currency">
+          <ThemedText variant="secondary" size="xs" style={{ marginBottom: spacing.sm }}>
+            Current currency: {plan.settings.currency}. Changing it converts existing amounts using
+            live exchange rates.
+          </ThemedText>
+          <Button title="Change Currency…" variant="secondary" onPress={() => router.push('/currency')} />
+        </SectionCard>
+
         <ThemedText variant="tertiary" size="xs" style={{ marginTop: spacing.md }}>
-          Manage pre-tax and post-tax deductions in Money → Deductions. Currency (
-          {plan.settings.currency}) can be changed on desktop, which also converts existing amounts
-          using live exchange rates.
+          Manage pre-tax and post-tax deductions in Money → Deductions.
         </ThemedText>
       </ScrollView>
     </ThemedView>

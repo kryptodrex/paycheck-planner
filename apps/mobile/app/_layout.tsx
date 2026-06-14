@@ -25,7 +25,6 @@ function RootStack() {
             (when closing a plan via replace) slides in from the left. */}
         <Stack.Screen name="index" options={{ headerShown: false, animationTypeForReplace: 'pop' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="search" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
       </Stack>
     </>

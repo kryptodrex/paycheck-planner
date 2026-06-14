@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, View, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { router, Stack } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -7,14 +7,28 @@ import { Feather } from '@expo/vector-icons';
 import { usePlan } from '../src/contexts/PlanContext';
 import { useTheme, type ThemeMode } from '../src/contexts/ThemeContext';
 import { APPEARANCE_PRESET_OPTIONS, resolveColors } from '../src/theme/tokens';
-import { deletePlanKey } from '../src/storage/keychainAdapter';
+import {
+  deletePlanKey,
+  getAvailableBiometricType,
+  getBiometricPref,
+  setBiometricUnlock,
+  type BiometricType,
+} from '../src/storage/keychainAdapter';
 import { createShareableCopy } from '../src/storage/planFileAdapter';
 import { ThemedView } from '../src/components/ThemedView';
 import { ThemedText } from '../src/components/ThemedText';
 import { MetricRow } from '../src/components/MetricRow';
 import { SectionCard } from '../src/components/SectionCard';
 import { SegmentedControl } from '../src/components/SegmentedControl';
+import { ToggleRow } from '../src/components/ToggleRow';
 import { Button } from '../src/components/Button';
+
+const BIOMETRIC_LABELS: Record<BiometricType, string> = {
+  face: 'Face ID',
+  fingerprint: 'Touch ID / Fingerprint',
+  iris: 'Iris',
+  none: 'Biometrics',
+};
 
 const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -23,10 +37,54 @@ const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { plan, sourcePath, encryptionKey, saveState, saveError, canUndo, canRedo, undo, redo } =
+  const { plan, sourcePath, encryptionKey, saveState, saveError, canUndo, canRedo, undo, redo, closePlan } =
     usePlan();
   const { colors, spacing, radius, isDark, mode, preset, setMode, setPreset } = useTheme();
   const [sharing, setSharing] = useState(false);
+  const [biometricType, setBiometricType] = useState<BiometricType>('none');
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricBusy, setBiometricBusy] = useState(false);
+
+  // Load the device's biometric capability and this plan's saved preference.
+  useEffect(() => {
+    if (!plan || !encryptionKey) return;
+    let active = true;
+    void (async () => {
+      const [type, pref] = await Promise.all([
+        getAvailableBiometricType(),
+        getBiometricPref(plan.id),
+      ]);
+      if (active) {
+        setBiometricType(type);
+        setBiometricEnabled(pref);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [plan, encryptionKey]);
+
+  function handleClosePlan() {
+    closePlan();
+    router.replace('/');
+  }
+
+  async function handleToggleBiometric(next: boolean) {
+    if (!plan || !encryptionKey) return;
+    setBiometricBusy(true);
+    try {
+      const effective = await setBiometricUnlock(plan.id, encryptionKey, next);
+      setBiometricEnabled(effective);
+      if (next && !effective) {
+        Alert.alert(
+          'Could not enable',
+          'Biometric unlock needs Face ID / Touch ID set up on this device, and you must approve the prompt.',
+        );
+      }
+    } finally {
+      setBiometricBusy(false);
+    }
+  }
 
   async function sharePlanFile() {
     if (!sourcePath || !plan) return;
@@ -214,6 +272,16 @@ export default function SettingsScreen() {
                 </ThemedText>
               </>
             )}
+            {encryptionKey && biometricType !== 'none' && (
+              <View style={{ marginBottom: spacing.sm }}>
+                <ToggleRow
+                  label={`Unlock with ${BIOMETRIC_LABELS[biometricType]}`}
+                  value={biometricEnabled}
+                  onChange={biometricBusy ? () => {} : handleToggleBiometric}
+                  hint={`Require ${BIOMETRIC_LABELS[biometricType]} to open this encrypted plan.`}
+                />
+              </View>
+            )}
             {encryptionKey && (
               <Button
                 title="Remove Stored Encryption Key"
@@ -222,12 +290,28 @@ export default function SettingsScreen() {
                 style={{ marginBottom: spacing.sm }}
               />
             )}
-            <ThemedText variant="tertiary" size="xs">
-              Close this plan with the “‹ Close” button in the top-left to return to the welcome
-              screen.
+            <Button
+              title="Close Plan"
+              variant="secondary"
+              onPress={handleClosePlan}
+              style={{ marginTop: spacing.xs }}
+            />
+            <ThemedText variant="tertiary" size="xs" style={{ marginTop: spacing.xs }}>
+              Closing returns to the welcome screen. Your plan stays saved on this device.
             </ThemedText>
           </SectionCard>
         )}
+
+        {/* Help & Reference — API-backed, shared with desktop */}
+        <SectionCard title="Help & Reference">
+          <Button
+            title="App FAQs"
+            variant="secondary"
+            onPress={() => router.push('/faqs')}
+            style={{ marginBottom: spacing.sm }}
+          />
+          <Button title="Glossary" variant="secondary" onPress={() => router.push('/glossary')} />
+        </SectionCard>
 
         {/* About */}
         <SectionCard title="About">

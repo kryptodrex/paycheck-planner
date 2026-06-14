@@ -31,6 +31,12 @@ export default function TabLayout() {
         <Label>Accounts</Label>
         <Icon sf="creditcard.fill" androidSrc={<VectorIcon family={MaterialIcons} name="account-balance-wallet" />} />
       </NativeTabs.Trigger>
+
+      {/* role="search" renders the system search tab on iOS (and a normal tab on Android). */}
+      <NativeTabs.Trigger name="search" role="search">
+        <Label>Search</Label>
+        <Icon sf="magnifyingglass" androidSrc={<VectorIcon family={MaterialIcons} name="search" />} />
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

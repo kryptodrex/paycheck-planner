@@ -164,6 +164,24 @@ describe('API app', () => {
     }
   });
 
+  it('allows reference-data and currency endpoints without auth even when shared-secret is enabled', async () => {
+    process.env.API_AUTH_MODE = 'shared-secret';
+    process.env.API_SHARED_SECRET = 'test-secret';
+
+    try {
+      const app = createApp();
+      const refResponse = await app.request('/reference-data/index');
+      expect(refResponse.status).toBe(200);
+
+      // Protected endpoints still require auth.
+      const healthResponse = await app.request('/health');
+      expect(healthResponse.status).toBe(401);
+    } finally {
+      delete process.env.API_AUTH_MODE;
+      delete process.env.API_SHARED_SECRET;
+    }
+  });
+
   it('allows requests with valid shared-secret auth', async () => {
     process.env.API_AUTH_MODE = 'shared-secret';
     process.env.API_SHARED_SECRET = 'test-secret';

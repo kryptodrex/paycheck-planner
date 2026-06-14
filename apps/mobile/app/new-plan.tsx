@@ -15,6 +15,7 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { createEmptyPlan } from '../src/utils/createPlan';
 import { createPlanFileInLibrary } from '../src/storage/planFileAdapter';
 import { addRecentFile } from '../src/storage/recentFilesStore';
+import { storePlanKey } from '../src/storage/keychainAdapter';
 import { ThemedView } from '../src/components/ThemedView';
 import { ThemedText } from '../src/components/ThemedText';
 import { SectionCard } from '../src/components/SectionCard';
@@ -22,6 +23,7 @@ import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
 import { FormError } from '../src/components/FormError';
 import { OptionPicker } from '../src/components/OptionPicker';
+import { ToggleRow } from '../src/components/ToggleRow';
 import { parseAmount } from '../src/utils/planMutations';
 
 const PAY_FREQUENCIES: PayFrequency[] = ['weekly', 'bi-weekly', 'semi-monthly', 'monthly'];
@@ -49,6 +51,9 @@ export default function NewPlanScreen() {
   const [hourlyRate, setHourlyRate] = useState('');
   const [hoursPerPayPeriod, setHoursPerPayPeriod] = useState('');
   const [payFrequency, setPayFrequency] = useState<PayFrequency>('bi-weekly');
+  const [encrypt, setEncrypt] = useState(false);
+  const [encryptionKey, setEncryptionKey] = useState('');
+  const [confirmKey, setConfirmKey] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -77,6 +82,12 @@ export default function NewPlanScreen() {
       return setError('Please enter a valid hourly rate and hours per pay period.');
     }
 
+    const trimmedKey = encryptionKey.trim();
+    if (encrypt) {
+      if (trimmedKey.length < 4) return setError('Encryption key must be at least 4 characters.');
+      if (trimmedKey !== confirmKey.trim()) return setError('Encryption keys do not match.');
+    }
+
     setCreating(true);
     try {
       const plan = createEmptyPlan({
@@ -90,7 +101,8 @@ export default function NewPlanScreen() {
         payFrequency,
       });
 
-      const uri = await createPlanFileInLibrary(plan);
+      const key = encrypt ? trimmedKey : null;
+      const uri = await createPlanFileInLibrary(plan, key);
       await addRecentFile({
         uri,
         name: `${plan.name}.budget`,
@@ -100,7 +112,11 @@ export default function NewPlanScreen() {
         planYear: plan.year,
       });
 
-      setPlan(plan, uri);
+      // Remember the key (biometric-protected when available) so the plan
+      // reopens without re-entry; best-effort and never blocks creation.
+      if (key) await storePlanKey(plan.id, key);
+
+      setPlan(plan, uri, { encryptionKey: key });
       router.replace('/(tabs)/summary');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -206,6 +222,45 @@ export default function NewPlanScreen() {
             <ThemedText variant="tertiary" size="xs">
               Estimated gross income: {formatCurrency(previewGross, currency)} per year
             </ThemedText>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Security">
+          <ToggleRow
+            label="Encrypt this plan"
+            value={encrypt}
+            onChange={(next) => {
+              setEncrypt(next);
+              setError(null);
+            }}
+            hint="Protect the plan file with a key (AES). Required to open on any device."
+          />
+          {encrypt && (
+            <>
+              <FormField
+                label="Encryption Key"
+                value={encryptionKey}
+                onChangeText={(text) => {
+                  setEncryptionKey(text);
+                  setError(null);
+                }}
+                placeholder="Choose a strong key"
+                autoCapitalize="none"
+                secureTextEntry
+              />
+              <FormField
+                label="Confirm Key"
+                value={confirmKey}
+                onChangeText={(text) => {
+                  setConfirmKey(text);
+                  setError(null);
+                }}
+                placeholder="Re-enter key"
+                autoCapitalize="none"
+                secureTextEntry
+                hint="Keep this safe — without it the plan can't be opened."
+              />
+            </>
           )}
         </SectionCard>
 

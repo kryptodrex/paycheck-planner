@@ -3,18 +3,18 @@ import { ScrollView, View, TextInput, TouchableOpacity, StyleSheet } from 'react
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { usePlan } from '../src/contexts/PlanContext';
-import { useTheme } from '../src/contexts/ThemeContext';
+import { usePlan } from '../../src/contexts/PlanContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import {
   getQuickActions,
   searchPlan,
   type PlanSearchResult,
   type QuickAction,
   type SearchTarget,
-} from '../src/utils/planSearch';
-import { ThemedView } from '../src/components/ThemedView';
-import { ThemedText } from '../src/components/ThemedText';
-import { EmptyState } from '../src/components/EmptyState';
+} from '../../src/utils/planSearch';
+import { ThemedView } from '../../src/components/ThemedView';
+import { ThemedText } from '../../src/components/ThemedText';
+import { EmptyState } from '../../src/components/EmptyState';
 
 function navigateToTarget(target: SearchTarget) {
   if (target.kind === 'tab') {
@@ -22,12 +22,10 @@ function navigateToTarget(target: SearchTarget) {
     if (target.pathname === '/(tabs)/money') params.section = target.section;
     if ('highlight' in target && target.highlight) params.highlight = target.highlight;
     if ('action' in target && target.action) params.action = target.action;
-    // Close the search modal and switch to the destination tab in one step.
-    router.dismissTo({ pathname: target.pathname, params });
+    // Switch to the destination tab (search is itself a tab now).
+    router.navigate({ pathname: target.pathname, params });
   } else {
-    // Close the modal, then push the stack screen over the tabs. expo-router
-    // serializes these through its routing queue, so there's no race.
-    if (router.canDismiss()) router.dismiss();
+    // Push the stack screen over the tab navigator.
     router.push(target.pathname);
   }
 }
@@ -45,22 +43,19 @@ export default function SearchScreen() {
 
   const showResults = query.trim().length >= 2;
 
-  function dismiss() {
-    if (router.canDismiss()) router.dismiss();
-    else router.back();
-  }
-
   function handleResult(result: PlanSearchResult) {
+    setQuery('');
     navigateToTarget(result.target);
   }
 
   function handleQuickAction(action: QuickAction) {
+    setQuery('');
     navigateToTarget(action.target);
   }
 
   return (
     <ThemedView style={styles.screen}>
-      {/* Search field + cancel */}
+      {/* Search field */}
       <View style={[styles.headerRow, { paddingTop: insets.top + 10, paddingHorizontal: spacing.md }]}>
         <View
           style={[
@@ -83,7 +78,6 @@ export default function SearchScreen() {
             onChangeText={setQuery}
             placeholder="Search bills, savings, accounts…"
             placeholderTextColor={colors.textTertiary}
-            autoFocus
             autoCorrect={false}
             autoCapitalize="none"
             returnKeyType="search"
@@ -97,15 +91,14 @@ export default function SearchScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity onPress={dismiss} style={styles.cancel} accessibilityRole="button">
-          <ThemedText variant="accent" size="md" weight="semibold">
-            Cancel
-          </ThemedText>
-        </TouchableOpacity>
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 48 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.sm,
+          paddingBottom: insets.bottom + 96,
+        }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -211,7 +204,6 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   searchInput: { flex: 1, paddingVertical: 10 },
-  cancel: { minHeight: 44, justifyContent: 'center', paddingLeft: 12 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
