@@ -6,19 +6,23 @@
 
 ### Features
 
-- 
+- Mobile: create encrypted plans and unlock them with Face ID / Touch ID.
+- Mobile: built-in Glossary and App FAQs, and change a plan's currency with live exchange rates — at parity with desktop.
+- Mobile: choose from the full set of account icons, shared with desktop so your chosen icon shows the same on both.
 
 
 ### Improvements
 
-- 
+- Mobile: Search now lives in the tab bar (replacing the floating button), and closing a plan moved into Settings for a cleaner header.
+- Mobile: set your first paycheck date so weekly/bi-weekly paychecks-per-month match desktop.
+- Mobile: removed the redundant per-account "Monthly Allocation" field in favor of Custom Allocations.
 
 
 ### Security
 
-- 
+- Reference data and currency endpoints are now public, read-only APIs — the apps no longer ship any embedded secret.
 
 
 ### Bug Fixes
 
-- 
+- Account icons created on mobile now use names desktop can render (previously stored an incompatible value).
