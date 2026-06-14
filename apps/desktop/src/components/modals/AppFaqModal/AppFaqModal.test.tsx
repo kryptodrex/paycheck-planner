@@ -1,7 +1,43 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AppFaqModal from './AppFaqModal';
+
+// FAQ content is sourced from the API at runtime (the bundled defaults are empty),
+// so provide a fixture for the component test instead of relying on shipped data.
+vi.mock('../../../services/referenceDataFetcher', () => {
+  const sections = [
+    {
+      id: 'getting-started',
+      title: 'Getting Started',
+      description: 'Basics for setting up your plan.',
+      searchTerms: 'setup basics salary',
+      items: [
+        {
+          id: 'update-salary',
+          question: 'How can I update my annual salary?',
+          answer: 'Open Pay Options from the toolbar or View menu to update your annual salary.',
+          keywords: ['salary', 'pay', 'income'],
+        },
+      ],
+    },
+    {
+      id: 'other-income',
+      title: 'Other Income',
+      description: 'Managing additional income sources.',
+      searchTerms: 'other income withholding',
+      items: [
+        {
+          id: 'withholding-auto',
+          question: "What does withholding mode 'auto' mean for other income sources?",
+          answer: 'Auto withholding estimates taxes automatically for other income sources.',
+          keywords: ['withholding', 'auto', 'other', 'income'],
+        },
+      ],
+    },
+  ];
+  return { getCachedAppFaqSections: () => sections };
+});
 
 describe('AppFaqModal', () => {
   it('renders searchable FAQ sections', () => {
