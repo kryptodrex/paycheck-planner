@@ -33,6 +33,7 @@
     "preview": "pnpm --config.minimumReleaseAge=0 turbo run preview --filter=@paycheck-planner/desktop",
     "start": "pnpm --config.minimumReleaseAge=0 turbo run start --filter=@paycheck-planner/desktop",
     "sync-version": "node scripts/sync-version.mjs --all",
+    "check:boundaries": "node scripts/check-workspace-deps.mjs",
     "generate-icons": "pnpm --config.minimumReleaseAge=0 turbo run generate-icons --filter=@paycheck-planner/desktop",
     "release-checks": "pnpm --config.minimumReleaseAge=0 turbo run release-checks --filter=@paycheck-planner/desktop",
     "ws:dev": "pnpm --config.verifyDepsBeforeRun=false --config.minimumReleaseAge=0 turbo run dev",
