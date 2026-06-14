@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Wallet, Info, Plus, X, Banknote } from 'lucide-react';
 import { useBudget } from '../../../contexts/BudgetContext';
 import { useAppDialogs } from '../../../hooks';
@@ -727,8 +727,13 @@ const PayBreakdown: React.FC<PayBreakdownProps> = ({
     previousLeftoverRef.current = leftoverPerPaycheck;
   };
 
-  // Call the check function during render
-  handleNegativeBalanceCheck();
+  // Run after commit (not during render) — this opens dialogs and mutates refs,
+  // which are side effects that must not happen in the render phase. No deps array
+  // preserves the original "check on every render" behavior.
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- component returns early above; consistent with the useMemo pattern in this file
+  useEffect(() => {
+    handleNegativeBalanceCheck();
+  });
 
   return (
     <div className="tab-view pay-breakdown">
