@@ -7,3 +7,13 @@ expo-env.d.ts
 
 # Local environment overrides (machine-specific API base URL, etc.)
 .env*.local
+
+# Store-submission credentials — never commit these.
+google-play-service-account.json
+*.keystore
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+ios/
+android/

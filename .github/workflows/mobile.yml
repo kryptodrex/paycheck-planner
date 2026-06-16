@@ -8,6 +8,14 @@ name: Mobile
 #   1. `cd apps/mobile && eas init`  (sets expo.owner + extra.eas.projectId in app.json)
 #   2. Add an EXPO_TOKEN repo secret (Expo account → Access Tokens).
 # See https://docs.expo.dev/build/setup/ and expo/expo-github-action.
+#
+# To also submit builds to TestFlight / Google Play internal testing, set the
+# `submit` input to `true` on a manual run. That appends `--auto-submit`, which
+# queues an `eas submit` after the build using the `submit.production` profile in
+# eas.json. Store credentials must be configured first — see
+# apps/mobile/DEPLOYMENT.md. Required repo secrets for auto-submit:
+#   - APPLE_ID, ASC_APP_ID, APPLE_TEAM_ID        (iOS App Store Connect)
+#   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON           (Google Play service account)
 
 on:
   pull_request:
@@ -44,6 +52,10 @@ on:
         type: choice
         default: preview
         options: [preview, production, development]
+      submit:
+        description: Submit the build to the stores (TestFlight / Play internal) after it finishes
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -101,6 +113,17 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Write Google Play service account key
+        if: ${{ inputs.submit && secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        working-directory: apps/mobile
+        run: printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > google-play-service-account.json
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+
       - name: Build on EAS
         working-directory: apps/mobile
-        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait
+        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait ${{ inputs.submit && '--auto-submit' || '' }}
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

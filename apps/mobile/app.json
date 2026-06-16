@@ -11,8 +11,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.paycheckplanner.mobile",
+      "buildNumber": "1",
+      "icon": "./assets/images/icon-ios.png",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Paycheck Planner uses Face ID to protect access to your encrypted budget plans.",
+        "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDocumentTypes": [
           {
             "CFBundleTypeName": "Paycheck Planner Budget",
@@ -38,6 +41,7 @@
         "backgroundColor": "#667eea"
       },
       "package": "com.paycheckplanner.mobile",
+      "versionCode": 1,
       "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT"]
     },
     "web": {
@@ -49,6 +53,18 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#667eea",
+          "dark": {
+            "backgroundColor": "#1f2233"
+          }
+        }
+      ],
       [
         "expo-local-authentication",
         {
