@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.paycheckplanner.mobile",
+      "bundleIdentifier": "com.paycheck.planner",
       "buildNumber": "1",
       "icon": "./assets/images/icon-ios.png",
       "infoPlist": {
@@ -20,16 +20,23 @@
           {
             "CFBundleTypeName": "Paycheck Planner Budget",
             "LSHandlerRank": "Owner",
-            "LSItemContentTypes": ["com.paycheckplanner.budget"]
+            "LSItemContentTypes": [
+              "com.paycheckplanner.budget"
+            ]
           }
         ],
         "UTExportedTypeDeclarations": [
           {
             "UTTypeDescription": "Paycheck Planner Budget",
             "UTTypeIdentifier": "com.paycheckplanner.budget",
-            "UTTypeConformsTo": ["public.data", "public.content"],
+            "UTTypeConformsTo": [
+              "public.data",
+              "public.content"
+            ],
             "UTTypeTagSpecification": {
-              "public.filename-extension": ["budget"]
+              "public.filename-extension": [
+                "budget"
+              ]
             }
           }
         ]
@@ -40,9 +47,14 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#667eea"
       },
-      "package": "com.paycheckplanner.mobile",
+      "package": "com.paycheck.planner",
       "versionCode": 1,
-      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT"]
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -77,7 +89,12 @@
       "tsconfigPaths": true
     },
     "extra": {
-      "apiBaseUrl": "https://paycheck-planner-api.fly.dev"
-    }
+      "apiBaseUrl": "https://paycheck-planner-api.fly.dev",
+      "router": {},
+      "eas": {
+        "projectId": "fe6d0ed3-f02a-4981-be53-c0d9f557422b"
+      }
+    },
+    "owner": "kryptodrex"
   }
 }

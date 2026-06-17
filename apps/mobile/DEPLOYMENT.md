@@ -14,7 +14,7 @@ Expo logins). This guide walks through it.
 
 - **`app.json`**
   - `version` `1.0.0`, iOS `buildNumber` `1`, Android `versionCode` `1` (starting points; EAS auto-increments from here).
-  - `ios.bundleIdentifier` / `android.package`: `com.paycheckplanner.mobile`.
+  - `ios.bundleIdentifier` / `android.package`: `com.paycheck.planner`.
   - `ios.icon` → `assets/images/icon-ios.png`, a full-bleed **1024×1024 opaque** icon (App Store requires this; transparent/rounded icons get rejected or look wrong).
   - `ITSAppUsesNonExemptEncryption: false` — the app only uses standard AES (exempt) encryption, so this skips the export-compliance prompt on every TestFlight upload. (If you ever add non-standard crypto, revisit this.)
   - Branded splash screen via `expo-splash-screen`.
@@ -60,7 +60,7 @@ This creates the project on your Expo account and writes `expo.owner` +
 
 ### 1. Create the app record
 In [App Store Connect](https://appstoreconnect.apple.com) → **Apps → +** create an
-app with bundle ID `com.paycheckplanner.mobile`. Note its **Apple ID** number
+app with bundle ID `com.paycheck.planner`. Note its **Apple ID** number
 (the `ascAppId`).
 
 ### 2. Build
@@ -98,7 +98,7 @@ internal testers (up to 100, no review needed) and they get it immediately.
 
 ### 1. Create the app + first release
 In the [Play Console](https://play.google.com/console) create an app with package
-`com.paycheckplanner.mobile`.
+`com.paycheck.planner`.
 
 > **The very first upload must be done by hand.** Google's API can't create the
 > first release on a brand-new app. Build an `.aab` (step 2), then upload it once
