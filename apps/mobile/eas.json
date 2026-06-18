@@ -5,11 +5,13 @@
   },
   "build": {
     "development": {
+      "node": "22.13.0",
       "environment": "development",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "node": "22.13.0",
       "environment": "preview",
       "distribution": "internal",
       "ios": {
@@ -20,6 +22,7 @@
       }
     },
     "production": {
+      "node": "22.13.0",
       "environment": "production",
       "autoIncrement": true,
       "ios": {
