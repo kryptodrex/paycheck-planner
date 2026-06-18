@@ -3,6 +3,11 @@ node_modules/
 .pnp
 .pnp.js
 
+# This is a pnpm workspace — npm/yarn lockfiles break the `workspace:` protocol
+# on EAS Build and `expo install` (they get detected as the package manager).
+package-lock.json
+yarn.lock
+
 # Testing
 coverage/
 
