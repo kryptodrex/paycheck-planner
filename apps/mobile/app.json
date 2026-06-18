@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.paycheck.planner",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "icon": "./assets/images/icon-ios.png",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Paycheck Planner uses Face ID to protect access to your encrypted budget plans.",
