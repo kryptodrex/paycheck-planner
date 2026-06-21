@@ -9,13 +9,21 @@ name: Mobile
 #   2. Add an EXPO_TOKEN repo secret (Expo account → Access Tokens).
 # See https://docs.expo.dev/build/setup/ and expo/expo-github-action.
 #
-# To also submit builds to TestFlight / Google Play internal testing, set the
-# `submit` input to `true` on a manual run. That appends `--auto-submit`, which
-# queues an `eas submit` after the build using the `submit.production` profile in
-# eas.json. Store credentials must be configured first — see
-# apps/mobile/DEPLOYMENT.md. Required repo secrets for auto-submit:
-#   - APPLE_ID, ASC_APP_ID, APPLE_TEAM_ID        (iOS App Store Connect)
-#   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON           (Google Play service account)
+# With platform = all (the default), iOS and Android build in parallel on EAS.
+#
+# To also submit to TestFlight / Google Play internal testing, set the `submit`
+# input to `true` on a manual run. That appends `--auto-submit`, which queues an
+# `eas submit` after each build using the `submit.production` profile in eas.json.
+# Store credentials must be configured first — see apps/mobile/DEPLOYMENT.md.
+#
+# Required repo secrets:
+#   - EXPO_TOKEN                        (always — Expo account → Access Tokens)
+#   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  (Android auto-submit only)
+# iOS auto-submit uses an App Store Connect API key stored on EAS servers
+# (`eas credentials` → iOS → App Store Connect API Key), so no Apple secrets are
+# needed in this workflow.
+# NOTE: Google Play rejects the FIRST upload of a brand-new app via the API — do
+# that initial Android release by hand in the Play Console; auto-submit works after.
 
 on:
   pull_request:
@@ -120,10 +128,9 @@ jobs:
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
 
+      # platform=all builds iOS + Android concurrently on EAS. --auto-submit (when
+      # submit=true) queues a store submit per platform: iOS via the ASC API key on
+      # EAS, Android via the service-account key written above.
       - name: Build on EAS
         working-directory: apps/mobile
         run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait ${{ inputs.submit && '--auto-submit' || '' }}
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
