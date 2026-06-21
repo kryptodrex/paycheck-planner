@@ -10,23 +10,33 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.paycheckplanner.mobile",
+      "bundleIdentifier": "com.paycheck.planner",
+      "buildNumber": "4",
+      "icon": "./assets/images/icon-ios.png",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Paycheck Planner uses Face ID to protect access to your encrypted budget plans.",
+        "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDocumentTypes": [
           {
             "CFBundleTypeName": "Paycheck Planner Budget",
             "LSHandlerRank": "Owner",
-            "LSItemContentTypes": ["com.paycheckplanner.budget"]
+            "LSItemContentTypes": [
+              "com.paycheckplanner.budget"
+            ]
           }
         ],
         "UTExportedTypeDeclarations": [
           {
             "UTTypeDescription": "Paycheck Planner Budget",
             "UTTypeIdentifier": "com.paycheckplanner.budget",
-            "UTTypeConformsTo": ["public.data", "public.content"],
+            "UTTypeConformsTo": [
+              "public.data",
+              "public.content"
+            ],
             "UTTypeTagSpecification": {
-              "public.filename-extension": ["budget"]
+              "public.filename-extension": [
+                "budget"
+              ]
             }
           }
         ]
@@ -37,8 +47,14 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#667eea"
       },
-      "package": "com.paycheckplanner.mobile",
-      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT"]
+      "package": "com.paycheck.planner",
+      "versionCode": 1,
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -49,6 +65,18 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#667eea",
+          "dark": {
+            "backgroundColor": "#1f2233"
+          }
+        }
+      ],
       [
         "expo-local-authentication",
         {
@@ -61,7 +89,12 @@
       "tsconfigPaths": true
     },
     "extra": {
-      "apiBaseUrl": "https://paycheck-planner-api.fly.dev"
-    }
+      "apiBaseUrl": "https://paycheck-planner-api.fly.dev",
+      "router": {},
+      "eas": {
+        "projectId": "fe6d0ed3-f02a-4981-be53-c0d9f557422b"
+      }
+    },
+    "owner": "kryptodrex"
   }
 }

@@ -5,10 +5,14 @@
   },
   "build": {
     "development": {
+      "node": "22.13.0",
+      "environment": "development",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "node": "22.13.0",
+      "environment": "preview",
       "distribution": "internal",
       "ios": {
         "simulator": true
@@ -18,10 +22,25 @@
       }
     },
     "production": {
-      "autoIncrement": true
+      "node": "22.13.0",
+      "environment": "production",
+      "autoIncrement": true,
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {},
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

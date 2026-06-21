@@ -2,12 +2,30 @@ name: Mobile
 
 # Mobile pipeline for apps/mobile.
 # - PRs/pushes: quality gate (lint/typecheck/tests) via Turbo — no account needed.
+# - Merge to develop (pre-release): auto-builds an internal-distribution Android
+#   APK on EAS that testers can sideload (no Play Console needed). Needs EXPO_TOKEN.
 # - Manual dispatch: EAS Build for real iOS/Android binaries on Expo's servers.
 #
 # One-time setup required before EAS builds work:
 #   1. `cd apps/mobile && eas init`  (sets expo.owner + extra.eas.projectId in app.json)
 #   2. Add an EXPO_TOKEN repo secret (Expo account → Access Tokens).
 # See https://docs.expo.dev/build/setup/ and expo/expo-github-action.
+#
+# With platform = all (the default), iOS and Android build in parallel on EAS.
+#
+# To also submit to TestFlight / Google Play internal testing, set the `submit`
+# input to `true` on a manual run. That appends `--auto-submit`, which queues an
+# `eas submit` after each build using the `submit.production` profile in eas.json.
+# Store credentials must be configured first — see apps/mobile/DEPLOYMENT.md.
+#
+# Required repo secrets:
+#   - EXPO_TOKEN                        (always — Expo account → Access Tokens)
+#   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON  (Android auto-submit only)
+# iOS auto-submit uses an App Store Connect API key stored on EAS servers
+# (`eas credentials` → iOS → App Store Connect API Key), so no Apple secrets are
+# needed in this workflow.
+# NOTE: Google Play rejects the FIRST upload of a brand-new app via the API — do
+# that initial Android release by hand in the Play Console; auto-submit works after.
 
 on:
   pull_request:
@@ -44,6 +62,10 @@ on:
         type: choice
         default: preview
         options: [preview, production, development]
+      submit:
+        description: Submit the build to the stores (TestFlight / Play internal) after it finishes
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -101,6 +123,64 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      - name: Write Google Play service account key
+        if: ${{ inputs.submit && secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        working-directory: apps/mobile
+        run: printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > google-play-service-account.json
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+
+      # platform=all builds iOS + Android concurrently on EAS. --auto-submit (when
+      # submit=true) queues a store submit per platform: iOS via the ASC API key on
+      # EAS, Android via the service-account key written above.
       - name: Build on EAS
         working-directory: apps/mobile
-        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait
+        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait ${{ inputs.submit && '--auto-submit' || '' }}
+
+  android-preview:
+    # Pre-release stage: on merge to develop, build an internal-distribution APK
+    # that testers can sideload (no Play Console / account verification needed).
+    # Requires the EXPO_TOKEN secret + `eas init`.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # preview profile = internal distribution APK. --no-wait returns immediately;
+      # the build (and its shareable install link) finish on EAS.
+      - name: Build Android preview APK (internal distribution)
+        working-directory: apps/mobile
+        run: eas build --platform android --profile preview --non-interactive --no-wait
+
+      - name: Where to get the install link
+        run: |
+          {
+            echo "### 📱 Android preview APK queued on EAS"
+            echo ""
+            echo "An internal-distribution APK is building for this develop merge."
+            echo "Grab the shareable install link from:"
+            echo "- the **Build Android preview APK** step log above, or"
+            echo "- the Expo dashboard → project → Builds"
+            echo ""
+            echo "Testers open the link on Android → download → install (allow unknown sources)."
+          } >> "$GITHUB_STEP_SUMMARY"
