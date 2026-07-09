@@ -17,7 +17,7 @@ import { generateDemoBudgetData, type BudgetData } from '@paycheck-planner/core'
 import { usePlanFile } from '../src/hooks/usePlanFile';
 import { usePlan } from '../src/contexts/PlanContext';
 import { getRecentFiles, removeRecentFile, type RecentFile } from '../src/storage/recentFilesStore';
-import { readPlanFile, decryptPlan } from '../src/storage/planFileAdapter';
+import { readPlanFile, decryptPlan, copyPlanIntoLibrary } from '../src/storage/planFileAdapter';
 import { getStoredPlanKey } from '../src/storage/keychainAdapter';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { ThemedText } from '../src/components/ThemedText';
@@ -32,8 +32,8 @@ export default function WelcomeScreen() {
   const [keyError, setKeyError] = useState<string | null>(null);
 
   const onPlanLoaded = useCallback(
-    (plan: BudgetData, uri: string, encryptionKey: string | null) => {
-      setPlan(plan, uri, { encryptionKey });
+    (plan: BudgetData, uri: string, encryptionKey: string | null, sourceUri: string | null) => {
+      setPlan(plan, uri, { encryptionKey, sourceUri });
       router.replace('/(tabs)/summary');
     },
     [setPlan],
@@ -64,11 +64,29 @@ export default function WelcomeScreen() {
   }
 
   async function openRecentFile(file: RecentFile) {
-    const parsed = await readPlanFile(file.uri);
-    if (parsed.status === 'invalid') return;
+    // Prefer the original document so edits made elsewhere (e.g. on desktop via
+    // cloud sync) are picked up; fall back to the on-device copy when the source
+    // is unreachable (access lapsed after a restart, file moved or deleted).
+    let sourceUri = file.sourceUri ?? null;
+    let parsed = sourceUri ? await readPlanFile(sourceUri) : null;
+    if (!parsed || parsed.status === 'invalid') {
+      sourceUri = null;
+      parsed = await readPlanFile(file.uri);
+      if (parsed.status === 'invalid') return;
+    }
+
+    // The source was readable — refresh the on-device working copy from it.
+    let workingUri = file.uri;
+    if (sourceUri) {
+      try {
+        workingUri = await copyPlanIntoLibrary(sourceUri, parsed.planId);
+      } catch {
+        // Keep the existing copy; saves will still sync back to the source.
+      }
+    }
 
     if (parsed.status === 'ok') {
-      setPlan(parsed.data, file.uri);
+      setPlan(parsed.data, workingUri, { sourceUri });
       router.replace('/(tabs)/summary');
       return;
     }
@@ -78,7 +96,7 @@ export default function WelcomeScreen() {
     if (storedKey) {
       const plan = decryptPlan(parsed.payload, storedKey);
       if (plan) {
-        setPlan(plan, file.uri, { encryptionKey: storedKey });
+        setPlan(plan, workingUri, { encryptionKey: storedKey, sourceUri });
         router.replace('/(tabs)/summary');
         return;
       }

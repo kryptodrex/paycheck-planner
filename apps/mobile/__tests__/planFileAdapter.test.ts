@@ -12,8 +12,57 @@ vi.mock('expo-file-system/legacy', () => ({
   EncodingType: { UTF8: 'utf8' },
 }));
 
+// Mock the non-legacy File API used for writing back to the source document
+// and creating plan files in a user-picked folder. vi.mock factories are
+// hoisted above this file's body, so the shared state lives in vi.hoisted.
+const { fileWriteMock, pickDirectoryAsyncMock, createFileMock, MockFile, MockDirectory } =
+  vi.hoisted(() => {
+    const fileWriteMock = vi.fn();
+    const pickDirectoryAsyncMock = vi.fn();
+    const createFileMock = vi.fn();
+
+    class MockFile {
+      uri: string;
+      constructor(uri: string) {
+        this.uri = uri;
+      }
+      write(content: string | Uint8Array) {
+        fileWriteMock(this.uri, content);
+      }
+    }
+
+    class MockDirectory {
+      uri: string;
+      constructor(uri: string) {
+        this.uri = uri;
+      }
+      static pickDirectoryAsync(...args: unknown[]) {
+        return pickDirectoryAsyncMock(...args);
+      }
+      createFile(name: string, mimeType: string | null): MockFile {
+        createFileMock(this.uri, name, mimeType);
+        return new MockFile(`${this.uri}/${encodeURIComponent(name)}`);
+      }
+    }
+
+    return { fileWriteMock, pickDirectoryAsyncMock, createFileMock, MockFile, MockDirectory };
+  });
+
+vi.mock('expo-file-system', () => ({
+  File: MockFile,
+  Directory: MockDirectory,
+}));
+
 import * as FileSystem from 'expo-file-system/legacy';
-import { readPlanFile, decryptPlan, serializePlan, writePlanFile } from '../src/storage/planFileAdapter';
+import {
+  readPlanFile,
+  decryptPlan,
+  serializePlan,
+  writePlanFile,
+  writePlanToSource,
+  copyPlanIntoLibrary,
+  createPlanFileInFolder,
+} from '../src/storage/planFileAdapter';
 
 const MOCK_PLAN = {
   id: 'test-plan-001',
@@ -157,5 +206,109 @@ describe('writePlanFile', () => {
       serializePlan(MOCK_PLAN as never),
       { encoding: 'utf8' },
     );
+  });
+});
+
+describe('writePlanToSource', () => {
+  beforeEach(() => {
+    fileWriteMock.mockReset();
+  });
+
+  it('writes plain JSON back to the original document uri', async () => {
+    const sourceUri = 'content://com.provider.cloud/document/plan%2Ebudget';
+    await writePlanToSource(sourceUri, MOCK_PLAN as never);
+    expect(fileWriteMock).toHaveBeenCalledWith(sourceUri, serializePlan(MOCK_PLAN as never));
+  });
+
+  it('writes the encrypted envelope when a key is given', async () => {
+    await writePlanToSource('file:///icloud/plan.budget', MOCK_PLAN as never, 'the-key');
+    const [, content] = fileWriteMock.mock.calls[0];
+    const envelope = JSON.parse(content as string);
+    expect(envelope.format).toBe('paycheck-planner-encrypted-v1');
+    expect(decryptPlan(envelope.payload, 'the-key')?.id).toBe('test-plan-001');
+  });
+
+  it('propagates write failures so callers can surface a sync error', async () => {
+    fileWriteMock.mockImplementation(() => {
+      throw new Error('Permission lapsed');
+    });
+    await expect(
+      writePlanToSource('content://gone/doc', MOCK_PLAN as never),
+    ).rejects.toThrow('Permission lapsed');
+  });
+});
+
+describe('createPlanFileInFolder', () => {
+  beforeEach(() => {
+    pickDirectoryAsyncMock.mockReset();
+    createFileMock.mockReset();
+    fileWriteMock.mockReset();
+  });
+
+  it('creates a plan-named .budget document in the picked folder and writes the plan', async () => {
+    pickDirectoryAsyncMock.mockResolvedValue(new MockDirectory('content://tree/icloud-docs'));
+    const result = await createPlanFileInFolder(MOCK_PLAN as never);
+
+    expect(result.status).toBe('created');
+    expect(createFileMock).toHaveBeenCalledWith(
+      'content://tree/icloud-docs',
+      'Test Plan.budget',
+      'application/json',
+    );
+    if (result.status === 'created') {
+      expect(fileWriteMock).toHaveBeenCalledWith(result.uri, serializePlan(MOCK_PLAN as never));
+    }
+  });
+
+  it('writes the encrypted envelope when a key is given', async () => {
+    pickDirectoryAsyncMock.mockResolvedValue(new MockDirectory('file:///chosen-dir'));
+    await createPlanFileInFolder(MOCK_PLAN as never, 'folder-key');
+    const [, content] = fileWriteMock.mock.calls[0];
+    const envelope = JSON.parse(content as string);
+    expect(envelope.format).toBe('paycheck-planner-encrypted-v1');
+    expect(decryptPlan(envelope.payload, 'folder-key')?.id).toBe('test-plan-001');
+  });
+
+  it('returns canceled when the user dismisses the folder picker', async () => {
+    pickDirectoryAsyncMock.mockRejectedValue(
+      Object.assign(new Error('The file picker was cancelled by the user'), {
+        code: 'ERR_PICKER_CANCELLED',
+      }),
+    );
+    const result = await createPlanFileInFolder(MOCK_PLAN as never);
+    expect(result).toEqual({ status: 'canceled' });
+    expect(createFileMock).not.toHaveBeenCalled();
+  });
+
+  it('rethrows real picker failures so the UI can show them', async () => {
+    pickDirectoryAsyncMock.mockRejectedValue(new Error('Provider unavailable'));
+    await expect(createPlanFileInFolder(MOCK_PLAN as never)).rejects.toThrow(
+      'Provider unavailable',
+    );
+  });
+});
+
+describe('copyPlanIntoLibrary', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('copies the picked document into the plans library and returns the durable uri', async () => {
+    vi.mocked(FileSystem.getInfoAsync).mockResolvedValue({ exists: true } as never);
+    vi.mocked(FileSystem.copyAsync).mockResolvedValue();
+    const uri = await copyPlanIntoLibrary('content://picker/doc%2Fplan', 'test-plan-001');
+    expect(uri).toBe('file:///documents/plans/test-plan-001.budget');
+    expect(FileSystem.copyAsync).toHaveBeenCalledWith({
+      from: 'content://picker/doc%2Fplan',
+      to: 'file:///documents/plans/test-plan-001.budget',
+    });
+  });
+
+  it('does not copy onto itself when the source already is the library file', async () => {
+    vi.mocked(FileSystem.getInfoAsync).mockResolvedValue({ exists: true } as never);
+    const libraryUri = 'file:///documents/plans/test-plan-001.budget';
+    const uri = await copyPlanIntoLibrary(libraryUri, 'test-plan-001');
+    expect(uri).toBe(libraryUri);
+    expect(FileSystem.copyAsync).not.toHaveBeenCalled();
   });
 });

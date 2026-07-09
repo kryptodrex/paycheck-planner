@@ -4,7 +4,7 @@
   "version": "0.5.0",
   "description": "Monorepo workspace for Paycheck Planner apps and packages.",
   "type": "module",
-  "packageManager": "pnpm@11.6.0",
+  "packageManager": "pnpm@11.10.0",
   "engines": {
     "node": ">=22 <26",
     "pnpm": ">=10 <12"
@@ -48,6 +48,6 @@
     "test:run:desktop": "pnpm --config.minimumReleaseAge=0 turbo run test:run --filter=@paycheck-planner/desktop"
   },
   "devDependencies": {
-    "turbo": "^2.5.0"
+    "turbo": "^2.10.4"
   }
 }

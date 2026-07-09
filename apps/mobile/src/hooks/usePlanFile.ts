@@ -24,7 +24,12 @@ export interface UsePlanFileResult {
 }
 
 export function usePlanFile(
-  onSuccess: (plan: BudgetData, uri: string, encryptionKey: string | null) => void,
+  onSuccess: (
+    plan: BudgetData,
+    uri: string,
+    encryptionKey: string | null,
+    sourceUri: string | null,
+  ) => void,
 ): UsePlanFileResult {
   const [status, setStatus] = useState<PlanLoadStatus>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -32,14 +37,18 @@ export function usePlanFile(
 
   const finalize = useCallback(
     async (plan: BudgetData, uri: string, name: string, encryptionKey: string | null) => {
-      // Keep a durable copy in the app's documents directory; picker copies
-      // land in the cache directory and can be evicted at any time.
+      // Keep a durable working copy in the app's documents directory, and hold
+      // on to the picked document itself so saves can be written back to it.
       let workingUri = uri;
       try {
         workingUri = await copyPlanIntoLibrary(uri, plan.id);
       } catch {
-        // Fall back to the original uri — read-only access still works.
+        // Fall back to editing the picked document directly.
       }
+      // When the library copy is the working file, the picked uri is the
+      // original document to sync saves back to; if the copy failed we already
+      // write straight to the document, so there is nothing extra to mirror.
+      const sourceUri = workingUri !== uri ? uri : null;
 
       await addRecentFile({
         uri: workingUri,
@@ -48,8 +57,9 @@ export function usePlanFile(
         planId: plan.id,
         planName: plan.name,
         planYear: plan.year,
+        ...(sourceUri ? { sourceUri } : {}),
       });
-      onSuccess(plan, workingUri, encryptionKey);
+      onSuccess(plan, workingUri, encryptionKey, sourceUri);
       setStatus('idle');
       setError(null);
     },
@@ -62,7 +72,10 @@ export function usePlanFile(
 
     const result = await DocumentPicker.getDocumentAsync({
       type: '*/*',
-      copyToCacheDirectory: true,
+      // Open the document in place (no cache copy) so we get the original
+      // file's uri and can write edits back to it — without this, edits only
+      // ever land in an app-local copy and never reach the source document.
+      copyToCacheDirectory: false,
       multiple: false,
     });
 
