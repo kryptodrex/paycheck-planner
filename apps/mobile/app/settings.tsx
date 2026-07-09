@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { router, Stack } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
 import { Feather } from '@expo/vector-icons';
 import { usePlan } from '../src/contexts/PlanContext';
@@ -15,7 +14,8 @@ import {
   storePlanKey,
   type BiometricType,
 } from '../src/storage/keychainAdapter';
-import { createShareableCopy } from '../src/storage/planFileAdapter';
+import { createPlanFileInFolder } from '../src/storage/planFileAdapter';
+import { addRecentFile } from '../src/storage/recentFilesStore';
 import { ThemedView } from '../src/components/ThemedView';
 import { ThemedText } from '../src/components/ThemedText';
 import { MetricRow } from '../src/components/MetricRow';
@@ -40,10 +40,10 @@ const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { plan, sourcePath, sourceUri, encryptionKey, saveState, saveError, syncState, syncError, canUndo, canRedo, undo, redo, closePlan, changeEncryptionKey } =
+  const { plan, sourcePath, sourceUri, encryptionKey, saveState, saveError, syncState, syncError, canUndo, canRedo, undo, redo, closePlan, changeEncryptionKey, attachSource } =
     usePlan();
   const { colors, spacing, radius, isDark, mode, preset, setMode, setPreset } = useTheme();
-  const [sharing, setSharing] = useState(false);
+  const [linkingFolder, setLinkingFolder] = useState(false);
   const [biometricType, setBiometricType] = useState<BiometricType>('none');
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricBusy, setBiometricBusy] = useState(false);
@@ -129,22 +129,32 @@ export default function SettingsScreen() {
     );
   }
 
-  async function sharePlanFile() {
+  // Create the plan's document in a user-chosen folder (Files/iCloud/Drive) and
+  // link it as the plan's source, so every save lands there from now on.
+  async function saveToFolder() {
     if (!sourcePath || !plan) return;
-    setSharing(true);
+    setLinkingFolder(true);
     try {
-      if (await Sharing.isAvailableAsync()) {
-        // Share a copy named after the plan (e.g. "2026 Plan.budget") rather
-        // than the internal UUID file, matching the desktop's saved filenames.
-        const shareUri = await createShareableCopy(sourcePath, plan);
-        await Sharing.shareAsync(shareUri, {
-          mimeType: 'application/json',
-          dialogTitle: 'Export or back up budget plan',
-          UTI: 'public.json',
-        });
-      }
+      const result = await createPlanFileInFolder(plan, encryptionKey);
+      if (result.status === 'canceled') return;
+
+      attachSource(result.uri);
+      await addRecentFile({
+        uri: sourcePath,
+        name: `${plan.name}.budget`,
+        lastOpenedAt: new Date().toISOString(),
+        planId: plan.id,
+        planName: plan.name,
+        planYear: plan.year,
+        sourceUri: result.uri,
+      });
+    } catch (err) {
+      Alert.alert(
+        'Could not save to folder',
+        err instanceof Error ? err.message : String(err),
+      );
     } finally {
-      setSharing(false);
+      setLinkingFolder(false);
     }
   }
 
@@ -313,13 +323,13 @@ export default function SettingsScreen() {
               onPress={() => router.push('/history')}
               style={{ marginBottom: spacing.sm }}
             />
-            {sourcePath && (
+            {sourcePath && !sourceUri && (
               <>
                 <Button
-                  title="Export / Back Up Plan…"
+                  title="Save to Folder…"
                   variant="secondary"
-                  onPress={sharePlanFile}
-                  loading={sharing}
+                  onPress={saveToFolder}
+                  loading={linkingFolder}
                   style={{ marginBottom: spacing.xs }}
                 />
                 <ThemedText
@@ -327,8 +337,9 @@ export default function SettingsScreen() {
                   size="xs"
                   style={{ marginBottom: spacing.sm }}
                 >
-                  Saved on this device automatically. Export to save a copy to Files, iCloud, or
-                  the desktop app.
+                  This plan only lives inside the app right now. Save it to a folder (Files, iCloud
+                  Drive…) to back it up and keep that file updated automatically — desktop can open
+                  it too.
                 </ThemedText>
               </>
             )}

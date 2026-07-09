@@ -1,5 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import { File } from 'expo-file-system';
+import { Directory, File } from 'expo-file-system';
 import CryptoJS from 'crypto-js';
 import type { BudgetData } from '@paycheck-planner/core';
 
@@ -160,19 +160,35 @@ function safeFileName(name: string): string {
   return cleaned || 'budget-plan';
 }
 
+export type FolderPlanFileResult =
+  | { status: 'created'; uri: string }
+  | { status: 'canceled' };
+
 /**
- * Make a temporary, human-readably named copy of the plan file for sharing, so
- * the export carries the plan's title (e.g. "2026 Plan.budget") instead of the
- * internal UUID filename — matching how the desktop app names saved files.
- * Returns the temp URI to hand to the share sheet.
+ * Ask the user to pick a folder — the Files app (incl. iCloud Drive) on iOS, a
+ * Storage Access Framework provider on Android — and create the plan's
+ * `.budget` document there, named after the plan like desktop does. The
+ * returned uri is the plan's source document: saves mirror to it from then on.
  */
-export async function createShareableCopy(sourceUri: string, plan: BudgetData): Promise<string> {
-  const targetUri = `${FileSystem.cacheDirectory}${safeFileName(plan.name)}.budget`;
-  try {
-    await FileSystem.deleteAsync(targetUri, { idempotent: true });
-  } catch {
-    // Ignore — target may not exist yet.
-  }
-  await FileSystem.copyAsync({ from: sourceUri, to: targetUri });
-  return targetUri;
+export async function createPlanFileInFolder(
+  plan: BudgetData,
+  encryptionKey?: string | null,
+): Promise<FolderPlanFileResult> {
+  const directory = await Directory.pickDirectoryAsync().catch((err: unknown) => {
+    if (isPickerCancellation(err)) return null;
+    throw err;
+  });
+  if (!directory) return { status: 'canceled' };
+
+  const file = directory.createFile(`${safeFileName(plan.name)}.budget`, 'application/json');
+  file.write(serializePlan(plan, encryptionKey));
+  return { status: 'created', uri: file.uri };
+}
+
+// Both platforms reject the directory-picker promise when the user backs out
+// (iOS FilePickingCancelledException / Android PickerCancelledException).
+function isPickerCancellation(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as { code?: string }).code ?? '';
+  return /cancel/i.test(`${code} ${err.message}`);
 }

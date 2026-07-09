@@ -53,6 +53,8 @@ interface PlanContextValue {
   lastChange: ChangeSignal | null;
   setPlan: (plan: BudgetData | null, path: string | null, options?: SetPlanOptions) => void;
   updatePlan: (updater: (plan: BudgetData) => BudgetData, options?: UpdatePlanOptions) => void;
+  /** Link the open plan to a source document and sync it there immediately. */
+  attachSource: (uri: string) => void;
   /** Change the file's encryption: pass a key to encrypt, or null to decrypt. Re-writes the file. */
   changeEncryptionKey: (key: string | null) => void;
   undo: () => void;
@@ -228,6 +230,17 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     applyPlan(next);
   }, [future, applyPlan]);
 
+  const attachSource = useCallback(
+    (uri: string) => {
+      if (!latest.current.plan || !latest.current.path) return;
+      latest.current = { ...latest.current, source: uri };
+      setSourceUri(uri);
+      // Sync right away so the new source document has the current plan state.
+      void flushSave();
+    },
+    [flushSave],
+  );
+
   const changeEncryptionKey = useCallback(
     (key: string | null) => {
       if (!latest.current.plan || !latest.current.path) return;
@@ -271,6 +284,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         lastChange,
         setPlan,
         updatePlan,
+        attachSource,
         changeEncryptionKey,
         undo,
         redo,

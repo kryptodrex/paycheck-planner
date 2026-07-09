@@ -1,8 +1,40 @@
+diff --git a/ios/RNSScreenStackHeaderConfig.mm b/ios/RNSScreenStackHeaderConfig.mm
+--- a/ios/RNSScreenStackHeaderConfig.mm
++++ b/ios/RNSScreenStackHeaderConfig.mm
+@@ -608,12 +608,15 @@
+     }
+   }
+ 
+-  [navctr setNavigationBarHidden:shouldHide animated:animated];
+-
+   [config applySemanticContentAttributeIfNeededToNavCtrl:navctr];
+ 
+   if (shouldHide) {
+     navitem.title = config.title;
++
++    // Setting navigation bar visibility is split to mitigate iOS 26 bug with bar button items.
++    // Backported from react-native-screens 4.18+; without this, bar button items (including the
++    // back button) are unresponsive on iOS 26 when the bar is un-hidden before items are set.
++    [navctr setNavigationBarHidden:YES animated:animated];
+     return;
+   }
+ 
+@@ -749,6 +752,11 @@
+   // See: https://github.com/software-mansion/react-native-screens/issues/1570 (comments)
+   navitem.title = config.title;
+ 
++  // Setting navigation bar visibility is split to mitigate iOS 26 bug with bar button items
++  // (setting nav bar visibility should be done after the navigation item is configured).
++  // Backported from react-native-screens 4.18+.
++  [navctr setNavigationBarHidden:NO animated:animated];
++
+   if (animated && vc.transitionCoordinator != nil &&
+       vc.transitionCoordinator.presentationStyle == UIModalPresentationNone && !wasHidden) {
+     // when there is an ongoing transition we may need to update navbar setting in animation block
 diff --git a/src/components/ScreenStackHeaderConfig.tsx b/src/components/ScreenStackHeaderConfig.tsx
 --- a/src/components/ScreenStackHeaderConfig.tsx
 +++ b/src/components/ScreenStackHeaderConfig.tsx
-@@ -27,8 +27,7 @@ export const ScreenStackHeaderConfig = React.forwardRef<
-   <ScreenStackHeaderConfigNativeComponent
+@@ -29,8 +29,7 @@
      {...props}
      ref={ref}
      topInsetEnabled={EDGE_TO_EDGE ? true : props.topInsetEnabled}
@@ -11,3 +43,4 @@ diff --git a/src/components/ScreenStackHeaderConfig.tsx b/src/components/ScreenS
 +    style={[styles.headerConfig, { pointerEvents: 'box-none' }]}
    />
  ));
+ 

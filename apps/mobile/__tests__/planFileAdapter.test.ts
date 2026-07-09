@@ -12,20 +12,45 @@ vi.mock('expo-file-system/legacy', () => ({
   EncodingType: { UTF8: 'utf8' },
 }));
 
-// Mock the non-legacy File API used for writing back to the source document.
-const fileWriteMock = vi.fn();
-const fileCtorUris: string[] = [];
+// Mock the non-legacy File API used for writing back to the source document
+// and creating plan files in a user-picked folder. vi.mock factories are
+// hoisted above this file's body, so the shared state lives in vi.hoisted.
+const { fileWriteMock, pickDirectoryAsyncMock, createFileMock, MockFile, MockDirectory } =
+  vi.hoisted(() => {
+    const fileWriteMock = vi.fn();
+    const pickDirectoryAsyncMock = vi.fn();
+    const createFileMock = vi.fn();
+
+    class MockFile {
+      uri: string;
+      constructor(uri: string) {
+        this.uri = uri;
+      }
+      write(content: string | Uint8Array) {
+        fileWriteMock(this.uri, content);
+      }
+    }
+
+    class MockDirectory {
+      uri: string;
+      constructor(uri: string) {
+        this.uri = uri;
+      }
+      static pickDirectoryAsync(...args: unknown[]) {
+        return pickDirectoryAsyncMock(...args);
+      }
+      createFile(name: string, mimeType: string | null): MockFile {
+        createFileMock(this.uri, name, mimeType);
+        return new MockFile(`${this.uri}/${encodeURIComponent(name)}`);
+      }
+    }
+
+    return { fileWriteMock, pickDirectoryAsyncMock, createFileMock, MockFile, MockDirectory };
+  });
+
 vi.mock('expo-file-system', () => ({
-  File: class {
-    uri: string;
-    constructor(uri: string) {
-      this.uri = uri;
-      fileCtorUris.push(uri);
-    }
-    write(content: string | Uint8Array) {
-      fileWriteMock(this.uri, content);
-    }
-  },
+  File: MockFile,
+  Directory: MockDirectory,
 }));
 
 import * as FileSystem from 'expo-file-system/legacy';
@@ -36,6 +61,7 @@ import {
   writePlanFile,
   writePlanToSource,
   copyPlanIntoLibrary,
+  createPlanFileInFolder,
 } from '../src/storage/planFileAdapter';
 
 const MOCK_PLAN = {
@@ -186,7 +212,6 @@ describe('writePlanFile', () => {
 describe('writePlanToSource', () => {
   beforeEach(() => {
     fileWriteMock.mockReset();
-    fileCtorUris.length = 0;
   });
 
   it('writes plain JSON back to the original document uri', async () => {
@@ -210,6 +235,56 @@ describe('writePlanToSource', () => {
     await expect(
       writePlanToSource('content://gone/doc', MOCK_PLAN as never),
     ).rejects.toThrow('Permission lapsed');
+  });
+});
+
+describe('createPlanFileInFolder', () => {
+  beforeEach(() => {
+    pickDirectoryAsyncMock.mockReset();
+    createFileMock.mockReset();
+    fileWriteMock.mockReset();
+  });
+
+  it('creates a plan-named .budget document in the picked folder and writes the plan', async () => {
+    pickDirectoryAsyncMock.mockResolvedValue(new MockDirectory('content://tree/icloud-docs'));
+    const result = await createPlanFileInFolder(MOCK_PLAN as never);
+
+    expect(result.status).toBe('created');
+    expect(createFileMock).toHaveBeenCalledWith(
+      'content://tree/icloud-docs',
+      'Test Plan.budget',
+      'application/json',
+    );
+    if (result.status === 'created') {
+      expect(fileWriteMock).toHaveBeenCalledWith(result.uri, serializePlan(MOCK_PLAN as never));
+    }
+  });
+
+  it('writes the encrypted envelope when a key is given', async () => {
+    pickDirectoryAsyncMock.mockResolvedValue(new MockDirectory('file:///chosen-dir'));
+    await createPlanFileInFolder(MOCK_PLAN as never, 'folder-key');
+    const [, content] = fileWriteMock.mock.calls[0];
+    const envelope = JSON.parse(content as string);
+    expect(envelope.format).toBe('paycheck-planner-encrypted-v1');
+    expect(decryptPlan(envelope.payload, 'folder-key')?.id).toBe('test-plan-001');
+  });
+
+  it('returns canceled when the user dismisses the folder picker', async () => {
+    pickDirectoryAsyncMock.mockRejectedValue(
+      Object.assign(new Error('The file picker was cancelled by the user'), {
+        code: 'ERR_PICKER_CANCELLED',
+      }),
+    );
+    const result = await createPlanFileInFolder(MOCK_PLAN as never);
+    expect(result).toEqual({ status: 'canceled' });
+    expect(createFileMock).not.toHaveBeenCalled();
+  });
+
+  it('rethrows real picker failures so the UI can show them', async () => {
+    pickDirectoryAsyncMock.mockRejectedValue(new Error('Provider unavailable'));
+    await expect(createPlanFileInFolder(MOCK_PLAN as never)).rejects.toThrow(
+      'Provider unavailable',
+    );
   });
 });
 
