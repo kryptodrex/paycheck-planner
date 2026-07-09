@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { File } from 'expo-file-system';
 import CryptoJS from 'crypto-js';
 import type { BudgetData } from '@paycheck-planner/core';
 
@@ -99,6 +100,23 @@ export async function writePlanFile(
   await FileSystem.writeAsStringAsync(uri, serializePlan(plan, encryptionKey), {
     encoding: FileSystem.EncodingType.UTF8,
   });
+}
+
+/**
+ * Write the plan back to the original document it was opened from, so edits
+ * reach the source (e.g. a file in iCloud Drive or Google Drive) instead of
+ * staying in the on-device copy — matching desktop, which saves in place.
+ *
+ * Uses the non-legacy `File` API: unlike the legacy one it can write to any
+ * provider's `content://` document on Android and to security-scoped files
+ * outside the sandbox on iOS.
+ */
+export async function writePlanToSource(
+  sourceUri: string,
+  plan: BudgetData,
+  encryptionKey?: string | null,
+): Promise<void> {
+  new File(sourceUri).write(serializePlan(plan, encryptionKey));
 }
 
 const PLAN_LIBRARY_DIR = 'plans/';

@@ -11,6 +11,7 @@ overrides:
 patchedDependencies:
   '@react-navigation/bottom-tabs@7.16.2': 82072706e4e0aa5f40d91e40aa0efde4840f73a9c68e78118f019e10d0baa8f6
   '@react-navigation/elements@2.9.19': 4aa672296675827cfd107e47d76a769503474cd4f9593d367bee33499db9e928
+  expo-document-picker@14.0.8: d82a8ef8fd2a7267fd6a72ab7ef5cda6e255d60190b125e64c8faa72c49f30dd
   react-native-screens@4.16.0: 7fb636fa88619e997f238f0c72109162423963119c12ce39216ab875a1393399
 
 importers:
@@ -213,7 +214,7 @@ importers:
         version: 6.0.21(expo@54.0.35)
       expo-document-picker:
         specifier: ~14.0.0
-        version: 14.0.8(expo@54.0.35)
+        version: 14.0.8(patch_hash=d82a8ef8fd2a7267fd6a72ab7ef5cda6e255d60190b125e64c8faa72c49f30dd)(expo@54.0.35)
       expo-file-system:
         specifier: ~19.0.0
         version: 19.0.23(expo@54.0.35)(react-native@0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.15)(react@19.1.0))
@@ -10250,7 +10251,7 @@ snapshots:
       expo: 54.0.35(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.15)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       expo-dev-menu-interface: 2.0.0(expo@54.0.35)
 
-  expo-document-picker@14.0.8(expo@54.0.35):
+  expo-document-picker@14.0.8(patch_hash=d82a8ef8fd2a7267fd6a72ab7ef5cda6e255d60190b125e64c8faa72c49f30dd)(expo@54.0.35):
     dependencies:
       expo: 54.0.35(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.15)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
 

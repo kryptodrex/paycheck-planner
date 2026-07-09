@@ -25,4 +25,5 @@
 
 ### Bug Fixes
 
+- Mobile: edits now save back to the file you opened — including cloud documents (iCloud Drive, Google Drive, etc.) — instead of only to a device-local copy. Reopening a plan from Recent Files also picks up changes made on desktop, and Settings shows whether the original file is in sync.
 - Account icons created on mobile now use names desktop can render (previously stored an incompatible value).

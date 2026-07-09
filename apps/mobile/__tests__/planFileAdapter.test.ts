@@ -12,8 +12,31 @@ vi.mock('expo-file-system/legacy', () => ({
   EncodingType: { UTF8: 'utf8' },
 }));
 
+// Mock the non-legacy File API used for writing back to the source document.
+const fileWriteMock = vi.fn();
+const fileCtorUris: string[] = [];
+vi.mock('expo-file-system', () => ({
+  File: class {
+    uri: string;
+    constructor(uri: string) {
+      this.uri = uri;
+      fileCtorUris.push(uri);
+    }
+    write(content: string | Uint8Array) {
+      fileWriteMock(this.uri, content);
+    }
+  },
+}));
+
 import * as FileSystem from 'expo-file-system/legacy';
-import { readPlanFile, decryptPlan, serializePlan, writePlanFile } from '../src/storage/planFileAdapter';
+import {
+  readPlanFile,
+  decryptPlan,
+  serializePlan,
+  writePlanFile,
+  writePlanToSource,
+  copyPlanIntoLibrary,
+} from '../src/storage/planFileAdapter';
 
 const MOCK_PLAN = {
   id: 'test-plan-001',
@@ -157,5 +180,60 @@ describe('writePlanFile', () => {
       serializePlan(MOCK_PLAN as never),
       { encoding: 'utf8' },
     );
+  });
+});
+
+describe('writePlanToSource', () => {
+  beforeEach(() => {
+    fileWriteMock.mockReset();
+    fileCtorUris.length = 0;
+  });
+
+  it('writes plain JSON back to the original document uri', async () => {
+    const sourceUri = 'content://com.provider.cloud/document/plan%2Ebudget';
+    await writePlanToSource(sourceUri, MOCK_PLAN as never);
+    expect(fileWriteMock).toHaveBeenCalledWith(sourceUri, serializePlan(MOCK_PLAN as never));
+  });
+
+  it('writes the encrypted envelope when a key is given', async () => {
+    await writePlanToSource('file:///icloud/plan.budget', MOCK_PLAN as never, 'the-key');
+    const [, content] = fileWriteMock.mock.calls[0];
+    const envelope = JSON.parse(content as string);
+    expect(envelope.format).toBe('paycheck-planner-encrypted-v1');
+    expect(decryptPlan(envelope.payload, 'the-key')?.id).toBe('test-plan-001');
+  });
+
+  it('propagates write failures so callers can surface a sync error', async () => {
+    fileWriteMock.mockImplementation(() => {
+      throw new Error('Permission lapsed');
+    });
+    await expect(
+      writePlanToSource('content://gone/doc', MOCK_PLAN as never),
+    ).rejects.toThrow('Permission lapsed');
+  });
+});
+
+describe('copyPlanIntoLibrary', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('copies the picked document into the plans library and returns the durable uri', async () => {
+    vi.mocked(FileSystem.getInfoAsync).mockResolvedValue({ exists: true } as never);
+    vi.mocked(FileSystem.copyAsync).mockResolvedValue();
+    const uri = await copyPlanIntoLibrary('content://picker/doc%2Fplan', 'test-plan-001');
+    expect(uri).toBe('file:///documents/plans/test-plan-001.budget');
+    expect(FileSystem.copyAsync).toHaveBeenCalledWith({
+      from: 'content://picker/doc%2Fplan',
+      to: 'file:///documents/plans/test-plan-001.budget',
+    });
+  });
+
+  it('does not copy onto itself when the source already is the library file', async () => {
+    vi.mocked(FileSystem.getInfoAsync).mockResolvedValue({ exists: true } as never);
+    const libraryUri = 'file:///documents/plans/test-plan-001.budget';
+    const uri = await copyPlanIntoLibrary(libraryUri, 'test-plan-001');
+    expect(uri).toBe(libraryUri);
+    expect(FileSystem.copyAsync).not.toHaveBeenCalled();
   });
 });

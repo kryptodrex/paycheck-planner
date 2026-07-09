@@ -8,12 +8,21 @@ import {
   type ReactNode,
 } from 'react';
 import { buildAuditEntries, type BudgetData } from '@paycheck-planner/core';
-import { writePlanFile } from '../storage/planFileAdapter';
+import { writePlanFile, writePlanToSource } from '../storage/planFileAdapter';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
+/** Status of mirroring saves back to the original (cloud) document. */
+export type SourceSyncState = 'idle' | 'synced' | 'error';
+
 interface SetPlanOptions {
   encryptionKey?: string | null;
+  /**
+   * The original document the plan was opened from (Files app / SAF provider).
+   * When set, every save is also written back to it so the source — e.g. a file
+   * in cloud storage — stays up to date, like editing in place on desktop.
+   */
+  sourceUri?: string | null;
 }
 
 export interface UpdatePlanOptions {
@@ -32,9 +41,13 @@ export interface ChangeSignal {
 interface PlanContextValue {
   plan: BudgetData | null;
   sourcePath: string | null;
+  /** Original document saves are mirrored back to, or null for local-only plans. */
+  sourceUri: string | null;
   encryptionKey: string | null;
   saveState: SaveState;
   saveError: string | null;
+  syncState: SourceSyncState;
+  syncError: string | null;
   canUndo: boolean;
   canRedo: boolean;
   lastChange: ChangeSignal | null;
@@ -55,18 +68,27 @@ const HISTORY_LIMIT = 50;
 export function PlanProvider({ children }: { children: ReactNode }) {
   const [plan, setPlanState] = useState<BudgetData | null>(null);
   const [sourcePath, setSourcePath] = useState<string | null>(null);
+  const [sourceUri, setSourceUri] = useState<string | null>(null);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [syncState, setSyncState] = useState<SourceSyncState>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [past, setPast] = useState<BudgetData[]>([]);
   const [future, setFuture] = useState<BudgetData[]>([]);
   const [lastChange, setLastChange] = useState<ChangeSignal | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seqRef = useRef(0);
-  const latest = useRef<{ plan: BudgetData | null; path: string | null; key: string | null }>({
+  const latest = useRef<{
+    plan: BudgetData | null;
+    path: string | null;
+    source: string | null;
+    key: string | null;
+  }>({
     plan: null,
     path: null,
+    source: null,
     key: null,
   });
 
@@ -78,7 +100,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   );
 
   const flushSave = useCallback(async () => {
-    const { plan: currentPlan, path, key } = latest.current;
+    const { plan: currentPlan, path, source, key } = latest.current;
     if (!currentPlan || !path) return;
 
     setSaveState('saving');
@@ -89,6 +111,20 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       setSaveState('error');
       setSaveError(err instanceof Error ? err.message : String(err));
+      return;
+    }
+
+    // Mirror the save back to the document the plan was opened from so the
+    // source (e.g. a cloud-synced file) receives the edits too. Failure here
+    // never loses data — the durable on-device copy above already saved.
+    if (!source) return;
+    try {
+      await writePlanToSource(source, currentPlan, key);
+      setSyncState('synced');
+      setSyncError(null);
+    } catch (err) {
+      setSyncState('error');
+      setSyncError(err instanceof Error ? err.message : String(err));
     }
   }, []);
 
@@ -112,12 +148,20 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const setPlan = useCallback(
     (newPlan: BudgetData | null, path: string | null, options?: SetPlanOptions) => {
       if (saveTimer.current) clearTimeout(saveTimer.current);
-      latest.current = { plan: newPlan, path, key: options?.encryptionKey ?? null };
+      latest.current = {
+        plan: newPlan,
+        path,
+        source: options?.sourceUri ?? null,
+        key: options?.encryptionKey ?? null,
+      };
       setPlanState(newPlan);
       setSourcePath(path);
+      setSourceUri(options?.sourceUri ?? null);
       setEncryptionKey(options?.encryptionKey ?? null);
       setSaveState('idle');
       setSaveError(null);
+      setSyncState('idle');
+      setSyncError(null);
       setPast([]);
       setFuture([]);
       setLastChange(null);
@@ -197,12 +241,15 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
   const closePlan = useCallback(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    latest.current = { plan: null, path: null, key: null };
+    latest.current = { plan: null, path: null, source: null, key: null };
     setPlanState(null);
     setSourcePath(null);
+    setSourceUri(null);
     setEncryptionKey(null);
     setSaveState('idle');
     setSaveError(null);
+    setSyncState('idle');
+    setSyncError(null);
     setPast([]);
     setFuture([]);
     setLastChange(null);
@@ -213,9 +260,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       value={{
         plan,
         sourcePath,
+        sourceUri,
         encryptionKey,
         saveState,
         saveError,
+        syncState,
+        syncError,
         canUndo: past.length > 0,
         canRedo: future.length > 0,
         lastChange,

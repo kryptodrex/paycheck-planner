@@ -10,6 +10,8 @@ export interface RecentFile {
   planId: string;
   planName?: string;
   planYear?: number;
+  /** Original picked document (cloud/provider URI) that saves are mirrored back to. */
+  sourceUri?: string;
 }
 
 export async function getRecentFiles(): Promise<RecentFile[]> {

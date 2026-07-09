@@ -40,7 +40,7 @@ const MODE_OPTIONS: { value: ThemeMode; label: string }[] = [
 ];
 
 export default function SettingsScreen() {
-  const { plan, sourcePath, encryptionKey, saveState, saveError, canUndo, canRedo, undo, redo, closePlan, changeEncryptionKey } =
+  const { plan, sourcePath, sourceUri, encryptionKey, saveState, saveError, syncState, syncError, canUndo, canRedo, undo, redo, closePlan, changeEncryptionKey } =
     usePlan();
   const { colors, spacing, radius, isDark, mode, preset, setMode, setPreset } = useTheme();
   const [sharing, setSharing] = useState(false);
@@ -168,9 +168,18 @@ export default function SettingsScreen() {
 
   const saveLabel =
     saveState === 'saving' ? 'Saving…'
-    : saveState === 'saved' ? 'All changes saved'
+    : saveState === 'saved' ?
+      (sourceUri && syncState === 'synced' ? 'All changes saved & synced to the original file'
+      : 'All changes saved')
     : saveState === 'error' ? `Save failed: ${saveError ?? 'unknown error'}`
     : sourcePath ? 'No changes yet' : 'Demo mode — changes are not saved';
+
+  // Saves always land in the on-device copy first; this only means the mirror
+  // write to the original document failed (e.g. access lapsed after a restart).
+  const syncWarning =
+    sourceUri && syncState === 'error'
+      ? `Saved on this device, but the original file could not be updated (${syncError ?? 'unknown error'}). Reopen the file with "Open Budget File" to reconnect it.`
+      : null;
 
   const version =
     Constants.expoConfig?.version ?? Constants.manifest2?.extra?.expoClient?.version ?? '—';
@@ -263,12 +272,20 @@ export default function SettingsScreen() {
               size="xs"
               style={{
                 marginTop: spacing.xs,
-                marginBottom: spacing.md,
+                marginBottom: syncWarning ? spacing.xs : spacing.md,
                 color: saveState === 'error' ? colors.error : undefined,
               }}
             >
               {saveLabel}
             </ThemedText>
+            {syncWarning && (
+              <ThemedText
+                size="xs"
+                style={{ marginBottom: spacing.md, color: colors.error }}
+              >
+                {syncWarning}
+              </ThemedText>
+            )}
 
             <View style={[styles.undoRow, { marginBottom: spacing.sm }]}>
               <Button
